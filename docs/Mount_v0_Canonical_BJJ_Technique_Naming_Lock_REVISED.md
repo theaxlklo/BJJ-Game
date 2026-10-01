@@ -998,3 +998,1015 @@ PROTECT → Protect / Survive
 ```
 
 Do not rename these into techniques.
+They describe what a grappler is broadly trying to do between decision windows.
+
+---
+
+# 19. Behavior Modifier Naming
+
+The rules remain unchanged.
+
+When Top uses:
+
+```text
+HOLD
+```
+
+and responds to:
+
+```text
+Bridge
+Trap-and-Roll Escape
+```
+
+Bottom's resulting grade shifts down one grade.
+
+When Bottom uses:
+
+```text
+PROTECT
+```
+
+and responds to:
+
+```text
+Americana Arm Isolation
+```
+
+Top's resulting grade shifts down one grade.
+
+Logs should use canonical names and examples that actually exist in the raw table:
+
+```text
+Behavior Modifier:
+Top HOLD defending Trap-and-Roll Escape
+Raw grade: Strong Success
+After HOLD: Success
+```
+
+and:
+
+```text
+Behavior Modifier:
+Bottom PROTECT defending Americana Arm Isolation
+Raw grade: Strong Success
+After PROTECT: Success
+```
+
+---
+
+# 20. Exit-Capability Metadata
+
+Each bottom action must carry explicit metadata.
+
+```text
+Bridge
+escape_capable = false
+exit_map = none
+special_rule = bridge_clamp
+```
+
+```text
+Elbow-Knee Escape
+escape_capable = true
+
+SUCCESS
+→ HALF_GUARD
+
+STRONG_SUCCESS
+→ OPEN_GUARD
+```
+
+```text
+Trap-and-Roll Escape
+escape_capable = true
+
+SUCCESS
+→ REVERSAL
+
+STRONG_SUCCESS
+→ REVERSAL
+```
+
+Do not infer exit capability by inspecting the action's name.
+
+Store it explicitly.
+
+---
+
+# 21. Recommended Action Data Shape
+
+Implementation should keep technique identity separate from resolution data.
+
+Conceptually:
+
+```text
+ActionDefinition {
+    id
+    side
+    canonical_name
+    short_name
+    legacy_name
+    aliases
+    category
+    description
+    escape_capable
+    exit_map
+    v0_notes
+}
+```
+
+Example:
+
+```text
+id:
+mount.bottom.elbow_knee_escape
+
+side:
+BOTTOM
+
+canonical_name:
+Elbow-Knee Escape
+
+short_name:
+Elbow-Knee Escape
+
+legacy_name:
+Elbow Escape
+
+aliases:
+Elbow Escape
+Knee-Elbow Escape
+Shrimp Escape
+Mount Shrimp Escape
+
+category:
+ESCAPE
+
+escape_capable:
+true
+
+exit_map:
+SUCCESS        → HALF_GUARD
+STRONG_SUCCESS → OPEN_GUARD
+```
+
+The 18-result matrix should reference only stable IDs.
+
+Never use display strings as lookup keys.
+
+Bad:
+
+```text
+lookup["Elbow-Knee Escape"]["Wide Mount Base"]
+```
+
+Correct:
+
+```text
+lookup[
+    mount.bottom.elbow_knee_escape
+][
+    mount.top_response.wide_mount_base
+]
+```
+
+This allows names to evolve later without changing engine behavior.
+
+---
+
+# 22. Alias Rules
+
+Aliases exist for:
+
+```text
+CLI convenience
+search
+glossary
+future educational UI
+migration from v9 terminology
+```
+
+Aliases must never determine mechanics.
+
+At startup/test time, validate that no alias resolves to two different Mount v0 entities.
+
+Canonical names must not contain `+` or `&`; use the word `and` instead.
+
+Input normalization should:
+
+```text
+1. Unicode-normalize the input.
+2. Lowercase it.
+3. Convert `+` and `&` tokens to the word `and` for backward/input convenience.
+4. Treat hyphens and underscores as spaces.
+5. Collapse repeated whitespace.
+6. Trim leading/trailing whitespace.
+```
+
+Thus these can resolve identically:
+
+```text
+trap-and-roll
+Trap And Roll
+trap_and_roll
+TRAP-AND-ROLL
+```
+
+But the engine should always convert the input immediately into the stable ID.
+
+---
+
+# 23. Special Alias Rule for Upa
+
+`UPA` is potentially ambiguous in BJJ conversation because people may use it for bridging generally or for the complete bridge-and-roll escape.
+
+Mount v0 resolves that ambiguity deliberately.
+
+```text
+upa
+upa escape
+bridge and roll
+bridge-and-roll
+```
+
+resolve to:
+
+```text
+mount.bottom.trap_and_roll_escape
+```
+
+They do **not** resolve to:
+
+```text
+mount.bottom.bridge
+```
+
+The standalone Bridge action remains:
+
+```text
+bridge
+hip bridge
+bridging
+```
+
+This prevents one word from selecting two mechanically different actions.
+
+---
+
+# 24. CLI Presentation
+
+Interactive hot-seat menus should display canonical names.
+
+Example:
+
+```text
+BOTTOM INITIATES
+
+1. Bridge
+2. Elbow-Knee Escape
+3. Trap-and-Roll Escape
+```
+
+Then:
+
+```text
+TOP RESPONSE
+
+1. Hand Post and Base
+2. Wide Mount Base
+3. Hip Follow and Knee Re-Pummel
+```
+
+For compact output, short names may be used after the first full display.
+
+Example:
+
+```text
+Bottom: Elbow-Knee Escape
+Top: Hip Follow
+```
+
+Internally this must still resolve to:
+
+```text
+mount.bottom.elbow_knee_escape
+mount.top_response.hip_follow_repummel
+```
+
+---
+
+# 25. Decision Log Format
+
+Every decision log should show both the human-readable term and the stable machine identity.
+
+Example:
+
+```text
+DECISION
+
+Clock:
+4:35
+
+Axis Before:
++1.50
+
+Visible Band Before:
+Stable
+
+Initiator:
+Bottom
+
+Initiated Action:
+Elbow-Knee Escape
+[mount.bottom.elbow_knee_escape]
+
+Response:
+Hip Follow and Knee Re-Pummel
+[mount.top_response.hip_follow_repummel]
+
+Raw Grade:
+Strong Failure (-2)
+
+Behavior Modifier:
+None
+
+Positional Modifier:
+None
+
+Final Grade:
+Strong Failure (-2)
+
+Axis Delta:
++2.00
+
+Proposed Axis:
++3.50
+
+Escape Capable:
+Yes
+
+Escape Threshold Reached:
+No
+
+Axis After:
++3.50
+
+Visible Band After:
+Locked
+
+Exit Destination:
+None
+```
+
+This makes logs readable to both a BJJ practitioner and the programmer debugging the engine.
+
+---
+
+# 26. Bridge Log Example
+
+```text
+Initiated Action:
+Bridge
+[mount.bottom.bridge]
+
+Response:
+Hip Follow and Knee Re-Pummel
+[mount.top_response.hip_follow_repummel]
+
+Final Grade:
+Success (+1)
+
+Bottom-Initiated Axis Delta:
+-1.00
+
+Axis Before:
++0.50
+
+Proposed Axis:
+-0.50
+
+Escape Capable:
+No
+
+Bridge Special Rule:
+Triggered
+
+Stored Axis:
++0.10
+
+Position:
+Mount
+
+Exit Destination:
+None
+```
+
+The log should explicitly say why a successful Bridge did not escape.
+
+Never leave the tester to infer this from the number.
+
+---
+
+# 27. Elbow-Knee Escape Exit Log
+
+Example Half Guard branch:
+
+```text
+Action:
+Elbow-Knee Escape
+
+Final Grade:
+Success
+
+Escape Threshold:
+Reached
+
+Exit:
+Half Guard
+
+Reason:
+Elbow-Knee Escape reached escape threshold with final grade Success.
+```
+
+Example Open Guard branch:
+
+```text
+Action:
+Elbow-Knee Escape
+
+Final Grade:
+Strong Success
+
+Escape Threshold:
+Reached
+
+Exit:
+Open Guard
+
+Reason:
+Elbow-Knee Escape reached escape threshold with final grade Strong Success.
+```
+
+Never write:
+
+```text
+Open Guard because axis overshot by 1.3
+```
+
+Overshoot does not choose the branch.
+
+---
+
+# 28. Trap-and-Roll Exit Log
+
+```text
+Action:
+Trap-and-Roll Escape
+
+Final Grade:
+Strong Success
+
+Escape Threshold:
+Reached
+
+Exit:
+Reversal
+
+Reason:
+Trap-and-Roll Escape reached escape threshold with a successful final grade.
+```
+
+Do not automatically report:
+
+```text
+Closed Guard
+```
+
+unless a later positional model explicitly establishes that destination.
+
+---
+
+# 29. Exhaustive Checker Naming
+
+`--enumerate` should use canonical names.
+
+Example:
+
+```text
+TOP INITIATED
+
+High Mount Climb
+vs Forearm Frame
+→ Success
+
+High Mount Climb
+vs Turn-In Recovery
+→ Contested
+
+High Mount Climb
+vs Tight-Elbow Arm Defense
+→ Failure
+```
+
+The stable IDs should optionally appear in verbose/debug mode.
+
+The checker should understand aliases only as user input.
+
+Its stored and reported matrix identity should use stable IDs plus canonical names.
+
+---
+
+# 30. Checker Semantic Tests
+
+In addition to the existing v9 balance checks, implementation should assert the naming invariants in code.
+
+```text
+12 canonical Mount v0 entities exist.
+
+6 are initiated actions.
+6 are responses.
+
+3 actions belong to Top.
+3 actions belong to Bottom.
+
+3 responses belong to Top.
+3 responses belong to Bottom.
+
+Exactly 18 raw lookup entries exist.
+
+Every lookup entry references valid stable IDs.
+
+No action/response pair is duplicated.
+
+No required pair is missing.
+
+Every stable ID is unique.
+
+Every canonical name is unique within its relevant selection menu.
+
+Every alias resolves unambiguously.
+
+"upa" resolves only to Trap-and-Roll Escape.
+
+"S-Mount" does not resolve to High Mount Climb.
+
+"Elbow-Knee Connection" does not resolve to Tight-Elbow Arm Defense.
+
+Bridge is not escape-capable.
+
+Elbow-Knee Escape is escape-capable.
+
+Trap-and-Roll Escape is escape-capable.
+
+Americana Arm Isolation has no submission finish in v0.
+
+Bare "High Mount" does not resolve to High Mount Climb.
+"High Mount" is reserved for a future position ID.
+
+No canonical name contains `+` or `&`.
+
+"Hip Frame" does not resolve to Forearm Frame.
+"Body Frame" does not resolve to Forearm Frame.
+
+Elbow-Knee Escape can reach Half Guard in at least one legal state.
+Elbow-Knee Escape can reach Open Guard in at least one legal state.
+```
+
+## Perfect-Response Diagnostic
+
+Mount v0 deliberately keeps the v9 full-information established-position flow:
+
+```text
+Initiator commits action
+→ responder sees the action
+→ responder chooses response
+→ deterministic resolution
+```
+
+The corrected table still has at least one `Failure` or `Strong Failure` counter to every initiated action. Therefore a responder who always chooses the best available counter can prevent every initiation from succeeding. This is a **known Mount v0 scaffolding limitation**, not something to hide.
+
+Do **not** add `--blind` to the core Mount v0 flow. Blind commitment would test the simultaneous-choice model reserved for neutral/scramble states rather than the established-position initiator/responder system.
+
+`--enumerate` must print a best-counter analysis for every initiated action:
+
+```text
+Action
+Best responder choice
+Raw grade against best response
+Final grade by visible band
+Can action succeed against unrestricted perfect response?
+```
+
+It must also print an aggregate diagnostic:
+
+```text
+PERFECT-RESPONSE LOCK: PRESENT
+
+Meaning:
+Every initiated action has at least one response that holds it to Failure or worse.
+
+Classification:
+KNOWN V0 SCAFFOLDING LIMITATION
+
+Expected future resolution:
+v0.2 setup/Ready/initiative legality can restrict which responses are available or tactically valid.
+```
+
+Do not distort otherwise believable BJJ matchup grades merely to force successful actions through a fully informed, unrestricted defender in v0.
+
+---
+
+# 31. Hysteresis and Naming
+
+Visible bands continue to use:
+
+```text
+Loose
+Stable
+Strong
+Locked
+```
+
+Recommended full player-facing forms:
+
+```text
+Loose Mount
+Stable Mount
+Strong Mount
+Locked Mount
+```
+
+The machine enum may remain:
+
+```text
+LOOSE
+STABLE
+STRONG
+LOCKED
+```
+
+Do not replace these with technique names.
+
+They describe the **quality of Mount control**.
+
+Example:
+
+```text
+Position:
+Mount
+
+Control:
+Strong Mount
+
+Top action:
+Americana Arm Isolation
+
+Bottom response:
+Tight-Elbow Arm Defense
+```
+
+---
+
+# 32. Multi-Band Hysteresis Implementation Clarification
+
+A single action may cross multiple band thresholds.
+
+Therefore visible-band updates must continue applying threshold transitions until no additional transition is legal.
+
+Conceptually:
+
+```text
+repeat:
+    evaluate transition from current visible band
+    if transition occurs:
+        set new visible band
+        continue
+    else:
+        stop
+```
+
+Example:
+
+```text
+Visible Band:
+Stable
+
+Axis:
++1.50
+
+Action moves axis to:
++3.50
+```
+
+The implementation must permit:
+
+```text
+Stable
+→ Strong
+→ Locked
+```
+
+in the same resolution.
+
+Likewise a sufficiently large loss of control may produce:
+
+```text
+Locked
+→ Strong
+→ Stable
+```
+
+in the same resolution.
+
+Each crossed boundary should be visible in debug logging.
+
+---
+
+# 33. Drift Clamp Clarification
+
+Every drift tick uses the Mount v0 legal stored range:
+
+```text
++0.10 through +4.00
+```
+
+Therefore after applying one drift tick:
+
+```text
+axis = clamp(axis + drift, +0.10, +4.00)
+```
+
+Drift can neither break Mount nor exceed Locked Mount.
+
+---
+
+# 34. Partial Final Decision Interval
+
+If the remaining clock is shorter than `--interval`, simulate only the remaining time.
+
+Example:
+
+```text
+Clock:
+0:04
+
+Interval:
+7 seconds
+```
+
+Actual drift summary:
+
+```text
+Clock:
+0:04 → 0:00
+
+Duration:
+4 simulated seconds
+```
+
+Never print:
+
+```text
+7-second interval
+```
+
+when only four simulated seconds occurred.
+
+The summary must report actual start/end clock values.
+
+---
+
+# 35. Mount Duration and Elapsed Simulated Time
+
+Keep both summary fields.
+
+In Mount v0 they normally contain the same duration because the prototype begins in Mount and terminates when Mount breaks or the clock expires.
+
+Keep both because later simulation versions can separate:
+
+```text
+Elapsed simulated match time
+```
+
+from:
+
+```text
+time spent specifically in Mount
+```
+
+No need to change the reporting schema later.
+
+---
+
+# 36. BJJ Vocabulary Boundary
+
+Mount v0 distinguishes three different kinds of names.
+
+| Type | Examples |
+|---|---|
+| Recognized technique/position terminology | High Mount, Americana, Elbow-Knee Escape, Trap-and-Roll |
+| Recognized mechanics/concepts | Bridge, Crossface, Frame, Post, Base |
+| Precise descriptive engine reactions | Hip Follow and Knee Re-Pummel, Turn-In Recovery, Tight-Elbow Arm Defense |
+
+All three are acceptable.
+
+What is not acceptable is inventing a named-looking technique where BJJ does not have one standardized name.
+
+The game should teach useful grappling vocabulary without pretending the sport is more terminologically standardized than it actually is.
+
+---
+
+# 37. Future-Proofing Rules
+
+The following distinctions are reserved now so later expansions do not require renaming Mount v0:
+
+```text
+High Mount
+≠ S-Mount
+
+Bridge
+≠ Trap-and-Roll Escape
+
+Arm Isolation
+≠ Americana Finish
+
+Wide Mount Base
+≠ Grapevine Mount
+
+Tight-Elbow Arm Defense
+≠ full Elbow-Knee Connection system
+
+Crossface Pressure
+≠ Arm-Triangle attack
+
+Reversal
+≠ automatically Closed Guard
+```
+
+These distinctions should be tested wherever practical.
+
+---
+
+# 38. Final Canonical Matrix
+
+The complete Mount v0 player vocabulary is now:
+
+```text
+TOP ACTIONS
+
+High Mount Climb
+Crossface Pressure
+Americana Arm Isolation
+
+BOTTOM ACTIONS
+
+Bridge
+Elbow-Knee Escape
+Trap-and-Roll Escape
+
+TOP RESPONSES
+
+Hand Post and Base
+Wide Mount Base
+Hip Follow and Knee Re-Pummel
+
+BOTTOM RESPONSES
+
+Forearm Frame
+Turn-In Recovery
+Tight-Elbow Arm Defense
+```
+
+The raw 18 grades are:
+
+```text
+TOP INITIATES
+
+High Mount Climb
+  vs Forearm Frame
+  → Success
+
+High Mount Climb
+  vs Turn-In Recovery
+  → Contested
+
+High Mount Climb
+  vs Tight-Elbow Arm Defense
+  → Failure
+
+Crossface Pressure
+  vs Forearm Frame
+  → Failure
+
+Crossface Pressure
+  vs Turn-In Recovery
+  → Success
+
+Crossface Pressure
+  vs Tight-Elbow Arm Defense
+  → Strong Success
+
+Americana Arm Isolation
+  vs Forearm Frame
+  → Strong Success
+
+Americana Arm Isolation
+  vs Turn-In Recovery
+  → Contested
+
+Americana Arm Isolation
+  vs Tight-Elbow Arm Defense
+  → Strong Failure
+```
+
+```text
+BOTTOM INITIATES
+
+Bridge
+  vs Hand Post and Base
+  → Strong Failure
+
+Bridge
+  vs Wide Mount Base
+  → Failure
+
+Bridge
+  vs Hip Follow and Knee Re-Pummel
+  → Success
+
+Elbow-Knee Escape
+  vs Hand Post and Base
+  → Strong Success
+
+Elbow-Knee Escape
+  vs Wide Mount Base
+  → Success
+
+Elbow-Knee Escape
+  vs Hip Follow and Knee Re-Pummel
+  → Strong Failure
+
+Trap-and-Roll Escape
+  vs Hand Post and Base
+  → Strong Failure
+
+Trap-and-Roll Escape
+  vs Wide Mount Base
+  → Failure
+
+Trap-and-Roll Escape
+  vs Hip Follow and Knee Re-Pummel
+  → Strong Success
+```
+
+---
+
+# 39. Implementation Freeze
+
+For the first running Mount v0 prototype:
+
+```text
+DO use these canonical names.
+
+DO use stable IDs for every lookup.
+
+DO retain old v9 names only as legacy metadata.
+
+DO preserve all existing v9 mechanics.
+
+DO log canonical name + stable ID.
+
+DO run --enumerate after implementation.
+
+DO inspect all four visible bands.
+
+DO assert both Elbow-Knee Exit Map branches are reachable.
+
+DO print best-counter analysis for every initiated action.
+
+DO report PERFECT-RESPONSE LOCK: PRESENT as a known v0 limitation.
+
+DO NOT add blind commitment to the core Mount v0 flow.
+
+DO reserve bare "High Mount" for the future position.
+
+DO keep `+` and `&` out of canonical names.
+
+DO allow prototype evidence to reveal further bad matchup grades.
+```
+
+The naming itself should **not** be revisited merely because another phrase sounds nicer.
+Rename something only if implementation or BJJ review demonstrates that the term is actually misleading.
+
+The next task remains:
+
+```text
+IMPLEMENT MOUNT v0.
+```
+
+Not:
+
+```text
+REVIEW MOUNT v0 AGAIN.
+```
