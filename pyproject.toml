@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bjj-game"
+version = "0.1.0"
+description = "Object-oriented engine for the BJJ tactical roguelike"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+bjj-game = "bjj_game.interfaces.cli:main"
+mount-v0 = "bjj_game.interfaces.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
