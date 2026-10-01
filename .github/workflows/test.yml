@@ -1,0 +1,20 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Run unit and regression tests
+        run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Run semantic checker
+        run: PYTHONPATH=src python -m bjj_game --check
+      - name: Verify legacy entry point
+        run: PYTHONPATH=src python -m mount_v0 --check
