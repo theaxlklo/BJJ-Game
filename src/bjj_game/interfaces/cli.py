@@ -61,8 +61,7 @@ def axis_value(value: str) -> float:
 def _choose_entity(prompt: str, side: Side, kind: EntityKind):
     entities = actions_for(side) if kind is EntityKind.ACTION else responses_for(side)
     while True:
-        print(f"
-{prompt}")
+        print(f"\n{prompt}")
         for i, entity in enumerate(entities, 1):
             print(f"  {i}. {entity.canonical_name}")
         value = _read_input("> ").strip()
@@ -83,8 +82,7 @@ def _choose_behavior(side: Side, current=None):
         label = f"{side.value.title()} behavior"
         if current is not None:
             label += f" [Enter keeps {current.value}]"
-        print(f"
-{label}")
+        print(f"\n{label}")
         for i, behavior in enumerate(choices, 1):
             print(f"  {i}. {behavior.value} — {behavior.display}")
         value = _read_input("> ").strip()
@@ -114,8 +112,7 @@ def _run_interactive(args: argparse.Namespace) -> int:
 
         while not run.ended:
             drift = run.drift(top_behavior, bottom_behavior)
-            print("
-" + format_drift(drift, top_behavior.value, bottom_behavior.value))
+            print("\n" + format_drift(drift, top_behavior.value, bottom_behavior.value))
             if run.ended:
                 break
 
@@ -129,8 +126,7 @@ def _run_interactive(args: argparse.Namespace) -> int:
                 top_behavior=top_behavior,
                 bottom_behavior=bottom_behavior,
             )
-            print("
-" + format_resolution(result, run.clock_seconds, top_behavior.value, bottom_behavior.value))
+            print("\n" + format_resolution(result, run.clock_seconds, top_behavior.value, bottom_behavior.value))
             if run.ended:
                 break
 
@@ -138,8 +134,7 @@ def _run_interactive(args: argparse.Namespace) -> int:
             bottom_behavior = _choose_behavior(Side.BOTTOM, current=bottom_behavior)
     except (EOFError, KeyboardInterrupt):
         run.exit_reason = "CANCELLED"
-        print("
-Run cancelled.")
+        print("\nRun cancelled.")
         _print_summary(run, status="CANCELLED")
         return 130
 
@@ -149,8 +144,7 @@ Run cancelled.")
 
 def _print_summary(run: MountRun, *, status: str | None = None) -> None:
     h = run.history
-    print("
-RUN SUMMARY")
+    print("\nRUN SUMMARY")
     print("=" * 11)
     if status is not None:
         print(f"Run status: {status}")
@@ -200,8 +194,7 @@ def _read_input(prompt: str = "") -> str:
         print(prompt, end="", flush=True)
     value = input()
     if isinstance(sys.stdout, _TeeStdout):
-        sys.stdout.write_log_only(value + "
-")
+        sys.stdout.write_log_only(value + "\n")
     return value
 
 
