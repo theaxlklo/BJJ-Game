@@ -1,0 +1,143 @@
+LOG FILE: docs/playtest/12-top-blunder-gifts-open-guard.txt
+MOUNT v0 — HOT-SEAT PROTOTYPE
+Clock: 0:15
+Starting axis: +1.50
+Initial visible band: Stable
+Decision interval: 5 simulated seconds
+First initiator: Top
+
+Top behavior
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 1
+
+Bottom behavior
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 1
+
+DRIFT SUMMARY
+Clock: 0:15 → 0:10
+Actual Duration: 5 simulated seconds
+Top: PRESSURE
+Bottom: ESCAPE
+Start Axis: +1.50
+Total Drift: +0.50
+End Axis: +2.00
+Visible Band: Stable
+
+TOP INITIATES
+  1. High Mount Climb
+  2. Crossface Pressure
+  3. Americana Arm Isolation
+> 3
+
+BOTTOM RESPONSE
+  1. Forearm Frame
+  2. Turn-In Recovery
+  3. Tight-Elbow Arm Defense
+> 3
+
+DECISION
+Clock: 0:10
+Axis before: +2.00
+Visible band before: Stable
+Top behavior: PRESSURE
+Bottom behavior: ESCAPE
+Initiator: Top
+Initiated action: Americana Arm Isolation [mount.top.americana_arm_isolation]
+Response: Tight-Elbow Arm Defense [mount.bottom_response.tight_elbow_arm_defense]
+Raw grade: Strong Failure (-2)
+Behavior modifier: None
+Grade after behavior: Strong Failure
+Positional modifier: None
+Final grade: Strong Failure (-2)
+Grade numeric value: -2
+Axis delta: -2.00
+Proposed axis: +0.00
+Failure clamp used?: Yes
+Bridge clamp used?: No
+Escape threshold reached?: No
+Exit-capable action?: No
+Axis after: +0.10
+Visible band after: Loose
+Exit destination: None
+Band Change: Stable → Loose
+
+Top behavior [Enter keeps PRESSURE]
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 
+
+Bottom behavior [Enter keeps ESCAPE]
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 
+
+DRIFT SUMMARY
+Clock: 0:10 → 0:05
+Actual Duration: 5 simulated seconds
+Top: PRESSURE
+Bottom: ESCAPE
+Start Axis: +0.10
+Total Drift: +0.50
+End Axis: +0.60
+Visible Band: Loose
+
+BOTTOM INITIATES
+  1. Bridge
+  2. Elbow-Knee Escape
+  3. Trap-and-Roll Escape
+> 2
+
+TOP RESPONSE
+  1. Hand Post and Base
+  2. Wide Mount Base
+  3. Hip Follow and Knee Re-Pummel
+> 1
+
+DECISION
+Clock: 0:05
+Axis before: +0.60
+Visible band before: Loose
+Top behavior: PRESSURE
+Bottom behavior: ESCAPE
+Initiator: Bottom
+Initiated action: Elbow-Knee Escape [mount.bottom.elbow_knee_escape]
+Response: Hand Post and Base [mount.top_response.post_and_base]
+Raw grade: Strong Success (+2)
+Behavior modifier: None
+Grade after behavior: Strong Success
+Positional modifier: None
+Final grade: Strong Success (+2)
+Grade numeric value: +2
+Axis delta: -2.00
+Proposed axis: -1.40
+Failure clamp used?: No
+Bridge clamp used?: No
+Escape threshold reached?: Yes
+Exit-capable action?: Yes
+Axis after: -1.40
+Visible band after: Loose
+Exit destination: Open Guard
+
+RUN SUMMARY
+===========
+Initial clock: 0:15
+Elapsed simulated time: 0:10
+Mount duration: 0:10
+Starting axis: +1.50
+Final axis: -1.40
+Final visible band: Mount broken (last visible: Loose)
+Top behavior history: ['PRESSURE', 'PRESSURE']
+Bottom behavior history: ['ESCAPE', 'ESCAPE']
+Top initiation count: 1
+Bottom initiation count: 1
+Initiated-action history: ['Americana Isolation', 'Elbow-Knee Escape']
+Response history: ['Tight Elbows', 'Post']
+Raw-grade history: ['Strong Failure', 'Strong Success']
+Modified-grade history: ['Strong Failure', 'Strong Success']
+Clamp count: 1
+Escape threshold reached?: Yes
+Exit reason: Elbow-Knee Escape reached the escape threshold with final grade Strong Success
+Exit destination: Open Guard
