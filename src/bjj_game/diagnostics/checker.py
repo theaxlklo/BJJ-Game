@@ -295,8 +295,7 @@ def _render_reachability_ranges(report: CheckReport) -> list[str]:
             continue
         destinations = sorted(set(action.exit_map.values()) | set(action.band_exit_overrides.values()), key=lambda d: d.value)
         for top_behavior in TopBehavior:
-            lines.append(f"
-{action.canonical_name} — Top {top_behavior.value}")
+            lines.append(f"\n{action.canonical_name} — Top {top_behavior.value}")
             for destination in destinations:
                 hits = report.escape_reachability.get((action.id, top_behavior, destination), [])
                 lines.append(f"  {destination.value}: {'REACHABLE' if hits else 'UNREACHABLE'}")
@@ -326,14 +325,12 @@ def render_enumeration() -> str:
         lines.append("")
         lines.append(f"{side.value.upper()} INITIATED — RAW 3x3 MATRIX")
         for action in actions_for(side):
-            lines.append(f"
-{action.canonical_name} [{action.id}]")
+            lines.append(f"\n{action.canonical_name} [{action.id}]")
             for response in responses_for(side.opponent):
                 grade = raw_grade(action.id, response.id)
                 lines.append(f"  vs {response.canonical_name:<32} -> {grade.display}")
 
-    lines.append("
-VISIBLE-BAND POSITIONAL MODIFIERS (behavior-neutral)")
+    lines.append("\nVISIBLE-BAND POSITIONAL MODIFIERS (behavior-neutral)")
     lines.append("-" * 52)
     for side in (Side.TOP, Side.BOTTOM):
         for action in actions_for(side):
@@ -344,8 +341,7 @@ VISIBLE-BAND POSITIONAL MODIFIERS (behavior-neutral)")
                 )
                 lines.append(f"{action.short_name} vs {response.short_name}: {finals}")
 
-    lines.append("
-BEST-COUNTER ANALYSIS")
+    lines.append("\nBEST-COUNTER ANALYSIS")
     lines.append("-" * 21)
     for side in (Side.TOP, Side.BOTTOM):
         for action in actions_for(side):
@@ -368,13 +364,11 @@ BEST-COUNTER ANALYSIS")
             )
 
     report = run_checks()
-    lines.append("
-ESCAPE BRANCH REACHABILITY — FULL TUNING WATCH")
+    lines.append("\nESCAPE BRANCH REACHABILITY — FULL TUNING WATCH")
     lines.append("-" * 51)
     lines.extend(_render_reachability_ranges(report))
 
-    lines.append("
-STRUCTURAL DIAGNOSTICS")
+    lines.append("\nSTRUCTURAL DIAGNOSTICS")
     lines.append("-" * 22)
     if report.perfect_response_lock:
         lines.append("PERFECT-RESPONSE LOCK: PRESENT")
@@ -385,8 +379,7 @@ STRUCTURAL DIAGNOSTICS")
     for name in report.never_best_responses:
         lines.append(f"INFO: NEVER-BEST (hedge response): {name}")
 
-    lines.append("
-CHECK RESULT")
+    lines.append("\nCHECK RESULT")
     lines.append("-" * 12)
     for message in report.info:
         if not message.startswith("PERFECT-RESPONSE") and not message.startswith("NEVER-BEST"):
@@ -396,5 +389,4 @@ CHECK RESULT")
     for error in report.errors:
         lines.append(f"ERROR: {error}")
     lines.append(f"STATUS: {'PASS' if report.ok else 'FAIL'}")
-    return "
-".join(lines)
+    return "\n".join(lines)
