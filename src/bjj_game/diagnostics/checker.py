@@ -14,7 +14,8 @@ from ..positions.mount.catalog import (
     responses_for,
 )
 from ..positions.mount.matchups import RAW_GRADES, raw_grade
-from ..engine.mount_engine import MOUNT_ENGINE\nfrom ..positions.mount.rules import MOUNT_RULES
+from ..engine.mount_engine import MOUNT_ENGINE
+from ..positions.mount.rules import MOUNT_RULES
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
 from ..positions.mount.names import RESOLVER, normalize_name
 
