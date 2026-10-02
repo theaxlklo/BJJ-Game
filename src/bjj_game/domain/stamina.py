@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import math
+from dataclasses import dataclass
 from enum import Enum
 
 
@@ -39,53 +40,71 @@ class StaminaRecovery:
     after: int
 
 
-@dataclass(slots=True)
 class StaminaPool:
-    """Player-owned stamina state.
+    """Player-owned stamina with controlled mutation and exhaustion hysteresis.
 
-    v0.1c changes this pool through action/behavior economics. v0.1e reads its
-    band in the match-layer ExhaustionPolicy; frozen Mount lookup data never does.
+    The current value is read-only to callers. All mutation goes through
+    set_current, spend_up_to, or recover_up_to so the Exhausted latch cannot
+    be bypassed accidentally.
     """
 
-    current: int = 100
-    maximum: int = 100
-    _exhausted_latched: bool = field(init=False, repr=False)
+    __slots__ = ("_current", "_maximum", "_exhausted_latched")
 
-    def __post_init__(self) -> None:
-        self._validate(self.current)
-        if self.maximum <= 0:
+    def __init__(self, current: int = 100, maximum: int = 100) -> None:
+        self._validate_value(current, label="stamina")
+        if not isinstance(maximum, int):
+            raise TypeError("maximum stamina must be an integer")
+        if maximum <= 0:
             raise ValueError("maximum stamina must be > 0")
-        if self.current > self.maximum:
+        if current > maximum:
             raise ValueError("current stamina cannot exceed maximum stamina")
-        self._exhausted_latched = self.ratio <= 0.25
+        self._maximum = maximum
+        self._current = current
+        self._exhausted_latched = current <= self.exhaustion_enter_threshold
 
-    def _validate(self, value: int) -> None:
+    @staticmethod
+    def _validate_value(value: int, *, label: str) -> None:
         if not isinstance(value, int):
-            raise TypeError("stamina must be an integer")
+            raise TypeError(f"{label} must be an integer")
         if value < 0:
-            raise ValueError("stamina cannot be negative")
+            raise ValueError(f"{label} cannot be negative")
+
+    @property
+    def current(self) -> int:
+        return self._current
+
+    @property
+    def maximum(self) -> int:
+        return self._maximum
+
+    @property
+    def exhaustion_enter_threshold(self) -> int:
+        return math.floor(self.maximum * 0.25)
+
+    @property
+    def exhaustion_recover_threshold(self) -> int:
+        return math.ceil(self.maximum * 0.35)
+
+    def _refresh_exhaustion_latch(self) -> None:
+        if self._exhausted_latched:
+            if self.current >= self.exhaustion_recover_threshold:
+                self._exhausted_latched = False
+        elif self.current <= self.exhaustion_enter_threshold:
+            self._exhausted_latched = True
 
     def set_current(self, value: int) -> None:
-        self._validate(value)
+        self._validate_value(value, label="stamina")
         if value > self.maximum:
             raise ValueError("current stamina cannot exceed maximum stamina")
-        self.current = value
+        self._current = value
         self._refresh_exhaustion_latch()
 
     def spend_up_to(self, requested: int) -> StaminaSpend:
-        """Charge as much of a non-negative cost as the pool can currently pay.
-
-        v0.1b records any shortfall but does not block or modify the action. This
-        keeps the commitment-cost slice playable before recovery and exhaustion
-        consequences are added in later v0.1 phases.
-        """
-        if not isinstance(requested, int):
-            raise TypeError("stamina cost must be an integer")
-        if requested < 0:
-            raise ValueError("stamina cost cannot be negative")
+        """Charge as much of a non-negative cost as the pool can currently pay."""
+        self._validate_value(requested, label="stamina cost")
         before = self.current
         charged = min(before, requested)
-        self.current = before - charged
+        self._current = before - charged
         self._refresh_exhaustion_latch()
         return StaminaSpend(
             before=before,
@@ -96,14 +115,11 @@ class StaminaPool:
         )
 
     def recover_up_to(self, requested: int) -> StaminaRecovery:
-        if not isinstance(requested, int):
-            raise TypeError("stamina recovery must be an integer")
-        if requested < 0:
-            raise ValueError("stamina recovery cannot be negative")
+        self._validate_value(requested, label="stamina recovery")
         before = self.current
         room = self.maximum - before
         recovered = min(room, requested)
-        self.current = before + recovered
+        self._current = before + recovered
         self._refresh_exhaustion_latch()
         return StaminaRecovery(
             before=before,
@@ -113,25 +129,15 @@ class StaminaPool:
             after=self.current,
         )
 
-    def _refresh_exhaustion_latch(self) -> None:
-        """25/35 hysteresis for the only mechanically meaningful stamina band."""
-        ratio = self.ratio
-        if self._exhausted_latched:
-            if ratio >= 0.35:
-                self._exhausted_latched = False
-        elif ratio <= 0.25:
-            self._exhausted_latched = True
-
     @property
     def ratio(self) -> float:
         return self.current / self.maximum
 
     @property
     def band(self) -> StaminaBand:
-        # Only EXHAUSTED has a mechanical consequence in v0.1e.
-        ratio = self.ratio
         if self._exhausted_latched:
             return StaminaBand.EXHAUSTED
+        ratio = self.ratio
         if ratio > 0.75:
             return StaminaBand.FRESH
         if ratio > 0.50:
@@ -140,4 +146,9 @@ class StaminaPool:
 
     @property
     def display(self) -> str:
+        if self.band is StaminaBand.EXHAUSTED:
+            return (
+                f"{self.current}/{self.maximum} "
+                f"(Exhausted — recovers at {self.exhaustion_recover_threshold})"
+            )
         return f"{self.current}/{self.maximum} ({self.band.value})"
