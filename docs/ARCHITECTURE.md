@@ -292,6 +292,23 @@ They do not modify:
 
 The escape-first policy uses exact escape probability as the first lexicographic criterion; when no escape is reachable, it requires both raw and realized attacker-axis expectations to be positive. Outcome distributions are observations from that fixed rule, not a new game rule or learned opponent.
 
+## v0.1 closure / v0.2 boundary
+
+Mount v0.1 stamina work is closed without adding responder-side or exhausted-behavior penalties.
+
+Evidence from rational-play and 25-stamina stress batches shows that:
+
+- the stamina implementation itself is stable;
+- normal v0 escape-first play rarely makes stamina binding from 100;
+- the current exhaustion penalty mostly affects initiators;
+- Top has little reason to spend from Strong/Locked because submissions do not exist yet.
+
+Those are treated as missing-system boundaries, not reasons to distort the v0.1 stamina constants.
+
+The next architecture slice is v0.2 and should introduce setup/Ready/triggered-initiative/information legality around the existing engine rather than reopening the frozen matchup matrix. STABILIZE should be considered there, where it can interact with setup/initiative state.
+
+v0.3 submissions are expected to provide the dominant-Top expenditure path that Mount v0 lacks.
+
 ## Refactor proof
 
 The architecture-hardening pass is behavior-preserving:
