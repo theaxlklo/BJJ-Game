@@ -10,7 +10,7 @@ from ..domain.action import Commitment
 from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, run_checks
 from ..engine.match import MountRun
-from ..engine.stamina import project_active_stamina_pacing
+from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_reset_window, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
 from ..domain.model import BottomBehavior, EntityKind, Side, TopBehavior
@@ -407,6 +407,19 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                     f"zero Top {format_clock(projection.top_zero_seconds)}, "
                     f"Bottom {format_clock(projection.bottom_zero_seconds)}."
                 )
+            cycle_parts = []
+            for commitment in Commitment:
+                cycle = conserve_cycle_net(commitment)
+                cycle_parts.append(
+                    f"{commitment.value} {cycle.attack_net:+d}"
+                )
+            reset_cycle = conserve_cycle_net(Commitment.MEDIUM).reset_net
+            print(
+                "INFO: CONSERVE CYCLE NET (10s): "
+                + ", ".join(cycle_parts)
+                + f"; RESET {reset_cycle:+d}. "
+                "Negative attack net means forced attacks cannot recover exhaustion while fully funded."
+            )
             print("INFO: EXHAUSTION HYSTERESIS: enter Exhausted at <=25; recover only at >=35.")
             for line in render_exhausted_reachability_summary():
                 print(f"INFO: {line}")
