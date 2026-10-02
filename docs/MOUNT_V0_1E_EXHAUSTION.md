@@ -476,6 +476,49 @@ MEDIUM stamina cost shown separately
 
 Escape crossings keep their crossing axis in the realized-axis calculation; escape probability remains a separate column, so no terminal-value conversion is invented.
 
+### Adaptive recovery policy
+
+The first nine fixed-behavior batches showed that stamina rarely became the limiting factor: Bottom generally attacked only on real escape opportunities, while Top made very few positional attacks. As a result, full-match CONSERVE vs PROTECT was measuring positional modifiers and drift more than recovery value.
+
+To test the actual intended use of CONSERVE, batch mode now supports:
+
+```text
+fixed   = keep baseline behavior for the full match
+recover = use CONSERVE only while latched Exhausted,
+          then return to baseline once stamina reaches >=35
+```
+
+Example:
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --batch 1000 \
+  --initiator-policy escape-first \
+  --seed 42 \
+  --top-behavior HOLD \
+  --bottom-behavior PROTECT \
+  --bottom-behavior-policy recover
+```
+
+That condition means:
+
+```text
+Bottom baseline: PROTECT
+Bottom Exhausted: CONSERVE
+Bottom recovers to 35: PROTECT again
+```
+
+The policy reads the same 25/35 hysteresis latch used by the game. If CONSERVE clears the latch during a normal-speed interval, the harness restores the baseline before the next action resolution.
+
+Batch output reports:
+
+- windows spent in each behavior
+- behavior-switch count by side
+
+Those counters are necessary because a final stamina value alone cannot tell us whether adaptive recovery ever activated.
+
+This remains an experiment-harness policy, not a new domain behavior or automatic in-game AI.
+
 ### Deterministic batch statistics
 
 For fixed-condition statistics:
