@@ -213,8 +213,10 @@ class EscapeFirstInitiatorPolicy:
             raise TypeError("Bottom behavior is not a BottomBehavior")
 
         stamina_band = match.competitor(side).stamina.band
-        exhaustion_modifier = (
-            match.exhaustion_policy.initiator_grade_modifier(stamina_band)
+        responder_stamina_band = match.competitor(side.opponent).stamina.band
+        exhaustion_modifier = match.exhaustion_policy.exchange_grade_modifier(
+            initiator_band=stamina_band,
+            responder_band=responder_stamina_band,
         )
 
         rows: list[tuple[str, float, float, float, float, int]] = []
