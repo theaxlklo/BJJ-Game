@@ -1,5 +1,6 @@
 import unittest
 
+from bjj_game.diagnostics.checker import render_reset_lock_probe
 from bjj_game.domain.action import Commitment
 from bjj_game.domain.model import BottomBehavior, Side, TopBehavior
 from bjj_game.domain.stamina import StaminaBand
@@ -8,6 +9,14 @@ from bjj_game.engine.stamina import conserve_cycle_net
 
 
 class ResetWindowTests(unittest.TestCase):
+    def test_always_reset_lock_probe_is_explicit(self):
+        self.assertEqual(
+            render_reset_lock_probe(),
+            "RESET LOCK PROBE: Top PRESSURE+RESET vs Bottom ESCAPE+RESET "
+            "-> TIMEOUT — Mount retained; axis +4.00; band Locked; "
+            "Top stamina 40; Bottom stamina 40",
+        )
+
     def test_conserve_cycle_net_exposes_forced_attack_deadlock(self):
         low = conserve_cycle_net(Commitment.LOW)
         medium = conserve_cycle_net(Commitment.MEDIUM)
