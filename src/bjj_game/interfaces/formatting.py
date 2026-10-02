@@ -86,7 +86,11 @@ def format_attempt_result(
         f"Charged: {spend.charged}",
         f"Shortfall after downgrade: {spend.shortfall}",
         f"Stamina after: {spend.after}",
-        "Commitment resolution effect: None (v0.1b)",
+        f"Stamina band before action: {result.stamina_band_before_action.value}",
+        f"Exhaustion modifier: {result.exhaustion_modifier:+d} grade",
+        f"Grade before exhaustion: {result.base_resolution.final_grade.display}",
+        f"Final grade after exhaustion: {result.resolution.final_grade.display}",
+        "Commitment resolution effect: None (cost/funding only)",
         "",
         format_resolution(result.resolution, clock_seconds, top_behavior, bottom_behavior),
     ]
@@ -110,8 +114,9 @@ def _format_behavior_stamina(label: str, result: BehaviorStaminaResult) -> str:
         parts.append(f"recovered={result.recovered}")
     if result.recovery_overflow:
         parts.append(f"overflow={result.recovery_overflow}")
-    if result.remainder_after:
-        parts.append(f"carry={result.remainder_after}")
+    parts.append(
+        f"carry={result.remainder_before:+d}→{result.remainder_after:+d}/{result.quantum_seconds}"
+    )
     return " | ".join(parts)
 
 
