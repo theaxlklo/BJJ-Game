@@ -29,6 +29,11 @@ from ..positions.mount.rules import (
 )
 from .mount_engine import MountResolutionEngine
 from .setup import DEFAULT_MOUNT_SETUP_POLICY, MountSetupPolicy
+from .stalling import (
+    STALLING_THRESHOLD_SECONDS,
+    StallingConsequence,
+    StallingTracker,
+)
 from .stamina import (
     DEFAULT_BEHAVIOR_STAMINA_POLICY,
     DEFAULT_EXHAUSTION_POLICY,
@@ -67,6 +72,7 @@ class MountMatch:
     )
     enable_v02_setup: bool = False
     enable_v03_submissions: bool = False
+    enable_v03b_stalling: bool = False
     setup_policy: MountSetupPolicy = field(
         default_factory=lambda: DEFAULT_MOUNT_SETUP_POLICY, repr=False
     )
@@ -84,6 +90,9 @@ class MountMatch:
     setup_state: SetupState = field(init=False)
     submission_state: SubmissionState = field(init=False)
     submission_tapped: bool = field(init=False, default=False)
+    stalling_tracker: StallingTracker = field(init=False)
+    free_initiative_pending: bool = field(init=False, default=False)
+    free_initiative_beneficiary: Side | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
         if self.initial_clock <= 0:
@@ -92,6 +101,8 @@ class MountMatch:
             raise ValueError("interval must be > 0")
         if self.enable_v03_submissions and not self.enable_v02_setup:
             raise ValueError("v0.3a submissions require v0.2 setup/Ready")
+        if self.enable_v03b_stalling and not self.enable_v03_submissions:
+            raise ValueError("v0.3b stalling requires v0.3a submissions")
         self.clock_seconds = self.initial_clock
         self.position = MountPosition.from_axis(self.starting_axis)
         self.initial_band = self.position.control.band
@@ -107,6 +118,9 @@ class MountMatch:
         self.bottom_behavior_stamina_meter = BehaviorStaminaMeter()
         self.setup_state = SetupState.for_targets(self.setup_policy.target_action_ids)
         self.submission_state = SubmissionState()
+        self.stalling_tracker = StallingTracker(
+            threshold_seconds=STALLING_THRESHOLD_SECONDS
+        )
 
     @property
     def axis(self) -> float:
@@ -153,6 +167,215 @@ class MountMatch:
         ):
             legal.append(TOP_AMERICANA_SUBMISSION_FINISH)
         return tuple(legal)
+
+    def advancement_clock(self, side: Side) -> int:
+        return self.stalling_tracker.clock(side)
+
+    def stalling_warned(self, side: Side) -> bool:
+        return self.stalling_tracker.warned[side]
+
+    def consume_free_initiative_window(self) -> Side | None:
+        if not self.free_initiative_pending:
+            return None
+        beneficiary = self.free_initiative_beneficiary
+        if beneficiary is None:
+            raise RuntimeError("free initiative window is pending without beneficiary")
+        if self.initiator is not beneficiary:
+            raise RuntimeError(
+                "free initiative beneficiary does not own current initiative"
+            )
+        self.free_initiative_pending = False
+        self.free_initiative_beneficiary = None
+        return beneficiary
+
+    def _progress_preview(self, *, action_id: str, response_id: str):
+        top_behavior, bottom_behavior = self._behaviors(None, None)
+        initiator = self.initiator
+        initiator_band = self.competitor(initiator).stamina.band
+        responder_band = self.competitor(initiator.opponent).stamina.band
+        exhaustion_modifier = self.exhaustion_policy.exchange_grade_modifier(
+            initiator_band=initiator_band,
+            responder_band=responder_band,
+        )
+
+        if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
+            return self._resolve_submission_stage(
+                response_id=response_id,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=exhaustion_modifier,
+            )
+
+        target_was_ready = (
+            self.enable_v02_setup
+            and action_id in self.setup_policy.target_action_ids
+            and self.setup_state.is_ready(action_id)
+        )
+        ready_override = (
+            self.setup_policy.ready_final_grade_override(
+                action_id,
+                response_id,
+            )
+            if target_was_ready
+            else None
+        )
+        return self._resolve(
+            action_id=action_id,
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            external_grade_modifier=exhaustion_modifier,
+            post_positional_grade_override=ready_override,
+        )
+
+    def _result_has_progress_channel(
+        self,
+        *,
+        action_id: str,
+        result,
+    ) -> bool:
+        initiator = self.initiator
+
+        if result.exit_destination is not None:
+            return True
+
+        if (
+            action_id == TOP_AMERICANA_SUBMISSION_FINISH
+            and self.enable_v03_submissions
+            and self.submission_state.active
+            and result.final_grade.successful
+        ):
+            return True
+
+        if (
+            action_id == TOP_AMERICANA_ARM_ISOLATION
+            and self.enable_v03_submissions
+            and initiator is Side.TOP
+            and self.setup_state.is_ready(action_id)
+            and result.band_before in {Band.STRONG, Band.LOCKED}
+            and result.final_grade.successful
+        ):
+            return True
+
+        if self.enable_v02_setup:
+            target = self.setup_policy.target_for_builder(action_id)
+            if (
+                target is not None
+                and not self.setup_state.is_ready(target)
+                and self.setup_policy.setup_advances_from(result)
+            ):
+                return True
+
+        realized = result.axis_after - result.axis_before
+        if initiator is Side.TOP and realized > 1e-12:
+            return True
+        if initiator is Side.BOTTOM and realized < -1e-12:
+            return True
+        return False
+
+    def action_is_progress_capable(self, action_id: str) -> bool:
+        self._validate_action_legality(action_id)
+        for response_id in self.legal_response_ids(action_id):
+            result = self._progress_preview(
+                action_id=action_id,
+                response_id=response_id,
+            )
+            if self._result_has_progress_channel(
+                action_id=action_id,
+                result=result,
+            ):
+                return True
+        return False
+
+    def progress_capable_action_ids(self) -> tuple[str, ...]:
+        return tuple(
+            action_id
+            for action_id in self.legal_action_ids()
+            if self.action_is_progress_capable(action_id)
+        )
+
+    def _record_progress_opportunity(
+        self,
+        *,
+        side: Side,
+        action_ids: tuple[str, ...],
+    ) -> None:
+        self.history.stalling_progress_opportunity_history.append(
+            f"{side.value}@{self.elapsed_simulated_time}s:"
+            + (",".join(action_ids) if action_ids else "none")
+        )
+
+    def _record_engagement(
+        self,
+        *,
+        initiator: Side,
+        action_id: str,
+    ) -> None:
+        self.stalling_tracker.engage(initiator)
+        self.stalling_tracker.engage(initiator.opponent)
+        self.history.stalling_progress_engagement_history.append(
+            f"{initiator.value}@{self.elapsed_simulated_time}s:{action_id}"
+        )
+        self.history.stalling_defensive_engagement_history.append(
+            f"{initiator.opponent.value}@{self.elapsed_simulated_time}s:"
+            f"defend:{action_id}"
+        )
+        self.history.stalling_clock_history.append(
+            f"engage@{self.elapsed_simulated_time}s:"
+            f"top={self.advancement_clock(Side.TOP)},"
+            f"bottom={self.advancement_clock(Side.BOTTOM)}"
+        )
+
+    def _apply_stalling_penalty(
+        self,
+        *,
+        offender: Side,
+    ) -> tuple[float, float, bool]:
+        axis_before = self.axis
+        band_before = self.band
+        target_axis: float | None = None
+
+        if offender is Side.TOP:
+            target_axis = {
+                Band.LOCKED: 2.80,
+                Band.STRONG: 1.80,
+                Band.STABLE: 0.80,
+            }.get(band_before)
+        else:
+            target_axis = {
+                Band.LOOSE: 1.20,
+                Band.STABLE: 2.20,
+                Band.STRONG: 3.20,
+            }.get(band_before)
+
+        if target_axis is None:
+            beneficiary = offender.opponent
+            self.free_initiative_pending = True
+            self.free_initiative_beneficiary = beneficiary
+            self.history.stalling_boundary_history.append(
+                f"{offender.value}@{self.elapsed_simulated_time}s:"
+                f"{band_before.value}:{axis_before:+.2f}:FREE_INITIATIVE"
+            )
+            self.history.stalling_free_initiative_history.append(
+                f"{beneficiary.value}@{self.elapsed_simulated_time}s"
+            )
+            return axis_before, axis_before, True
+
+        band_after, changes = self.engine.rules.update_band(
+            target_axis,
+            band_before,
+        )
+        if len(changes) != 1:
+            raise RuntimeError(
+                "stalling penalty must move exactly one visible Mount band"
+            )
+        self.position.apply_control(target_axis, band_after)
+        self.history.stalling_penalty_history.append(
+            f"{offender.value}@{self.elapsed_simulated_time}s:"
+            f"{band_before.value}->{band_after.value}:"
+            f"{axis_before:+.2f}->{self.axis:+.2f}"
+        )
+        return axis_before, self.axis, False
 
     def _validate_action_legality(self, action_id: str) -> None:
         if action_id not in self.legal_action_ids():
@@ -318,6 +541,14 @@ class MountMatch:
         top_behavior, bottom_behavior = self._behaviors(None, None)
         drift = self.drift()
         duration = drift.start_clock - drift.end_clock
+
+        if self.enable_v03b_stalling:
+            self.stalling_tracker.advance(duration)
+            self.history.stalling_clock_history.append(
+                f"advance@{self.elapsed_simulated_time}s:"
+                f"top={self.advancement_clock(Side.TOP)},"
+                f"bottom={self.advancement_clock(Side.BOTTOM)}"
+            )
 
         top_stamina = self.behavior_stamina_policy.apply(
             pool=self.top.stamina,
@@ -539,30 +770,73 @@ class MountMatch:
         return result
 
     def reset_window(self) -> ResetWindowResult:
-        """Yield the current decision window without initiating a technique.
-
-        This is modern v0.1 scaffolding for the event-driven design: no action
-        stamina is charged, no response is requested, and no immediate axis
-        change occurs. Initiative passes to the opponent; another normal-speed
-        interval must occur before the next decision window.
-        """
+        """Yield the current decision window, with optional v0.3b stalling audit."""
         if self.clock_seconds <= 0:
             raise RuntimeError("Cannot reset a decision window after timeout")
         if self.position.broken:
             raise RuntimeError("Cannot reset a decision window after Mount is broken")
 
         initiator = self.initiator
+        progress_ids: tuple[str, ...] = ()
+        progress_route_available = False
+        advancement_clock = 0
+        stalling_offense = False
+        stalling_consequence: str | None = None
+        penalty_axis_before: float | None = None
+        penalty_axis_after: float | None = None
+        free_initiative_window = False
+
+        if self.enable_v03b_stalling:
+            progress_ids = self.progress_capable_action_ids()
+            progress_route_available = bool(progress_ids)
+            advancement_clock = self.advancement_clock(initiator)
+            self._record_progress_opportunity(
+                side=initiator,
+                action_ids=progress_ids,
+            )
+            if progress_route_available:
+                self.history.stalling_reset_with_route_history.append(
+                    f"{initiator.value}@{self.elapsed_simulated_time}s:"
+                    f"clock={advancement_clock}"
+                )
+            evaluation = self.stalling_tracker.evaluate_reset(
+                side=initiator,
+                progress_route_available=progress_route_available,
+            )
+            stalling_offense = evaluation.offense
+            stalling_consequence = evaluation.consequence.value
+            if evaluation.consequence is StallingConsequence.WARNING:
+                self.history.stalling_warning_history.append(
+                    f"{initiator.value}@{self.elapsed_simulated_time}s:"
+                    f"clock={evaluation.clock_seconds}"
+                )
+            elif evaluation.consequence is StallingConsequence.PENALTY:
+                (
+                    penalty_axis_before,
+                    penalty_axis_after,
+                    free_initiative_window,
+                ) = self._apply_stalling_penalty(offender=initiator)
+
+        next_initiator = initiator.opponent
         result = ResetWindowResult(
             initiator=initiator,
-            next_initiator=initiator.opponent,
+            next_initiator=next_initiator,
             clock_seconds=self.clock_seconds,
             axis=self.axis,
             band=self.band,
             stamina=self.competitor(initiator).stamina.current,
+            progress_route_available=progress_route_available,
+            advancement_clock_seconds=advancement_clock,
+            stalling_offense=stalling_offense,
+            stalling_consequence=stalling_consequence,
+            penalty_axis_before=penalty_axis_before,
+            penalty_axis_after=penalty_axis_after,
+            free_initiative_window=free_initiative_window,
         )
         self.history.reset_window_history.append(initiator.value)
-        self.initiator = initiator.opponent
+        self.initiator = next_initiator
         return result
+
 
     def attempt(
         self,
@@ -584,6 +858,15 @@ class MountMatch:
         initiator = self.initiator
         self._validate_action_legality(action_id)
         self._validate_response_legality(action_id, response_id)
+        progress_ids: tuple[str, ...] = ()
+        action_progress_capable = False
+        if self.enable_v03b_stalling:
+            progress_ids = self.progress_capable_action_ids()
+            self._record_progress_opportunity(
+                side=initiator,
+                action_ids=progress_ids,
+            )
+            action_progress_capable = action_id in progress_ids
         target_was_ready = (
             self.enable_v02_setup
             and action_id in self.setup_policy.target_action_ids
@@ -724,6 +1007,12 @@ class MountMatch:
             responder_exhaustion_modifier
         )
         self.history.exhaustion_modifier_history.append(exhaustion_modifier)
+
+        if self.enable_v03b_stalling and action_progress_capable:
+            self._record_engagement(
+                initiator=initiator,
+                action_id=action_id,
+            )
 
         self._apply_resolution(result)
         self._apply_setup_after_attempt(
