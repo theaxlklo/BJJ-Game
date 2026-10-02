@@ -118,6 +118,21 @@ class CliTests(unittest.TestCase):
         self.assertIn("Effective commitment history: ['MEDIUM']", text)
         self.assertIn("Top stamina: 92/100 (Fresh)", text)
 
+
+    def test_primary_cli_can_reset_without_response_or_action_cost(self):
+        output = io.StringIO()
+        inputs = ["3", "3", "4", KeyboardInterrupt]
+        with patch("builtins.input", side_effect=inputs), redirect_stdout(output):
+            code = bjj_main(["--clock", "0:10", "--interval", "5"])
+        self.assertEqual(code, 130)
+        text = output.getvalue()
+        self.assertIn("RESET / NO ACTION", text)
+        self.assertIn("Action stamina cost: 0", text)
+        self.assertIn("Initiative passes to: Bottom", text)
+        self.assertNotIn("BOTTOM RESPONSE", text)
+        self.assertIn("Reset / no-action history: ['top']", text)
+
+
     def test_legacy_cli_has_no_commitment_prompt_or_stamina_cost(self):
         output = io.StringIO()
         inputs = ["1", "1", "1", "2", KeyboardInterrupt]
@@ -148,6 +163,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("Exhausted Top 1:25, Bottom 1:30", text)
         self.assertIn("STAMINA PACING HIGH", text)
         self.assertIn("Exhausted Top 0:55, Bottom 1:00", text)
+        self.assertIn("CONSERVE CYCLE NET (10s): LOW +1, MEDIUM -3, HIGH -8; RESET +4", text)
         self.assertIn("EXHAUSTION HYSTERESIS: enter Exhausted at <=25; recover only at >=35", text)
         self.assertIn(
             "EXHAUSTED REACHABILITY: Elbow-Knee Escape / Top PRESSURE: Half Guard=+0.10..+1.10; Open Guard=UNREACHABLE",
@@ -167,6 +183,7 @@ class CliTests(unittest.TestCase):
         text = output.getvalue()
         self.assertNotIn("COMMITMENT DOMINANCE", text)
         self.assertNotIn("COMMITMENT VISIBILITY", text)
+        self.assertNotIn("CONSERVE CYCLE NET", text)
         self.assertNotIn("EXHAUSTION HYSTERESIS", text)
         self.assertNotIn("EXHAUSTED REACHABILITY", text)
         self.assertNotIn("V0.2 RESPONSE-STAMINA DEBT", text)
