@@ -84,6 +84,9 @@ class BottomBehavior(str, Enum):
         }[self]
 
 
+Behavior = TopBehavior | BottomBehavior
+
+
 class ExitDestination(str, Enum):
     HALF_GUARD = "Half Guard"
     OPEN_GUARD = "Open Guard"
@@ -104,7 +107,8 @@ class TechniqueEntity:
     escape_capable: bool = False
     exit_map: Mapping[Grade, ExitDestination] = field(default_factory=dict)
     band_exit_overrides: Mapping[tuple[Grade, Band], ExitDestination] = field(default_factory=dict)
-    special_rule: str | None = None
+    behavior_modifiers: Mapping[Behavior, int] = field(default_factory=dict)
+    clamp_at_mount_floor: bool = False
 
 
 @dataclass(frozen=True, slots=True)
