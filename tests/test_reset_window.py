@@ -1,11 +1,23 @@
 import unittest
 
+from bjj_game.domain.action import Commitment
 from bjj_game.domain.model import BottomBehavior, Side, TopBehavior
 from bjj_game.domain.stamina import StaminaBand
 from bjj_game.engine.match import MountMatch
+from bjj_game.engine.stamina import conserve_cycle_net
 
 
 class ResetWindowTests(unittest.TestCase):
+    def test_conserve_cycle_net_exposes_forced_attack_deadlock(self):
+        low = conserve_cycle_net(Commitment.LOW)
+        medium = conserve_cycle_net(Commitment.MEDIUM)
+        high = conserve_cycle_net(Commitment.HIGH)
+
+        self.assertEqual(low.attack_net, 1)
+        self.assertEqual(medium.attack_net, -3)
+        self.assertEqual(high.attack_net, -8)
+        self.assertEqual(medium.reset_net, 4)
+
     def test_reset_yields_initiative_without_action_cost_or_axis_change(self):
         match = MountMatch(initial_clock=30, starting_axis=1.50, interval_seconds=5)
         match.top.stamina.set_current(25)
