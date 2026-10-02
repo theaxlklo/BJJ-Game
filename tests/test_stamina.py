@@ -76,6 +76,21 @@ class StaminaPoolTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             StaminaPool(current=50.5)  # type: ignore[arg-type]
 
+    def test_current_is_read_only(self):
+        stamina = StaminaPool(current=30)
+        with self.assertRaises(AttributeError):
+            stamina.current = 50  # type: ignore[misc]
+
+    def test_exhausted_display_explains_recovery_threshold(self):
+        stamina = StaminaPool(current=25)
+        stamina.recover_up_to(5)
+        self.assertEqual(stamina.current, 30)
+        self.assertIs(stamina.band, StaminaBand.EXHAUSTED)
+        self.assertEqual(
+            stamina.display,
+            "30/100 (Exhausted — recovers at 35)",
+        )
+
     def test_competitors_do_not_share_stamina_pool(self):
         top = Competitor(Side.TOP, "Top", TopBehavior.PRESSURE)
         bottom = Competitor(Side.BOTTOM, "Bottom", BottomBehavior.ESCAPE)
@@ -125,7 +140,7 @@ class StaminaIdentityTests(unittest.TestCase):
         self.assertEqual(code, 130)
         text = output.getvalue()
         self.assertIn("Top stamina: 75/100 (Working)", text)
-        self.assertIn("Bottom stamina: 25/100 (Exhausted)", text)
+        self.assertIn("Bottom stamina: 25/100 (Exhausted — recovers at 35)", text)
         self.assertIn("Action stamina costs: ON (LOW=3, MEDIUM=7, HIGH=12)", text)
         self.assertIn("Standard commitment: MEDIUM", text)
         self.assertIn("Commitment resolution effects: OFF", text)
