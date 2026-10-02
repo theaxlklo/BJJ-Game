@@ -57,15 +57,16 @@ There is deliberately no compatibility module under `bjj_game/positions/mount/`;
 
 Represents a grappler and owns player-specific changing state.
 
-Mount v0 stores:
+Mount v0.1a stores:
 
 - side
 - name
 - current behavior
+- an independent `StaminaPool`
 
 The CLI updates behavior when the player chooses it. `MountMatch.drift()` and `decide()` then read behavior from the competitors. Optional behavior arguments still exist only to preserve the frozen v0 API and update the same competitor-owned state.
 
-v0.1 stamina and commitment, then later belt/style/attribute/injury/run state, attach to `Competitor` through composed objects rather than becoming more method parameters.
+Stamina is now attached to `Competitor` through composition. In v0.1a it is observational only; no resolution code reads it. Commitment and later belt/style/attribute/injury/run state follow the same composition rule rather than becoming more method parameters.
 
 ### `MountMatch`
 
@@ -141,7 +142,7 @@ Compatibility behavior parameters remain accepted by `MountMatch.drift()` and `d
 
 ## v0.1 extension points
 
-Stamina should now fit without reworking the positional engine:
+v0.1a now proves the player-owned stamina state can exist without reworking or changing the positional engine:
 
 ```text
 Competitor
@@ -158,10 +159,10 @@ MountResolutionEngine
 
 Planned objects:
 
-- `StaminaPool`
-- `StaminaBand`
-- `Commitment`
-- `ActionAttempt`
+- `StaminaPool` — implemented in v0.1a
+- `StaminaBand` — implemented in v0.1a, observational only
+- `Commitment` — next slice
+- `ActionAttempt` — next slice
 
 `CONSERVE` and `STABILIZE` are behaviors/policies, not competitor subclasses.
 
