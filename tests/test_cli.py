@@ -461,7 +461,11 @@ class CliTests(unittest.TestCase):
             "EXHAUSTED REACHABILITY: Trap-and-Roll Escape / Top HOLD: Reversal=UNREACHABLE",
             text,
         )
+        self.assertIn("V0.1 STAMINA VALIDATION", text)
+        self.assertIn("forced-attack pacing is a stress projection", text)
         self.assertIn("V0.2 RESPONSE-STAMINA DEBT", text)
+        self.assertIn("Do not retune 3/7/12 or CONSERVE recovery", text)
+        self.assertIn("submissions in v0.3", text)
         self.assertIn("RESET/STALLING DEBT", text)
         self.assertIn(
             "RESET LOCK PROBE: Top PRESSURE+RESET vs Bottom ESCAPE+RESET -> TIMEOUT — Mount retained; axis +4.00; band Locked; Top stamina 40; Bottom stamina 40",
@@ -495,6 +499,7 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("CONSERVE CYCLE NET", text)
         self.assertNotIn("EXHAUSTION HYSTERESIS", text)
         self.assertNotIn("EXHAUSTED REACHABILITY", text)
+        self.assertNotIn("V0.1 STAMINA VALIDATION", text)
         self.assertNotIn("V0.2 RESPONSE-STAMINA DEBT", text)
         self.assertNotIn("RESET/STALLING DEBT", text)
         self.assertNotIn("RESET LOCK PROBE", text)
