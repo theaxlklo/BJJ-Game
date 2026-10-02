@@ -119,6 +119,42 @@ class CliTests(unittest.TestCase):
         self.assertIn("Top stamina: 92/100 (Fresh)", text)
 
 
+
+    def test_blind_mode_locks_hidden_response_before_action(self):
+        output = io.StringIO()
+        inputs = ["1", "1", "1", KeyboardInterrupt]
+        with (
+            patch("builtins.input", side_effect=inputs),
+            patch("bjj_game.interfaces.cli.getpass.getpass", return_value="1"),
+            redirect_stdout(output),
+        ):
+            code = bjj_main(["--clock", "0:10", "--interval", "5", "--blind"])
+        self.assertEqual(code, 130)
+        text = output.getvalue()
+        self.assertIn("Blind hot-seat testing:", text)
+        response_index = text.index("BOTTOM RESPONSE — BLIND LOCK")
+        action_index = text.index("TOP INITIATES")
+        self.assertLess(response_index, action_index)
+        self.assertIn("Response locked.", text)
+        self.assertIn("Response: Forearm Frame", text)
+
+    def test_blind_mode_reset_discards_locked_response_without_resolution(self):
+        output = io.StringIO()
+        inputs = ["3", "3", "4", KeyboardInterrupt]
+        with (
+            patch("builtins.input", side_effect=inputs),
+            patch("bjj_game.interfaces.cli.getpass.getpass", return_value="1"),
+            redirect_stdout(output),
+        ):
+            code = bjj_main(["--clock", "0:10", "--interval", "5", "--blind"])
+        self.assertEqual(code, 130)
+        text = output.getvalue()
+        self.assertIn("BOTTOM RESPONSE — BLIND LOCK", text)
+        self.assertIn("RESET / NO ACTION", text)
+        self.assertIn("Response history: []", text)
+        self.assertIn("Initiated-action history: []", text)
+
+
     def test_primary_cli_can_reset_without_response_or_action_cost(self):
         output = io.StringIO()
         inputs = ["3", "3", "4", KeyboardInterrupt]
@@ -149,6 +185,15 @@ class CliTests(unittest.TestCase):
 
 
 
+
+    def test_legacy_cli_rejects_blind_testing_flag(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["--blind"])
+        self.assertEqual(code, 2)
+        self.assertIn("--blind is available only on the modern bjj_game testing path", output.getvalue())
+
+
     def test_primary_check_reports_commitment_dominance_and_visibility_debt(self):
         output = io.StringIO()
         with redirect_stdout(output):
@@ -175,6 +220,11 @@ class CliTests(unittest.TestCase):
         )
         self.assertIn("V0.2 RESPONSE-STAMINA DEBT", text)
         self.assertIn("RESET/STALLING DEBT", text)
+        self.assertIn(
+            "RESET LOCK PROBE: Top PRESSURE+RESET vs Bottom ESCAPE+RESET -> TIMEOUT — Mount retained; axis +4.00; band Locked; Top stamina 40; Bottom stamina 40",
+            text,
+        )
+        self.assertIn("BLIND PLAYTEST MODE: use --blind", text)
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
         output = io.StringIO()
@@ -189,6 +239,8 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("EXHAUSTED REACHABILITY", text)
         self.assertNotIn("V0.2 RESPONSE-STAMINA DEBT", text)
         self.assertNotIn("RESET/STALLING DEBT", text)
+        self.assertNotIn("RESET LOCK PROBE", text)
+        self.assertNotIn("BLIND PLAYTEST MODE", text)
 
 
 
