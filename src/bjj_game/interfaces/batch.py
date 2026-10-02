@@ -590,6 +590,8 @@ class BatchSummary:
     bottom_stalling_warning_count: int
     top_stalling_penalty_count: int
     bottom_stalling_penalty_count: int
+    top_stalling_position_reset_count: int
+    bottom_stalling_position_reset_count: int
     top_stalling_reset_with_route_count: int
     bottom_stalling_reset_with_route_count: int
     free_initiative_window_count: int
@@ -674,6 +676,8 @@ class BatchSummary:
             f"Bottom stalling warnings: {self.bottom_stalling_warning_count}",
             f"Top stalling penalties: {self.top_stalling_penalty_count}",
             f"Bottom stalling penalties: {self.bottom_stalling_penalty_count}",
+            f"Top Position Resets: {self.top_stalling_position_reset_count}",
+            f"Bottom Position Resets: {self.bottom_stalling_position_reset_count}",
             f"Top RESET-with-route count: {self.top_stalling_reset_with_route_count}",
             f"Bottom RESET-with-route count: {self.bottom_stalling_reset_with_route_count}",
             f"Free initiative windows: {self.free_initiative_window_count}",
@@ -810,6 +814,8 @@ def run_escape_first_batch(
     bottom_stalling_warnings = 0
     top_stalling_penalties = 0
     bottom_stalling_penalties = 0
+    top_stalling_position_resets = 0
+    bottom_stalling_position_resets = 0
     top_stalling_resets_with_route = 0
     bottom_stalling_resets_with_route = 0
     free_initiative_windows = 0
@@ -920,6 +926,8 @@ def run_escape_first_batch(
                             top_stalling_warnings += 1
                         elif reset.stalling_consequence == "PENALTY":
                             top_stalling_penalties += 1
+                        elif reset.stalling_consequence == "POSITION_RESET":
+                            top_stalling_position_resets += 1
                     else:
                         bottom_resets += 1
                         if reset.progress_route_available:
@@ -928,6 +936,8 @@ def run_escape_first_batch(
                             bottom_stalling_warnings += 1
                         elif reset.stalling_consequence == "PENALTY":
                             bottom_stalling_penalties += 1
+                        elif reset.stalling_consequence == "POSITION_RESET":
+                            bottom_stalling_position_resets += 1
                     continue
                 if (
                     side is Side.TOP
@@ -966,6 +976,8 @@ def run_escape_first_batch(
                             top_stalling_warnings += 1
                         elif reset.stalling_consequence == "PENALTY":
                             top_stalling_penalties += 1
+                        elif reset.stalling_consequence == "POSITION_RESET":
+                            top_stalling_position_resets += 1
                     else:
                         bottom_resets += 1
                         if reset.progress_route_available:
@@ -974,6 +986,8 @@ def run_escape_first_batch(
                             bottom_stalling_warnings += 1
                         elif reset.stalling_consequence == "PENALTY":
                             bottom_stalling_penalties += 1
+                        elif reset.stalling_consequence == "POSITION_RESET":
+                            bottom_stalling_position_resets += 1
                     continue
 
             action = MODERN_ENTITY_BY_ID[decision.action_id]
@@ -1076,6 +1090,8 @@ def run_escape_first_batch(
         bottom_stalling_warning_count=bottom_stalling_warnings,
         top_stalling_penalty_count=top_stalling_penalties,
         bottom_stalling_penalty_count=bottom_stalling_penalties,
+        top_stalling_position_reset_count=top_stalling_position_resets,
+        bottom_stalling_position_reset_count=bottom_stalling_position_resets,
         top_stalling_reset_with_route_count=top_stalling_resets_with_route,
         bottom_stalling_reset_with_route_count=bottom_stalling_resets_with_route,
         free_initiative_window_count=free_initiative_windows,
