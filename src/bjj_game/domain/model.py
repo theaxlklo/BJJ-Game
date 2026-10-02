@@ -190,6 +190,10 @@ class RunHistory:
     reset_window_history: list[str] = field(default_factory=list)
     setup_change_history: list[str] = field(default_factory=list)
     setup_consumption_history: list[str] = field(default_factory=list)
+    submission_attempt_history: list[str] = field(default_factory=list)
+    submission_change_history: list[str] = field(default_factory=list)
+    submission_defense_history: list[str] = field(default_factory=list)
+    submission_tap_count: int = 0
     top_initiation_count: int = 0
     bottom_initiation_count: int = 0
     clamp_count: int = 0
