@@ -92,19 +92,26 @@ The v0.1 batch harness commonly produces about one Top positional attack per mat
 
 ### v0.2 is done when
 
-In at least one standardized 100-stamina batch condition, Top averages more than 1.0 meaningful position/setup initiations per match before terminal state.
+In at least one standardized 100-stamina batch condition, Top averages more than 1.0 **follow-up** meaningful position/setup initiations per match after Top's first actual initiation.
 
-RESET does not count.
+The opening initiation is excluded from the metric. RESET does not count.
 
 The metric should distinguish:
 
-- positional attacks;
+- opening initiation;
+- follow-up positional attacks;
 - setup-building actions;
 - submission actions when v0.3 exists.
 
 ### Measurement
 
-Batch summary: total Top meaningful initiations / matches.
+Current v0.1/v0.2-baseline batch summary:
+
+```text
+Top follow-up position attacks / matches
+```
+
+When setup-building actions exist, extend the follow-up numerator deliberately rather than counting the opening again.
 
 ## Gate 6 — Exhausted Bottom escape reachability
 
@@ -116,14 +123,22 @@ Some v0.1 conditions remove every positive-weight Bottom escape route while Exha
 
 One of these is true:
 
-A. at least one Exhausted-Bottom escape route remains reachable in a standardized v0.2 Ready/setup condition; or
-B. complete lockout is deliberately retained and explicitly documented as an intended rule with a separate recovery/setup route that prevents a dead state.
+A. at least one positive-weight Exhausted-Bottom escape route remains reachable under **every current Top behavior** (PRESSURE, HOLD, CONSERVE) in the standardized v0.2 Ready/setup condition; or
+B. a behavior-specific complete lockout is deliberately retained and explicitly documented as an intended rule with a separate recovery/setup route that prevents a dead state.
 
-This gate is intentionally not prescriptive about which outcome is correct.
+This gate is intentionally not prescriptive about which outcome is correct, but one favorable behavior may not hide a lockout under another behavior.
 
 ### Measurement
 
-Extend the current Exhausted-reachability report to include v0.2 Ready/setup state and show whether each Exit Map destination is reachable.
+The automatic checker reports positive-weight Exhausted-Bottom route counts separately for:
+
+```text
+Top PRESSURE
+Top HOLD
+Top CONSERVE
+```
+
+The PASS path requires every behavior count to be greater than zero. When Ready/setup state exists, extend the same per-behavior probe rather than collapsing the conditions.
 
 ## Gate 7 — Commitment meaning
 
@@ -177,8 +192,8 @@ Gate 1  run_checks().perfect_response_lock
 Gate 2  standardized RESET-lock probe
 Gate 3  exhaustive fresh-vs-Exhausted responder exchange differential
 Gate 4  Bridge selections in the standard batch
-Gate 5  Top position attacks / match in the standard batch
-Gate 6  positive-weight Exhausted-Bottom escape reachability
+Gate 5  Top follow-up position attacks / match after the opening
+Gate 6  positive-weight Exhausted-Bottom routes under every Top behavior
 Gate 7  exhaustive funded LOW strict-dominance probe
 ```
 
@@ -210,12 +225,16 @@ Gate 1  Perfect-response lock             OPEN
 Gate 2  RESET/stalling lock               OPEN
 Gate 3  Responder stamina                 OPEN
 Gate 4  Bridge setup role                 OPEN
-Gate 5  Top post-opening activity         PASS under the current >1.0 threshold
-Gate 6  Exhausted Bottom escape routes    PASS because one positive-weight route exists
+Gate 5  Top post-opening activity         OPEN — 0.110 follow-up position attacks/match
+Gate 6  Exhausted Bottom escape routes    OPEN — PRESSURE:1, HOLD:0, CONSERVE:1
 Gate 7  Commitment meaning                OPEN
 ```
 
-Gate 5 and Gate 6 being PASS at baseline is intentional evidence, not a declaration. If those thresholds are later judged too permissive, change the completion criterion first and let the checker recompute the status.
+All seven gates are OPEN at the current pre-v0.2 baseline.
+
+Gate 5 excludes the opening attack because the debt is specifically post-opening passivity. Gate 6 evaluates each Top behavior separately because the debt is a condition-specific exhausted lockout.
+
+If a future completion criterion changes, change the criterion openly first and let the checker recompute the status. Do not hand-edit a gate label.
 
 v0.2 is not complete until every required gate is PASS or an explicitly accepted DEFERRED state where this document allows deferral.
 
