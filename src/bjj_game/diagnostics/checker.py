@@ -1057,12 +1057,20 @@ def _v03_best_defense_evidence() -> dict[SubmissionStage, V03DefenseStageEvidenc
 def _v03_stage_signature(stage: SubmissionStage, result) -> tuple:
     advanced = result.final_grade.successful
     tapped = advanced and stage is SubmissionStage.FINISH
-    if not advanced or stage is SubmissionStage.FINISH:
-        after_stage = stage
-    elif stage is SubmissionStage.THREAT:
-        after_stage = SubmissionStage.CONTROL
+    if advanced:
+        if stage is SubmissionStage.THREAT:
+            after_stage = SubmissionStage.CONTROL
+        elif stage is SubmissionStage.CONTROL:
+            after_stage = SubmissionStage.FINISH
+        else:
+            after_stage = SubmissionStage.FINISH
     else:
-        after_stage = SubmissionStage.FINISH
+        if stage is SubmissionStage.THREAT:
+            after_stage = None
+        elif stage is SubmissionStage.CONTROL:
+            after_stage = SubmissionStage.THREAT
+        else:
+            after_stage = SubmissionStage.CONTROL
     return (
         advanced,
         tapped,
