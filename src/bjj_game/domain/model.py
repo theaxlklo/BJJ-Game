@@ -180,6 +180,8 @@ class RunHistory:
     stamina_charged_history: list[int] = field(default_factory=list)
     stamina_shortfall_history: list[int] = field(default_factory=list)
     stamina_funding_gap_history: list[int] = field(default_factory=list)
+    stamina_band_at_initiation_history: list[str] = field(default_factory=list)
+    exhaustion_modifier_history: list[int] = field(default_factory=list)
     top_behavior_stamina_history: list[int] = field(default_factory=list)
     bottom_behavior_stamina_history: list[int] = field(default_factory=list)
     top_initiation_count: int = 0
