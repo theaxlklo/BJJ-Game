@@ -461,6 +461,56 @@ so the checker reports evidence rather than selecting an overall best action.
 
 The report also exposes a correction to the raw simultaneous-game shorthand: **Top initiating from Loose receives the frozen -1 positional modifier**, so the raw response mix is not an equilibrium there in the same sense as Stable.
 
+### Clamp-aware axis report
+
+The per-band report now keeps both the pre-clamp and realized signals visible:
+
+```text
+raw attacker-axis
+realized-axis min..max
+escape min..max
+MEDIUM stamina cost shown separately
+```
+
+`realized-axis` is calculated across every legal 0.01 axis value in the visible band using the actual floor/cap resolver. This prevents edge-band predictions from treating a nominal -2 grade as a full -2 axis loss when the Mount floor stops it at +0.10, or from treating a +2 grade as full upside when the +4.00 cap absorbs it.
+
+Escape crossings keep their crossing axis in the realized-axis calculation; escape probability remains a separate column, so no terminal-value conversion is invented.
+
+### Deterministic batch statistics
+
+For fixed-condition statistics:
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --batch 1000 \
+  --initiator-policy greedy \
+  --seed 42 \
+  --top-behavior HOLD \
+  --bottom-behavior CONSERVE
+```
+
+The batch harness:
+
+1. creates an independent seeded random responder for each match using `base_seed + match_index`;
+2. holds the selected Top/Bottom behaviors constant;
+3. uses the exact current axis, band, stamina/exhaustion state, and behavior modifiers;
+4. attacks only when some action has positive expected **realized** attacker-axis movement;
+5. otherwise RESETs;
+6. reports outcome frequencies, final stamina statistics, final-axis mean, RESET counts, and action counts.
+
+Run paired conditions with the same base seed and count. Example:
+
+```text
+HOLD vs CONSERVE, seed 42, 1000 matches
+HOLD vs PROTECT,  seed 42, 1000 matches
+```
+
+This controls the per-match response streams.
+
+The greedy rule is not an AI claim and does not combine escape, stamina, clock, and axis into a utility function. It exists only to turn the current checker signal into reproducible distributions.
+
+Fixed behavior is intentionally an extreme-condition experiment. CONSERVE is expected to be switched tactically in real play, so a full-match CONSERVE batch cannot by itself decide whether short recovery bursts are healthy.
+
 ### Pre-session predictions
 
 Before tuning numbers, the first solo blind sessions should test these predictions:
