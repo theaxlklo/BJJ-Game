@@ -298,8 +298,8 @@ class CliTests(unittest.TestCase):
         self.assertIn("BATCH SUMMARY", text)
         self.assertIn("Matches: 8", text)
         self.assertIn("Base seed: 42", text)
-        self.assertIn("Top behavior: HOLD", text)
-        self.assertIn("Bottom behavior: CONSERVE", text)
+        self.assertIn("Top baseline behavior: HOLD", text)
+        self.assertIn("Bottom baseline behavior: CONSERVE", text)
         self.assertNotIn("TOP INITIATES", text)
         self.assertNotIn("BOTTOM RESPONSE", text)
 
@@ -326,8 +326,44 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         text = output.getvalue()
         self.assertIn("Base seed: 0", text)
-        self.assertIn("Top behavior: PRESSURE", text)
-        self.assertIn("Bottom behavior: ESCAPE", text)
+        self.assertIn("Top baseline behavior: PRESSURE", text)
+        self.assertIn("Bottom baseline behavior: ESCAPE", text)
+
+
+    def test_batch_recover_behavior_policy_is_reported(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--batch", "1",
+                "--seed", "42",
+                "--clock", "1:00",
+                "--top-stamina", "25",
+                "--bottom-stamina", "25",
+                "--top-behavior", "HOLD",
+                "--bottom-behavior", "PROTECT",
+                "--top-behavior-policy", "recover",
+                "--bottom-behavior-policy", "recover",
+            ])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Top baseline behavior: HOLD", text)
+        self.assertIn("Top behavior policy: recover", text)
+        self.assertIn("Bottom baseline behavior: PROTECT", text)
+        self.assertIn("Bottom behavior policy: recover", text)
+        self.assertIn("Top windows:", text)
+        self.assertIn("Bottom windows:", text)
+        self.assertIn("CONSERVE", text)
+
+    def test_behavior_policy_requires_batch(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--top-behavior", "HOLD",
+                "--top-behavior-policy", "recover",
+            ])
+        self.assertEqual(code, 2)
+        self.assertIn("behavior-policy", output.getvalue())
+
 
     def test_batch_rejects_interactive_blind_flags(self):
         output = io.StringIO()
