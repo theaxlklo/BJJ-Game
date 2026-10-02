@@ -10,7 +10,7 @@ from ..domain.action import Commitment
 from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, run_checks
 from ..engine.match import MountRun
-from .formatting import format_attempt_result, format_clock, format_drift, format_resolution
+from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
 from ..domain.model import BottomBehavior, EntityKind, Side, TopBehavior
 from ..positions.mount.names import RESOLVER
@@ -59,6 +59,13 @@ def stamina_value(value: str) -> int:
     return parsed
 
 
+def commitment_value(value: str) -> Commitment:
+    try:
+        return Commitment(value.strip().upper())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("commitment must be LOW, MEDIUM, or HIGH") from exc
+
+
 def axis_value(value: str) -> float:
     try:
         parsed = float(value)
@@ -86,9 +93,13 @@ def _choose_entity(prompt: str, side: Side, kind: EntityKind):
             print(exc)
 
 
-def _choose_behavior(side: Side, current=None):
+def _choose_behavior(side: Side, current=None, *, conserve_enabled: bool = True):
     enum_cls = TopBehavior if side is Side.TOP else BottomBehavior
-    choices = list(enum_cls)
+    choices = [
+        behavior
+        for behavior in enum_cls
+        if conserve_enabled or behavior.value != "CONSERVE"
+    ]
     while True:
         label = f"{side.value.title()} behavior"
         if current is not None:
@@ -108,27 +119,11 @@ def _choose_behavior(side: Side, current=None):
         print("Unknown behavior")
 
 
-def _choose_commitment() -> Commitment:
-    choices = list(Commitment)
-    while True:
-        print("\nCommitment")
-        for i, commitment in enumerate(choices, 1):
-            print(f"  {i}. {commitment.value}")
-        value = _read_input("> ").strip()
-        if value.isdigit() and 1 <= int(value) <= len(choices):
-            return choices[int(value) - 1]
-        upper = value.upper()
-        for commitment in choices:
-            if upper == commitment.value:
-                return commitment
-        print("Unknown commitment")
-
-
 def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = True) -> int:
     run = MountRun(initial_clock=args.clock, starting_axis=args.axis, interval_seconds=args.interval)
     run.top.stamina.set_current(args.top_stamina)
     run.bottom.stamina.set_current(args.bottom_stamina)
-    print("MOUNT v0.1b — HOT-SEAT PROTOTYPE" if commitment_enabled else "MOUNT v0 — HOT-SEAT PROTOTYPE")
+    print("MOUNT v0.1c — HOT-SEAT PROTOTYPE" if commitment_enabled else "MOUNT v0 — HOT-SEAT PROTOTYPE")
     print(f"Clock: {format_clock(run.initial_clock)}")
     print(f"Starting axis: {run.axis:+.2f}")
     print(f"Initial visible band: {run.band.value}")
@@ -137,25 +132,38 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
     print(f"Top stamina: {run.top.stamina.display}")
     print(f"Bottom stamina: {run.bottom.stamina.display}")
     if commitment_enabled:
-        print("Stamina costs: ON (LOW=3, MEDIUM=7, HIGH=12)")
-        print("Commitment resolution effects: OFF (v0.1b cost-only slice)")
+        print("Action stamina costs: ON (LOW=3, MEDIUM=7, HIGH=12)")
+        print(f"Standard commitment: {args.commitment.value}")
+        print("Commitment resolution effects: OFF (LOW remains dominant; standard play defaults MEDIUM)")
+        print("Behavior stamina: PRESSURE/ESCAPE -1 per 5s; HOLD/PROTECT 0; CONSERVE +2 per 5s")
     else:
         print("Stamina effects: OFF (legacy Mount v0 path)")
 
     try:
-        top_behavior = _choose_behavior(Side.TOP)
-        bottom_behavior = _choose_behavior(Side.BOTTOM)
+        top_behavior = _choose_behavior(Side.TOP, conserve_enabled=commitment_enabled)
+        bottom_behavior = _choose_behavior(Side.BOTTOM, conserve_enabled=commitment_enabled)
         run.set_behaviors(top=top_behavior, bottom=bottom_behavior)
 
         while not run.ended:
-            drift = run.drift()
-            print("\n" + format_drift(drift, top_behavior.value, bottom_behavior.value))
+            if commitment_enabled:
+                advance = run.advance()
+                print(
+                    "\n"
+                    + format_advance_result(
+                        advance,
+                        top_behavior.value,
+                        bottom_behavior.value,
+                    )
+                )
+            else:
+                drift = run.drift()
+                print("\n" + format_drift(drift, top_behavior.value, bottom_behavior.value))
             if run.ended:
                 break
 
             initiator = run.initiator
             action = _choose_entity(f"{initiator.value.upper()} INITIATES", initiator, EntityKind.ACTION)
-            commitment = _choose_commitment() if commitment_enabled else None
+            commitment = args.commitment if commitment_enabled else None
             responder = initiator.opponent
             response = _choose_entity(f"{responder.value.upper()} RESPONSE", responder, EntityKind.RESPONSE)
             if commitment_enabled:
@@ -190,8 +198,8 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
             if run.ended:
                 break
 
-            top_behavior = _choose_behavior(Side.TOP, current=top_behavior)
-            bottom_behavior = _choose_behavior(Side.BOTTOM, current=bottom_behavior)
+            top_behavior = _choose_behavior(Side.TOP, current=top_behavior, conserve_enabled=commitment_enabled)
+            bottom_behavior = _choose_behavior(Side.BOTTOM, current=bottom_behavior, conserve_enabled=commitment_enabled)
             run.set_behaviors(top=top_behavior, bottom=bottom_behavior)
     except (EOFError, KeyboardInterrupt):
         run.exit_reason = "CANCELLED"
@@ -222,6 +230,9 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
         print(f"Final visible band: Mount broken (last visible: {run.band.value})")
     print(f"Top behavior history: {h.top_behavior_history}")
     print(f"Bottom behavior history: {h.bottom_behavior_history}")
+    if h.top_behavior_stamina_history or h.bottom_behavior_stamina_history:
+        print(f"Top behavior-stamina history: {h.top_behavior_stamina_history}")
+        print(f"Bottom behavior-stamina history: {h.bottom_behavior_stamina_history}")
     print(f"Top initiation count: {h.top_initiation_count}")
     print(f"Bottom initiation count: {h.bottom_initiation_count}")
     action_history = [ENTITY_BY_ID[action_id].short_name for action_id in h.initiated_action_history]
@@ -232,10 +243,12 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
     print(f"Modified-grade history: {h.modified_grade_history}")
     if h.commitment_history:
         print(f"Commitment initiator history: {h.commitment_initiator_history}")
-        print(f"Commitment history: {h.commitment_history}")
+        print(f"Requested commitment history: {h.commitment_history}")
+        print(f"Effective commitment history: {h.effective_commitment_history}")
         print(f"Stamina requested history: {h.stamina_requested_history}")
         print(f"Stamina charged history: {h.stamina_charged_history}")
         print(f"Stamina shortfall history: {h.stamina_shortfall_history}")
+        print(f"Stamina funding gap history: {h.stamina_funding_gap_history}")
     print(f"Clamp count: {h.clamp_count}")
     print(f"Escape threshold reached?: {'Yes' if h.escape_threshold_reached else 'No'}")
     print(f"Exit reason: {run.exit_reason or 'None'}")
@@ -249,6 +262,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--interval", type=positive_int, default=DEFAULT_INTERVAL_SECONDS, help="decision interval in simulated seconds")
     parser.add_argument("--top-stamina", type=stamina_value, default=100, help="starting Top stamina telemetry, 0..100")
     parser.add_argument("--bottom-stamina", type=stamina_value, default=100, help="starting Bottom stamina telemetry, 0..100")
+    parser.add_argument("--commitment", type=commitment_value, default=Commitment.MEDIUM, help="fixed v0.1c action commitment; defaults to MEDIUM")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -323,6 +337,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         print(render_enumeration())
         return 0 if run_checks().ok else 1
     if args.check:
+        if commitment_enabled:
+            print("INFO: COMMITMENT DOMINANCE: LOW strictly dominates MEDIUM/HIGH while commitment effects are OFF; standard play defaults to MEDIUM.")
+            print("INFO: COMMITMENT VISIBILITY: public in v0.1c; hidden/recognized commitment is deferred to the v0.2 information layer.")
         report = run_checks()
         for message in report.info:
             print(f"INFO: {message}")
