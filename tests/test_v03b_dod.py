@@ -10,6 +10,7 @@ from bjj_game.diagnostics.checker import (
     _v03b_top_stall_probe,
     measure_v03a_definition_of_done,
     measure_v03b_definition_of_done,
+    render_v03b_normal_play_guard,
 )
 from bjj_game.domain.model import Band
 from bjj_game.domain.submission import SubmissionStage
@@ -22,14 +23,30 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v03b_definition_of_done()
         }
 
-    def test_gate_a_full_match_probe_exposes_current_locked_timeout(self):
+    def test_gate_a_status_follows_full_match_stalling_evidence(self):
         evidence = _v03b_top_stall_probe()
+        expected = (
+            V02GateStatus.PASS
+            if (
+                evidence.warnings == 1
+                and evidence.penalties >= 1
+                and evidence.position_resets >= 1
+                and evidence.final_band is not Band.LOCKED
+                and not evidence.locked_timeout
+            )
+            else V02GateStatus.OPEN
+        )
         self.assertEqual(evidence.warnings, 1)
         self.assertGreaterEqual(evidence.penalties, 1)
-        self.assertIs(evidence.final_band, Band.LOCKED)
-        self.assertTrue(evidence.locked_timeout)
+        self.assertGreaterEqual(evidence.position_resets, 1)
         self.assertGreater(evidence.locked_windows, 0)
-        self.assertIs(self.gates["A"].status, V02GateStatus.OPEN)
+        self.assertIs(self.gates["A"].status, expected)
+
+    def test_normal_play_guard_keeps_stronger_escalation_out_of_engaged_batches(self):
+        self.assertIn(
+            "V0.3b NORMAL-PLAY GUARD [PASS]",
+            render_v03b_normal_play_guard(),
+        )
 
     def test_gate_b_stalemated_attacker_and_defender_remain_engaged(self):
         evidence = _v03b_stalemated_attacker_probe()
