@@ -183,7 +183,21 @@ class MountMatch:
             for response in self.engine.catalog.responses_for(action.side.opponent)
         )
         if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
-            return all_ids
+            ready_ids = self.setup_policy.ready_response_ids(
+                TOP_AMERICANA_ARM_ISOLATION
+            )
+            if ready_ids is None:
+                raise RuntimeError(
+                    "Americana submission stage has no inherited isolation defenses"
+                )
+            legal = tuple(
+                response_id for response_id in ready_ids if response_id in all_ids
+            )
+            if not legal:
+                raise RuntimeError(
+                    "Americana submission stage leaves no legal responses"
+                )
+            return legal
         if not self.enable_v02_setup or not self.setup_state.is_ready(action_id):
             return all_ids
 
@@ -375,10 +389,10 @@ class MountMatch:
             bottom_behavior=bottom_behavior,
             external_grade_modifier=external_grade_modifier,
         )
-        defended = not proxy.final_grade.successful
+        defender_won = proxy.final_grade.failed
         proposed_axis = (
             round(self.axis - 1.0, 10)
-            if defended
+            if defender_won
             else self.axis
         )
         axis_after = self.engine.rules.clamp_axis(proposed_axis)
@@ -456,7 +470,7 @@ class MountMatch:
                 self.history.submission_change_history.append(
                     f"{stage_before.value}->{change.after.value}"
                 )
-        else:
+        elif resolution.final_grade.failed:
             change = self.submission_state.defend()
             after_label = change.after.value if change.after is not None else "None"
             self.history.submission_change_history.append(
@@ -466,6 +480,10 @@ class MountMatch:
                 f"{stage_before.value}->{after_label}:"
                 f"{resolution.final_grade.display}:"
                 f"{resolution.axis_before:+.2f}->{resolution.axis_after:+.2f}"
+            )
+        else:
+            self.history.submission_change_history.append(
+                f"{stage_before.value}->{stage_before.value}:held"
             )
 
     def _apply_resolution(self, result) -> None:
