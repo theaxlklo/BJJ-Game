@@ -185,6 +185,8 @@ class RunHistory:
     top_behavior_stamina_history: list[int] = field(default_factory=list)
     bottom_behavior_stamina_history: list[int] = field(default_factory=list)
     reset_window_history: list[str] = field(default_factory=list)
+    setup_change_history: list[str] = field(default_factory=list)
+    setup_consumption_history: list[str] = field(default_factory=list)
     top_initiation_count: int = 0
     bottom_initiation_count: int = 0
     clamp_count: int = 0
