@@ -213,18 +213,65 @@ _V02_BAND_ANCHORS = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class V02ReadyGateEvidence:
+    reachable_states: int
+    lock_free_states: int
+    guaranteed_attacker_states: int
+
+
+def _best_counter_response_id(match, action_id: str) -> str:
+    """Choose the legal response that is worst for the current initiator."""
+    side = match.initiator
+    top_behavior = match.top.behavior
+    bottom_behavior = match.bottom.behavior
+    candidates: list[tuple[int, float, str]] = []
+    for response_id in match.legal_response_ids(action_id):
+        result = match.engine.resolve_action(
+            axis=match.axis,
+            band=match.band,
+            initiator=side,
+            action_id=action_id,
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+        )
+        world_delta = result.axis_after - match.axis
+        attacker_delta = world_delta if side is Side.TOP else -world_delta
+        candidates.append(
+            (int(result.final_grade), attacker_delta, response_id)
+        )
+    if not candidates:
+        raise RuntimeError(f"No legal response to {action_id!r}")
+    return min(candidates)[2]
+
+
 @lru_cache(maxsize=1)
-def _v02_ready_lock_free_states() -> dict[Side, int]:
-    """Count Ready states per side with no legal Failure-or-worse response."""
+def _v02_ready_gate_evidence() -> dict[Side, V02ReadyGateEvidence]:
+    """Measure reachable Ready states against best-counter play.
+
+    A state counts only if two builder attempts can reach Ready while the
+    responder always chooses the legal response that is worst for the builder.
+
+    Gate 1 also rejects the opposite solved extreme: any reachable Ready state
+    where every legal response yields Success-or-better is counted as a
+    guaranteed-attacker state.
+    """
     from ..engine.match import MountMatch
 
-    counts = {Side.TOP: 0, Side.BOTTOM: 0}
+    totals = {
+        Side.TOP: [0, 0, 0],
+        Side.BOTTOM: [0, 0, 0],
+    }
     probe = MountMatch(enable_v02_setup=True)
 
-    for target_action_id in probe.setup_policy.target_action_ids:
+    for rule in probe.setup_policy.rules:
+        target_action_id = rule.target_action_id
+        builder_action_id = rule.builder_action_id
         action = probe.engine.catalog.get(target_action_id)
         side = action.side
-        for band, axis in _V02_BAND_ANCHORS.items():
+
+        for _band, axis in _V02_BAND_ANCHORS.items():
             for top_behavior in TopBehavior:
                 for bottom_behavior in BottomBehavior:
                     match = MountMatch(
@@ -238,24 +285,60 @@ def _v02_ready_lock_free_states() -> dict[Side, int]:
                         top=top_behavior,
                         bottom=bottom_behavior,
                     )
-                    match.setup_state.advance(target_action_id)
-                    match.setup_state.advance(target_action_id)
+
+                    for _ in range(2):
+                        match.initiator = side
+                        response_id = _best_counter_response_id(
+                            match,
+                            builder_action_id,
+                        )
+                        match.attempt(
+                            action_id=builder_action_id,
+                            response_id=response_id,
+                            commitment=Commitment.MEDIUM,
+                        )
+
+                    if not match.setup_state.is_ready(target_action_id):
+                        continue
+
+                    totals[side][0] += 1
+                    match.initiator = side
                     legal = match.legal_response_ids(target_action_id)
                     finals = [
                         match.engine.resolve_action(
-                            axis=axis,
-                            band=band,
+                            axis=match.axis,
+                            band=match.band,
                             initiator=side,
                             action_id=target_action_id,
                             response_id=response_id,
-                            top_behavior=top_behavior,
-                            bottom_behavior=bottom_behavior,
+                            top_behavior=match.top.behavior,
+                            bottom_behavior=match.bottom.behavior,
                         ).final_grade
                         for response_id in legal
                     ]
                     if finals and min(finals) > Grade.FAILURE:
-                        counts[side] += 1
-    return counts
+                        totals[side][1] += 1
+                    if finals and min(finals) >= Grade.SUCCESS:
+                        totals[side][2] += 1
+
+    return {
+        side: V02ReadyGateEvidence(
+            reachable_states=values[0],
+            lock_free_states=values[1],
+            guaranteed_attacker_states=values[2],
+        )
+        for side, values in totals.items()
+    }
+
+
+@lru_cache(maxsize=1)
+def _v02_ready_lock_free_states() -> dict[Side, int]:
+    """Compatibility view of Gate 1 lock-free Ready states."""
+    evidence = _v02_ready_gate_evidence()
+    return {
+        side: item.lock_free_states
+        for side, item in evidence.items()
+    }
 
 
 @lru_cache(maxsize=1)
@@ -542,10 +625,14 @@ def measure_v02_definition_of_done(
     if report is None:
         report = run_checks()
 
-    # Gate 1: v0.2 Ready-aware legal-response measurement.
-    ready_lock_free_states = _v02_ready_lock_free_states()
+    # Gate 1: Ready must be reachable against best-counter play, break the
+    # defender's perfect-response lock, and avoid the opposite solved extreme
+    # where every legal Ready response is Success-or-better.
+    ready_evidence = _v02_ready_gate_evidence()
     gate1_pass = all(
-        ready_lock_free_states[side] > 0
+        ready_evidence[side].reachable_states > 0
+        and ready_evidence[side].lock_free_states > 0
+        and ready_evidence[side].guaranteed_attacker_states == 0
         for side in (Side.TOP, Side.BOTTOM)
     )
 
@@ -598,15 +685,19 @@ def measure_v02_definition_of_done(
             name="perfect-response lock",
             status=V02GateStatus.PASS if gate1_pass else V02GateStatus.OPEN,
             metric=(
-                "Ready lock-free states="
-                f"top:{ready_lock_free_states[Side.TOP]},"
-                f"bottom:{ready_lock_free_states[Side.BOTTOM]}"
+                "Ready states against best counters="
+                f"top:{ready_evidence[Side.TOP].reachable_states}/"
+                f"lock-free:{ready_evidence[Side.TOP].lock_free_states}/"
+                f"guaranteed:{ready_evidence[Side.TOP].guaranteed_attacker_states},"
+                f"bottom:{ready_evidence[Side.BOTTOM].reachable_states}/"
+                f"lock-free:{ready_evidence[Side.BOTTOM].lock_free_states}/"
+                f"guaranteed:{ready_evidence[Side.BOTTOM].guaranteed_attacker_states}"
             ),
             evidence=(
-                "each side has at least one Ready state with no legal Failure-or-worse counter"
+                "Ready is reachable for both sides, breaks the defender lock, and creates no guaranteed-attacker Ready state"
                 if gate1_pass
                 else
-                "at least one side still lacks a Ready state free of Failure-or-worse counters"
+                "Gate requires reachable Ready under best-counter play, at least one lock-free Ready state per side, and zero guaranteed-attacker Ready states"
             ),
         ),
         V02GateMeasurement(
