@@ -247,6 +247,46 @@ For v0.1 playtests, `bjj_game --blind` can remove the full-information response 
 
 Bridge remains a known v0 setup limitation: in the raw matrix Trap-and-Roll is at least as good against every response and has the stronger Hip Follow result plus an escape branch. Bridge is being left intact for v0.2 setup/Ready work rather than receiving an ad-hoc stamina discount.
 
+### Adaptive recovery behavior policy
+
+Fixed behaviors are useful controls, but they do not model how CONSERVE is meant to be used tactically. Batch mode now supports an adaptive recovery policy:
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --batch 1000 \
+  --initiator-policy escape-first \
+  --seed 42 \
+  --top-behavior HOLD \
+  --bottom-behavior PROTECT \
+  --bottom-behavior-policy recover
+```
+
+Behavior-policy flags are batch-only:
+
+```text
+--top-behavior-policy fixed|recover
+--bottom-behavior-policy fixed|recover
+```
+
+`fixed` keeps the supplied baseline behavior for the whole match.
+
+`recover` means:
+
+```text
+not Exhausted
+→ use baseline behavior
+
+latched Exhausted
+→ switch to CONSERVE
+
+recover to >=35 and clear the latch
+→ return to baseline
+```
+
+The baseline is still supplied by `--top-behavior` or `--bottom-behavior`. For example, `--bottom-behavior PROTECT --bottom-behavior-policy recover` means PROTECT normally and CONSERVE only during actual Exhausted recovery.
+
+Batch summaries now include behavior-window counts and switch counts, so a result can show whether CONSERVE was actually exercised instead of inferring it from final stamina alone.
+
 ## Batch behavior experiments
 
 For repeatable statistics instead of one seed at a time:
