@@ -90,9 +90,11 @@ class CommitmentAttemptTests(unittest.TestCase):
         self.assertEqual(high.stamina.shortfall, 0)
         self.assertEqual(high.stamina.after, 2)
         self.assertTrue(high.stamina.fully_paid)
-        self.assertEqual(high.resolution, reference.resolution)
-        self.assertEqual(underfunded.axis, fresh.axis)
-        self.assertEqual(underfunded.band, fresh.band)
+        self.assertEqual(high.base_resolution, reference.base_resolution)
+        self.assertEqual(high.exhaustion_modifier, -1)
+        self.assertNotEqual(high.resolution, reference.resolution)
+        self.assertAlmostEqual(underfunded.axis, 0.50)
+        self.assertAlmostEqual(fresh.axis, 1.50)
 
     def test_zero_stamina_is_unfunded_not_free_high_commitment(self):
         match, result = self._attempt(Commitment.HIGH, stamina=0)
