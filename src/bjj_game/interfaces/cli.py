@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -8,7 +9,7 @@ from typing import TextIO
 
 from ..domain.action import Commitment
 from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
-from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, run_checks
+from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_reset_window, format_resolution
@@ -95,6 +96,36 @@ def _choose_entity(prompt: str, side: Side, kind: EntityKind):
 
 
 
+
+def _read_hidden_input(prompt: str = "") -> str:
+    """Read a hot-seat secret without echoing it to the next player."""
+    value = getpass.getpass(prompt)
+    if isinstance(sys.stdout, _TeeStdout):
+        sys.stdout.write_log_only("<hidden input>\n")
+    return value
+
+
+def _choose_blind_response(side: Side):
+    entities = responses_for(side)
+    while True:
+        print(f"\n{side.value.upper()} RESPONSE — BLIND LOCK")
+        for i, entity in enumerate(entities, 1):
+            print(f"  {i}. {entity.canonical_name}")
+        value = _read_hidden_input("> ").strip()
+        if not value:
+            continue
+        if value.isdigit() and 1 <= int(value) <= len(entities):
+            print("Response locked.")
+            return entities[int(value) - 1]
+        try:
+            entity = RESOLVER.resolve(value, kind=EntityKind.RESPONSE, side=side)
+        except ValueError:
+            print("Unknown response")
+            continue
+        print("Response locked.")
+        return entity
+
+
 def _choose_modern_initiation(side: Side):
     entities = actions_for(side)
     while True:
@@ -171,6 +202,8 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
         print("Commitment resolution effects: OFF (LOW remains dominant; standard play defaults MEDIUM)")
         print("Exhaustion consequence: Exhausted initiator -1 grade")
         print("Behavior stamina: PRESSURE/ESCAPE -1 per 5s; HOLD/PROTECT 0; CONSERVE +2 per 5s")
+        if args.blind:
+            print("Blind hot-seat testing: responder locks hidden response before action/RESET is chosen")
     else:
         print("Stamina effects: OFF (legacy Mount v0 path)")
 
@@ -198,16 +231,25 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
 
             initiator = run.initiator
             if commitment_enabled:
+                responder = initiator.opponent
+                blind_response = (
+                    _choose_blind_response(responder)
+                    if args.blind
+                    else None
+                )
                 action = _choose_modern_initiation(initiator)
                 if action is None:
                     reset_result = run.reset_window()
                     print("\n" + format_reset_window(reset_result))
                 else:
-                    responder = initiator.opponent
-                    response = _choose_entity(
-                        f"{responder.value.upper()} RESPONSE",
-                        responder,
-                        EntityKind.RESPONSE,
+                    response = (
+                        blind_response
+                        if blind_response is not None
+                        else _choose_entity(
+                            f"{responder.value.upper()} RESPONSE",
+                            responder,
+                            EntityKind.RESPONSE,
+                        )
                     )
                     attempt_result = run.attempt(
                         action_id=action.id,
@@ -320,6 +362,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--top-stamina", type=stamina_value, default=100, help="starting Top stamina telemetry, 0..100")
     parser.add_argument("--bottom-stamina", type=stamina_value, default=100, help="starting Bottom stamina telemetry, 0..100")
     parser.add_argument("--commitment", type=commitment_value, default=Commitment.MEDIUM, help="fixed v0.1c action commitment; defaults to MEDIUM")
+    parser.add_argument("--blind", action="store_true", help="testing mode: responder locks a hidden response before the action/RESET choice")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -390,6 +433,9 @@ def _tee_to_log(path: Path):
 
 
 def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> int:
+    if args.blind and not commitment_enabled:
+        print("ERROR: --blind is available only on the modern bjj_game testing path.")
+        return 2
     if args.enumerate:
         print(render_enumeration())
         return 0 if run_checks().ok else 1
@@ -430,6 +476,11 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             print(
                 "INFO: RESET/STALLING DEBT: RESET solves forced-action recovery but repeated no-action "
                 "windows need the future progress-based stalling system."
+            )
+            print("INFO: " + render_reset_lock_probe())
+            print(
+                "INFO: BLIND PLAYTEST MODE: use --blind to lock the responder before the action is shown; "
+                "testing only, no resolution rules change."
             )
         report = run_checks()
         for message in report.info:
