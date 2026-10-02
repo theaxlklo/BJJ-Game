@@ -9,7 +9,7 @@ from typing import TextIO
 
 from ..domain.action import Commitment
 from ..positions.mount.catalog import MODERN_ENTITY_BY_ID, actions_for, responses_for
-from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_behavior_and_reacquisition_probe, render_v03a_definition_of_done, render_v03a_recovery_prediction_probe, run_checks
+from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_behavior_and_reacquisition_probe, render_v03a_definition_of_done, render_v03a_recovery_prediction_probe, render_v03a_stamina_saturation_observation, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
 from .batch import BatchBehaviorMode, run_escape_first_batch
@@ -689,6 +689,7 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             for line in render_v03a_definition_of_done():
                 print(f"INFO: {line}")
             print("INFO: " + render_v03a_recovery_prediction_probe())
+            print("INFO: " + render_v03a_stamina_saturation_observation())
             for line in render_v03a_behavior_and_reacquisition_probe():
                 print("INFO: " + line)
         for message in report.info:
