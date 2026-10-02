@@ -4,10 +4,9 @@ from dataclasses import dataclass, field
 
 from ..domain.competitor import Competitor
 from ..domain.model import Band, BottomBehavior, ExitDestination, RunHistory, Side, TopBehavior
-from ..positions.mount.catalog import MOUNT_CATALOG
 from ..positions.mount.position import MountPosition
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
-from .mount_engine import MOUNT_ENGINE, MountResolutionEngine
+from .mount_engine import MountResolutionEngine
 
 
 @dataclass(slots=True)
@@ -16,12 +15,14 @@ class MountMatch:
 
     The match owns competitors, clock, position, initiative and history. Resolution
     math lives in MountResolutionEngine, keeping mutable state separate from rules.
+    Behaviors are competitor state; optional method arguments remain only for the
+    frozen v0 compatibility API and update that state before resolution.
     """
 
     initial_clock: int = DEFAULT_CLOCK_SECONDS
     starting_axis: float = DEFAULT_AXIS
     interval_seconds: int = DEFAULT_INTERVAL_SECONDS
-    engine: MountResolutionEngine = field(default=MOUNT_ENGINE, repr=False)
+    engine: MountResolutionEngine = field(default_factory=MountResolutionEngine.default, repr=False)
     clock_seconds: int = field(init=False)
     position: MountPosition = field(init=False)
     initial_band: Band = field(init=False)
@@ -42,12 +43,12 @@ class MountMatch:
         self.initial_band = self.position.control.band
         self.initiator = Side.TOP
         self.history = RunHistory()
-        self.top = Competitor(side=Side.TOP, name="Top")
-        self.bottom = Competitor(side=Side.BOTTOM, name="Bottom")
+        self.top = Competitor(side=Side.TOP, name="Top", behavior=TopBehavior.PRESSURE)
+        self.bottom = Competitor(side=Side.BOTTOM, name="Bottom", behavior=BottomBehavior.ESCAPE)
 
     @property
     def axis(self) -> float:
-        return self.position.control.value
+        return self.position.reported_axis
 
     @property
     def band(self) -> Band:
@@ -55,7 +56,7 @@ class MountMatch:
 
     @property
     def ended(self) -> bool:
-        return self.clock_seconds <= 0 or self.exit_destination is not None
+        return self.clock_seconds <= 0 or self.position.broken
 
     @property
     def elapsed_simulated_time(self) -> int:
@@ -65,17 +66,42 @@ class MountMatch:
     def mount_duration(self) -> int:
         return self.elapsed_simulated_time
 
-    def drift(self, top_behavior: TopBehavior, bottom_behavior: BottomBehavior):
+    def set_behaviors(
+        self,
+        *,
+        top: TopBehavior | None = None,
+        bottom: BottomBehavior | None = None,
+    ) -> None:
+        if top is not None:
+            self.top.set_behavior(top)
+        if bottom is not None:
+            self.bottom.set_behavior(bottom)
+
+    def _behaviors(
+        self,
+        top_behavior: TopBehavior | None,
+        bottom_behavior: BottomBehavior | None,
+    ) -> tuple[TopBehavior, BottomBehavior]:
+        self.set_behaviors(top=top_behavior, bottom=bottom_behavior)
+        assert isinstance(self.top.behavior, TopBehavior)
+        assert isinstance(self.bottom.behavior, BottomBehavior)
+        return self.top.behavior, self.bottom.behavior
+
+    def drift(
+        self,
+        top_behavior: TopBehavior | None = None,
+        bottom_behavior: BottomBehavior | None = None,
+    ):
+        top_behavior, bottom_behavior = self._behaviors(top_behavior, bottom_behavior)
         result = self.engine.simulate_drift(
-            axis=self.axis,
+            axis=self.position.control.value,
             band=self.band,
             clock_seconds=self.clock_seconds,
             duration_seconds=self.interval_seconds,
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
         )
-        self.position.control.value = result.end_axis
-        self.position.control.band = result.end_band
+        self.position.apply_control(result.end_axis, result.end_band)
         self.clock_seconds = result.end_clock
         self.history.top_behavior_history.append(top_behavior.value)
         self.history.bottom_behavior_history.append(bottom_behavior.value)
@@ -88,13 +114,16 @@ class MountMatch:
         *,
         action_id: str,
         response_id: str,
-        top_behavior: TopBehavior,
-        bottom_behavior: BottomBehavior,
+        top_behavior: TopBehavior | None = None,
+        bottom_behavior: BottomBehavior | None = None,
     ):
         if self.clock_seconds <= 0:
             raise RuntimeError("Cannot resolve a decision after timeout")
+        if self.position.broken:
+            raise RuntimeError("Cannot resolve a decision after Mount is broken")
+        top_behavior, bottom_behavior = self._behaviors(top_behavior, bottom_behavior)
         result = self.engine.resolve_action(
-            axis=self.axis,
+            axis=self.position.control.value,
             band=self.band,
             initiator=self.initiator,
             action_id=action_id,
@@ -102,8 +131,6 @@ class MountMatch:
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
         )
-        self.position.control.value = result.axis_after
-        self.position.control.band = result.band_after
         self.history.initiated_action_history.append(action_id)
         self.history.response_history.append(response_id)
         self.history.raw_grade_history.append(result.raw_grade.display)
@@ -116,16 +143,17 @@ class MountMatch:
         self.history.escape_threshold_reached |= result.escape_threshold_reached
 
         if result.exit_destination is not None:
+            self.position.break_mount(result.axis_after)
             self.exit_destination = result.exit_destination
-            action = MOUNT_CATALOG.get(action_id)
+            action = self.engine.catalog.get(action_id)
             self.exit_reason = (
                 f"{action.canonical_name} reached the escape threshold with final grade "
                 f"{result.final_grade.display}"
             )
         else:
+            self.position.apply_control(result.axis_after, result.band_after)
             self.initiator = self.initiator.opponent
         return result
 
 
-# v0 public compatibility name. New code should prefer MountMatch.
 MountRun = MountMatch
