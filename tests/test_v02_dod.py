@@ -5,7 +5,7 @@ from bjj_game.diagnostics.checker import (
     _commitment_low_dominance_probe,
     _exhausted_positive_weight_escape_routes_by_top_behavior,
     _responder_exhaustion_differential_count,
-    _v02_ready_lock_free_states,
+    _v02_ready_gate_evidence,
     _v02_standard_batch,
     measure_v02_definition_of_done,
     render_reset_lock_probe,
@@ -23,16 +23,26 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             for gate in measure_v02_definition_of_done(cls.report)
         }
 
-    def test_gate_1_status_follows_ready_legal_response_measurement(self):
-        counts = _v02_ready_lock_free_states()
+    def test_gate_1_status_follows_reachable_balanced_ready_measurement(self):
+        evidence = _v02_ready_gate_evidence()
         expected = (
             V02GateStatus.PASS
-            if all(counts[side] > 0 for side in counts)
+            if all(
+                item.reachable_states > 0
+                and item.lock_free_states > 0
+                and item.guaranteed_attacker_states == 0
+                for item in evidence.values()
+            )
             else V02GateStatus.OPEN
         )
         self.assertIs(self.gates[1].status, expected)
-        for side, count in counts.items():
-            self.assertIn(f"{side.value}:{count}", self.gates[1].metric)
+        for side, item in evidence.items():
+            self.assertIn(
+                f"{side.value}:{item.reachable_states}/"
+                f"lock-free:{item.lock_free_states}/"
+                f"guaranteed:{item.guaranteed_attacker_states}",
+                self.gates[1].metric,
+            )
 
     def test_gate_2_status_follows_reset_probe(self):
         probe = render_reset_lock_probe()
@@ -57,13 +67,14 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         self.assertIs(self.gates[3].status, expected)
         self.assertIn(f"={differences}", self.gates[3].metric)
 
-    def test_gate_4_status_follows_bridge_setup_value_in_standard_batch(self):
+    def test_gate_4_status_follows_completed_bridge_chain_value(self):
         batch = _v02_standard_batch()
         bridge_count = batch.bottom_action_counts.get("Bridge", 0)
         setup_count = batch.bottom_setup_action_count
+        completed_builds = batch.bottom_completed_setup_build_count
         expected = (
             V02GateStatus.PASS
-            if setup_count > 0
+            if completed_builds > 0
             else V02GateStatus.OPEN
         )
         self.assertIs(self.gates[4].status, expected)
@@ -72,12 +83,18 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             f"setup-priority selections={setup_count}",
             self.gates[4].metric,
         )
+        self.assertIn(
+            f"completed-chain Bridge builds={completed_builds}",
+            self.gates[4].metric,
+        )
 
-    def test_gate_5_status_follows_top_followup_meaningful_rate(self):
+    def test_gate_5_status_follows_completed_setup_chain_activity(self):
         batch = _v02_standard_batch()
         position_rate = batch.top_followup_position_attack_count / batch.matches
-        setup_rate = batch.top_followup_setup_action_count / batch.matches
-        rate = position_rate + setup_rate
+        completed_setup_rate = (
+            batch.top_followup_completed_setup_build_count / batch.matches
+        )
+        rate = position_rate + completed_setup_rate
         expected = (
             V02GateStatus.PASS
             if rate > 1.0
@@ -86,8 +103,11 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         self.assertIs(self.gates[5].status, expected)
         self.assertIn(f"={rate:.3f}", self.gates[5].metric)
         self.assertIn(f"position:{position_rate:.3f}", self.gates[5].metric)
-        self.assertIn(f"setup:{setup_rate:.3f}", self.gates[5].metric)
-        self.assertIn("opening attack excluded", self.gates[5].evidence)
+        self.assertIn(
+            f"completed-setup-builds:{completed_setup_rate:.3f}",
+            self.gates[5].metric,
+        )
+        self.assertIn("setup builders count only when", self.gates[5].evidence)
 
     def test_gate_6_requires_escape_route_under_every_top_behavior(self):
         routes_by_behavior = (
