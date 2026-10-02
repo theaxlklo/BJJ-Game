@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..positions.mount.catalog import ENTITY_BY_ID
+from ..domain.action import AttemptResult
 from ..domain.model import DriftResult, ResolutionResult
 
 
@@ -52,7 +53,7 @@ def format_resolution(result: ResolutionResult, clock_seconds: int, top_behavior
         f"Axis delta: {result.axis_delta:+.2f}",
         f"Proposed axis: {result.proposed_axis:+.2f}",
         f"Failure clamp used?: {'Yes' if result.failure_clamp_used else 'No'}",
-        f"Bridge clamp used?: {'Yes' if result.bridge_clamp_used else 'No'}",
+        f"Floor clamp used?: {'Yes' if result.floor_clamp_used else 'No'}",
         f"Escape threshold reached?: {'Yes' if result.escape_threshold_reached else 'No'}",
         f"Exit-capable action?: {'Yes' if result.exit_capable_action else 'No'}",
         f"Axis after: {result.axis_after:+.2f}",
@@ -61,6 +62,28 @@ def format_resolution(result: ResolutionResult, clock_seconds: int, top_behavior
     ]
     for change in result.band_changes:
         lines.append(f"Band Change: {change.before.value} → {change.after.value}")
-    if result.bridge_clamp_used:
-        lines.append("Bridge Special Rule: successful disruption may reach Loose, but Bridge cannot break Mount in v0.")
+    if result.floor_clamp_used:
+        lines.append("Floor Clamp: this action cannot cross the Mount floor without an escape transition.")
+    return "\n".join(lines)
+
+
+def format_attempt_result(
+    result: AttemptResult,
+    clock_seconds: int,
+    top_behavior: str,
+    bottom_behavior: str,
+) -> str:
+    spend = result.stamina
+    lines = [
+        "COMMITMENT / STAMINA",
+        f"Commitment: {result.attempt.commitment.value}",
+        f"Stamina before: {spend.before}",
+        f"Requested cost: {spend.requested}",
+        f"Charged: {spend.charged}",
+        f"Shortfall: {spend.shortfall}",
+        f"Stamina after: {spend.after}",
+        "Commitment resolution effect: None (v0.1b)",
+        "",
+        format_resolution(result.resolution, clock_seconds, top_behavior, bottom_behavior),
+    ]
     return "\n".join(lines)
