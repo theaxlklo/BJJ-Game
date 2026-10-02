@@ -2,7 +2,7 @@ import unittest
 
 from bjj_game.diagnostics.checker import (
     V02GateStatus,
-    _commitment_outcome_effect_count,
+    _commitment_low_dominance_probe,
     _exhausted_positive_weight_escape_hits,
     _responder_exhaustion_differential_count,
     _v02_standard_batch,
@@ -89,15 +89,22 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         self.assertIs(self.gates[6].status, expected)
         self.assertIn(f"={len(routes)}", self.gates[6].metric)
 
-    def test_gate_7_status_follows_commitment_outcome_probe(self):
-        effects = _commitment_outcome_effect_count()
+    def test_gate_7_status_follows_low_dominance_probe(self):
+        low_dominates, advantage_states = _commitment_low_dominance_probe()
         expected = (
-            V02GateStatus.PASS
-            if effects > 0
-            else V02GateStatus.OPEN
+            V02GateStatus.OPEN
+            if low_dominates
+            else V02GateStatus.PASS
         )
         self.assertIs(self.gates[7].status, expected)
-        self.assertIn(f"={effects}", self.gates[7].metric)
+        self.assertIn(
+            f"low_strictly_dominates={low_dominates}",
+            self.gates[7].metric,
+        )
+        self.assertIn(
+            f"higher-commitment advantage states={advantage_states}",
+            self.gates[7].metric,
+        )
 
     def test_renderer_uses_measured_status_objects(self):
         lines = render_v02_definition_of_done(self.report)
