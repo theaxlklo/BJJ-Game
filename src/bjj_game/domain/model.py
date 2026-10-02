@@ -194,6 +194,7 @@ class RunHistory:
     stalling_reset_with_route_history: list[str] = field(default_factory=list)
     stalling_warning_history: list[str] = field(default_factory=list)
     stalling_penalty_history: list[str] = field(default_factory=list)
+    stalling_position_reset_history: list[str] = field(default_factory=list)
     stalling_free_initiative_history: list[str] = field(default_factory=list)
     stalling_clock_history: list[str] = field(default_factory=list)
     stalling_boundary_history: list[str] = field(default_factory=list)
