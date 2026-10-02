@@ -374,11 +374,8 @@ def measure_v02_definition_of_done(
     # Gates 4/5 share the same deterministic standard batch.
     standard_batch = _v02_standard_batch()
     bridge_count = standard_batch.bottom_action_counts.get("Bridge", 0)
-    top_meaningful_initiations = sum(
-        standard_batch.top_action_counts.values()
-    )
-    top_initiations_per_match = (
-        top_meaningful_initiations / standard_batch.matches
+    top_position_attacks_per_match = (
+        standard_batch.top_position_attack_count / standard_batch.matches
     )
 
     # Gate 3: responder-only outcome differential.
@@ -459,12 +456,12 @@ def measure_v02_definition_of_done(
             name="Top post-opening activity",
             status=(
                 V02GateStatus.PASS
-                if top_initiations_per_match > 1.0
+                if top_position_attacks_per_match > 1.0
                 else V02GateStatus.OPEN
             ),
             metric=(
-                "standard batch Top meaningful initiations/match="
-                f"{top_initiations_per_match:.3f}"
+                "standard batch Top position attacks/match="
+                f"{top_position_attacks_per_match:.3f}"
             ),
             evidence="pass threshold is >1.000 per match",
         ),
