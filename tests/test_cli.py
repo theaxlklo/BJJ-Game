@@ -487,6 +487,13 @@ class CliTests(unittest.TestCase):
             "response mix: Open Guard",
             text,
         )
+        self.assertIn("V0.2 DOD GATE 1 [OPEN]: perfect-response lock", text)
+        self.assertIn("V0.2 DOD GATE 2 [OPEN]: RESET/stalling", text)
+        self.assertIn("V0.2 DOD GATE 3 [OPEN]: responder stamina", text)
+        self.assertIn("V0.2 DOD GATE 4 [OPEN]: Bridge setup role", text)
+        self.assertIn("V0.2 DOD GATE 5 [OPEN]: Top post-opening activity", text)
+        self.assertIn("V0.2 DOD GATE 6 [OPEN]: Exhausted Bottom escape reachability", text)
+        self.assertIn("V0.2 DOD GATE 7 [OPEN]: commitment meaning", text)
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
         output = io.StringIO()
@@ -507,6 +514,7 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("RANDOM BLIND RESPONDER MIX", text)
         self.assertNotIn("BLIND MIX BAND METRICS", text)
         self.assertNotIn("BATCH RESPONSE MIX LIMIT", text)
+        self.assertNotIn("V0.2 DOD GATE", text)
 
 
 
