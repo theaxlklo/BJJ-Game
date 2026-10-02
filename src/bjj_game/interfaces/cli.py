@@ -9,7 +9,7 @@ from typing import TextIO
 
 from ..domain.action import Commitment
 from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
-from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, run_checks
+from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done_baseline, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
 from .batch import BatchBehaviorMode, run_escape_first_batch
@@ -666,6 +666,8 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             for line in render_random_mix_band_metrics():
                 print(f"INFO: {line}")
             print("INFO: " + render_random_mix_exit_limit())
+            for line in render_v02_definition_of_done_baseline():
+                print(f"INFO: {line}")
         report = run_checks()
         for message in report.info:
             print(f"INFO: {message}")
