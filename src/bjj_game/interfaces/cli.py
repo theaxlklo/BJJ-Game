@@ -10,6 +10,7 @@ from ..domain.action import Commitment
 from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, run_checks
 from ..engine.match import MountRun
+from ..engine.stamina import project_active_stamina_pacing
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
 from ..domain.model import BottomBehavior, EntityKind, Side, TopBehavior
@@ -123,7 +124,7 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
     run = MountRun(initial_clock=args.clock, starting_axis=args.axis, interval_seconds=args.interval)
     run.top.stamina.set_current(args.top_stamina)
     run.bottom.stamina.set_current(args.bottom_stamina)
-    print("MOUNT v0.1c — HOT-SEAT PROTOTYPE" if commitment_enabled else "MOUNT v0 — HOT-SEAT PROTOTYPE")
+    print("MOUNT v0.1e — HOT-SEAT PROTOTYPE" if commitment_enabled else "MOUNT v0 — HOT-SEAT PROTOTYPE")
     print(f"Clock: {format_clock(run.initial_clock)}")
     print(f"Starting axis: {run.axis:+.2f}")
     print(f"Initial visible band: {run.band.value}")
@@ -135,6 +136,7 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
         print("Action stamina costs: ON (LOW=3, MEDIUM=7, HIGH=12)")
         print(f"Standard commitment: {args.commitment.value}")
         print("Commitment resolution effects: OFF (LOW remains dominant; standard play defaults MEDIUM)")
+        print("Exhaustion consequence: Exhausted initiator -1 grade")
         print("Behavior stamina: PRESSURE/ESCAPE -1 per 5s; HOLD/PROTECT 0; CONSERVE +2 per 5s")
     else:
         print("Stamina effects: OFF (legacy Mount v0 path)")
@@ -249,6 +251,8 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
         print(f"Stamina charged history: {h.stamina_charged_history}")
         print(f"Stamina shortfall history: {h.stamina_shortfall_history}")
         print(f"Stamina funding gap history: {h.stamina_funding_gap_history}")
+        print(f"Stamina band at initiation history: {h.stamina_band_at_initiation_history}")
+        print(f"Exhaustion modifier history: {h.exhaustion_modifier_history}")
     print(f"Clamp count: {h.clamp_count}")
     print(f"Escape threshold reached?: {'Yes' if h.escape_threshold_reached else 'No'}")
     print(f"Exit reason: {run.exit_reason or 'None'}")
@@ -339,7 +343,17 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
     if args.check:
         if commitment_enabled:
             print("INFO: COMMITMENT DOMINANCE: LOW strictly dominates MEDIUM/HIGH while commitment effects are OFF; standard play defaults to MEDIUM.")
-            print("INFO: COMMITMENT VISIBILITY: public in v0.1c; hidden/recognized commitment is deferred to the v0.2 information layer.")
+            print("INFO: COMMITMENT VISIBILITY: public in v0.1e; hidden/recognized commitment is deferred to the v0.2 information layer.")
+            for commitment in Commitment:
+                projection = project_active_stamina_pacing(commitment=commitment)
+                print(
+                    "INFO: STAMINA PACING "
+                    f"{commitment.value}: active PRESSURE/ESCAPE, start 100, "
+                    f"Exhausted Top {format_clock(projection.top_exhausted_seconds)}, "
+                    f"Bottom {format_clock(projection.bottom_exhausted_seconds)}; "
+                    f"zero Top {format_clock(projection.top_zero_seconds)}, "
+                    f"Bottom {format_clock(projection.bottom_zero_seconds)}."
+                )
         report = run_checks()
         for message in report.info:
             print(f"INFO: {message}")
