@@ -3,6 +3,7 @@ import unittest
 from bjj_game.diagnostics.checker import (
     V02GateStatus,
     _commitment_low_dominance_probe,
+    _exhausted_bottom_dynamic_escape_counts,
     _exhausted_positive_weight_escape_routes_by_top_behavior,
     _responder_exhaustion_differential_count,
     _v02_ready_gate_evidence,
@@ -65,6 +66,7 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         )
         self.assertIs(self.gates[3].status, expected)
         self.assertIn(f"={differences}", self.gates[3].metric)
+        self.assertEqual(differences, 258)
 
     def test_gate_4_status_follows_completed_bridge_chain_value(self):
         batch = _v02_standard_batch()
@@ -108,7 +110,7 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         )
         self.assertIn("setup builders count only when", self.gates[5].evidence)
 
-    def test_gate_6_requires_escape_route_under_every_top_behavior(self):
+    def test_gate_6_accepts_measured_path_b_when_static_lockout_has_dynamic_route(self):
         routes_by_behavior = (
             _exhausted_positive_weight_escape_routes_by_top_behavior()
         )
@@ -116,15 +118,27 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             behavior: len(routes)
             for behavior, routes in routes_by_behavior.items()
         }
-        expected = (
-            V02GateStatus.PASS
-            if all(count > 0 for count in counts.values())
-            else V02GateStatus.OPEN
+        dynamic = _exhausted_bottom_dynamic_escape_counts()
+        lockouts = tuple(
+            behavior
+            for behavior, count in counts.items()
+            if count == 0
         )
+        if all(count > 0 for count in counts.values()):
+            expected = V02GateStatus.PASS
+        elif lockouts and all(dynamic[behavior] > 0 for behavior in lockouts):
+            expected = V02GateStatus.ACCEPTED
+        else:
+            expected = V02GateStatus.OPEN
+
         self.assertIs(self.gates[6].status, expected)
         for behavior, count in counts.items():
             self.assertIn(
                 f"{behavior.value}:{count}",
+                self.gates[6].metric,
+            )
+            self.assertIn(
+                f"{behavior.value}:{dynamic[behavior]}",
                 self.gates[6].metric,
             )
 
