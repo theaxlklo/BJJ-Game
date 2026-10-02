@@ -80,6 +80,42 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
         self.assertTrue(result.resolution.final_grade.successful)
         self.assertIsNone(match.submission_state.stage)
 
+    def test_ready_americana_contested_hold_cost_is_v03_only(self):
+        v03 = self._ready_americana(axis=3.50)
+        before = v03.bottom.stamina.current
+        result = v03.attempt(
+            action_id=TOP_AMERICANA_ARM_ISOLATION,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+        self.assertIs(result.resolution.final_grade, Grade.CONTESTED)
+        self.assertEqual(v03.bottom.stamina.current, before - 3)
+        self.assertEqual(
+            v03.history.submission_hold_stamina_charged_history,
+            [3],
+        )
+
+        v02 = MountMatch(
+            starting_axis=3.50,
+            enable_v02_setup=True,
+            enable_v03_submissions=False,
+        )
+        v02.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        v02.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        v02.initiator = Side.TOP
+        before_v02 = v02.bottom.stamina.current
+        result_v02 = v02.attempt(
+            action_id=TOP_AMERICANA_ARM_ISOLATION,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+        self.assertIs(result_v02.resolution.final_grade, Grade.CONTESTED)
+        self.assertEqual(v02.bottom.stamina.current, before_v02)
+        self.assertEqual(
+            v02.history.submission_hold_stamina_charged_history,
+            [],
+        )
+
     def test_submission_stage_inherits_ready_isolation_responses(self):
         match = self._active_stage()
         self.assertEqual(
