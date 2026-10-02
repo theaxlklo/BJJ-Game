@@ -248,6 +248,7 @@ class MountMatch:
         spend = self.competitor(initiator).stamina.spend_up_to(requested)
 
         self.history.commitment_history.append(commitment.value)
+        self.history.commitment_initiator_history.append(initiator.value)
         self.history.stamina_requested_history.append(spend.requested)
         self.history.stamina_charged_history.append(spend.charged)
         self.history.stamina_shortfall_history.append(spend.shortfall)
