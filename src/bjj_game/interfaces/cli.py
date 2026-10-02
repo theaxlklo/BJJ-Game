@@ -8,7 +8,7 @@ from typing import TextIO
 
 from ..domain.action import Commitment
 from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
-from ..diagnostics.checker import render_enumeration, run_checks
+from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import project_active_stamina_pacing
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_resolution
@@ -354,6 +354,13 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                     f"zero Top {format_clock(projection.top_zero_seconds)}, "
                     f"Bottom {format_clock(projection.bottom_zero_seconds)}."
                 )
+            print("INFO: EXHAUSTION HYSTERESIS: enter Exhausted at <=25; recover only at >=35.")
+            for line in render_exhausted_reachability_summary():
+                print(f"INFO: {line}")
+            print(
+                "INFO: V0.2 RESPONSE-STAMINA DEBT: exhausted responders still defend at full strength "
+                "and responses have no direct cost; revisit with triggered initiative."
+            )
         report = run_checks()
         for message in report.info:
             print(f"INFO: {message}")
