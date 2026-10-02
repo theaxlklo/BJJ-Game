@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TextIO
 
 from ..domain.action import Commitment
-from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
+from ..positions.mount.catalog import MODERN_ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_definition_of_done, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
@@ -424,8 +424,8 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
     print(f"Bottom initiation count: {h.bottom_initiation_count}")
     if h.reset_window_history:
         print(f"Reset / no-action history: {h.reset_window_history}")
-    action_history = [ENTITY_BY_ID[action_id].short_name for action_id in h.initiated_action_history]
-    response_history = [ENTITY_BY_ID[response_id].short_name for response_id in h.response_history]
+    action_history = [MODERN_ENTITY_BY_ID[action_id].short_name for action_id in h.initiated_action_history]
+    response_history = [MODERN_ENTITY_BY_ID[response_id].short_name for response_id in h.response_history]
     print(f"Initiated-action history: {action_history}")
     print(f"Response history: {response_history}")
     print(f"Raw-grade history: {h.raw_grade_history}")
