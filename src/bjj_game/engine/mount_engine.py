@@ -73,6 +73,7 @@ class MountResolutionEngine:
         response_id: str,
         top_behavior: TopBehavior = TopBehavior.PRESSURE,
         bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
+        external_grade_modifier: int = 0,
     ) -> ResolutionResult:
         action = self.catalog.get(action_id)
         response = self.catalog.get(response_id)
@@ -86,7 +87,8 @@ class MountResolutionEngine:
         bmod = self.rules.behavior_modifier(action=action, opposing_behavior=opposing_behavior)
         behavior_grade = raw.shift(bmod)
         pmod = self.rules.positional_modifier(initiator=initiator, band=band)
-        final = behavior_grade.shift(pmod)
+        positional_grade = behavior_grade.shift(pmod)
+        final = positional_grade.shift(external_grade_modifier)
         value = int(final)
         delta = float(value if initiator is Side.TOP else -value)
         proposed = round(axis + delta, 10)
@@ -132,6 +134,7 @@ class MountResolutionEngine:
             final_grade=final,
             behavior_modifier=bmod,
             positional_modifier=pmod,
+            external_grade_modifier=external_grade_modifier,
             grade_value=value,
             axis_before=axis,
             axis_delta=delta,
