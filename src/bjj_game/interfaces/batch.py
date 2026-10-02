@@ -93,6 +93,16 @@ class EscapeFirstInitiatorPolicy:
         ready_ids = match.setup_policy.ready_response_ids(target)
         if not ready_ids:
             return False
+        ready_grade_overrides = {
+            response_id: override
+            for response_id in ready_ids
+            if (
+                override := match.setup_policy.ready_final_grade_override(
+                    target,
+                    response_id,
+                )
+            ) is not None
+        }
 
         side = match.initiator
         top_behavior = match.top.behavior
@@ -112,6 +122,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=ready_ids,
+                ready_grade_overrides=ready_grade_overrides,
             )
             raw_axis = expected_raw_attacker_axis_delta(
                 side=side,
@@ -122,6 +133,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=ready_ids,
+                ready_grade_overrides=ready_grade_overrides,
             )
             realized_axis = expected_realized_attacker_axis_delta(
                 side=side,
@@ -132,6 +144,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=ready_ids,
+                ready_grade_overrides=ready_grade_overrides,
             )
         except ValueError:
             return False
@@ -219,6 +232,23 @@ class EscapeFirstInitiatorPolicy:
                 if match.enable_v02_setup
                 else None
             )
+            ready_grade_overrides = (
+                {
+                    response_id: override
+                    for response_id in allowed or ()
+                    if (
+                        override := match.setup_policy.ready_final_grade_override(
+                            action.id,
+                            response_id,
+                        )
+                    ) is not None
+                }
+                if (
+                    match.enable_v02_setup
+                    and match.setup_state.is_ready(action.id)
+                )
+                else None
+            )
             escape_probability = exact_escape_probability(
                 side=side,
                 action_id=action.id,
@@ -228,6 +258,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=exhaustion_modifier,
                 allowed_response_ids=allowed,
+                ready_grade_overrides=ready_grade_overrides,
             )
             setup_probability = self._setup_advance_probability(
                 match,
@@ -243,6 +274,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=exhaustion_modifier,
                 allowed_response_ids=allowed,
+                ready_grade_overrides=ready_grade_overrides,
             )
             realized_axis = expected_realized_attacker_axis_delta(
                 side=side,
@@ -253,6 +285,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=exhaustion_modifier,
                 allowed_response_ids=allowed,
+                ready_grade_overrides=ready_grade_overrides,
             )
             rows.append(
                 (
