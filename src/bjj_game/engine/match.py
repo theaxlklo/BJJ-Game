@@ -457,8 +457,14 @@ class MountMatch:
                     f"{stage_before.value}->{change.after.value}"
                 )
         else:
+            change = self.submission_state.defend()
+            after_label = change.after.value if change.after is not None else "None"
+            self.history.submission_change_history.append(
+                f"{stage_before.value}->{after_label}:defended"
+            )
             self.history.submission_defense_history.append(
-                f"{stage_before.value}:{resolution.final_grade.display}:"
+                f"{stage_before.value}->{after_label}:"
+                f"{resolution.final_grade.display}:"
                 f"{resolution.axis_before:+.2f}->{resolution.axis_after:+.2f}"
             )
 
