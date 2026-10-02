@@ -384,7 +384,9 @@ def render_random_mix_band_metrics(*, action_cost: int = 7) -> tuple[str, ...]:
     return tuple(lines)
 
 
-def random_mix_reachable_exits() -> frozenset[ExitDestination]:
+def random_mix_reachable_exits(
+    *, external_grade_modifier: int = 0
+) -> frozenset[ExitDestination]:
     """Exit destinations reachable against positive-weight responses."""
     reachable: set[ExitDestination] = set()
     for action in actions_for(Side.BOTTOM):
@@ -403,6 +405,7 @@ def random_mix_reachable_exits() -> frozenset[ExitDestination]:
                         response_id=response_id,
                         top_behavior=TopBehavior.PRESSURE,
                         bottom_behavior=BottomBehavior.ESCAPE,
+                        external_grade_modifier=external_grade_modifier,
                     )
                     if result.exit_destination is not None:
                         reachable.add(result.exit_destination)
@@ -410,11 +413,28 @@ def random_mix_reachable_exits() -> frozenset[ExitDestination]:
 
 
 def render_random_mix_exit_limit() -> str:
-    reachable = random_mix_reachable_exits()
-    missing = [destination.value for destination in ExitDestination if destination not in reachable]
-    if not missing:
-        return "BATCH RESPONSE MIX LIMIT: all current Exit Map destinations are reachable."
+    fresh = random_mix_reachable_exits()
+    exhausted_responder = random_mix_reachable_exits(
+        external_grade_modifier=+1
+    )
+    fresh_missing = [
+        destination.value
+        for destination in ExitDestination
+        if destination not in fresh
+    ]
+    exhausted_missing = [
+        destination.value
+        for destination in ExitDestination
+        if destination not in exhausted_responder
+    ]
+
+    def render_missing(values: list[str]) -> str:
+        return ", ".join(values) if values else "none"
+
     return (
-        "BATCH RESPONSE MIX LIMIT: unreachable under the fixed positive-weight "
-        "response mix: " + ", ".join(missing)
+        "BATCH RESPONSE MIX REACHABILITY: fresh responder missing="
+        + render_missing(fresh_missing)
+        + "; Exhausted responder missing="
+        + render_missing(exhausted_missing)
+        + "."
     )
