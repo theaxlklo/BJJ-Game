@@ -757,6 +757,7 @@ def measure_v02_definition_of_done(
     v03b_stalling_resolves_lock = (
         v03b_top_stall.warnings == 1
         and v03b_top_stall.penalties >= 1
+        and v03b_top_stall.position_resets >= 1
         and v03b_top_stall.final_band is not Band.LOCKED
         and not v03b_top_stall.locked_timeout
     )
@@ -874,6 +875,7 @@ def measure_v02_definition_of_done(
                 f"submission_finish_present={submission_finish_present}; "
                 f"v03b_warnings={v03b_top_stall.warnings}; "
                 f"v03b_penalties={v03b_top_stall.penalties}; "
+                f"v03b_position_resets={v03b_top_stall.position_resets}; "
                 f"v03b_final_band={v03b_top_stall.final_band.value}"
             ),
             evidence=(
@@ -884,9 +886,9 @@ def measure_v02_definition_of_done(
                     "would punish a state with no legal way to advance"
                     if reset_locked_timeout and not submission_finish_present
                     else (
-                        "; v0.3b one-sided ownership probe issues a persistent "
-                        "Warning then a one-band penalty, so deliberate RESET "
-                        "cannot retain unchanged Locked control"
+                        "; v0.3b one-sided ownership probe runs through timeout and "
+                        "reaches persistent Warning, one-band penalty, then "
+                        "Position Reset escalation, preventing a Locked timeout"
                         if v03b_stalling_resolves_lock
                         else "; v0.3b stalling evidence has not resolved the lock"
                     )
@@ -1677,6 +1679,7 @@ def render_v03a_hold_cost_status() -> str:
 class V03BTopStallEvidence:
     warnings: int
     penalties: int
+    position_resets: int
     final_axis: float
     final_band: Band
     locked_timeout: bool
@@ -1781,6 +1784,7 @@ def _v03b_top_stall_probe() -> V03BTopStallEvidence:
     return V03BTopStallEvidence(
         warnings=len(match.history.stalling_warning_history),
         penalties=len(match.history.stalling_penalty_history),
+        position_resets=len(match.history.stalling_position_reset_history),
         final_axis=match.axis,
         final_band=match.band,
         locked_timeout=(
@@ -1900,6 +1904,7 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
     gate_a_pass = (
         top_stall.warnings == 1
         and top_stall.penalties >= 1
+        and top_stall.position_resets >= 1
         and top_stall.final_band is not Band.LOCKED
         and not top_stall.locked_timeout
     )
@@ -1937,6 +1942,7 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
             status=V02GateStatus.PASS if gate_a_pass else V02GateStatus.OPEN,
             metric=(
                 f"warnings={top_stall.warnings}; penalties={top_stall.penalties}; "
+                f"Position Resets={top_stall.position_resets}; "
                 f"final_axis={top_stall.final_axis:+.2f}; "
                 f"final_band={top_stall.final_band.value}; "
                 f"locked_timeout={top_stall.locked_timeout}; "
@@ -1944,8 +1950,8 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
             ),
             evidence=(
                 "Top repeatedly RESETs through a real active-submission route for "
-                "the full match; PASS requires the stalling ladder to prevent a "
-                "Locked timeout, not merely dislodge Locked temporarily"
+                "the full match; PASS requires Warning -> one-band penalty -> "
+                "Position Reset escalation to prevent a Locked timeout"
             ),
         ),
         V03BGateMeasurement(
@@ -2090,8 +2096,50 @@ def render_v03b_prediction_probe() -> str:
         f"{stalling_random.bottom_stalling_warning_count}; "
         f"penalties Top/Bottom="
         f"{stalling_random.top_stalling_penalty_count}/"
-        f"{stalling_random.bottom_stalling_penalty_count}. "
+        f"{stalling_random.bottom_stalling_penalty_count}; "
+        f"Position Resets Top/Bottom="
+        f"{stalling_random.top_stalling_position_reset_count}/"
+        f"{stalling_random.bottom_stalling_position_reset_count}. "
         "Observational only; no prediction is a tuning gate."
+    )
+
+
+def render_v03b_normal_play_guard() -> str:
+    random = _v03b_random_standard_batch()
+    informed = _v03b_informed_standard_batch()
+
+    random_clear = (
+        random.top_stalling_warning_count == 0
+        and random.bottom_stalling_warning_count == 0
+        and random.top_stalling_penalty_count == 0
+        and random.bottom_stalling_penalty_count == 0
+        and random.top_stalling_position_reset_count == 0
+        and random.bottom_stalling_position_reset_count == 0
+    )
+    informed_clear = (
+        informed.top_stalling_warning_count == 0
+        and informed.bottom_stalling_warning_count == 0
+        and informed.top_stalling_penalty_count == 0
+        and informed.bottom_stalling_penalty_count == 0
+        and informed.top_stalling_position_reset_count == 0
+        and informed.bottom_stalling_position_reset_count == 0
+    )
+    status = "PASS" if random_clear and informed_clear else "OPEN"
+    return (
+        f"V0.3b NORMAL-PLAY GUARD [{status}]: "
+        f"random warnings={random.top_stalling_warning_count}/"
+        f"{random.bottom_stalling_warning_count}, penalties="
+        f"{random.top_stalling_penalty_count}/"
+        f"{random.bottom_stalling_penalty_count}, Position Resets="
+        f"{random.top_stalling_position_reset_count}/"
+        f"{random.bottom_stalling_position_reset_count}; "
+        f"informed warnings={informed.top_stalling_warning_count}/"
+        f"{informed.bottom_stalling_warning_count}, penalties="
+        f"{informed.top_stalling_penalty_count}/"
+        f"{informed.bottom_stalling_penalty_count}, Position Resets="
+        f"{informed.top_stalling_position_reset_count}/"
+        f"{informed.bottom_stalling_position_reset_count}. "
+        "Executable guard; stronger stalling escalation must not punish engaged standard play."
     )
 
 
