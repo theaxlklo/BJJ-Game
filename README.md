@@ -77,6 +77,27 @@ PYTHONPATH=src python -m bjj_game \
   --log logs/blind-seed-42.txt
 ```
 
+For clean behavior experiments, either side can be fixed for the entire session:
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --blind \
+  --blind-responder random \
+  --seed 42 \
+  --top-behavior PRESSURE \
+  --bottom-behavior ESCAPE \
+  --log logs/pressure-vs-escape-seed-42.txt
+```
+
+Supported fixed values:
+
+```text
+--top-behavior PRESSURE|HOLD|CONSERVE
+--bottom-behavior ESCAPE|PROTECT|CONSERVE
+```
+
+A fixed side is not re-prompted between windows. The other side stays interactive when only one behavior flag is supplied.
+
 In `--blind`, the responder locks a response before the initiator chooses an action or RESET. Human mode hides the typed response with `getpass`. Random mode uses a deterministic seeded policy and reveals/logs the selected response only after the initiator commits, so one person can run genuinely blind sessions.
 
 Current fixed random-response mixes:
@@ -225,6 +246,17 @@ The matrix is intentionally **not** distorted to fix this. v0.2 setup/Ready/init
 For v0.1 playtests, `bjj_game --blind` can remove the full-information response advantage without changing the matrix: the responder commits before the initiated action is shown. `--blind-responder random --seed N` makes that usable in solo sessions. This is a testing mode, not the final v0.2 information model.
 
 Bridge remains a known v0 setup limitation: in the raw matrix Trap-and-Roll is at least as good against every response and has the stronger Hip Follow result plus an escape branch. Bridge is being left intact for v0.2 setup/Ready work rather than receiving an ad-hoc stamina discount.
+
+### Per-band blind-mix diagnostics
+
+`bjj_game --check` reports every action against the fixed random-response mix by visible band using two separate signals:
+
+- **attacker-axis** — expected proposed axis delta from the initiator's perspective after behavior and positional grade modifiers, before axis floor/cap/escape clamping.
+- **escape** — the min/max escape probability across the existing 0.01 axis grid compatible with that visible band.
+
+MEDIUM's 7-stamina action cost is printed separately. The checker never converts stamina or an escape into axis points and never emits a combined utility score.
+
+The baseline for these lines is Top PRESSURE / Bottom ESCAPE with no exhaustion penalty. One useful consequence is explicit: Top's frozen Loose positional modifier makes all three Top attacks negative on attacker-axis under the current seeded response mix, even though Crossface/Americana are positive at Stable.
 
 ## Final Elbow-Knee playtest tune
 
