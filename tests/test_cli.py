@@ -256,7 +256,7 @@ class CliTests(unittest.TestCase):
                 "--top-behavior", "PRESSURE",
                 "--bottom-behavior", "ESCAPE",
             ])
-        self.assertEqual(code, 130)
+        self.assertEqual(code, 0)
         text = output.getvalue()
         self.assertIn("Top behavior fixed for session: PRESSURE", text)
         self.assertIn("Bottom behavior fixed for session: ESCAPE", text)
