@@ -677,10 +677,16 @@ class MountMatch:
         )
         spend = pool.spend_up_to(effective_cost)
 
-        if (
+        submission_hold = (
             action_id == TOP_AMERICANA_SUBMISSION_FINISH
             and result.final_grade is Grade.CONTESTED
-        ):
+        ) or (
+            self.enable_v03_submissions
+            and action_id == TOP_AMERICANA_ARM_ISOLATION
+            and target_was_ready
+            and result.final_grade is Grade.CONTESTED
+        )
+        if submission_hold:
             hold_cost = self.stamina_cost_policy.cost(Commitment.LOW)
             hold_spend = responder_pool.spend_up_to(hold_cost)
             self.history.submission_hold_responder_side_history.append(
