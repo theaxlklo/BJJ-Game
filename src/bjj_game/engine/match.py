@@ -377,6 +377,22 @@ class MountMatch:
         )
         return axis_before, self.axis, False
 
+    def _apply_stalling_position_reset(
+        self,
+        *,
+        offender: Side,
+    ) -> tuple[float, float]:
+        axis_before = self.axis
+        band_before = self.band
+        reset_band = self.engine.rules.initial_band(DEFAULT_AXIS)
+        self.position.apply_control(DEFAULT_AXIS, reset_band)
+        self.history.stalling_position_reset_history.append(
+            f"{offender.value}@{self.elapsed_simulated_time}s:"
+            f"{band_before.value}->{reset_band.value}:"
+            f"{axis_before:+.2f}->{self.axis:+.2f}"
+        )
+        return axis_before, self.axis
+
     def _validate_action_legality(self, action_id: str) -> None:
         if action_id not in self.legal_action_ids():
             if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
@@ -784,6 +800,9 @@ class MountMatch:
         stalling_consequence: str | None = None
         penalty_axis_before: float | None = None
         penalty_axis_after: float | None = None
+        position_reset = False
+        position_reset_axis_before: float | None = None
+        position_reset_axis_after: float | None = None
         free_initiative_window = False
 
         if self.enable_v03b_stalling:
@@ -816,6 +835,12 @@ class MountMatch:
                     penalty_axis_after,
                     free_initiative_window,
                 ) = self._apply_stalling_penalty(offender=initiator)
+            elif evaluation.consequence is StallingConsequence.POSITION_RESET:
+                position_reset = True
+                (
+                    position_reset_axis_before,
+                    position_reset_axis_after,
+                ) = self._apply_stalling_position_reset(offender=initiator)
 
         next_initiator = initiator.opponent
         result = ResetWindowResult(
@@ -831,6 +856,9 @@ class MountMatch:
             stalling_consequence=stalling_consequence,
             penalty_axis_before=penalty_axis_before,
             penalty_axis_after=penalty_axis_after,
+            position_reset=position_reset,
+            position_reset_axis_before=position_reset_axis_before,
+            position_reset_axis_after=position_reset_axis_after,
             free_initiative_window=free_initiative_window,
         )
         self.history.reset_window_history.append(initiator.value)
