@@ -351,55 +351,78 @@ See `docs/MOUNT_V0_2B_RESPONDER_EXHAUSTION.md`.
 
 ## Mount v0.3a — minimal Americana submission track
 
-v0.3a adds one modern-only submission path without extending the frozen 18-entry Mount-v0 matchup table:
+v0.3a adds one modern-only Americana submission path around the frozen Mount-v0 matrix:
 
 ```text
-Ready Americana
-→ Threat
-→ Control
-→ Finish
-→ Tap
+Ready Americana -> Threat -> Control -> Finish -> Tap
 ```
 
-Mount is the current **entry context**, not ownership of the Americana technique. The submission-control track is intentionally separate from positional identity so later positions such as Side Control, Knee-on-Belly, or Guard can feed the same Americana graph through their own access/setup rules.
+Mount is the currently implemented **entry context**, not ownership of the Americana. The submission-control state is intentionally separate so future Side Control, Knee-on-Belly, Guard, and other entry contexts can feed the same Americana control graph.
 
-A defended submission stage breaks the active Americana track and moves Mount control -1.00 toward Bottom. Ready Americana is consumed on use, so another attempt requires rebuilding setup before re-entry.
-
-The seeded responder now preserves response-policy mass when contextual Ready legality removes an ordinary response. For Ready Americana, ordinary Bottom response mass:
+PR review exposed and corrected a legality contradiction: once Ready Americana establishes isolation, Tight Elbows cannot immediately become legal again during Threat/Control/Finish. Active stages therefore inherit the Ready isolation response set:
 
 ```text
-Frame=4 / Tight Elbows=3 / Turn-In=0
+Forearm Frame
+Turn-In Recovery
 ```
 
-projects to:
+Stage semantics are now:
 
 ```text
-Frame=4 / Turn-In=3
+Success / Strong Success -> advance
+Contested                -> hold current stage; no axis loss
+Failure / Strong Failure -> break track; axis -1.00 toward Bottom
 ```
 
-because Tight Elbows is illegal once the arm is isolated and Turn-In is the designated Ready stalemate defense. No new weight is invented; the original total mass is preserved. This projection is generic to context-specific legality rather than hardcoded to Mount or Americana.
+This keeps the Ready and submission stalemate concepts consistent. A fresh informed defender can hold with Turn-In; an Exhausted defender's same Turn-In becomes Success for Top and can be finished.
 
-Final v0.3a evidence on the review branch:
+The random responder still preserves ordinary response-policy mass under contextual legality. Ready/active Americana projects the removed Tight-Elbows mass onto the designated Turn-In stalemate defense:
+
+```text
+ordinary: Frame=4 / Tight Elbows=3 / Turn-In=0
+isolated: Frame=4 / Turn-In=3
+```
+
+No response weight is invented.
+
+Current amended v0.3a gate evidence:
 
 ```text
 Gate A  PASS  Locked submission-progress probability=0.571
-Gate B  PASS  Tap=39/100 (39.0%) under the frozen 0% < Tap < 50% target
-Gate C  PASS  best fresh defense stops every reachable Threat/Control/Finish state
-Gate D  PASS  attacker exhaustion matters, defender exhaustion matters, both cancel
+Gate B  OPEN  Tap=98/100 under the unchanged 0% < Tap < 50% random-batch target
+Gate C  PASS  informed best fresh defense is exactly Contested at every reachable stage
+Gate D  PASS  one-sided exhaustion matters both ways; both Exhausted cancel
+Gate E  PASS  informed Exhausted defender cannot perfect-lock the submission
 ```
 
-The v0.2 Gate-2 deferral therefore expires as planned:
+Gate B reopened because correct Contested semantics turn Turn-In into a persistent hold rather than a track break. A random responder eventually samples enough Frames to advance through the three stages in almost every five-minute match. Gate C simultaneously proves that an informed fresh responder can hold indefinitely. That measurement/design mismatch is intentionally left visible rather than tuned away.
+
+The v0.2 Gate-2 deferral also expires as planned:
 
 ```text
-Gate 2  OPEN  real SUBMISSION_FINISH exists; repeated RESET still times out at Locked
+Gate 2 OPEN
 ```
 
-Stalling remains a separate v0.3b slice. Gate 5 is still observational rather than a tuning target, and Gate 7 commitment meaning remains OPEN.
+because a real submission-finish route exists while repeated RESET still times out at Locked. Stalling/progress enforcement remains the planned v0.3b slice and now directly intersects the informed fresh submission stalemate.
+
+Current standard-batch stamina observation after the stalemate correction:
+
+```text
+Top median final stamina = 2
+Bottom median final stamina = 9
+Top RESETs = 0
+Bottom RESETs = 0
+```
+
+This remains non-gating debt; v0.3a does not retune stamina to change it.
 
 See:
 
 - `docs/MOUNT_V0_3A_DEFINITION_OF_DONE.md`
-- `docs/MOUNT_V0_3A_FINAL_MEASUREMENT.md`
+- `docs/MOUNT_V0_3A_STALEMATE_AMENDMENT.md`
+- `docs/MOUNT_V0_3A_STALEMATE_GATE_C_CLARIFICATION.md`
+- `docs/MOUNT_V0_3A_GATE_C_REACHABILITY.md`
+- `docs/MOUNT_V0_3A_OPTION_A_MEASUREMENT.md`
 
 ## Known v0 limitation
 
