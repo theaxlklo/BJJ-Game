@@ -54,13 +54,12 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             and "band Locked" in probe
         )
         submission_finish_present = _submission_finish_present()
-        stalling = _v03b_top_stall_probe()
-        resolved = (
-            stalling.warnings == 1
-            and stalling.penalties >= 1
-            and stalling.final_band.value != "Locked"
-            and not stalling.locked_timeout
+        from bjj_game.diagnostics.checker import (
+            _v03b_gate_a_sweep_passes,
+            _v03b_top_stall_sweep,
         )
+        stalling = _v03b_top_stall_probe()
+        resolved = _v03b_gate_a_sweep_passes(_v03b_top_stall_sweep())
         expected = (
             V02GateStatus.DEFERRED
             if locked_timeout and not submission_finish_present
@@ -80,7 +79,7 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             self.gates[2].metric,
         )
         self.assertIn(
-            f"v03b_penalties={stalling.penalties}",
+            "v03b_sweep_cases=26",
             self.gates[2].metric,
         )
 
