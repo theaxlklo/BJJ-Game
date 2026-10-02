@@ -232,6 +232,30 @@ The modern v0.1 flow also offers **RESET / NO ACTION**. It yields the current at
 `StaminaPool.current` is read-only; supported mutation routes all refresh the 25/35 exhaustion latch. Latched displays explain the recovery threshold, e.g. `30/100 (Exhausted — recovers at 35)`.
 
 See `docs/MOUNT_V0_1E_EXHAUSTION.md`.
+
+### Mount v0.1 validation conclusion
+
+Mount v0.1 stamina is **validated and closed for Mount v0**.
+
+Batch and low-stamina stress tests show two important limits of the current scaffold:
+
+- rational escape-first play from 100 stamina rarely spends enough for exhaustion to become binding;
+- when exhaustion does matter, it weighs primarily on initiated attacks/Bottom escape attempts, while Top can often avoid spending and responders defend for free.
+
+The forced-attack pacing projection is therefore a **stress case**, not expected rational-play pacing. Do not retune the prototype 3/7/12 action costs or CONSERVE's +2/5s recovery merely to make v0 consume more stamina.
+
+The remaining pressure is expected to come from later systems:
+
+```text
+v0.2 setup / Ready / triggered initiative / information legality
+→ more reasons and opportunities to initiate
+
+v0.3 submissions
+→ productive Top attacks and stamina spending from Strong / Locked
+```
+
+The former standalone v0.1d STABILIZE step is retired; STABILIZE will be reconsidered inside v0.2 alongside initiative/setup behavior.
+
 ## Known v0 limitation
 
 The responder sees the exact initiated action and has unrestricted access to every response. Every action therefore has a Failure-or-worse best counter. `--enumerate` reports:
