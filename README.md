@@ -92,6 +92,35 @@ PYTHONPATH=src python -m unittest discover -s tests -v
 
 CI runs the full suite and both semantic-check entry points on Python 3.11 and 3.13.
 
+## Mount v0.1a — stamina telemetry
+
+The first v0.1 slice is now present as **state only**. Every `Competitor` owns an independent `StaminaPool`; the CLI can start Top and Bottom at any value from 0–100 and reports the observational band.
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --top-stamina 75 \
+  --bottom-stamina 25
+```
+
+Current bands are observational quartiles:
+
+```text
+76–100  Fresh
+51–75   Working
+26–50   Tired
+0–25    Exhausted
+```
+
+**Stamina has no mechanical effect in v0.1a.** It does not change grades, drift, axis movement, clamps, exits, or action availability.
+
+The exact frozen v0 `--enumerate` output is protected by SHA-256 regression test:
+
+```text
+3ee55429434f8f95c592183317292d3e824768135d7834c44bae82a6c1a59ff2
+```
+
+See `docs/MOUNT_V0_1A_STAMINA.md`.
+
 ## Known v0 limitation
 
 The responder sees the exact initiated action and has unrestricted access to every response. Every action therefore has a Failure-or-worse best counter. `--enumerate` reports:
