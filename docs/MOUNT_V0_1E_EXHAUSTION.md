@@ -483,20 +483,23 @@ For fixed-condition statistics:
 ```bash
 PYTHONPATH=src python -m bjj_game \
   --batch 1000 \
-  --initiator-policy greedy \
+  --initiator-policy escape-first \
   --seed 42 \
   --top-behavior HOLD \
   --bottom-behavior CONSERVE
 ```
+
+Open Guard is unreachable under the fixed positive-weight batch mix because the only response that can produce it, Hand Post and Base, has zero weight. `--check` derives this from the response policy and Exit Maps and reports it as a batch-response-mix limitation.
 
 The batch harness:
 
 1. creates an independent seeded random responder for each match using `base_seed + match_index`;
 2. holds the selected Top/Bottom behaviors constant;
 3. uses the exact current axis, band, stamina/exhaustion state, and behavior modifiers;
-4. attacks only when some action has positive expected **realized** attacker-axis movement;
-5. otherwise RESETs;
-6. reports outcome frequencies, final stamina statistics, final-axis mean, RESET counts, and action counts.
+4. chooses the highest exact escape probability whenever any escape is reachable;
+5. otherwise attacks for position only when both raw and realized attacker-axis expectations are positive;
+6. otherwise RESETs;
+7. reports outcome frequencies, final stamina statistics, final-axis mean, RESET counts, escape-priority attack counts, positional attack counts, and action counts.
 
 Run paired conditions with the same base seed and count. Example:
 
@@ -507,7 +510,7 @@ HOLD vs PROTECT,  seed 42, 1000 matches
 
 This controls the per-match response streams.
 
-The greedy rule is not an AI claim and does not combine escape, stamina, clock, and axis into a utility function. It exists only to turn the current checker signal into reproducible distributions.
+The escape-first rule is not an AI claim and does not combine escape, stamina, clock, and axis into a utility function. Escape is ordered ahead of positional gain instead of being assigned an axis-point value. It exists only to turn the current checker signals into reproducible distributions.
 
 Fixed behavior is intentionally an extreme-condition experiment. CONSERVE is expected to be switched tactically in real play, so a full-match CONSERVE batch cannot by itself decide whether short recovery bursts are healthy.
 
