@@ -2,11 +2,11 @@
 
 ## Status
 
-Mount v0.1e is implemented before v0.1d on purpose.
+**Mount v0.1 stamina is validated and closed for Mount v0.**
 
-The reason is simple: STABILIZE cannot be judged against PRESSURE, HOLD, PROTECT, ESCAPE, or CONSERVE until low stamina has an actual consequence.
+The implemented stamina mechanics behave consistently under boundary, recovery, blind-play, batch, and low-stamina stress tests. The remaining limitations are primarily caused by missing setup/Ready/triggered-initiative and submission layers, not by evidence that the current 3/7/12 action costs or +2/5s CONSERVE rate need retuning.
 
-v0.1d remains reserved for the STABILIZE distinction and will be implemented after the first exhaustion playtests.
+The former "v0.1d — STABILIZE next" plan is retired. STABILIZE remains a design concept, but its implementation decision moves into v0.2 where setup/Ready/initiative legality can distinguish it from HOLD, PROTECT, and CONSERVE without adding another isolated v0.1 rule.
 
 ## Minimal exhaustion rule
 
@@ -195,7 +195,15 @@ Bottom 1:20
 
 These numbers are diagnostics, not tuning approval.
 
-Do not retune 3/7/12 or the behavior rates until exhaustion playtests show whether the pacing feels too fast in actual play.
+The completed batch/playtest work changes how they should be interpreted: **forced-attack pacing is a stress projection, not normal rational Mount-v0 pacing.** Under the escape-first policy from a normal 100-stamina start, both sides usually initiate only a few paid actions, so exhaustion rarely becomes binding.
+
+Therefore:
+
+- do **not** retune 3/7/12 against the forced-attack projection;
+- do **not** increase CONSERVE recovery merely to make 100-stamina rational v0 play exhaust more often;
+- preserve the current numbers until v0.2 setup/Ready/triggered initiative and v0.3 submissions create more natural reasons to spend stamina.
+
+Low-stamina starts such as 25 remain useful stress tests for the recovery tradeoff, not evidence that normal matches should begin or routinely reach that state.
 
 ## Exhausted exit reachability
 
@@ -224,9 +232,21 @@ An exhausted responder currently:
 - defends at full grade
 - pays no direct response stamina cost
 
-Alternating initiative makes that tolerable in the current scaffold, but triggered initiative in v0.2 could let an exhausted player stay reactive indefinitely.
+The 25-stamina batch matrix made the asymmetry concrete:
 
-That is now reported by `bjj_game --check` as a v0.2 design debt and must be revisited with triggered initiative.
+- with fixed HOLD vs ESCAPE and both competitors Exhausted, sampled matches produced 100% timeout because the weighted Bottom escape routes were removed by HOLD + exhaustion;
+- letting only Bottom recover changed HOLD vs ESCAPE to 100% Half Guard in the sampled 1,000-match run;
+- letting only Top recover created large Reversal rates because CONSERVE removes HOLD's defensive modifier and changes drift;
+- under normal 100-stamina escape-first play, recovery policy activates only rarely because rational players initiate few paid actions.
+
+This means v0 exhaustion currently weighs much more heavily on the side that must initiate to escape than on a Top player who can often defend, RESET, and avoid spending.
+
+**Decision: do not add new exhausted-behavior penalties in v0.1.** That would compensate for missing future systems rather than fix a demonstrated stamina arithmetic bug.
+
+`bjj_game --check` now records this as a v0.2/v0.3 design debt:
+
+- v0.2 should revisit responder-side stamina, triggered initiative, setup/Ready pressure, and information/recognition;
+- v0.3 submissions should give Top productive reasons to spend stamina from Strong/Locked instead of sitting at the cap.
 
 ## CONSERVE / HOLD / PROTECT tuning watch
 
@@ -597,17 +617,17 @@ When a competitor is latched Exhausted above 25, display text explains the hyste
 
 ## Next step
 
-Do **not** implement STABILIZE immediately after this file lands.
+Mount v0.1 stamina work is closed.
 
-First run targeted v0.1e playtests using `--blind` unless the session is specifically testing the full-information lock:
+Proceed to **v0.2 — setup / Ready / triggered initiative / information legality**.
 
-1. default MEDIUM with PRESSURE vs ESCAPE
-2. deliberate CONSERVE cycles from both sides
-3. HOLD vs CONSERVE
-4. PROTECT vs CONSERVE
-5. one run beginning near the 25/26 stamina boundary
-6. one all-LOW and one all-HIGH run
+v0.2 should explicitly consume the debts discovered here:
 
-Use those logs to decide pacing and whether CONSERVE needs a positional or recovery adjustment.
+1. perfect-response lock and the temporary blind-play harness;
+2. Bridge's lack of setup purpose;
+3. responder-side stamina being effectively free;
+4. Top having little reason to spend stamina once Strong/Locked;
+5. RESET/stalling behavior;
+6. STABILIZE's distinction from HOLD/PROTECT/CONSERVE.
 
-Then implement **v0.1d — STABILIZE** against an economy whose consequences have actually been observed.
+v0.3 submissions remain the planned layer that gives Top meaningful offensive expenditure from dominant Mount.
