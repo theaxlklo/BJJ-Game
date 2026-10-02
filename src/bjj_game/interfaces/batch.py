@@ -79,6 +79,68 @@ class EscapeFirstInitiatorPolicy:
     Tie-breaks are realized axis, then raw axis, then catalog order.
     """
 
+    def _ready_target_has_value(
+        self,
+        match: MountMatch,
+        *,
+        builder_action_id: str,
+        external_grade_modifier: int,
+    ) -> bool:
+        target = match.setup_policy.target_for_builder(builder_action_id)
+        if target is None:
+            return False
+
+        ready_ids = match.setup_policy.ready_response_ids(target)
+        if not ready_ids:
+            return False
+
+        side = match.initiator
+        top_behavior = match.top.behavior
+        bottom_behavior = match.bottom.behavior
+        if not isinstance(top_behavior, TopBehavior):
+            raise TypeError("Top behavior is not a TopBehavior")
+        if not isinstance(bottom_behavior, BottomBehavior):
+            raise TypeError("Bottom behavior is not a BottomBehavior")
+
+        try:
+            escape_probability = exact_escape_probability(
+                side=side,
+                action_id=target,
+                axis=match.axis,
+                band=match.band,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=external_grade_modifier,
+                allowed_response_ids=ready_ids,
+            )
+            raw_axis = expected_raw_attacker_axis_delta(
+                side=side,
+                action_id=target,
+                axis=match.axis,
+                band=match.band,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=external_grade_modifier,
+                allowed_response_ids=ready_ids,
+            )
+            realized_axis = expected_realized_attacker_axis_delta(
+                side=side,
+                action_id=target,
+                axis=match.axis,
+                band=match.band,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=external_grade_modifier,
+                allowed_response_ids=ready_ids,
+            )
+        except ValueError:
+            return False
+
+        return (
+            escape_probability > 0
+            or (raw_axis > 0 and realized_axis > 0)
+        )
+
     def _setup_advance_probability(
         self,
         match: MountMatch,
@@ -90,6 +152,12 @@ class EscapeFirstInitiatorPolicy:
             return 0.0
         target = match.setup_policy.target_for_builder(action_id)
         if target is None or match.setup_state.is_ready(target):
+            return 0.0
+        if not self._ready_target_has_value(
+            match,
+            builder_action_id=action_id,
+            external_grade_modifier=external_grade_modifier,
+        ):
             return 0.0
 
         side = match.initiator
@@ -297,6 +365,11 @@ class BatchSummary:
     bottom_position_attack_count: int
     top_setup_action_count: int
     bottom_setup_action_count: int
+    top_completed_setup_chain_count: int
+    bottom_completed_setup_chain_count: int
+    top_completed_setup_build_count: int
+    bottom_completed_setup_build_count: int
+    top_followup_completed_setup_build_count: int
     top_behavior_mode: BatchBehaviorMode
     bottom_behavior_mode: BatchBehaviorMode
     top_behavior_window_counts: dict[str, int]
@@ -359,6 +432,11 @@ class BatchSummary:
             f"Bottom position attacks: {self.bottom_position_attack_count}",
             f"Top setup-building actions: {self.top_setup_action_count}",
             f"Bottom setup-building actions: {self.bottom_setup_action_count}",
+            f"Top completed setup chains: {self.top_completed_setup_chain_count}",
+            f"Bottom completed setup chains: {self.bottom_completed_setup_chain_count}",
+            f"Top setup builds in completed chains: {self.top_completed_setup_build_count}",
+            f"Bottom setup builds in completed chains: {self.bottom_completed_setup_build_count}",
+            f"Top follow-up setup builds in completed chains: {self.top_followup_completed_setup_build_count}",
             "Top actions: " + _render_counts(self.top_action_counts),
             "Bottom actions: " + _render_counts(self.bottom_action_counts),
             "",
@@ -413,6 +491,11 @@ def run_escape_first_batch(
     bottom_position_attacks = 0
     top_setup_actions = 0
     bottom_setup_actions = 0
+    top_completed_setup_chains = 0
+    bottom_completed_setup_chains = 0
+    top_completed_setup_builds = 0
+    bottom_completed_setup_builds = 0
+    top_followup_completed_setup_builds = 0
     top_behavior_windows: Counter[str] = Counter()
     bottom_behavior_windows: Counter[str] = Counter()
     top_behavior_switches = 0
@@ -442,6 +525,8 @@ def run_escape_first_batch(
         match.set_behaviors(top=current_top, bottom=current_bottom)
         responder = RandomBlindResponder(base_seed + match_index)
         top_has_initiated_action = False
+        pending_setup_builds: Counter[tuple[Side, str]] = Counter()
+        pending_top_followup_setup_builds: Counter[str] = Counter()
 
         while not match.ended:
             # Choose behavior for the upcoming normal-speed interval.
@@ -504,14 +589,28 @@ def run_escape_first_batch(
                     continue
 
             action = ENTITY_BY_ID[decision.action_id]
+            setup_target = (
+                match.setup_policy.target_for_builder(action.id)
+                if enable_v02_setup
+                else None
+            )
+            target_was_ready = (
+                enable_v02_setup
+                and match.setup_state.is_ready(action.id)
+            )
+
             if side is Side.TOP:
                 top_actions[action.short_name] += 1
                 if decision.reason == "escape":
                     top_escape_priority += 1
                 elif decision.reason == "setup":
                     top_setup_actions += 1
+                    if setup_target is not None:
+                        pending_setup_builds[(Side.TOP, setup_target)] += 1
                     if top_has_initiated_action:
                         top_followup_setup_actions += 1
+                        if setup_target is not None:
+                            pending_top_followup_setup_builds[setup_target] += 1
                 else:
                     top_position_attacks += 1
                     if top_has_initiated_action:
@@ -523,6 +622,8 @@ def run_escape_first_batch(
                     bottom_escape_priority += 1
                 elif decision.reason == "setup":
                     bottom_setup_actions += 1
+                    if setup_target is not None:
+                        pending_setup_builds[(Side.BOTTOM, setup_target)] += 1
                 else:
                     bottom_position_attacks += 1
 
@@ -531,6 +632,20 @@ def run_escape_first_batch(
                 response_id=hidden.response_id,
                 commitment=commitment,
             )
+
+            if target_was_ready:
+                credited = pending_setup_builds[(side, action.id)]
+                pending_setup_builds[(side, action.id)] = 0
+                if side is Side.TOP:
+                    top_completed_setup_chains += 1
+                    top_completed_setup_builds += credited
+                    top_followup_completed_setup_builds += (
+                        pending_top_followup_setup_builds[action.id]
+                    )
+                    pending_top_followup_setup_builds[action.id] = 0
+                else:
+                    bottom_completed_setup_chains += 1
+                    bottom_completed_setup_builds += credited
 
         outcome = (
             match.exit_destination.value
@@ -566,6 +681,11 @@ def run_escape_first_batch(
         bottom_position_attack_count=bottom_position_attacks,
         top_setup_action_count=top_setup_actions,
         bottom_setup_action_count=bottom_setup_actions,
+        top_completed_setup_chain_count=top_completed_setup_chains,
+        bottom_completed_setup_chain_count=bottom_completed_setup_chains,
+        top_completed_setup_build_count=top_completed_setup_builds,
+        bottom_completed_setup_build_count=bottom_completed_setup_builds,
+        top_followup_completed_setup_build_count=top_followup_completed_setup_builds,
         top_behavior_mode=top_behavior_mode,
         bottom_behavior_mode=bottom_behavior_mode,
         top_behavior_window_counts=dict(top_behavior_windows),
