@@ -281,6 +281,53 @@ class CliTests(unittest.TestCase):
         self.assertIn("\nBottom behavior\n", text)
 
 
+
+    def test_batch_mode_runs_noninteractive_and_reports_summary(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--batch", "8",
+                "--initiator-policy", "greedy",
+                "--seed", "42",
+                "--clock", "0:30",
+                "--top-behavior", "HOLD",
+                "--bottom-behavior", "CONSERVE",
+            ])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("BATCH SUMMARY", text)
+        self.assertIn("Matches: 8", text)
+        self.assertIn("Base seed: 42", text)
+        self.assertIn("Top behavior: HOLD", text)
+        self.assertIn("Bottom behavior: CONSERVE", text)
+        self.assertNotIn("TOP INITIATES", text)
+        self.assertNotIn("BOTTOM RESPONSE", text)
+
+    def test_batch_defaults_seed_and_behaviors_deterministically(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--batch", "2"])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Base seed: 0", text)
+        self.assertIn("Top behavior: PRESSURE", text)
+        self.assertIn("Bottom behavior: ESCAPE", text)
+
+    def test_batch_rejects_interactive_blind_flags(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--batch", "2", "--blind"])
+        self.assertEqual(code, 2)
+        self.assertIn("--batch already uses the seeded random response mix", output.getvalue())
+
+    def test_initiator_policy_requires_batch(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--initiator-policy", "greedy"])
+        self.assertEqual(code, 2)
+        self.assertIn("--initiator-policy is only valid with --batch", output.getvalue())
+
+
     def test_primary_cli_can_reset_without_response_or_action_cost(self):
         output = io.StringIO()
         inputs = ["3", "3", "4", KeyboardInterrupt]
@@ -325,6 +372,15 @@ class CliTests(unittest.TestCase):
         output = io.StringIO()
         with redirect_stdout(output):
             code = main(["--top-behavior", "PRESSURE"])
+        self.assertEqual(code, 2)
+        self.assertIn("modern playtest flags", output.getvalue())
+
+
+
+    def test_legacy_cli_rejects_batch_flags(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["--batch", "2"])
         self.assertEqual(code, 2)
         self.assertIn("modern playtest flags", output.getvalue())
 
