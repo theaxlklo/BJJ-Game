@@ -647,17 +647,19 @@ def measure_v02_definition_of_done(
     standard_batch = _v02_standard_batch()
     bridge_count = standard_batch.bottom_action_counts.get("Bridge", 0)
     bridge_setup_count = standard_batch.bottom_setup_action_count
+    bridge_completed_setup_builds = standard_batch.bottom_completed_setup_build_count
+    bottom_completed_setup_chains = standard_batch.bottom_completed_setup_chain_count
     top_followup_position_attacks_per_match = (
         standard_batch.top_followup_position_attack_count
         / standard_batch.matches
     )
-    top_followup_setup_actions_per_match = (
-        standard_batch.top_followup_setup_action_count
+    top_followup_completed_setup_builds_per_match = (
+        standard_batch.top_followup_completed_setup_build_count
         / standard_batch.matches
     )
     top_followup_meaningful_per_match = (
         top_followup_position_attacks_per_match
-        + top_followup_setup_actions_per_match
+        + top_followup_completed_setup_builds_per_match
     )
 
     # Gate 3: responder-only outcome differential.
@@ -732,19 +734,21 @@ def measure_v02_definition_of_done(
             name="Bridge setup role",
             status=(
                 V02GateStatus.PASS
-                if bridge_setup_count > 0
+                if bridge_completed_setup_builds > 0
                 else V02GateStatus.OPEN
             ),
             metric=(
                 f"standard batch Bridge selections={bridge_count}/"
                 f"{standard_batch.matches}; setup-priority selections="
-                f"{bridge_setup_count}"
+                f"{bridge_setup_count}; completed-chain Bridge builds="
+                f"{bridge_completed_setup_builds}; completed Bottom chains="
+                f"{bottom_completed_setup_chains}"
             ),
             evidence=(
-                "Bridge is selected specifically for setup value"
-                if bridge_setup_count > 0
+                "Bridge setup work contributes to at least one consumed Trap-and-Roll chain"
+                if bridge_completed_setup_builds > 0
                 else
-                "Bridge is never selected for setup value in the standard batch"
+                "Bridge may be attempted, but no Bridge setup work completes into a consumed Trap-and-Roll chain"
             ),
         ),
         V02GateMeasurement(
@@ -759,9 +763,9 @@ def measure_v02_definition_of_done(
                 "standard batch Top follow-up meaningful initiations/match="
                 f"{top_followup_meaningful_per_match:.3f} "
                 f"(position:{top_followup_position_attacks_per_match:.3f},"
-                f"setup:{top_followup_setup_actions_per_match:.3f})"
+                f"completed-setup-builds:{top_followup_completed_setup_builds_per_match:.3f})"
             ),
-            evidence="opening attack excluded; pass threshold is >1.000 follow-up position+setup initiations per match",
+            evidence="opening attack excluded; setup builders count only when their Ready target is later consumed; pass threshold is >1.000 meaningful follow-up initiations per match",
         ),
         V02GateMeasurement(
             number=6,
