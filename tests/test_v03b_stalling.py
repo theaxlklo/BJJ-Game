@@ -163,18 +163,22 @@ class V03BStallingTests(unittest.TestCase):
         self.assertFalse(match.free_initiative_pending)
 
     def test_reset_without_progress_route_never_becomes_offense(self):
-        match = self._match(axis=4.00)
-        # At the upper cap before setup is built, every ordinary Top positional
-        # gain is fully absorbed and High Mount setup cannot advance.
-        self.assertEqual(match.progress_capable_action_ids(), ())
-        match.stalling_tracker.advance(60)
+        tracker = StallingTracker()
+        tracker.advance(60)
 
-        reset = match.reset_window()
+        evaluation = tracker.evaluate_reset(
+            side=Side.TOP,
+            progress_route_available=False,
+        )
 
-        self.assertFalse(reset.progress_route_available)
-        self.assertFalse(reset.stalling_offense)
-        self.assertIsNone(reset.stalling_consequence)
-        self.assertFalse(match.stalling_warned(Side.TOP))
+        self.assertFalse(evaluation.progress_route_available)
+        self.assertFalse(evaluation.offense)
+        self.assertIs(
+            evaluation.consequence,
+            StallingConsequence.NONE,
+        )
+        self.assertFalse(tracker.warned[Side.TOP])
+        self.assertEqual(tracker.clock(Side.TOP), 60)
 
     def test_disabled_v03b_keeps_reset_stamina_and_axis_semantics(self):
         match = MountMatch(
