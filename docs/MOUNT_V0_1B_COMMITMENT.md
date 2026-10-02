@@ -213,3 +213,21 @@ Do not add yet:
 The natural next slice is **v0.1c: CONSERVE + stamina recovery**.
 
 That gives a fighter a real way to trade positional ambition for energy before any exhaustion penalties or commitment restrictions are introduced.
+
+
+## v0.1c funding update
+
+v0.1c supersedes the temporary partial-charge shortfall rule documented above.
+
+Requested commitment now downgrades to the highest fully payable commitment:
+
+```text
+request HIGH with 5 stamina
+→ effective LOW
+→ charge 3
+→ 2 stamina remains
+```
+
+At less than LOW's cost, effective commitment is `UNFUNDED` and no action stamina is charged.
+
+The frozen Mount resolution is still unchanged. See `MOUNT_V0_1C_CONSERVE.md`.
