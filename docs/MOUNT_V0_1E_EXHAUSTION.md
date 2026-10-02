@@ -17,14 +17,15 @@ Initiator starts the action in Exhausted stamina band
 → final initiated-action grade shifts down one grade
 ```
 
-Stamina bands remain:
+Stamina uses a 25/35 hysteresis boundary for Exhausted:
 
 ```text
-76–100  Fresh
-51–75   Working
-26–50   Tired
-0–25    Exhausted
+enter Exhausted: <=25
+remain Exhausted while recovering: 26..34
+leave Exhausted: >=35
 ```
+
+A newly initialized pool at 26+ starts outside Exhausted. Once a competitor has crossed into Exhausted, however, recovery must reach 35 before the penalty clears.
 
 Fresh, Working, and Tired have no grade penalty in v0.1e.
 
@@ -43,6 +44,30 @@ MEDIUM costs 7
 ```
 
 This avoids retroactively weakening an action because its own cost pushed the fighter across the threshold.
+
+## Boundary exploit fix
+
+The original 25/26 stateless cutoff created a mechanical exploit:
+
+```text
+24 stamina
+→ CONSERVE one 5s window
+→ 26 stamina
+→ immediately avoid exhaustion penalty
+```
+
+That loop was confirmed against the implementation.
+
+The 25/35 hysteresis removes it:
+
+```text
+24
+→ CONSERVE to 26
+→ still Exhausted
+→ no penalty relief until 35
+```
+
+This mirrors the existing Mount-axis hysteresis idea: entering a bad state and leaving it use different thresholds.
 
 ## Resolution boundary
 
@@ -171,6 +196,37 @@ Bottom 1:20
 These numbers are diagnostics, not tuning approval.
 
 Do not retune 3/7/12 or the behavior rates until exhaustion playtests show whether the pacing feels too fast in actual play.
+
+## Exhausted exit reachability
+
+The primary `--check` path now runs a separate exhausted-initiator reachability pass without changing frozen `--enumerate`.
+
+Current consequences include:
+
+```text
+Elbow-Knee Escape, exhausted:
+Open Guard → unreachable
+Half Guard → +0.10..+1.10
+
+Trap-and-Roll, exhausted:
+Top PRESSURE → Reversal +0.10..+1.10
+Top HOLD → Reversal unreachable
+```
+
+This makes the positional + exhaustion stack visible instead of hiding it inside individual playtests.
+
+## v0.2 responder-stamina debt
+
+Exhaustion still affects initiated actions only.
+
+An exhausted responder currently:
+
+- defends at full grade
+- pays no direct response stamina cost
+
+Alternating initiative makes that tolerable in the current scaffold, but triggered initiative in v0.2 could let an exhausted player stay reactive indefinitely.
+
+That is now reported by `bjj_game --check` as a v0.2 design debt and must be revisited with triggered initiative.
 
 ## CONSERVE / HOLD / PROTECT tuning watch
 
