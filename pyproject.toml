@@ -11,7 +11,7 @@ dependencies = []
 
 [project.scripts]
 bjj-game = "bjj_game.interfaces.cli:main"
-mount-v0 = "bjj_game.interfaces.cli:main"
+mount-v0 = "mount_v0.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
