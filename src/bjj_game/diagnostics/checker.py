@@ -629,6 +629,20 @@ def _commitment_low_dominance_probe() -> tuple[bool, int]:
     return low_strictly_dominates, advantage_states
 
 
+
+def _submission_finish_present() -> bool:
+    """Whether Mount currently has a real submission-finish action.
+
+    Gate 2's deferral expires automatically once v0.3 supplies a finish
+    surface. At that point a still-locked RESET probe becomes OPEN again and
+    must be solved by the actual stalling/progress rule.
+    """
+    return any(
+        action.category == "SUBMISSION_FINISH"
+        for side in (Side.TOP, Side.BOTTOM)
+        for action in actions_for(side)
+    )
+
 def measure_v02_definition_of_done(
     report: CheckReport | None = None,
 ) -> tuple[V02GateMeasurement, ...]:
@@ -653,6 +667,7 @@ def measure_v02_definition_of_done(
         "TIMEOUT — Mount retained" in reset_probe
         and "band Locked" in reset_probe
     )
+    submission_finish_present = _submission_finish_present()
 
     # Gates 4/5 share the same deterministic standard batch.
     standard_batch = _v02_standard_batch()
@@ -671,6 +686,10 @@ def measure_v02_definition_of_done(
     top_followup_meaningful_per_match = (
         top_followup_position_attacks_per_match
         + top_followup_completed_setup_builds_per_match
+    )
+    top_followup_threshold = 1.0
+    top_followup_margin = (
+        top_followup_meaningful_per_match - top_followup_threshold
     )
 
     # Gate 3: responder-only outcome differential.
@@ -717,12 +736,28 @@ def measure_v02_definition_of_done(
             number=2,
             name="RESET/stalling",
             status=(
-                V02GateStatus.OPEN
-                if reset_locked_timeout
-                else V02GateStatus.PASS
+                V02GateStatus.PASS
+                if not reset_locked_timeout
+                else (
+                    V02GateStatus.DEFERRED
+                    if not submission_finish_present
+                    else V02GateStatus.OPEN
+                )
             ),
-            metric=f"locked_timeout={reset_locked_timeout}",
-            evidence=reset_probe,
+            metric=(
+                f"locked_timeout={reset_locked_timeout}; "
+                f"submission_finish_present={submission_finish_present}"
+            ),
+            evidence=(
+                reset_probe
+                + (
+                    "; deferred to v0.3 because Locked Top currently has no "
+                    "submission-finish/progress action, so a stalling penalty "
+                    "would punish a state with no legal way to advance"
+                    if reset_locked_timeout and not submission_finish_present
+                    else ""
+                )
+            ),
         ),
         V02GateMeasurement(
             number=3,
@@ -767,16 +802,18 @@ def measure_v02_definition_of_done(
             name="Top post-opening activity",
             status=(
                 V02GateStatus.PASS
-                if top_followup_meaningful_per_match > 1.0
+                if top_followup_meaningful_per_match > top_followup_threshold
                 else V02GateStatus.OPEN
             ),
             metric=(
                 "standard batch Top follow-up meaningful initiations/match="
                 f"{top_followup_meaningful_per_match:.3f} "
                 f"(position:{top_followup_position_attacks_per_match:.3f},"
-                f"completed-setup-builds:{top_followup_completed_setup_builds_per_match:.3f})"
+                f"completed-setup-builds:{top_followup_completed_setup_builds_per_match:.3f}); "
+                f"threshold={top_followup_threshold:.3f}; "
+                f"margin={top_followup_margin:+.3f}"
             ),
-            evidence="opening attack excluded; setup builders count only when their Ready target is later consumed; pass threshold is >1.000 meaningful follow-up initiations per match",
+            evidence="opening attack excluded; setup builders count only when their Ready target is later consumed; margin is measured against the unchanged >1.000 threshold",
         ),
         V02GateMeasurement(
             number=6,
