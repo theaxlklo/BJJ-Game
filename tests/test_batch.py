@@ -176,6 +176,32 @@ class BatchSimulationTests(unittest.TestCase):
         self.assertLessEqual(first_attacks, summary.matches)
         self.assertGreater(first_attacks, 0)
 
+    def test_setup_builds_only_get_completed_chain_credit_after_target_use(self):
+        summary = run_escape_first_batch(
+            matches=30,
+            base_seed=42,
+            top_behavior=TopBehavior.PRESSURE,
+            bottom_behavior=BottomBehavior.ESCAPE,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
+            enable_v02_setup=True,
+        )
+
+        self.assertLessEqual(
+            summary.top_completed_setup_build_count,
+            summary.top_setup_action_count,
+        )
+        self.assertLessEqual(
+            summary.bottom_completed_setup_build_count,
+            summary.bottom_setup_action_count,
+        )
+        self.assertGreaterEqual(summary.bottom_completed_setup_chain_count, 0)
+        self.assertGreaterEqual(summary.top_completed_setup_chain_count, 0)
+
     def test_batch_render_keeps_outcomes_stamina_and_decisions_separate(self):
         text = self._run().render()
 
@@ -192,6 +218,8 @@ class BatchSimulationTests(unittest.TestCase):
         self.assertIn("Top escape-priority attacks:", text)
         self.assertIn("Bottom escape-priority attacks:", text)
         self.assertIn("Top follow-up position attacks:", text)
+        self.assertIn("Top completed setup chains:", text)
+        self.assertIn("Top setup builds in completed chains:", text)
 
 
 if __name__ == "__main__":
