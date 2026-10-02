@@ -247,16 +247,59 @@ For v0.1 playtests, `bjj_game --blind` can remove the full-information response 
 
 Bridge remains a known v0 setup limitation: in the raw matrix Trap-and-Roll is at least as good against every response and has the stronger Hip Follow result plus an escape branch. Bridge is being left intact for v0.2 setup/Ready work rather than receiving an ad-hoc stamina discount.
 
+## Batch behavior experiments
+
+For repeatable statistics instead of one seed at a time:
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --batch 1000 \
+  --initiator-policy greedy \
+  --seed 42 \
+  --top-behavior HOLD \
+  --bottom-behavior CONSERVE
+```
+
+Batch mode is non-interactive. It automatically uses the fixed seeded random-response mix; do not combine it with `--blind`.
+
+Each match uses:
+
+```text
+match 0 → seed 42
+match 1 → seed 43
+match 2 → seed 44
+...
+```
+
+Using the same base seed and match count across two behavior conditions therefore pairs comparable response streams.
+
+The current `greedy` initiator policy is deliberately simple:
+
+```text
+at the exact current axis/band/stamina state
+→ compute expected realized attacker-favorable axis movement
+  against the fixed response mix
+→ attack with the highest-positive action
+→ otherwise RESET
+```
+
+It includes current behavior, positional, exhaustion, floor, and cap effects. It does **not** assign a separate utility bonus to Half Guard, Open Guard, Reversal, stamina, or time. It is a reproducible test rule, not an optimal-opponent model.
+
+Batch output reports outcome frequencies, mean/median final stamina, mean final axis, RESET counts, and action counts by side.
+
+Fixed-behavior batches measure extreme conditions such as HOLD-vs-CONSERVE or HOLD-vs-PROTECT. They do not answer whether short bursts of CONSERVE are useful; adaptive human sessions are still required for that question.
+
 ### Per-band blind-mix diagnostics
 
 `bjj_game --check` reports every action against the fixed random-response mix by visible band using two separate signals:
 
-- **attacker-axis** — expected proposed axis delta from the initiator's perspective after behavior and positional grade modifiers, before axis floor/cap/escape clamping.
-- **escape** — the min/max escape probability across the existing 0.01 axis grid compatible with that visible band.
+- **raw attacker-axis** — expected grade-derived axis delta from the initiator's perspective after behavior and positional grade modifiers, before floor/cap handling.
+- **realized-axis** — min..max expected actual attacker-favorable axis movement across the legal 0.01 axis grid after floor/cap handling; escape crossings use the resolver's crossing axis.
+- **escape** — the min..max escape probability across the same legal axis grid.
 
 MEDIUM's 7-stamina action cost is printed separately. The checker never converts stamina or an escape into axis points and never emits a combined utility score.
 
-The baseline for these lines is Top PRESSURE / Bottom ESCAPE with no exhaustion penalty. One useful consequence is explicit: Top's frozen Loose positional modifier makes all three Top attacks negative on attacker-axis under the current seeded response mix, even though Crossface/Americana are positive at Stable.
+The baseline for these lines is Top PRESSURE / Bottom ESCAPE with no exhaustion penalty. The realized range matters at the edges. For example, Top's raw Loose values are negative, but the Mount-floor clamp limits failures, so Americana can have positive realized-axis expectation within Loose. At Locked, the reverse can happen: upside is capped at +4.00 while failures still lose position, making realized expectation worse than the raw grade average.
 
 ## Final Elbow-Knee playtest tune
 
