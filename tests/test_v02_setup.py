@@ -62,6 +62,33 @@ class MountSetupReadyTests(unittest.TestCase):
             match.legal_action_ids(),
         )
 
+    def test_best_counter_cannot_freeze_setup_progress(self):
+        bottom = MountMatch(starting_axis=1.50, enable_v02_setup=True)
+        for expected in (SetupTier.PARTIAL, SetupTier.READY):
+            bottom.initiator = Side.BOTTOM
+            bottom.attempt(
+                action_id=BOTTOM_BRIDGE,
+                response_id=TOP_RESPONSE_POST_AND_BASE,
+                commitment=Commitment.MEDIUM,
+            )
+            self.assertIs(
+                bottom.setup_tier(BOTTOM_TRAP_AND_ROLL_ESCAPE),
+                expected,
+            )
+
+        top = MountMatch(starting_axis=1.50, enable_v02_setup=True)
+        for expected in (SetupTier.PARTIAL, SetupTier.READY):
+            top.initiator = Side.TOP
+            top.attempt(
+                action_id=TOP_HIGH_MOUNT_CLIMB,
+                response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+                commitment=Commitment.MEDIUM,
+            )
+            self.assertIs(
+                top.setup_tier(TOP_AMERICANA_ARM_ISOLATION),
+                expected,
+            )
+
     def test_bridge_successes_build_trap_and_roll_to_ready(self):
         match = MountMatch(starting_axis=1.50, enable_v02_setup=True)
 
