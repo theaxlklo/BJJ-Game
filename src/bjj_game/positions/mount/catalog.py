@@ -1,7 +1,16 @@
 from __future__ import annotations
 
 from ...domain.catalog import TechniqueCatalog
-from ...domain.model import (\n    Band,\n    BottomBehavior,\n    EntityKind,\n    ExitDestination,\n    Grade,\n    Side,\n    TechniqueEntity,\n    TopBehavior,\n)
+from ...domain.model import (
+    Band,
+    BottomBehavior,
+    EntityKind,
+    ExitDestination,
+    Grade,
+    Side,
+    TechniqueEntity,
+    TopBehavior,
+)
 
 
 TOP_HIGH_MOUNT_CLIMB = "mount.top.high_mount_climb"
