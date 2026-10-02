@@ -173,6 +173,7 @@ class RunHistory:
     raw_grade_history: list[str] = field(default_factory=list)
     modified_grade_history: list[str] = field(default_factory=list)
     commitment_history: list[str] = field(default_factory=list)
+    effective_commitment_history: list[str] = field(default_factory=list)
     commitment_initiator_history: list[str] = field(default_factory=list)
     stamina_requested_history: list[int] = field(default_factory=list)
     stamina_charged_history: list[int] = field(default_factory=list)
