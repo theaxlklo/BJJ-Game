@@ -299,6 +299,7 @@ class MountMatch:
         top_behavior: TopBehavior,
         bottom_behavior: BottomBehavior,
         external_grade_modifier: int = 0,
+        post_positional_grade_override=None,
     ):
         if self.clock_seconds <= 0:
             raise RuntimeError("Cannot resolve a decision after timeout")
@@ -313,6 +314,7 @@ class MountMatch:
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
             external_grade_modifier=external_grade_modifier,
+            post_positional_grade_override=post_positional_grade_override,
         )
 
     def _apply_resolution(self, result) -> None:
@@ -411,6 +413,14 @@ class MountMatch:
         target_was_ready = (
             self.enable_v02_setup and self.setup_state.is_ready(action_id)
         )
+        ready_grade_override = (
+            self.setup_policy.ready_final_grade_override(
+                action_id,
+                response_id,
+            )
+            if target_was_ready
+            else None
+        )
         pool = self.competitor(initiator).stamina
         stamina_band_before_action = pool.band
         exhaustion_modifier = self.exhaustion_policy.initiator_grade_modifier(
@@ -422,6 +432,7 @@ class MountMatch:
             response_id=response_id,
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
+            post_positional_grade_override=ready_grade_override,
         )
         result = (
             base_resolution
@@ -432,6 +443,7 @@ class MountMatch:
                 top_behavior=top_behavior,
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=exhaustion_modifier,
+                post_positional_grade_override=ready_grade_override,
             )
         )
 
