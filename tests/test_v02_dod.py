@@ -5,6 +5,7 @@ from bjj_game.diagnostics.checker import (
     _commitment_low_dominance_probe,
     _exhausted_positive_weight_escape_routes_by_top_behavior,
     _responder_exhaustion_differential_count,
+    _submission_finish_present,
     _v02_ready_gate_evidence,
     _v02_standard_batch,
     measure_v02_definition_of_done,
@@ -43,18 +44,31 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
                 self.gates[1].metric,
             )
 
-    def test_gate_2_status_follows_reset_probe(self):
+    def test_gate_2_status_follows_reset_probe_and_submission_surface(self):
         probe = render_reset_lock_probe()
         locked_timeout = (
             "TIMEOUT — Mount retained" in probe
             and "band Locked" in probe
         )
+        submission_finish_present = _submission_finish_present()
         expected = (
-            V02GateStatus.OPEN
-            if locked_timeout
-            else V02GateStatus.PASS
+            V02GateStatus.PASS
+            if not locked_timeout
+            else (
+                V02GateStatus.DEFERRED
+                if not submission_finish_present
+                else V02GateStatus.OPEN
+            )
         )
         self.assertIs(self.gates[2].status, expected)
+        self.assertIn(
+            f"locked_timeout={locked_timeout}",
+            self.gates[2].metric,
+        )
+        self.assertIn(
+            f"submission_finish_present={submission_finish_present}",
+            self.gates[2].metric,
+        )
 
     def test_gate_3_status_follows_responder_exhaustion_differential(self):
         differences = _responder_exhaustion_differential_count()
@@ -100,7 +114,10 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             else V02GateStatus.OPEN
         )
         self.assertIs(self.gates[5].status, expected)
+        margin = rate - 1.0
         self.assertIn(f"={rate:.3f}", self.gates[5].metric)
+        self.assertIn(f"threshold={1.0:.3f}", self.gates[5].metric)
+        self.assertIn(f"margin={margin:+.3f}", self.gates[5].metric)
         self.assertIn(f"position:{position_rate:.3f}", self.gates[5].metric)
         self.assertIn(
             f"completed-setup-builds:{completed_setup_rate:.3f}",
