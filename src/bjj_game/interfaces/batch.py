@@ -91,7 +91,18 @@ class EscapeFirstInitiatorPolicy:
         match: MountMatch,
         action_id: str,
     ) -> str | None:
-        if not match.enable_v02_setup or not match.setup_state.is_ready(action_id):
+        if not match.enable_v02_setup:
+            return None
+        if (
+            action_id == TOP_AMERICANA_SUBMISSION_FINISH
+            and match.enable_v03_submissions
+            and match.submission_state.active
+        ):
+            rule = match.setup_policy.rule_for_target(
+                TOP_AMERICANA_ARM_ISOLATION
+            )
+            return rule.stalemate_response_id if rule is not None else None
+        if not match.setup_state.is_ready(action_id):
             return None
         rule = match.setup_policy.rule_for_target(action_id)
         return rule.stalemate_response_id if rule is not None else None
@@ -312,6 +323,10 @@ class EscapeFirstInitiatorPolicy:
             weighted = RandomBlindResponder.weighted_policy(
                 Side.BOTTOM,
                 allowed_response_ids=allowed,
+                fallback_response_id=self._ready_fallback_response_id(
+                    match,
+                    action_id,
+                ),
             )
             total = sum(weight for _, weight in weighted)
             if total <= 0:
