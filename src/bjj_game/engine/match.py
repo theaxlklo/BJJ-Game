@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass, field
 
-from ..domain.action import ActionAttempt, AttemptResult, Commitment
+from ..domain.action import ActionAttempt, AttemptResult, Commitment, ResetWindowResult
 from ..domain.competitor import Competitor
 from ..domain.model import (
     Band,
@@ -266,6 +266,32 @@ class MountMatch:
             bottom_behavior=bottom_behavior,
         )
         self._apply_resolution(result)
+        return result
+
+    def reset_window(self) -> ResetWindowResult:
+        """Yield the current decision window without initiating a technique.
+
+        This is modern v0.1 scaffolding for the event-driven design: no action
+        stamina is charged, no response is requested, and no immediate axis
+        change occurs. Initiative passes to the opponent; another normal-speed
+        interval must occur before the next decision window.
+        """
+        if self.clock_seconds <= 0:
+            raise RuntimeError("Cannot reset a decision window after timeout")
+        if self.position.broken:
+            raise RuntimeError("Cannot reset a decision window after Mount is broken")
+
+        initiator = self.initiator
+        result = ResetWindowResult(
+            initiator=initiator,
+            next_initiator=initiator.opponent,
+            clock_seconds=self.clock_seconds,
+            axis=self.axis,
+            band=self.band,
+            stamina=self.competitor(initiator).stamina.current,
+        )
+        self.history.reset_window_history.append(initiator.value)
+        self.initiator = initiator.opponent
         return result
 
     def attempt(
