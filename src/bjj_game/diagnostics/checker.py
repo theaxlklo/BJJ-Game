@@ -559,6 +559,7 @@ def measure_v02_definition_of_done(
     # Gates 4/5 share the same deterministic standard batch.
     standard_batch = _v02_standard_batch()
     bridge_count = standard_batch.bottom_action_counts.get("Bridge", 0)
+    bridge_setup_count = standard_batch.bottom_setup_action_count
     top_followup_position_attacks_per_match = (
         standard_batch.top_followup_position_attack_count
         / standard_batch.matches
@@ -640,18 +641,19 @@ def measure_v02_definition_of_done(
             name="Bridge setup role",
             status=(
                 V02GateStatus.PASS
-                if bridge_count > 0
+                if bridge_setup_count > 0
                 else V02GateStatus.OPEN
             ),
             metric=(
                 f"standard batch Bridge selections={bridge_count}/"
-                f"{standard_batch.matches}"
+                f"{standard_batch.matches}; setup-priority selections="
+                f"{bridge_setup_count}"
             ),
             evidence=(
-                "Bridge is selected by the scripted policy"
-                if bridge_count > 0
+                "Bridge is selected specifically for setup value"
+                if bridge_setup_count > 0
                 else
-                "Bridge is never selected in the standard batch"
+                "Bridge is never selected for setup value in the standard batch"
             ),
         ),
         V02GateMeasurement(
