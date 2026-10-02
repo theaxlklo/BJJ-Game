@@ -57,7 +57,7 @@ There is deliberately no compatibility module under `bjj_game/positions/mount/`;
 
 Represents a grappler and owns player-specific changing state.
 
-Mount v0.1a stores:
+Mount v0.1b stores:
 
 - side
 - name
@@ -66,7 +66,7 @@ Mount v0.1a stores:
 
 The CLI updates behavior when the player chooses it. `MountMatch.drift()` and `decide()` then read behavior from the competitors. Optional behavior arguments still exist only to preserve the frozen v0 API and update the same competitor-owned state.
 
-Stamina is now attached to `Competitor` through composition. In v0.1a it is observational only; no resolution code reads it. Commitment and later belt/style/attribute/injury/run state follow the same composition rule rather than becoming more method parameters.
+Stamina is attached to `Competitor` through composition. v0.1b charges stamina around initiated actions through `ActionAttempt`; the frozen `MountResolutionEngine` still does not read stamina or commitment. Later belt/style/attribute/injury/run state follow the same composition rule rather than becoming more method parameters.
 
 ### `MountMatch`
 
@@ -153,19 +153,35 @@ ActionAttempt
 ├── Technique
 └── Commitment
 
-MountResolutionEngine
-└── consumes attempt/stamina policy as an additional modifier source
+MountMatch
+├── ActionAttempt
+├── StaminaCostPolicy
+└── invokes unchanged MountResolutionEngine
 ```
 
 Planned objects:
 
 - `StaminaPool` — implemented in v0.1a
 - `StaminaBand` — implemented in v0.1a, observational only
-- `Commitment` — next slice
-- `ActionAttempt` — next slice
+- `Commitment` — implemented in v0.1b
+- `ActionAttempt` — implemented in v0.1b
+- `StaminaCostPolicy` — implemented in v0.1b and injected into `MountMatch`
 
-`CONSERVE` and `STABILIZE` are behaviors/policies, not competitor subclasses.
+`CONSERVE` and `STABILIZE` are behaviors/policies, not competitor subclasses. v0.1b does not yet add either behavior.
 
+
+### Commitment boundary
+
+`MountMatch.decide()` remains the cost-free frozen-v0 path. `MountMatch.attempt()` is the v0.1b path:
+
+```text
+ActionAttempt
+→ validate frozen resolution
+→ charge initiator through StaminaCostPolicy
+→ apply unchanged ResolutionResult
+```
+
+This keeps stamina economics outside the BJJ matchup table and resolution engine.
 ## Refactor proof
 
 The architecture-hardening pass is behavior-preserving:
