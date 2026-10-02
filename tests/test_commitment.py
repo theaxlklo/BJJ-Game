@@ -76,18 +76,32 @@ class CommitmentAttemptTests(unittest.TestCase):
         self.assertEqual(outcomes[Commitment.LOW], outcomes[Commitment.MEDIUM])
         self.assertEqual(outcomes[Commitment.MEDIUM], outcomes[Commitment.HIGH])
 
-    def test_cost_shortfall_is_recorded_without_blocking_or_modifying_action(self):
-        exhausted, high = self._attempt(Commitment.HIGH, stamina=5)
+    def test_underfunded_commitment_downgrades_to_highest_payable_level(self):
+        underfunded, high = self._attempt(Commitment.HIGH, stamina=5)
         fresh, reference = self._attempt(Commitment.HIGH, stamina=100)
 
-        self.assertEqual(high.stamina.requested, 12)
-        self.assertEqual(high.stamina.charged, 5)
-        self.assertEqual(high.stamina.shortfall, 7)
-        self.assertEqual(high.stamina.after, 0)
-        self.assertFalse(high.stamina.fully_paid)
+        self.assertIs(high.attempt.requested_commitment, Commitment.HIGH)
+        self.assertIs(high.attempt.effective_commitment, Commitment.LOW)
+        self.assertEqual(high.requested_cost, 12)
+        self.assertEqual(high.effective_cost, 3)
+        self.assertEqual(high.funding_gap, 9)
+        self.assertEqual(high.stamina.requested, 3)
+        self.assertEqual(high.stamina.charged, 3)
+        self.assertEqual(high.stamina.shortfall, 0)
+        self.assertEqual(high.stamina.after, 2)
+        self.assertTrue(high.stamina.fully_paid)
         self.assertEqual(high.resolution, reference.resolution)
-        self.assertEqual(exhausted.axis, fresh.axis)
-        self.assertEqual(exhausted.band, fresh.band)
+        self.assertEqual(underfunded.axis, fresh.axis)
+        self.assertEqual(underfunded.band, fresh.band)
+
+    def test_zero_stamina_is_unfunded_not_free_high_commitment(self):
+        match, result = self._attempt(Commitment.HIGH, stamina=0)
+        self.assertIsNone(result.attempt.effective_commitment)
+        self.assertEqual(result.requested_cost, 12)
+        self.assertEqual(result.effective_cost, 0)
+        self.assertEqual(result.funding_gap, 12)
+        self.assertEqual(result.stamina.charged, 0)
+        self.assertEqual(match.top.stamina.current, 0)
 
     def test_invalid_attempt_does_not_spend_stamina(self):
         match = MountMatch()
@@ -113,9 +127,11 @@ class CommitmentAttemptTests(unittest.TestCase):
         match, _ = self._attempt(Commitment.LOW)
         self.assertEqual(match.history.commitment_initiator_history, ["top"])
         self.assertEqual(match.history.commitment_history, ["LOW"])
+        self.assertEqual(match.history.effective_commitment_history, ["LOW"])
         self.assertEqual(match.history.stamina_requested_history, [3])
         self.assertEqual(match.history.stamina_charged_history, [3])
         self.assertEqual(match.history.stamina_shortfall_history, [0])
+        self.assertEqual(match.history.stamina_funding_gap_history, [0])
 
 
 if __name__ == "__main__":
