@@ -76,6 +76,28 @@ class BatchSimulationTests(unittest.TestCase):
         self.assertGreaterEqual(summary.bottom_final_stamina_mean, 0)
         self.assertLessEqual(summary.bottom_final_stamina_mean, 100)
 
+    def test_escape_first_batch_produces_real_escape_outcomes(self):
+        summary = run_escape_first_batch(
+            matches=40,
+            base_seed=42,
+            top_behavior=TopBehavior.HOLD,
+            bottom_behavior=BottomBehavior.ESCAPE,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
+        )
+
+        escaped = (
+            summary.outcome_counts.get("Half Guard", 0)
+            + summary.outcome_counts.get("Open Guard", 0)
+            + summary.outcome_counts.get("Reversal", 0)
+        )
+        self.assertGreater(escaped, 0)
+        self.assertGreater(summary.bottom_escape_priority_count, 0)
+
     def test_batch_render_keeps_outcomes_stamina_and_decisions_separate(self):
         text = self._run().render()
 
