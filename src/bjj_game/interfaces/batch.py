@@ -28,6 +28,11 @@ class BatchBehaviorMode(str, Enum):
     RECOVER = "recover"
 
 
+class BatchResponderMode(str, Enum):
+    RANDOM = "random"
+    INFORMED = "informed"
+
+
 @dataclass(frozen=True, slots=True)
 class AdaptiveBehaviorPolicy:
     """Batch-only behavior switching around the existing Exhausted latch.
@@ -569,6 +574,7 @@ class EscapeFirstInitiatorPolicy:
 class BatchSummary:
     matches: int
     base_seed: int
+    bottom_responder_mode: BatchResponderMode
     top_behavior: TopBehavior
     bottom_behavior: BottomBehavior
     commitment: Commitment
@@ -629,6 +635,7 @@ class BatchSummary:
             f"Top behavior policy: {self.top_behavior_mode.value}",
             f"Bottom baseline behavior: {self.bottom_behavior.value}",
             f"Bottom behavior policy: {self.bottom_behavior_mode.value}",
+            f"Bottom responder policy: {self.bottom_responder_mode.value}",
             f"Commitment: {self.commitment.value}",
             "",
             "OUTCOMES",
@@ -692,6 +699,66 @@ def _render_counts(counts: dict[str, int]) -> str:
     return ", ".join(f"{name}={counts[name]}" for name in sorted(counts))
 
 
+def _informed_bottom_response_id(
+    match: MountMatch,
+    *,
+    action_id: str,
+) -> str:
+    """Choose Bottom's legal response that minimizes Top's final grade."""
+    if match.initiator is not Side.TOP:
+        raise ValueError("informed Bottom response requires Top as initiator")
+
+    legal = match.legal_response_ids(action_id)
+    if not legal:
+        raise RuntimeError(f"No legal responses for {action_id!r}")
+
+    initiator_band = match.top.stamina.band
+    responder_band = match.bottom.stamina.band
+    exhaustion_modifier = match.exhaustion_policy.exchange_grade_modifier(
+        initiator_band=initiator_band,
+        responder_band=responder_band,
+    )
+    top_behavior = match.top.behavior
+    bottom_behavior = match.bottom.behavior
+    if not isinstance(top_behavior, TopBehavior):
+        raise TypeError("Top behavior is not a TopBehavior")
+    if not isinstance(bottom_behavior, BottomBehavior):
+        raise TypeError("Bottom behavior is not a BottomBehavior")
+
+    candidates: list[tuple[Grade, int, str]] = []
+    for order, response_id in enumerate(legal):
+        if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
+            result = match.preview_submission_stage(
+                response_id=response_id,
+                external_grade_modifier=exhaustion_modifier,
+            )
+        else:
+            target_was_ready = (
+                match.enable_v02_setup
+                and action_id in match.setup_policy.target_action_ids
+                and match.setup_state.is_ready(action_id)
+            )
+            ready_override = (
+                match.setup_policy.ready_final_grade_override(
+                    action_id,
+                    response_id,
+                )
+                if target_was_ready
+                else None
+            )
+            result = match._resolve(
+                action_id=action_id,
+                response_id=response_id,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=exhaustion_modifier,
+                post_positional_grade_override=ready_override,
+            )
+        candidates.append((result.final_grade, order, response_id))
+
+    return min(candidates)[2]
+
+
 def run_escape_first_batch(
     *,
     matches: int,
@@ -706,6 +773,7 @@ def run_escape_first_batch(
     bottom_stamina: int,
     top_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
     bottom_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
+    bottom_responder_mode: BatchResponderMode = BatchResponderMode.RANDOM,
     enable_v02_setup: bool = False,
     enable_v03_submissions: bool = False,
 ) -> BatchSummary:
@@ -816,21 +884,32 @@ def run_escape_first_batch(
                     else:
                         bottom_resets += 1
                     continue
-                hidden = responder.choose(
-                    side.opponent,
-                    allowed_response_ids=match.legal_response_ids(
-                        decision.action_id
-                    ),
-                    fallback_response_id=(
-                        policy._ready_fallback_response_id(
-                            match,
-                            decision.action_id,
-                        )
-                    ),
-                )
+                if (
+                    side is Side.TOP
+                    and bottom_responder_mode is BatchResponderMode.INFORMED
+                ):
+                    response_id = _informed_bottom_response_id(
+                        match,
+                        action_id=decision.action_id,
+                    )
+                else:
+                    hidden = responder.choose(
+                        side.opponent,
+                        allowed_response_ids=match.legal_response_ids(
+                            decision.action_id
+                        ),
+                        fallback_response_id=(
+                            policy._ready_fallback_response_id(
+                                match,
+                                decision.action_id,
+                            )
+                        ),
+                    )
+                    response_id = hidden.response_id
             else:
                 # v0.1 blind harness preserves historical responder-first sampling.
                 hidden = responder.choose(side.opponent)
+                response_id = hidden.response_id
                 decision = policy.choose(match)
                 if decision.action_id is None:
                     match.reset_window()
@@ -885,7 +964,7 @@ def run_escape_first_batch(
 
             match.attempt(
                 action_id=decision.action_id,
-                response_id=hidden.response_id,
+                response_id=response_id,
                 commitment=commitment,
             )
 
@@ -924,6 +1003,7 @@ def run_escape_first_batch(
     return BatchSummary(
         matches=matches,
         base_seed=base_seed,
+        bottom_responder_mode=bottom_responder_mode,
         top_behavior=top_behavior,
         bottom_behavior=bottom_behavior,
         commitment=commitment,
