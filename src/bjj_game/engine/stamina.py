@@ -6,7 +6,7 @@ from typing import Mapping
 
 from ..domain.action import Commitment
 from ..domain.model import Behavior, BottomBehavior, DriftResult, TopBehavior
-from ..domain.stamina import StaminaPool, StaminaRecovery, StaminaSpend
+from ..domain.stamina import StaminaBand, StaminaPool, StaminaRecovery, StaminaSpend
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +68,7 @@ class BehaviorStaminaMeter:
 class BehaviorStaminaResult:
     behavior: Behavior
     duration_seconds: int
+    quantum_seconds: int
     before: int
     spent: int
     spend_shortfall: int
@@ -164,6 +165,7 @@ class BehaviorStaminaPolicy:
         return BehaviorStaminaResult(
             behavior=behavior,
             duration_seconds=duration_seconds,
+            quantum_seconds=self.quantum_seconds,
             before=before,
             spent=spend.charged,
             spend_shortfall=spend.shortfall,
@@ -186,3 +188,101 @@ DEFAULT_BEHAVIOR_STAMINA_POLICY = BehaviorStaminaPolicy.build(
         BottomBehavior.CONSERVE: +2,
     },
 )
+
+
+@dataclass(frozen=True, slots=True)
+class ExhaustionPolicy:
+    """v0.1e initiated-action consequence for depleted stamina."""
+
+    exhausted_initiator_grade_modifier: int = -1
+
+    def initiator_grade_modifier(self, band: StaminaBand) -> int:
+        return (
+            self.exhausted_initiator_grade_modifier
+            if band is StaminaBand.EXHAUSTED
+            else 0
+        )
+
+
+DEFAULT_EXHAUSTION_POLICY = ExhaustionPolicy()
+
+
+@dataclass(frozen=True, slots=True)
+class StaminaPacingProjection:
+    commitment: Commitment
+    top_exhausted_seconds: int
+    bottom_exhausted_seconds: int
+    top_zero_seconds: int
+    bottom_zero_seconds: int
+
+
+def project_active_stamina_pacing(
+    *,
+    commitment: Commitment,
+    action_policy: StaminaCostPolicy = DEFAULT_STAMINA_COST_POLICY,
+    behavior_policy: BehaviorStaminaPolicy = DEFAULT_BEHAVIOR_STAMINA_POLICY,
+    starting_stamina: int = 100,
+    interval_seconds: int = 5,
+    horizon_seconds: int = 300,
+) -> StaminaPacingProjection:
+    """Project the current v0 scaffold under always-active behavior.
+
+    Both competitors use the active stamina-draining behavior, initiative
+    alternates Top/Bottom every interval, and commitment is fixed.
+    """
+
+    top = StaminaPool(current=starting_stamina, maximum=starting_stamina)
+    bottom = StaminaPool(current=starting_stamina, maximum=starting_stamina)
+    top_meter = BehaviorStaminaMeter()
+    bottom_meter = BehaviorStaminaMeter()
+    exhausted = {"top": None, "bottom": None}
+    zero = {"top": None, "bottom": None}
+    initiator = "top"
+    elapsed = 0
+
+    while elapsed < horizon_seconds and (zero["top"] is None or zero["bottom"] is None):
+        elapsed += interval_seconds
+        behavior_policy.apply(
+            pool=top,
+            behavior=TopBehavior.PRESSURE,
+            duration_seconds=interval_seconds,
+            meter=top_meter,
+        )
+        behavior_policy.apply(
+            pool=bottom,
+            behavior=BottomBehavior.ESCAPE,
+            duration_seconds=interval_seconds,
+            meter=bottom_meter,
+        )
+
+        for label, pool in (("top", top), ("bottom", bottom)):
+            if exhausted[label] is None and pool.band is StaminaBand.EXHAUSTED:
+                exhausted[label] = elapsed
+            if zero[label] is None and pool.current == 0:
+                zero[label] = elapsed
+
+        pool = top if initiator == "top" else bottom
+        effective = action_policy.effective_commitment(
+            requested=commitment,
+            available_stamina=pool.current,
+        )
+        if effective is not None:
+            pool.spend_up_to(action_policy.cost(effective))
+
+        if exhausted[initiator] is None and pool.band is StaminaBand.EXHAUSTED:
+            exhausted[initiator] = elapsed
+        if zero[initiator] is None and pool.current == 0:
+            zero[initiator] = elapsed
+
+        initiator = "bottom" if initiator == "top" else "top"
+
+    if any(value is None for value in (*exhausted.values(), *zero.values())):
+        raise RuntimeError("pacing projection horizon is too short")
+
+    return StaminaPacingProjection(
+        commitment=commitment,
+        top_exhausted_seconds=int(exhausted["top"]),
+        bottom_exhausted_seconds=int(exhausted["bottom"]),
+        top_zero_seconds=int(zero["top"]),
+        bottom_zero_seconds=int(zero["bottom"]),
+    )
