@@ -1,3 +1,3 @@
-from bjj_game.interfaces.cli import main
+from .cli import main
 
 raise SystemExit(main())
