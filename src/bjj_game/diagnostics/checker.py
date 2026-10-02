@@ -67,7 +67,9 @@ def _final_grade_without_behavior(action_id: str, response_id: str, side: Side, 
     return result.final_grade
 
 
-def _collect_escape_reachability() -> dict[
+def _collect_escape_reachability(
+    *, external_grade_modifier: int = 0
+) -> dict[
     tuple[str, TopBehavior, ExitDestination], list[ReachabilityHit]
 ]:
     reachability: dict[
@@ -93,6 +95,7 @@ def _collect_escape_reachability() -> dict[
                             response_id=response.id,
                             top_behavior=top_behavior,
                             bottom_behavior=BottomBehavior.ESCAPE,
+                            external_grade_modifier=external_grade_modifier,
                         )
                         if result.exit_destination is None:
                             continue
@@ -116,6 +119,35 @@ def _axis_range(hits: list[ReachabilityHit]) -> tuple[float, float] | None:
     axes = [hit.axis for hit in hits]
     return min(axes), max(axes)
 
+
+
+def render_exhausted_reachability_summary() -> list[str]:
+    """Modern v0.1e diagnostic; intentionally excluded from frozen --enumerate."""
+    reachability = _collect_escape_reachability(external_grade_modifier=-1)
+    lines: list[str] = []
+    for action in BOTTOM_ACTIONS:
+        if not action.escape_capable:
+            continue
+        destinations = sorted(
+            set(action.exit_map.values()) | set(action.band_exit_overrides.values()),
+            key=lambda destination: destination.value,
+        )
+        for top_behavior in V0_TOP_BEHAVIORS:
+            parts: list[str] = []
+            for destination in destinations:
+                hits = reachability[(action.id, top_behavior, destination)]
+                axis_range = _axis_range(hits)
+                if axis_range is None:
+                    parts.append(f"{destination.value}=UNREACHABLE")
+                else:
+                    parts.append(
+                        f"{destination.value}={axis_range[0]:+.2f}..{axis_range[1]:+.2f}"
+                    )
+            lines.append(
+                f"EXHAUSTED REACHABILITY: {action.canonical_name} / "
+                f"Top {top_behavior.value}: {'; '.join(parts)}"
+            )
+    return lines
 
 def run_checks() -> CheckReport:
     report = CheckReport()
