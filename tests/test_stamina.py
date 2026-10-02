@@ -110,6 +110,7 @@ class StaminaIdentityTests(unittest.TestCase):
         self.assertIn("Standard commitment: MEDIUM", text)
         self.assertIn("Commitment resolution effects: OFF", text)
         self.assertIn("Behavior stamina: PRESSURE/ESCAPE -1 per 5s", text)
+        self.assertIn("Exhaustion consequence: Exhausted initiator -1 grade", text)
 
 
 if __name__ == "__main__":
