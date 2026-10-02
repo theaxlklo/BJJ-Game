@@ -111,6 +111,65 @@ def _axis_grid() -> tuple[float, ...]:
     return tuple(round(i / 100, 2) for i in range(10, 401))
 
 
+def expected_raw_attacker_axis_delta(
+    *,
+    side: Side,
+    action_id: str,
+    axis: float,
+    band: Band,
+    top_behavior: TopBehavior = TopBehavior.PRESSURE,
+    bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
+    external_grade_modifier: int = 0,
+) -> float:
+    """Expected grade-derived axis delta before floor/cap/escape handling."""
+    response_policy = RandomBlindResponder.POLICY[side.opponent]
+    total_weight = sum(weight for _, weight in response_policy)
+    weighted = 0.0
+    for response_id, weight in response_policy:
+        result = MOUNT_ENGINE.resolve_action(
+            axis=axis,
+            band=band,
+            initiator=side,
+            action_id=action_id,
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            external_grade_modifier=external_grade_modifier,
+        )
+        weighted += result.grade_value * weight
+    return weighted / total_weight
+
+
+def exact_escape_probability(
+    *,
+    side: Side,
+    action_id: str,
+    axis: float,
+    band: Band,
+    top_behavior: TopBehavior = TopBehavior.PRESSURE,
+    bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
+    external_grade_modifier: int = 0,
+) -> float:
+    """Exact escape probability at one state under the fixed blind response mix."""
+    response_policy = RandomBlindResponder.POLICY[side.opponent]
+    total_weight = sum(weight for _, weight in response_policy)
+    escaped_weight = 0
+    for response_id, weight in response_policy:
+        result = MOUNT_ENGINE.resolve_action(
+            axis=axis,
+            band=band,
+            initiator=side,
+            action_id=action_id,
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            external_grade_modifier=external_grade_modifier,
+        )
+        if result.exit_destination is not None:
+            escaped_weight += weight
+    return escaped_weight / total_weight
+
+
 def expected_realized_attacker_axis_delta(
     *,
     side: Side,
