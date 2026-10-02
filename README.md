@@ -157,6 +157,24 @@ Standard play defaults commitment to `MEDIUM` because LOW still strictly dominat
 Underfunded commitment downgrades to the highest fully payable level; at zero stamina it becomes `UNFUNDED`, preventing future HIGH effects from being free.
 
 See `docs/MOUNT_V0_1C_CONSERVE.md`.
+## Mount v0.1e — exhaustion consequence
+
+v0.1e was intentionally implemented before v0.1d so STABILIZE can be designed against a stamina system that already matters.
+
+Minimal rule:
+
+```text
+Initiator starts the action Exhausted (0–25 stamina)
+→ final initiated-action grade -1
+```
+
+The band is read before the action's commitment cost is paid. If the current action pushes the fighter into Exhausted, the penalty begins on their next initiation.
+
+`bjj_game --check` now reports projected time to Exhausted and zero stamina for LOW/MEDIUM/HIGH under active PRESSURE/ESCAPE. The current costs are intentionally left unchanged until playtests produce evidence.
+
+Behavior-stamina logs always include fixed-point carry so partial recovery/spend across behavior changes is visible.
+
+See `docs/MOUNT_V0_1E_EXHAUSTION.md`.
 ## Known v0 limitation
 
 The responder sees the exact initiated action and has unrestricted access to every response. Every action therefore has a Failure-or-worse best counter. `--enumerate` reports:
