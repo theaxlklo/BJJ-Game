@@ -6,9 +6,11 @@ Mount v0 mechanics are frozen. This document describes the object-oriented struc
 
 ## Design goals
 
-- Keep BJJ matchup knowledge data-driven.
-- Put mutable state on domain objects instead of global variables.
+- Keep BJJ matchup and technique-specific interaction knowledge data-driven.
+- Put player-specific mutable state on `Competitor`.
+- Keep persisted position state legal at all times.
 - Separate match state from resolution policy.
+- Make resolution dependencies explicitly injectable.
 - Keep position-specific rules local to the position.
 - Make later positions composable rather than adding `if position == ...` branches throughout the engine.
 - Preserve the original `mount_v0` API while migration is in progress.
@@ -33,7 +35,6 @@ src/
 │   │   └── mount/
 │   │       ├── axis.py
 │   │       ├── catalog.py
-│   │       ├── compat.py
 │   │       ├── matchups.py
 │   │       ├── names.py
 │   │       ├── position.py
@@ -44,51 +45,59 @@ src/
 │       ├── cli.py
 │       └── formatting.py
 └── mount_v0/
-    └── compatibility facade
+    ├── mechanics.py
+    └── other compatibility facades
 ```
+
+There is deliberately no compatibility module under `bjj_game/positions/mount/`; compatibility imports only point **into** the new package, never back out of it.
 
 ## Core objects
 
 ### `Competitor`
 
-Represents a grappler. v0 stores identity and side only. v0.1 stamina and later belt/style/attribute/injury/run state belong here or in composed objects owned by the competitor.
+Represents a grappler and owns player-specific changing state.
+
+Mount v0 stores:
+
+- side
+- name
+- current behavior
+
+The CLI updates behavior when the player chooses it. `MountMatch.drift()` and `decide()` then read behavior from the competitors. Optional behavior arguments still exist only to preserve the frozen v0 API and update the same competitor-owned state.
+
+v0.1 stamina and commitment, then later belt/style/attribute/injury/run state, attach to `Competitor` through composed objects rather than becoming more method parameters.
 
 ### `MountMatch`
 
-The aggregate root for the current prototype. It owns:
+The aggregate root for the current prototype. It owns top and bottom competitors, simulated clock, current `MountPosition`, scheduled initiator, history, and exit state.
 
-- top and bottom competitors
-- simulated clock
-- current `MountPosition`
-- scheduled initiator
-- history
-- exit state
+It does not contain grade-resolution formulas; those live in the resolution engine and rule set.
 
-It does not contain the grade-resolution formulas; those live in the resolution engine and rule set.
+`MountMatch` is intentionally Mount-specific in v0. A generic multi-position match coordinator should be introduced only when a second playable position exists.
 
 ### `Position` / `MountPosition`
 
-`Position` is the common positional abstraction. `MountPosition` contains Mount-specific state today. Future `HalfGuardPosition`, `ClosedGuardPosition`, `SideControlPosition`, `BackControlPosition`, `TurtlePosition`, `StandingPosition`, etc. can be introduced without converting the engine into a large position switch statement.
+`Position` is currently a deliberately minimal common abstraction. `MountPosition` owns Mount state and the transition between a valid Mount and a broken Mount.
+
+A broken Mount stores the terminal crossing value separately from persisted Mount control. Future positions can then be introduced without storing out-of-domain values in another position's state.
 
 ### `MountAxis`
 
-Owns the numeric Mount control state and its visible hysteresis band. Mount-specific threshold policy remains centralized in `MountRuleSet`.
+Owns persisted Mount control value and visible hysteresis band. It is the **only** path used to update persisted Mount control.
+
+`MountAxis.apply()` rejects values outside `+0.10..+4.00` and impossible axis/band combinations. When an escape crosses below the Mount floor, that overshoot is event/transition data on `MountPosition.crossing_axis`; it is not persisted in `MountAxis`.
 
 ### `MountRuleSet`
 
-Owns the frozen v0 rules:
+Owns position-wide Mount-v0 policies: persisted range, initial bands, hysteresis thresholds, drift rates, positional modifiers, and Exit Map policy.
 
-- `+0.10..+4.00` persisted Mount range
-- initial bands
-- hysteresis thresholds
-- drift rates
-- HOLD/PROTECT behavior modifiers
-- positional modifiers
-- exit-destination policy, including the final Elbow-Knee playtest tune
+Technique-specific behavior sensitivities and special floor-clamp semantics are **catalog metadata**, not hard-coded action IDs in `MountRuleSet` or the engine.
 
 ### `TechniqueCatalog`
 
 Indexes canonical technique and response definitions by stable ID. Mechanics reference stable IDs, never player-facing strings.
+
+A `TechniqueEntity` can carry escape capability, Exit Map, band-specific exit overrides, behavior modifiers, and whether a non-escape action clamps at the Mount floor.
 
 ### `MatchupTable`
 
@@ -96,69 +105,79 @@ Contains the 18 hand-authored action/response grades. The BJJ judgments remain d
 
 ### `MountResolutionEngine`
 
-A stateless/injectable service that resolves:
+A stateless service that resolves drift and exchanges. Its dependencies are explicit constructor fields:
 
-- drift
-- raw matchup grade
-- behavior modifier
-- positional modifier
-- grade clamp
-- axis delta
-- Bridge/failure clamp
-- escape threshold
-- Exit Map
+```python
+MountResolutionEngine(
+    rules=...,
+    catalog=...,
+    matchups=...,
+)
+```
 
-It receives state and returns immutable result objects. `MountMatch` applies those results to mutable match state.
+`MountResolutionEngine.default()` wires the production Mount-v0 objects. Tests can inject a modified catalog, rule set, or even a one-entry matchup table without monkey-patching globals.
+
+## Dependency direction
+
+```text
+interfaces / diagnostics
+        ↓
+      engine
+        ↓
+domain + positions
+
+mount_v0 compatibility facade
+        ↓
+      bjj_game
+```
+
+The new `bjj_game` package never imports from `mount_v0`. The legacy package is a one-way adapter only.
 
 ## Compatibility policy
 
-The `mount_v0` package is intentionally retained as a facade. Existing imports such as:
+Existing `mount_v0` imports continue to work, but implementation lives in `bjj_game`.
 
-```python
-from mount_v0.engine import MountRun
-from mount_v0.mechanics import resolve_action
-```
-
-continue to work, but the implementation lives in `bjj_game`.
-
-This gives us a migration path without discarding the regression suite or breaking playtest tooling.
+Compatibility behavior parameters remain accepted by `MountMatch.drift()` and `decide()` so all frozen v0 tests/playtest tooling continue to work. New code sets behavior on the competitors and omits those parameters.
 
 ## v0.1 extension points
 
-Stamina should be added without reworking the positional engine:
+Stamina should now fit without reworking the positional engine:
 
 ```text
 Competitor
-└── Stamina
+├── behavior
+└── StaminaPool
 
 ActionAttempt
 ├── Technique
 └── Commitment
 
 MountResolutionEngine
-└── consumes stamina/commitment policy as an additional modifier source
+└── consumes attempt/stamina policy as an additional modifier source
 ```
 
-Recommended new objects:
+Planned objects:
 
 - `StaminaPool`
 - `StaminaBand`
 - `Commitment`
 - `ActionAttempt`
 
-`CONSERVE` and `STABILIZE` should be behaviors/policies, not competitor subclasses.
+`CONSERVE` and `STABILIZE` are behaviors/policies, not competitor subclasses.
 
 ## Refactor proof
 
-The OOP migration is behavior-preserving:
+The architecture-hardening pass is behavior-preserving:
 
-- original v0 tests: 44/44 pass unchanged
-- architecture tests: 6/6 pass
-- total: 50/50
-- `python -m mount_v0 --check`: PASS
+- frozen Mount-v0 tests: **44/44 pass unchanged**
+- architecture tests: **13/13 pass**
+- total: **57/57**
 - `python -m bjj_game --check`: PASS
-- exhaustive `--enumerate`: byte-identical to the pre-refactor build
-- Session 11 blunder replay output: byte-identical except absolute log path
-- Session 12 blunder replay output: byte-identical except absolute log path
+- `python -m mount_v0 --check`: PASS
+- exhaustive `--enumerate`: byte-identical to the previous OOP build
+- custom matchup-table injection is tested
+- behavior ownership is tested
+- catalog-driven HOLD/PROTECT/special-clamp metadata is tested
+- an escape regression proves terminal negative overshoot is not persisted in `MountAxis`
 
-No Mount v0 mechanics were changed during the refactor.
+No Mount-v0 mechanics changed during this pass.
