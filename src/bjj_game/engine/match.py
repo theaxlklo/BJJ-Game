@@ -20,7 +20,14 @@ from ..positions.mount.rules import (
     DEFAULT_INTERVAL_SECONDS,
 )
 from .mount_engine import MountResolutionEngine
-from .stamina import DEFAULT_STAMINA_COST_POLICY, StaminaCostPolicy
+from .stamina import (
+    DEFAULT_BEHAVIOR_STAMINA_POLICY,
+    DEFAULT_STAMINA_COST_POLICY,
+    AdvanceResult,
+    BehaviorStaminaMeter,
+    BehaviorStaminaPolicy,
+    StaminaCostPolicy,
+)
 
 
 @dataclass(slots=True)
@@ -41,6 +48,9 @@ class MountMatch:
     stamina_cost_policy: StaminaCostPolicy = field(
         default_factory=lambda: DEFAULT_STAMINA_COST_POLICY, repr=False
     )
+    behavior_stamina_policy: BehaviorStaminaPolicy = field(
+        default_factory=lambda: DEFAULT_BEHAVIOR_STAMINA_POLICY, repr=False
+    )
     clock_seconds: int = field(init=False)
     position: MountPosition = field(init=False)
     initial_band: Band = field(init=False)
@@ -50,6 +60,8 @@ class MountMatch:
     bottom: Competitor = field(init=False)
     exit_destination: ExitDestination | None = field(init=False, default=None)
     exit_reason: str | None = field(init=False, default=None)
+    top_behavior_stamina_meter: BehaviorStaminaMeter = field(init=False)
+    bottom_behavior_stamina_meter: BehaviorStaminaMeter = field(init=False)
 
     def __post_init__(self) -> None:
         if self.initial_clock <= 0:
@@ -67,6 +79,8 @@ class MountMatch:
         self.bottom = Competitor(
             side=Side.BOTTOM, name="Bottom", behavior=BottomBehavior.ESCAPE
         )
+        self.top_behavior_stamina_meter = BehaviorStaminaMeter()
+        self.bottom_behavior_stamina_meter = BehaviorStaminaMeter()
 
     @property
     def axis(self) -> float:
@@ -144,6 +158,35 @@ class MountMatch:
         if self.clock_seconds == 0 and self.exit_destination is None:
             self.exit_reason = "TIMEOUT — Mount retained"
         return result
+
+    def advance(self) -> AdvanceResult:
+        """v0.1c normal-speed drift plus behavior stamina economy.
+
+        Frozen drift() remains stamina-free for Mount-v0 compatibility.
+        """
+        top_behavior, bottom_behavior = self._behaviors(None, None)
+        drift = self.drift()
+        duration = drift.start_clock - drift.end_clock
+
+        top_stamina = self.behavior_stamina_policy.apply(
+            pool=self.top.stamina,
+            behavior=top_behavior,
+            duration_seconds=duration,
+            meter=self.top_behavior_stamina_meter,
+        )
+        bottom_stamina = self.behavior_stamina_policy.apply(
+            pool=self.bottom.stamina,
+            behavior=bottom_behavior,
+            duration_seconds=duration,
+            meter=self.bottom_behavior_stamina_meter,
+        )
+        self.history.top_behavior_stamina_history.append(top_stamina.net_change)
+        self.history.bottom_behavior_stamina_history.append(bottom_stamina.net_change)
+        return AdvanceResult(
+            drift=drift,
+            top_stamina=top_stamina,
+            bottom_stamina=bottom_stamina,
+        )
 
     def _resolve(
         self,
@@ -239,23 +282,42 @@ class MountMatch:
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
         )
+        pool = self.competitor(initiator).stamina
+        requested_cost = self.stamina_cost_policy.cost(commitment)
+        effective_commitment = self.stamina_cost_policy.effective_commitment(
+            requested=commitment,
+            available_stamina=pool.current,
+        )
+        effective_cost = (
+            self.stamina_cost_policy.cost(effective_commitment)
+            if effective_commitment is not None
+            else 0
+        )
+        funding_gap = requested_cost - effective_cost
         attempt = ActionAttempt(
             initiator=initiator,
             action_id=action_id,
-            commitment=commitment,
+            requested_commitment=commitment,
+            effective_commitment=effective_commitment,
         )
-        requested = self.stamina_cost_policy.cost(commitment)
-        spend = self.competitor(initiator).stamina.spend_up_to(requested)
+        spend = pool.spend_up_to(effective_cost)
 
         self.history.commitment_history.append(commitment.value)
+        self.history.effective_commitment_history.append(
+            effective_commitment.value if effective_commitment is not None else "UNFUNDED"
+        )
         self.history.commitment_initiator_history.append(initiator.value)
-        self.history.stamina_requested_history.append(spend.requested)
+        self.history.stamina_requested_history.append(requested_cost)
         self.history.stamina_charged_history.append(spend.charged)
         self.history.stamina_shortfall_history.append(spend.shortfall)
+        self.history.stamina_funding_gap_history.append(funding_gap)
 
         self._apply_resolution(result)
         return AttemptResult(
             attempt=attempt,
+            requested_cost=requested_cost,
+            effective_cost=effective_cost,
+            funding_gap=funding_gap,
             stamina=spend,
             resolution=result,
         )
