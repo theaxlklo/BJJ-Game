@@ -134,5 +134,25 @@ class CliTests(unittest.TestCase):
 
 
 
+    def test_primary_check_reports_commitment_dominance_and_visibility_debt(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--check"])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("COMMITMENT DOMINANCE: LOW strictly dominates", text)
+        self.assertIn("COMMITMENT VISIBILITY: public in v0.1c", text)
+
+    def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["--check"])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertNotIn("COMMITMENT DOMINANCE", text)
+        self.assertNotIn("COMMITMENT VISIBILITY", text)
+
+
+
 if __name__ == "__main__":
     unittest.main()
