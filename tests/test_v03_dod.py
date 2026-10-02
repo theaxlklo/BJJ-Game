@@ -8,6 +8,7 @@ from bjj_game.diagnostics.checker import (
     _v03_defender_behavior_sweep,
     _v03_reacquisition_probability_sweep,
     _v03_exhaustion_differentials,
+    _v03_informed_exhausted_defender_probe,
     _v03_locked_submission_probe,
     _v03_standard_batch,
     measure_v02_definition_of_done,
@@ -70,13 +71,14 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             self.gates["B"].metric,
         )
 
-    def test_gate_c_requires_best_fresh_defense_to_stop_every_stage(self):
+    def test_gate_c_requires_exact_fresh_stalemate_at_every_reachable_stage(self):
         evidence = _v03_best_defense_evidence()
         expected = (
             V02GateStatus.PASS
             if all(
                 item.reachable_states > 0
-                and item.best_defense_stops == item.reachable_states
+                and item.best_contested_states == item.reachable_states
+                and item.best_defender_win_states == 0
                 and item.guaranteed_advance_states == 0
                 for item in evidence.values()
             )
@@ -85,12 +87,17 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
         self.assertIs(self.gates["C"].status, expected)
         self.assertEqual(set(evidence), set(SubmissionStage))
         for stage, item in evidence.items():
-            self.assertGreater(item.reachable_states, 0)
-            self.assertEqual(item.best_defense_stops, item.reachable_states)
+            self.assertEqual(item.reachable_states, 2)
+            self.assertEqual(
+                item.best_contested_states,
+                item.reachable_states,
+            )
+            self.assertEqual(item.best_defender_win_states, 0)
             self.assertEqual(item.guaranteed_advance_states, 0)
             self.assertIn(
                 f"{stage.value}:{item.reachable_states}/"
-                f"stopped:{item.best_defense_stops}/"
+                f"best-contested:{item.best_contested_states}/"
+                f"defender-wins:{item.best_defender_win_states}/"
                 f"guaranteed:{item.guaranteed_advance_states}",
                 self.gates["C"].metric,
             )
@@ -125,6 +132,20 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             self.assertGreaterEqual(row.escapes, 0)
             self.assertGreaterEqual(row.timeouts, 0)
             self.assertGreaterEqual(row.submission_attempts, 0)
+
+    def test_gate_e_informed_exhausted_defender_cannot_perfect_lock(self):
+        evidence = _v03_informed_exhausted_defender_probe()
+        expected = (
+            V02GateStatus.PASS
+            if evidence.tapped
+            else V02GateStatus.OPEN
+        )
+        self.assertIs(self.gates["E"].status, expected)
+        self.assertTrue(evidence.tapped)
+        self.assertEqual(len(evidence.selected_responses), 3)
+        self.assertEqual(len(evidence.final_grades), 3)
+        self.assertTrue(all(grade.successful for grade in evidence.final_grades))
+        self.assertIn("tapped=True", self.gates["E"].metric)
 
     def test_gate_d_checks_both_one_sided_directions_and_cancellation(self):
         attacker, defender, mismatches, cases = _v03_exhaustion_differentials()
