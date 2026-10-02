@@ -268,6 +268,68 @@ The integer stamina value may be unchanged in the second window, but `+4/5` show
 
 This prevents a playtester from mistaking mathematically correct carried remainder for a recovery bug.
 
+## Forced-action recovery deadlock
+
+After the 25/35 hysteresis fix, a larger structural issue remained in the fixed alternating scaffold.
+
+Pure CONSERVE restores:
+
+```text
++4 stamina per 10-second initiative cycle
+```
+
+Nominal action-cycle balance is therefore:
+
+```text
+LOW    +4 - 3  = +1
+MEDIUM +4 - 7  = -3
+HIGH   +4 - 12 = -8
+```
+
+Under forced MEDIUM or HIGH attacks, an Exhausted competitor cannot climb from the recovery band to 35 while fully funding every scheduled action.
+
+This is not treated as a recovery-number problem. It comes from the v0 scaffold forcing a technique every scheduled decision window.
+
+The broader frozen design is event-driven: a player may maintain/change broad behavior without necessarily initiating a technique every window.
+
+### RESET / NO ACTION
+
+The modern v0.1 flow now allows:
+
+```text
+RESET / NO ACTION
+```
+
+Effect:
+
+- no initiated technique
+- no response prompt
+- no action stamina cost
+- no immediate axis change
+- no extra simulated-second cost inside the paused decision window
+- initiative yields to the opponent
+- another normal-speed interval occurs before the next decision window
+
+The opportunity cost is the lost attack opportunity plus the positional drift/time that occurs before the next chance.
+
+With both competitors at 25 stamina, both using CONSERVE and RESET on every initiative:
+
+```text
+25 → 27 → 29 → 31 → 33 → 35
+```
+
+Both clear Exhausted after 25 simulated seconds.
+
+This makes recovery structurally possible without changing the temporary 3/7/12 action costs or +2/5s CONSERVE rate.
+
+### Stalling debt
+
+RESET is intentionally available outside Exhausted too, because the long-term design does not require a technique every decision window.
+
+However, repeated RESET can be used to burn clock without progress in the current prototype.
+
+That is not solved inside v0.1e. The frozen design already contains progress-based stalling rules, so `bjj_game --check` now reports RESET/stalling as an explicit future debt.
+
 ## Frozen-v0 identity gate
 
 The frozen enumerate digest remains:
@@ -277,6 +339,24 @@ The frozen enumerate digest remains:
 ```
 
 CI compares the actual digest against that exact value and fails on mismatch.
+
+## StaminaPool encapsulation
+
+`StaminaPool.current` is now read-only to callers.
+
+All mutation must use:
+
+- `set_current()`
+- `spend_up_to()`
+- `recover_up_to()`
+
+This guarantees the 25/35 exhaustion latch is refreshed on every supported state change, mirroring the controlled-write approach used by `MountAxis`.
+
+When a competitor is latched Exhausted above 25, display text explains the hysteresis directly:
+
+```text
+30/100 (Exhausted — recovers at 35)
+```
 
 ## Next step
 
