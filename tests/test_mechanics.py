@@ -66,7 +66,8 @@ class MechanicsTests(unittest.TestCase):
             action_id=BOTTOM_BRIDGE,
             response_id=TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,
         )
-        self.assertTrue(result.bridge_clamp_used)
+        self.assertTrue(result.floor_clamp_used)
+        self.assertTrue(result.bridge_clamp_used)  # legacy read-only alias
         self.assertEqual(result.axis_after, 0.10)
         self.assertIsNone(result.exit_destination)
 
