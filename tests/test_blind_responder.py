@@ -1,6 +1,7 @@
 import unittest
 
 from bjj_game.domain.model import Band, ExitDestination, Side
+from bjj_game.engine.stamina import DEFAULT_EXHAUSTION_POLICY
 from bjj_game.interfaces.blind import RandomBlindResponder, random_mix_band_metrics, random_mix_reachable_exits, render_random_mix_band_metrics, render_random_mix_exit_limit
 
 
@@ -151,7 +152,9 @@ class RandomBlindResponderTests(unittest.TestCase):
     def test_open_guard_reachability_changes_with_responder_exhaustion(self):
         fresh = random_mix_reachable_exits()
         exhausted_responder = random_mix_reachable_exits(
-            external_grade_modifier=+1
+            external_grade_modifier=(
+                DEFAULT_EXHAUSTION_POLICY.exhausted_responder_grade_modifier
+            )
         )
         self.assertIn(ExitDestination.HALF_GUARD, fresh)
         self.assertIn(ExitDestination.REVERSAL, fresh)

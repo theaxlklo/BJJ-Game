@@ -117,6 +117,19 @@ class CliTests(unittest.TestCase):
         self.assertIn("Requested commitment history: ['MEDIUM']", text)
         self.assertIn("Effective commitment history: ['MEDIUM']", text)
         self.assertIn("Top stamina: 92/100 (Fresh)", text)
+        self.assertIn(
+            "Exhaustion consequence: initiator Exhausted -1 grade; responder Exhausted +1 grade; both cancel",
+            text,
+        )
+        self.assertIn("Initiator stamina band before action: Fresh", text)
+        self.assertIn("Responder stamina band before action: Fresh", text)
+        self.assertIn("Initiator exhaustion modifier: +0 grade", text)
+        self.assertIn("Responder exhaustion modifier: +0 grade", text)
+        self.assertIn("Combined exhaustion modifier: +0 grade", text)
+        self.assertIn("Responder stamina band history: ['Fresh']", text)
+        self.assertIn("Initiator exhaustion modifier history: [0]", text)
+        self.assertIn("Responder exhaustion modifier history: [0]", text)
+        self.assertIn("Exhaustion modifier history (combined): [0]", text)
 
 
 

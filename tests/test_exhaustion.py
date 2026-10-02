@@ -8,6 +8,7 @@ from bjj_game.engine.stamina import (
     DEFAULT_EXHAUSTION_POLICY,
     project_active_stamina_pacing,
 )
+from bjj_game.interfaces.formatting import format_attempt_result
 from bjj_game.positions.mount.catalog import (
     BOTTOM_RESPONSE_FOREARM_FRAME,
     BOTTOM_RESPONSE_TURN_IN_RECOVERY,
@@ -64,6 +65,17 @@ class ExhaustionPolicyTests(unittest.TestCase):
         self.assertEqual(result.exhaustion_modifier, +1)
         self.assertIs(result.base_resolution.final_grade, Grade.SUCCESS)
         self.assertIs(result.resolution.final_grade, Grade.STRONG_SUCCESS)
+        rendered = format_attempt_result(
+            result,
+            clock_seconds=300,
+            top_behavior="PRESSURE",
+            bottom_behavior="ESCAPE",
+        )
+        self.assertIn("Initiator stamina band before action: Fresh", rendered)
+        self.assertIn("Responder stamina band before action: Exhausted", rendered)
+        self.assertIn("Initiator exhaustion modifier: +0 grade", rendered)
+        self.assertIn("Responder exhaustion modifier: +1 grade", rendered)
+        self.assertIn("Combined exhaustion modifier: +1 grade", rendered)
 
     def test_both_exhausted_modifiers_cancel(self):
         match = MountMatch(starting_axis=1.50)

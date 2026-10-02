@@ -6,6 +6,7 @@ from typing import Mapping
 
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TechniqueEntity, TopBehavior
 from ..engine.mount_engine import MOUNT_ENGINE
+from ..engine.stamina import DEFAULT_EXHAUSTION_POLICY
 from ..positions.mount.rules import MOUNT_RULES
 from ..positions.mount.catalog import (
     BOTTOM_RESPONSE_FOREARM_FRAME,
@@ -415,7 +416,9 @@ def random_mix_reachable_exits(
 def render_random_mix_exit_limit() -> str:
     fresh = random_mix_reachable_exits()
     exhausted_responder = random_mix_reachable_exits(
-        external_grade_modifier=+1
+        external_grade_modifier=(
+            DEFAULT_EXHAUSTION_POLICY.exhausted_responder_grade_modifier
+        )
     )
     fresh_missing = [
         destination.value
