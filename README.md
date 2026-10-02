@@ -537,15 +537,72 @@ progress-capable route exists
 + advancement clock >= 20s
 ```
 
-The first offense is a persistent Warning. Later offenses move Mount one visible band step toward the non-stalling player:
+The warning/penalty ladder is:
+
+```text
+offense 1 -> persistent Warning
+
+offense 2 -> one visible-band penalty
+             or free initiative at the Neutral-side boundary
+
+offense 3+ -> Position Reset to +1.50 Stable
+```
+
+The offense-2 positional penalty uses the existing visible-band hysteresis boundaries:
 
 ```text
 Locked -> Strong -> Stable -> Loose
 ```
 
-A stalling penalty never crosses Neutral. At the Loose/boundary case, the non-stalling player receives a **zero-time free initiative window** instead.
+Its numeric axis size therefore depends on where the player sits inside the band. For example:
 
-The cadence is simulated-time based rather than window-count based, so changing `--interval` does not change the 20-second threshold.
+```text
++4.00 Locked -> +2.80 Strong = -1.20
++3.21 Locked -> +2.80 Strong = -0.41
+```
+
+A one-band stalling penalty never crosses Neutral. At the Loose/boundary case, the non-stalling player receives a **zero-time free initiative window** instead.
+
+Repeated offenses after the first positional penalty use the v9 Section-33 Position Reset rung. In Mount-v0 this resets only positional control:
+
+```text
+axis = +1.50
+band = Stable
+```
+
+It does not clear stamina, setup state, or the Americana submission stage. Americana is not treated as inherently Mount-exclusive.
+
+The cadence is simulated-time based rather than window-count based, so changing `--interval` does not change the 20-second threshold. An offense is adjudicated on the first eligible RESET window at or after the threshold.
+
+### Corrected full-match Gate A
+
+The original early Gate-A probe stopped immediately after the first positional penalty and was insufficient. The authoritative probe now runs the full 5:00 clock.
+
+One-band-only mechanics failed:
+
+```text
+Warning=1
+one-band penalties=13
+Position Resets=0
+final axis=+4.00
+final band=Locked
+locked_timeout=True
+Locked windows=59/59
+```
+
+After completing the frozen Position Reset escalation:
+
+```text
+Warning=1
+one-band penalties=1
+Position Resets=12
+final axis=+3.00
+final band=Strong
+locked_timeout=False
+Locked windows=24/59
+```
+
+So Gate 2 now closes from **full-match** evidence rather than a temporary early Strong state.
 
 Current executable result:
 
@@ -559,41 +616,59 @@ v0.3b Gate D PASS
 v0.3b Gate E PASS
 ```
 
-Key evidence:
+The Americana stalemate remains protected:
 
 ```text
-one-sided Top stall:
-  Warning=1
-  penalty=1
-  +4.00 Locked -> +2.80 Strong
-
-fresh informed Americana stalemate:
+fresh informed Americana:
   attempts=3
   Top penalties=0
   Bottom penalties=0
   stage remains Threat
   clocks=0/0
-
-symmetry:
-  Top warnings/penalties=1/1
-  Bottom warnings/penalties=1/1
-
-Loose boundary:
-  axis +0.50 -> +0.50
-  free initiative windows=1
-  simulated clock unchanged
 ```
 
-The normal matched PRESSURE / ESCAPE batch is intentionally almost untouched:
+Symmetric attribution remains:
+
+```text
+Top warnings/penalties=1/1
+Bottom warnings/penalties=1/1
+```
+
+The Neutral-side boundary remains protected:
+
+```text
+axis +0.50 -> +0.50
+free initiative windows=1
+simulated clock unchanged
+```
+
+### Normal-play guard
+
+The stronger escalation must not leak into already-engaged standard play. The executable guard reports:
+
+```text
+V0.3b NORMAL-PLAY GUARD [PASS]
+
+random:
+  warnings=0/0
+  penalties=0/0
+  Position Resets=0/0
+
+informed:
+  warnings=0/0
+  penalties=0/0
+  Position Resets=0/0
+```
+
+The matched prediction surface remains:
 
 ```text
 Top RESETs 0 -> 0
 random taps 99 -> 99
 informed taps 0 -> 0
-stalling warnings/penalties 0/0
 ```
 
-So v0.3b penalizes deliberate inactivity without perturbing already-engaged play.
+So v0.3b penalizes deliberate inactivity without perturbing already-engaged standard play.
 
 The v0.3a competent-defender Gate B remains **DEFERRED**:
 
@@ -610,7 +685,10 @@ See:
 - `docs/MOUNT_V0_3B_STALLING_CADENCE.md`
 - `docs/MOUNT_V0_3B_CADENCE_TIMING_CLARIFICATION.md`
 - `docs/MOUNT_V0_3B_GATE_A_PROBE_CLARIFICATION.md`
-- `docs/MOUNT_V0_3B_FIRST_MEASUREMENT.md`
+- `docs/MOUNT_V0_3B_FIRST_MEASUREMENT.md` — historical; Gate-A closure superseded
+- `docs/MOUNT_V0_3B_FULL_MATCH_STALLING_FAILURE.md`
+- `docs/MOUNT_V0_3B_POSITION_RESET_ESCALATION.md`
+- `docs/MOUNT_V0_3B_POSITION_RESET_FINAL_MEASUREMENT.md`
 
 ## Known v0 limitation
 
