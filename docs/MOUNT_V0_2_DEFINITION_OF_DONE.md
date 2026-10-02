@@ -25,10 +25,13 @@ With unrestricted full information, every initiated action has a legal response 
 
 With v0.2 setup/Ready/initiative legality enabled:
 
-- Ready must actually be reachable against best-counter play;
-- at least one reachable Top Ready state must have no legal response that forces Failure-or-worse;
-- at least one reachable Bottom Ready state must have no legal response that forces Failure-or-worse; and
-- no reachable Ready state may make the attacker guaranteed to receive Success-or-better against every legal response.
+- Ready must actually be reachable against best-counter play; and
+- in **every** reachable Ready state, the responder's best legal result must be exactly Contested.
+
+That single invariant rejects both solved extremes:
+
+- Failure-or-worse best defense → defender still has a perfect counter;
+- Success-or-better best defense → attacker has a guaranteed win.
 
 This must be demonstrated by an exhaustive checker over the v0.2 builder path and legal-response set, not by constructing Ready state by hand.
 
@@ -39,10 +42,10 @@ The frozen `PERFECT-RESPONSE LOCK` diagnostic remains an unrestricted-v0 diagnos
 Gate 1 uses a separate Ready-aware exhaustive probe. It first drives each setup to Ready while the responder always selects the legal best counter, then reports per side:
 
 - reachable Ready states;
-- lock-free Ready states;
+- states whose best legal response is exactly Contested;
 - guaranteed-attacker Ready states.
 
-PASS requires Ready reachability for both sides, at least one lock-free Ready state per side, and zero guaranteed-attacker Ready states.
+PASS requires at least one reachable state for each side and `best-contested == reachable` for both sides.
 
 ## Gate 2 — RESET / stalling lock
 
@@ -246,13 +249,14 @@ Gate 6  Exhausted Bottom escape routes    OPEN — PRESSURE:1, HOLD:0, CONSERVE:
 The minimal Setup/Ready slice moves three gates automatically:
 
 ```text
-Gate 1  Perfect-response lock             OPEN — Top 36 reachable / 6 lock-free / 0 guaranteed
-                                                 Bottom 36 reachable / 36 lock-free / 24 guaranteed
+Gate 1  Perfect-response lock             PASS — Top 36/36 best-counter Contested
+                                                 Bottom 36/36 best-counter Contested
+                                                 0 guaranteed-attacker states
 Gate 2  RESET/stalling lock               OPEN
 Gate 3  Responder stamina                 OPEN
 Gate 4  Bridge setup role                 PASS — 590 Bridge builds credited to 295 completed Bottom chains
-Gate 5  Top post-opening activity         PASS — 3.120 meaningful follow-ups/match
-                                                 position 1.370, completed setup builds 1.750
+Gate 5  Top post-opening activity         PASS — 1.140 meaningful follow-ups/match
+                                                 position 0.560, completed setup builds 0.580
 Gate 6  Exhausted Bottom escape routes    OPEN — PRESSURE:1, HOLD:0, CONSERVE:1
 Gate 7  Commitment meaning                OPEN
 ```
