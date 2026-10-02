@@ -147,6 +147,46 @@ Correct-response disruption/decay is still deferred; when that layer exists it m
 
 This preserves the legacy `mount_v0` path.
 
+## Upper-cap setup progress rule
+
+Setup pressure is not allowed to advance for free when the Mount ceiling absorbs the entire positional result.
+
+A designated builder advances setup only when its resolved exchange is not **fully** absorbed by the upper cap:
+
+```text
+axis before +4.00
+builder result proposes above +4.00
+persisted axis remains +4.00
+→ no setup progress
+```
+
+Partial absorption still counts when the exchange produces real persisted movement:
+
+```text
+axis before +3.50
+builder result reaches persisted +4.00
+→ setup may progress
+```
+
+This keeps the best-counter Ready path reachable from non-cap states while preventing a fully absorbed Locked exchange from manufacturing setup progress.
+
+A 1,000-match `PRESSURE vs PROTECT` replay after this rule produced:
+
+```text
+Half Guard 0
+Reversal 0
+Timeout 1000
+
+Bridge                  9,510
+Trap-and-Roll           1,490
+completed Bottom chains 1,490
+mean Bottom stamina     23.00
+```
+
+Before the cap rule, the same condition produced roughly 8,000 Bridge and 3,000 Trap-and-Roll uses.
+
+Interpretation: **free cap-absorbed setup progress is fixed, but repeated probabilistic setup attempts remain.** The random responder can still choose Hip Follow, which produces a real positional result and therefore legitimate setup progress. That remaining willingness to spend stamina on low-probability setup attempts is a policy/stamina question, not free cap progress.
+
 ## Established-position ordering
 
 The setup-enabled batch harness restores the v9 established-position ordering:
@@ -201,10 +241,10 @@ The measured checker currently reports:
 
 ```text
 Gate 1  Perfect-response lock          PASS
-Gate 2  RESET/stalling                 OPEN
+Gate 2  RESET/stalling                 DEFERRED to v0.3 submissions
 Gate 3  Responder stamina              OPEN
 Gate 4  Bridge setup role              PASS
-Gate 5  Top post-opening activity      PASS
+Gate 5  Top post-opening activity      OPEN
 Gate 6  Exhausted Bottom escape        OPEN
 Gate 7  Commitment meaning             OPEN
 ```
@@ -215,21 +255,22 @@ Current evidence:
 Gate 1:
 Ready states reached against best-counter play:
 Top:    36 reachable / 36 best-counter Contested / 0 guaranteed-attacker
-Bottom: 36 reachable / 36 best-counter Contested / 0 guaranteed-attacker
+Bottom: 18 reachable / 18 best-counter Contested / 0 guaranteed-attacker
 
 Gate 1 now passes because every reachable Ready state follows the Ready-defense invariant exactly.
 
 Gate 4:
-Bridge selections: 595 / 100 standard matches
-Bridge setup-priority selections: 595
-Bridge builds credited to completed chains: 590
-Completed Bottom setup chains: 295
+Bridge selections: 755 / 100 standard matches
+Bridge setup-priority selections: 755
+Bridge builds credited to completed chains: 415
+Completed Bottom setup chains: 135
 
 Gate 5:
-Top follow-up meaningful initiations / match: 1.140
-  position:               0.560
-  completed setup builds: 0.580
+Top follow-up meaningful initiations / match: 0.630
+  position:               0.310
+  completed setup builds: 0.320
 threshold: > 1.000
+margin:                  -0.370
 
 Setup builders count only when their Ready target is later consumed in the same match.
 ```
@@ -302,4 +343,6 @@ Gate 1 is now settled by the Ready-defense invariant.
 
 The next experimental pass is the 25-stamina setup matrix, because setup chains now create enough action volume for exhaustion to become common. That evidence should be collected before changing responder stamina, exhausted escape reachability, or commitment.
 
-The Locked/cap setup treadmill remains intentionally open and should be considered together with RESET/stalling, because both concern progress that can be accumulated cheaply while positional movement is absorbed.
+The fully cap-absorbed setup-progress bug is fixed. Gate 2 is now explicitly deferred until v0.3 supplies a real Locked submission/progress action; the deferral expires automatically when such an action exists.
+
+The next unresolved stamina-specific question is Gate 3: setups now create enough action volume for exhaustion to matter, but exhausted responders still defend at full strength. Gate 5 is also back OPEN after the cap rule, with a measured margin of -0.370 rather than a hidden threshold flip.
