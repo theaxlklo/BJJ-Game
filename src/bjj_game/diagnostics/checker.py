@@ -216,6 +216,7 @@ _V02_BAND_ANCHORS = {
 @dataclass(frozen=True, slots=True)
 class V02ReadyGateEvidence:
     reachable_states: int
+    contested_best_states: int
     lock_free_states: int
     guaranteed_attacker_states: int
 
@@ -260,8 +261,8 @@ def _v02_ready_gate_evidence() -> dict[Side, V02ReadyGateEvidence]:
     from ..engine.match import MountMatch
 
     totals = {
-        Side.TOP: [0, 0, 0],
-        Side.BOTTOM: [0, 0, 0],
+        Side.TOP: [0, 0, 0, 0],
+        Side.BOTTOM: [0, 0, 0, 0],
     }
     probe = MountMatch(enable_v02_setup=True)
 
@@ -313,19 +314,29 @@ def _v02_ready_gate_evidence() -> dict[Side, V02ReadyGateEvidence]:
                             response_id=response_id,
                             top_behavior=match.top.behavior,
                             bottom_behavior=match.bottom.behavior,
+                            post_positional_grade_override=(
+                                match.setup_policy.ready_final_grade_override(
+                                    target_action_id,
+                                    response_id,
+                                )
+                            ),
                         ).final_grade
                         for response_id in legal
                     ]
-                    if finals and min(finals) > Grade.FAILURE:
+                    best_counter = min(finals) if finals else None
+                    if best_counter is Grade.CONTESTED:
                         totals[side][1] += 1
-                    if finals and min(finals) >= Grade.SUCCESS:
+                    if best_counter is not None and best_counter > Grade.FAILURE:
                         totals[side][2] += 1
+                    if best_counter is not None and best_counter >= Grade.SUCCESS:
+                        totals[side][3] += 1
 
     return {
         side: V02ReadyGateEvidence(
             reachable_states=values[0],
-            lock_free_states=values[1],
-            guaranteed_attacker_states=values[2],
+            contested_best_states=values[1],
+            lock_free_states=values[2],
+            guaranteed_attacker_states=values[3],
         )
         for side, values in totals.items()
     }
@@ -631,8 +642,8 @@ def measure_v02_definition_of_done(
     ready_evidence = _v02_ready_gate_evidence()
     gate1_pass = all(
         ready_evidence[side].reachable_states > 0
-        and ready_evidence[side].lock_free_states > 0
-        and ready_evidence[side].guaranteed_attacker_states == 0
+        and ready_evidence[side].contested_best_states
+        == ready_evidence[side].reachable_states
         for side in (Side.TOP, Side.BOTTOM)
     )
 
@@ -689,17 +700,17 @@ def measure_v02_definition_of_done(
             metric=(
                 "Ready states against best counters="
                 f"top:{ready_evidence[Side.TOP].reachable_states}/"
-                f"lock-free:{ready_evidence[Side.TOP].lock_free_states}/"
+                f"best-contested:{ready_evidence[Side.TOP].contested_best_states}/"
                 f"guaranteed:{ready_evidence[Side.TOP].guaranteed_attacker_states},"
                 f"bottom:{ready_evidence[Side.BOTTOM].reachable_states}/"
-                f"lock-free:{ready_evidence[Side.BOTTOM].lock_free_states}/"
+                f"best-contested:{ready_evidence[Side.BOTTOM].contested_best_states}/"
                 f"guaranteed:{ready_evidence[Side.BOTTOM].guaranteed_attacker_states}"
             ),
             evidence=(
-                "Ready is reachable for both sides, breaks the defender lock, and creates no guaranteed-attacker Ready state"
+                "every reachable Ready state has exactly Contested as the responder's best legal result"
                 if gate1_pass
                 else
-                "Gate requires reachable Ready under best-counter play, at least one lock-free Ready state per side, and zero guaranteed-attacker Ready states"
+                "Gate requires Ready reachability against best-counter play and exactly Contested as the best legal response in every reachable Ready state"
             ),
         ),
         V02GateMeasurement(
