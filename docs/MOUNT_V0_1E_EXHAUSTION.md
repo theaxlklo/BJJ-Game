@@ -330,6 +330,61 @@ However, repeated RESET can be used to burn clock without progress in the curren
 
 That is not solved inside v0.1e. The frozen design already contains progress-based stalling rules, so `bjj_game --check` now reports RESET/stalling as an explicit future debt.
 
+## Perfect-response lock and blind playtests
+
+Adding RESET exposed another v0 scaffold artifact more strongly: with full information, every initiated action has a Failure-or-worse unrestricted best response, while RESET has no immediate resolution risk.
+
+The checker now includes an explicit always-RESET probe:
+
+```text
+Top PRESSURE + RESET
+vs
+Bottom ESCAPE + RESET
+
+→ TIMEOUT — Mount retained
+→ final axis +4.00
+→ Locked
+→ Top stamina 40
+→ Bottom stamina 40
+```
+
+This confirms that standard full-information hot-seat play is a bad environment for judging RESET frequency.
+
+### --blind
+
+For the v0.1e playtests only:
+
+```bash
+PYTHONPATH=src python -m bjj_game --blind
+```
+
+Blind sequence:
+
+```text
+normal-speed drift
+→ responder secretly locks response
+→ initiator chooses action or RESET
+→ if action: frozen resolver uses the locked response
+→ if RESET: locked response is unused
+```
+
+The hidden response entry is not echoed to the other hot-seat player.
+
+`--blind` changes no:
+
+- matchup grade
+- behavior modifier
+- positional modifier
+- stamina rule
+- Exit Map
+- action/response legality
+
+It is an information-order testing harness only.
+
+The legacy `mount_v0` entry point rejects `--blind`.
+
+The eventual v0.2 recognition/feint/setup layer remains responsible for the actual information model.
+
 ## Frozen-v0 identity gate
 
 The frozen enumerate digest remains:
@@ -362,7 +417,7 @@ When a competitor is latched Exhausted above 25, display text explains the hyste
 
 Do **not** implement STABILIZE immediately after this file lands.
 
-First run targeted v0.1e playtests:
+First run targeted v0.1e playtests using `--blind` unless the session is specifically testing the full-information lock:
 
 1. default MEDIUM with PRESSURE vs ESCAPE
 2. deliberate CONSERVE cycles from both sides
