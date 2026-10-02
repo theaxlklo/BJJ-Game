@@ -89,6 +89,35 @@ class MountSetupReadyTests(unittest.TestCase):
                 expected,
             )
 
+    def test_upper_cap_fully_absorbed_builder_does_not_advance_setup(self):
+        match = MountMatch(starting_axis=4.00, enable_v02_setup=True)
+        match.initiator = Side.BOTTOM
+        match.attempt(
+            action_id=BOTTOM_BRIDGE,
+            response_id=TOP_RESPONSE_POST_AND_BASE,
+            commitment=Commitment.MEDIUM,
+        )
+
+        self.assertIs(
+            match.setup_tier(BOTTOM_TRAP_AND_ROLL_ESCAPE),
+            SetupTier.NONE,
+        )
+
+    def test_partial_move_into_upper_cap_still_advances_setup(self):
+        match = MountMatch(starting_axis=3.50, enable_v02_setup=True)
+        match.initiator = Side.BOTTOM
+        match.attempt(
+            action_id=BOTTOM_BRIDGE,
+            response_id=TOP_RESPONSE_POST_AND_BASE,
+            commitment=Commitment.MEDIUM,
+        )
+
+        self.assertEqual(match.axis, 4.00)
+        self.assertIs(
+            match.setup_tier(BOTTOM_TRAP_AND_ROLL_ESCAPE),
+            SetupTier.PARTIAL,
+        )
+
     def test_bridge_successes_build_trap_and_roll_to_ready(self):
         match = MountMatch(starting_axis=1.50, enable_v02_setup=True)
 
