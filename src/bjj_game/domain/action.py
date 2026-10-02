@@ -70,4 +70,7 @@ class ResetWindowResult:
     stalling_consequence: str | None = None
     penalty_axis_before: float | None = None
     penalty_axis_after: float | None = None
+    position_reset: bool = False
+    position_reset_axis_before: float | None = None
+    position_reset_axis_after: float | None = None
     free_initiative_window: bool = False
