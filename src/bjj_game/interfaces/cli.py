@@ -401,7 +401,7 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 projection = project_active_stamina_pacing(commitment=commitment)
                 print(
                     "INFO: STAMINA PACING "
-                    f"{commitment.value}: active PRESSURE/ESCAPE, start 100, "
+                    f"{commitment.value}: active PRESSURE/ESCAPE, forced attack each initiative, start 100, "
                     f"Exhausted Top {format_clock(projection.top_exhausted_seconds)}, "
                     f"Bottom {format_clock(projection.bottom_exhausted_seconds)}; "
                     f"zero Top {format_clock(projection.top_zero_seconds)}, "
@@ -426,6 +426,10 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             print(
                 "INFO: V0.2 RESPONSE-STAMINA DEBT: exhausted responders still defend at full strength "
                 "and responses have no direct cost; revisit with triggered initiative."
+            )
+            print(
+                "INFO: RESET/STALLING DEBT: RESET solves forced-action recovery but repeated no-action "
+                "windows need the future progress-based stalling system."
             )
         report = run_checks()
         for message in report.info:
