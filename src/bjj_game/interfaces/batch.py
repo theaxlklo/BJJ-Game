@@ -285,6 +285,7 @@ class BatchSummary:
     bottom_escape_priority_count: int
     top_position_attack_count: int
     top_followup_position_attack_count: int
+    top_followup_setup_action_count: int
     bottom_position_attack_count: int
     top_setup_action_count: int
     bottom_setup_action_count: int
@@ -346,6 +347,7 @@ class BatchSummary:
             f"Bottom escape-priority attacks: {self.bottom_escape_priority_count}",
             f"Top position attacks: {self.top_position_attack_count}",
             f"Top follow-up position attacks: {self.top_followup_position_attack_count}",
+            f"Top follow-up setup actions: {self.top_followup_setup_action_count}",
             f"Bottom position attacks: {self.bottom_position_attack_count}",
             f"Top setup-building actions: {self.top_setup_action_count}",
             f"Bottom setup-building actions: {self.bottom_setup_action_count}",
@@ -399,6 +401,7 @@ def run_escape_first_batch(
     bottom_escape_priority = 0
     top_position_attacks = 0
     top_followup_position_attacks = 0
+    top_followup_setup_actions = 0
     bottom_position_attacks = 0
     top_setup_actions = 0
     bottom_setup_actions = 0
@@ -500,7 +503,7 @@ def run_escape_first_batch(
                 elif decision.reason == "setup":
                     top_setup_actions += 1
                     if top_has_initiated_action:
-                        top_followup_position_attacks += 1
+                        top_followup_setup_actions += 1
                 else:
                     top_position_attacks += 1
                     if top_has_initiated_action:
@@ -551,6 +554,7 @@ def run_escape_first_batch(
         bottom_escape_priority_count=bottom_escape_priority,
         top_position_attack_count=top_position_attacks,
         top_followup_position_attack_count=top_followup_position_attacks,
+        top_followup_setup_action_count=top_followup_setup_actions,
         bottom_position_attack_count=bottom_position_attacks,
         top_setup_action_count=top_setup_actions,
         bottom_setup_action_count=bottom_setup_actions,
