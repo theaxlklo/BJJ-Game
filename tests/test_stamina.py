@@ -48,6 +48,26 @@ class StaminaPoolTests(unittest.TestCase):
                 stamina = StaminaPool(current=value)
                 self.assertIs(stamina.band, band)
 
+    def test_exhaustion_recovery_uses_25_35_hysteresis(self):
+        stamina = StaminaPool(current=24)
+        self.assertIs(stamina.band, StaminaBand.EXHAUSTED)
+
+        stamina.recover_up_to(2)
+        self.assertEqual(stamina.current, 26)
+        self.assertIs(stamina.band, StaminaBand.EXHAUSTED)
+
+        stamina.recover_up_to(8)
+        self.assertEqual(stamina.current, 34)
+        self.assertIs(stamina.band, StaminaBand.EXHAUSTED)
+
+        stamina.recover_up_to(1)
+        self.assertEqual(stamina.current, 35)
+        self.assertIs(stamina.band, StaminaBand.TIRED)
+
+    def test_new_pool_at_26_starts_tired_not_exhausted(self):
+        stamina = StaminaPool(current=26)
+        self.assertIs(stamina.band, StaminaBand.TIRED)
+
     def test_invalid_stamina_is_rejected(self):
         with self.assertRaises(ValueError):
             StaminaPool(current=-1)
