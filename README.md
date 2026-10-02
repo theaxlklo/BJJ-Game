@@ -67,7 +67,31 @@ Blind hot-seat playtest mode:
 PYTHONPATH=src python -m bjj_game --blind --log logs/blind-session.txt
 ```
 
-In `--blind`, the responder locks a hidden response before the initiator chooses an action or RESET. This changes input order only; resolution mechanics are unchanged. The legacy `mount_v0` path rejects `--blind`.
+Solo seeded blind playtest mode:
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --blind \
+  --blind-responder random \
+  --seed 42 \
+  --log logs/blind-seed-42.txt
+```
+
+In `--blind`, the responder locks a response before the initiator chooses an action or RESET. Human mode hides the typed response with `getpass`. Random mode uses a deterministic seeded policy and reveals/logs the selected response only after the initiator commits, so one person can run genuinely blind sessions.
+
+Current fixed random-response mixes:
+
+```text
+Bottom responding to Top:
+Frame : Tight Elbows = 4 : 3
+Turn-In = 0
+
+Top responding to Bottom:
+Wide Base : Hip Follow = 2 : 1
+Post = 0
+```
+
+The seed and every random draw/response are written to the session log for replay. This changes input order only; resolution mechanics are unchanged. The legacy `mount_v0` path rejects blind-testing flags.
 
 Legacy compatibility remains available during migration:
 
@@ -198,7 +222,9 @@ Classification: KNOWN V0 SCAFFOLDING LIMITATION
 
 The matrix is intentionally **not** distorted to fix this. v0.2 setup/Ready/initiative legality is the planned layer that can restrict which responses are actually available or tactically valid.
 
-For v0.1 playtests, `bjj_game --blind` can remove the full-information response advantage without changing the matrix: the responder commits secretly before the initiated action is shown. This is a testing mode, not the final v0.2 information model.
+For v0.1 playtests, `bjj_game --blind` can remove the full-information response advantage without changing the matrix: the responder commits before the initiated action is shown. `--blind-responder random --seed N` makes that usable in solo sessions. This is a testing mode, not the final v0.2 information model.
+
+Bridge remains a known v0 setup limitation: in the raw matrix Trap-and-Roll is at least as good against every response and has the stronger Hip Follow result plus an escape branch. Bridge is being left intact for v0.2 setup/Ready work rather than receiving an ad-hoc stamina discount.
 
 ## Final Elbow-Knee playtest tune
 
