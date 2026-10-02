@@ -137,7 +137,15 @@ class EscapeFirstInitiatorPolicy:
         )
 
         rows: list[tuple[str, float, float, float, float, int]] = []
-        for order, action in enumerate(actions_for(side)):
+        candidate_actions = (
+            tuple(
+                ENTITY_BY_ID[action_id]
+                for action_id in match.legal_action_ids(side)
+            )
+            if match.enable_v02_setup
+            else actions_for(side)
+        )
+        for order, action in enumerate(candidate_actions):
             allowed = (
                 match.legal_response_ids(action.id)
                 if match.enable_v02_setup
