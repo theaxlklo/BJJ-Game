@@ -69,6 +69,24 @@ def commitment_value(value: str) -> Commitment:
         raise argparse.ArgumentTypeError("commitment must be LOW, MEDIUM, or HIGH") from exc
 
 
+def top_behavior_value(value: str) -> TopBehavior:
+    try:
+        return TopBehavior(value.strip().upper())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "top behavior must be PRESSURE, HOLD, or CONSERVE"
+        ) from exc
+
+
+def bottom_behavior_value(value: str) -> BottomBehavior:
+    try:
+        return BottomBehavior(value.strip().upper())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "bottom behavior must be ESCAPE, PROTECT, or CONSERVE"
+        ) from exc
+
+
 def axis_value(value: str) -> float:
     try:
         parsed = float(value)
@@ -238,8 +256,20 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
         print("Stamina effects: OFF (legacy Mount v0 path)")
 
     try:
-        top_behavior = _choose_behavior(Side.TOP, conserve_enabled=commitment_enabled)
-        bottom_behavior = _choose_behavior(Side.BOTTOM, conserve_enabled=commitment_enabled)
+        top_behavior = (
+            args.top_behavior
+            if commitment_enabled and args.top_behavior is not None
+            else _choose_behavior(Side.TOP, conserve_enabled=commitment_enabled)
+        )
+        bottom_behavior = (
+            args.bottom_behavior
+            if commitment_enabled and args.bottom_behavior is not None
+            else _choose_behavior(Side.BOTTOM, conserve_enabled=commitment_enabled)
+        )
+        if commitment_enabled and args.top_behavior is not None:
+            print(f"Top behavior fixed for session: {top_behavior.value}")
+        if commitment_enabled and args.bottom_behavior is not None:
+            print(f"Bottom behavior fixed for session: {bottom_behavior.value}")
         run.set_behaviors(top=top_behavior, bottom=bottom_behavior)
 
         while not run.ended:
@@ -344,8 +374,18 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
             if run.ended:
                 break
 
-            top_behavior = _choose_behavior(Side.TOP, current=top_behavior, conserve_enabled=commitment_enabled)
-            bottom_behavior = _choose_behavior(Side.BOTTOM, current=bottom_behavior, conserve_enabled=commitment_enabled)
+            if not (commitment_enabled and args.top_behavior is not None):
+                top_behavior = _choose_behavior(
+                    Side.TOP,
+                    current=top_behavior,
+                    conserve_enabled=commitment_enabled,
+                )
+            if not (commitment_enabled and args.bottom_behavior is not None):
+                bottom_behavior = _choose_behavior(
+                    Side.BOTTOM,
+                    current=bottom_behavior,
+                    conserve_enabled=commitment_enabled,
+                )
             run.set_behaviors(top=top_behavior, bottom=bottom_behavior)
     except (EOFError, KeyboardInterrupt):
         run.exit_reason = "CANCELLED"
@@ -416,6 +456,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--blind", action="store_true", help="testing mode: responder locks a hidden response before the action/RESET choice")
     parser.add_argument("--blind-responder", choices=("human", "random"), default="human", help="blind responder source; random requires --blind and --seed")
     parser.add_argument("--seed", type=int, help="deterministic seed for --blind-responder random")
+    parser.add_argument("--top-behavior", type=top_behavior_value, help="fix Top behavior for the entire modern playtest session")
+    parser.add_argument("--bottom-behavior", type=bottom_behavior_value, help="fix Bottom behavior for the entire modern playtest session")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -487,9 +529,16 @@ def _tee_to_log(path: Path):
 
 def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> int:
     if not commitment_enabled and (
-        args.blind or args.blind_responder != "human" or args.seed is not None
+        args.blind
+        or args.blind_responder != "human"
+        or args.seed is not None
+        or args.top_behavior is not None
+        or args.bottom_behavior is not None
     ):
-        print("ERROR: blind testing flags are available only on the modern bjj_game path.")
+        print(
+            "ERROR: modern playtest flags (--blind/--blind-responder/--seed/"
+            "--top-behavior/--bottom-behavior) are available only on bjj_game."
+        )
         return 2
     if args.blind_responder == "random" and not args.blind:
         print("ERROR: --blind-responder random requires --blind.")
