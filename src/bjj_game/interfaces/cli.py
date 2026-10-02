@@ -9,7 +9,7 @@ from typing import TextIO
 
 from ..domain.action import Commitment
 from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
-from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, run_checks
+from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_definition_of_done, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
 from .batch import BatchBehaviorMode, run_escape_first_batch
@@ -467,6 +467,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch", type=positive_int, help="run N deterministic non-interactive matches")
     parser.add_argument("--initiator-policy", choices=("escape-first", "greedy"), help="scripted batch initiator policy; greedy is a deprecated alias for escape-first")
     parser.add_argument("--v02-setup", action="store_true", help="batch-only: enable experimental v0.2 setup/Ready legality")
+    parser.add_argument("--v03-submissions", action="store_true", help="batch-only: enable v0.3a Americana submission track; requires --v02-setup")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -548,10 +549,11 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         or args.batch is not None
         or args.initiator_policy is not None
         or args.v02_setup
+        or args.v03_submissions
     ):
         print(
             "ERROR: modern playtest flags (--blind/--blind-responder/--seed/"
-            "--top-behavior/--bottom-behavior/--batch/--initiator-policy/--v02-setup) "
+            "--top-behavior/--bottom-behavior/--batch/--initiator-policy/--v02-setup/--v03-submissions) "
             "are available only on bjj_game."
         )
         return 2
@@ -565,6 +567,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 "ERROR: --batch already uses the seeded random response mix; "
                 "do not combine it with --blind/--blind-responder."
             )
+            return 2
+        if args.v03_submissions and not args.v02_setup:
+            print("ERROR: --v03-submissions requires --v02-setup.")
             return 2
         policy = args.initiator_policy or "escape-first"
         if policy == "greedy":
@@ -589,6 +594,7 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 args.bottom_behavior_policy or "fixed"
             ),
             enable_v02_setup=args.v02_setup,
+            enable_v03_submissions=args.v03_submissions,
         )
         print(summary.render())
         return 0
@@ -598,6 +604,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         return 2
     if args.v02_setup:
         print("ERROR: --v02-setup is currently available only with --batch.")
+        return 2
+    if args.v03_submissions:
+        print("ERROR: --v03-submissions is currently available only with --batch.")
         return 2
     if args.top_behavior_policy is not None or args.bottom_behavior_policy is not None:
         print("ERROR: --top-behavior-policy/--bottom-behavior-policy are only valid with --batch.")
@@ -676,6 +685,8 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 print(f"INFO: {line}")
             print("INFO: " + render_random_mix_exit_limit())
             for line in render_v02_definition_of_done(report):
+                print(f"INFO: {line}")
+            for line in render_v03a_definition_of_done():
                 print(f"INFO: {line}")
         for message in report.info:
             print(f"INFO: {message}")
