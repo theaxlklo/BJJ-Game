@@ -40,6 +40,23 @@ class CommitmentAttemptTests(unittest.TestCase):
         )
         return match, result
 
+    def test_cost_policy_is_injectable_at_match_level(self):
+        custom = StaminaCostPolicy.build(
+            {
+                Commitment.LOW: 1,
+                Commitment.MEDIUM: 2,
+                Commitment.HIGH: 4,
+            }
+        )
+        match = MountMatch(stamina_cost_policy=custom)
+        result = match.attempt(
+            action_id=TOP_HIGH_MOUNT_CLIMB,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.HIGH,
+        )
+        self.assertEqual(result.stamina.requested, 4)
+        self.assertEqual(match.top.stamina.current, 96)
+
     def test_commitment_charges_initiator_only(self):
         match, result = self._attempt(Commitment.MEDIUM)
         self.assertEqual(result.stamina.before, 100)
@@ -94,6 +111,7 @@ class CommitmentAttemptTests(unittest.TestCase):
 
     def test_attempt_history_records_commitment_and_cost(self):
         match, _ = self._attempt(Commitment.LOW)
+        self.assertEqual(match.history.commitment_initiator_history, ["top"])
         self.assertEqual(match.history.commitment_history, ["LOW"])
         self.assertEqual(match.history.stamina_requested_history, [3])
         self.assertEqual(match.history.stamina_charged_history, [3])
