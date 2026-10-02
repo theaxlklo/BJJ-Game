@@ -117,6 +117,19 @@ class CliTests(unittest.TestCase):
         self.assertIn("Requested commitment history: ['MEDIUM']", text)
         self.assertIn("Effective commitment history: ['MEDIUM']", text)
         self.assertIn("Top stamina: 92/100 (Fresh)", text)
+        self.assertIn(
+            "Exhaustion consequence: Exhausted initiator -1 grade; Exhausted responder +1 grade for initiator; both Exhausted cancel",
+            text,
+        )
+        self.assertIn("Initiator stamina band before action: Fresh", text)
+        self.assertIn("Responder stamina band before action: Fresh", text)
+        self.assertIn("Initiator exhaustion modifier: +0 grade", text)
+        self.assertIn("Responder exhaustion modifier: +0 grade", text)
+        self.assertIn("Combined exhaustion modifier: +0 grade", text)
+        self.assertIn("Responder stamina band history: ['Fresh']", text)
+        self.assertIn("Initiator exhaustion modifier history: [0]", text)
+        self.assertIn("Responder exhaustion modifier history: [0]", text)
+        self.assertIn("Exhaustion modifier history (combined): [0]", text)
 
 
 
@@ -497,9 +510,9 @@ class CliTests(unittest.TestCase):
         )
         self.assertIn("V0.1 STAMINA VALIDATION", text)
         self.assertIn("forced-attack pacing is a stress projection", text)
-        self.assertIn("V0.2 RESPONSE-STAMINA DEBT", text)
-        self.assertIn("Do not retune 3/7/12 or CONSERVE recovery", text)
-        self.assertIn("submissions in v0.3", text)
+        self.assertIn("V0.2 RESPONDER-STAMINA VALIDATION", text)
+        self.assertIn("both Exhausted cancel", text)
+        self.assertIn("responding still has no direct stamina cost", text)
         self.assertIn("RESET/STALLING DEBT", text)
         self.assertIn(
             "RESET LOCK PROBE: Top PRESSURE+RESET vs Bottom ESCAPE+RESET -> TIMEOUT — Mount retained; axis +4.00; band Locked; Top stamina 40; Bottom stamina 40",
@@ -517,8 +530,8 @@ class CliTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "BATCH RESPONSE MIX LIMIT: unreachable under the fixed positive-weight "
-            "response mix: Open Guard",
+            "BATCH RESPONSE MIX REACHABILITY: fresh responder missing=Open Guard; "
+            "Exhausted responder missing=none.",
             text,
         )
         self.assertIn("V0.2 DOD GATE 1 [", text)
@@ -541,13 +554,13 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("EXHAUSTION HYSTERESIS", text)
         self.assertNotIn("EXHAUSTED REACHABILITY", text)
         self.assertNotIn("V0.1 STAMINA VALIDATION", text)
-        self.assertNotIn("V0.2 RESPONSE-STAMINA DEBT", text)
+        self.assertNotIn("V0.2 RESPONDER-STAMINA VALIDATION", text)
         self.assertNotIn("RESET/STALLING DEBT", text)
         self.assertNotIn("RESET LOCK PROBE", text)
         self.assertNotIn("BLIND PLAYTEST MODE", text)
         self.assertNotIn("RANDOM BLIND RESPONDER MIX", text)
         self.assertNotIn("BLIND MIX BAND METRICS", text)
-        self.assertNotIn("BATCH RESPONSE MIX LIMIT", text)
+        self.assertNotIn("BATCH RESPONSE MIX REACHABILITY", text)
         self.assertNotIn("V0.2 DOD GATE", text)
 
 

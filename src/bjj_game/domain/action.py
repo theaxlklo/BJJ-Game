@@ -46,6 +46,9 @@ class AttemptResult:
     funding_gap: int
     stamina: StaminaSpend
     stamina_band_before_action: StaminaBand
+    responder_stamina_band_before_action: StaminaBand
+    initiator_exhaustion_modifier: int
+    responder_exhaustion_modifier: int
     exhaustion_modifier: int
     base_resolution: ResolutionResult
     resolution: ResolutionResult

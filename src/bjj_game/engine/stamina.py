@@ -192,15 +192,36 @@ DEFAULT_BEHAVIOR_STAMINA_POLICY = BehaviorStaminaPolicy.build(
 
 @dataclass(frozen=True, slots=True)
 class ExhaustionPolicy:
-    """v0.1e initiated-action consequence for depleted stamina."""
+    """Initiator and responder consequences for depleted stamina."""
 
     exhausted_initiator_grade_modifier: int = -1
+    exhausted_responder_grade_modifier: int = +1
 
     def initiator_grade_modifier(self, band: StaminaBand) -> int:
         return (
             self.exhausted_initiator_grade_modifier
             if band is StaminaBand.EXHAUSTED
             else 0
+        )
+
+    def responder_grade_modifier(self, band: StaminaBand) -> int:
+        """Shift the initiated action up when the responder is Exhausted."""
+        return (
+            self.exhausted_responder_grade_modifier
+            if band is StaminaBand.EXHAUSTED
+            else 0
+        )
+
+    def exchange_grade_modifier(
+        self,
+        *,
+        initiator_band: StaminaBand,
+        responder_band: StaminaBand,
+    ) -> int:
+        """Net exhaustion modifier for one initiated exchange."""
+        return (
+            self.initiator_grade_modifier(initiator_band)
+            + self.responder_grade_modifier(responder_band)
         )
 
 

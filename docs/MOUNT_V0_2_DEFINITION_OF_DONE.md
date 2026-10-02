@@ -74,11 +74,11 @@ Reuse the current RESET-lock probe and pair it with an executable check for a re
 
 ## Gate 3 — Responder stamina
 
-### Current debt
+### Current state
 
-Exhaustion penalizes initiated actions, while responders defend at full strength and pay no direct response cost.
+v0.2b resolves the responder-side mechanical asymmetry without adding a direct response cost.
 
-The 25-stamina matrix showed this asymmetry affects Bottom much more strongly than Top.
+An Exhausted responder shifts the initiated action +1 grade for the initiator. An Exhausted initiator remains -1, so both Exhausted cancel. Responding itself remains cost-free.
 
 ### v0.2 is done when
 
@@ -92,7 +92,9 @@ The automatic checker first runs an exhaustive one-exchange differential with th
 
 When responder-side v0.2 mechanics exist, paired seeded batch confirmation should also be added for outcome/legality/response distributions.
 
-The setup-enabled 25-stamina matrix confirms that stamina is now binding in realistic v0.2 action volume, but it does **not** close Gate 3: the responder-only one-exchange differential remains zero. Recovery-policy outcome differences are therefore not evidence of responder weakness.
+The responder-only one-exchange differential now measures **258** changed exchanges when only responder stamina changes. Gate 3 therefore reports PASS.
+
+The result is measured from the same 25/35 latch and pre-cost timing used by initiator exhaustion.
 
 ## Gate 4 — Bridge has a setup role
 
@@ -173,9 +175,27 @@ Top HOLD
 Top CONSERVE
 ```
 
-The PASS path requires every behavior count to be greater than zero. When Ready/setup state exists, extend the same per-behavior probe rather than collapsing the conditions.
+The PASS path requires every behavior count to be greater than zero.
 
-The post-Ready 25-stamina rerun still produces 100% timeout for fixed HOLD-vs-ESCAPE, while Bottom-only recovery restores almost all escapes. That supports keeping Gate 6 OPEN until the no-recovery Exhausted route question is explicitly resolved.
+Path B may instead report ACCEPTED when a behavior-specific static lockout is intentionally retained **and** the checker measures a real no-recovery route out during match evolution.
+
+The current static counts remain:
+
+```text
+PRESSURE:1
+HOLD:0
+CONSERVE:1
+```
+
+The standardized dynamic path-B probe starts Bottom Exhausted at 25, Top fresh at 100, keeps behaviors fixed, enables setup, and gives Bottom no recovery policy. Current escapes / 100 matches are:
+
+```text
+PRESSURE:0
+HOLD:76
+CONSERVE:35
+```
+
+HOLD therefore qualifies for ACCEPTED rather than PASS: a fresh HOLD Top can still pin a gassed Bottom, but Top can tire from real setup work and open a measured escape route. If that route disappears, the computed status returns to OPEN automatically.
 
 ## Gate 7 — Commitment meaning
 
@@ -276,12 +296,13 @@ Gate 1  Perfect-response lock             PASS — Top 36/36 best-counter Contes
                                                  0 guaranteed-attacker states
 Gate 2  RESET/stalling lock               DEFERRED — locked_timeout=True
                                                     submission_finish_present=False
-Gate 3  Responder stamina                 OPEN
-Gate 4  Bridge setup role                 PASS — 415 Bridge builds credited to 135 completed Bottom chains
-Gate 5  Top post-opening activity         OPEN — 0.630 meaningful follow-ups/match
-                                                threshold 1.000, margin -0.370
-                                                position 0.310, completed setup builds 0.320
-Gate 6  Exhausted Bottom escape routes    OPEN — PRESSURE:1, HOLD:0, CONSERVE:1
+Gate 3  Responder stamina                 PASS — 258 fresh-vs-Exhausted responder outcome differences
+Gate 4  Bridge setup role                 PASS — 491 Bridge builds credited to 152 completed Bottom chains
+Gate 5  Top post-opening activity         OPEN — 0.610 meaningful follow-ups/match
+                                                threshold 1.000, margin -0.390
+                                                position 0.300, completed setup builds 0.310
+Gate 6  Exhausted Bottom escape routes    ACCEPTED — static PRESSURE:1, HOLD:0, CONSERVE:1
+                                                    dynamic escapes/100 PRESSURE:0, HOLD:76, CONSERVE:35
 Gate 7  Commitment meaning                OPEN
 ```
 
@@ -289,7 +310,7 @@ Gate 5 excludes the opening attack because the debt is specifically post-opening
 
 If a future completion criterion changes, change the criterion openly first and let the checker recompute the status. Do not hand-edit a gate label.
 
-v0.2 is not complete until every required gate is PASS or an explicitly accepted DEFERRED state where this document allows deferral.
+v0.2 is not complete until every required gate is PASS, an explicitly accepted path-B state where this document allows acceptance, or an explicitly accepted DEFERRED state where this document allows deferral.
 
 ## Measurement integrity
 

@@ -237,7 +237,7 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
         print("Action stamina costs: ON (LOW=3, MEDIUM=7, HIGH=12)")
         print(f"Standard commitment: {args.commitment.value}")
         print("Commitment resolution effects: OFF (LOW remains dominant; standard play defaults MEDIUM)")
-        print("Exhaustion consequence: Exhausted initiator -1 grade")
+        print("Exhaustion consequence: Exhausted initiator -1 grade; Exhausted responder +1 grade for initiator; both Exhausted cancel")
         print("Behavior stamina: PRESSURE/ESCAPE -1 per 5s; HOLD/PROTECT 0; CONSERVE +2 per 5s")
         if args.blind:
             if random_blind is None:
@@ -439,7 +439,10 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
         print(f"Stamina shortfall history: {h.stamina_shortfall_history}")
         print(f"Stamina funding gap history: {h.stamina_funding_gap_history}")
         print(f"Stamina band at initiation history: {h.stamina_band_at_initiation_history}")
-        print(f"Exhaustion modifier history: {h.exhaustion_modifier_history}")
+        print(f"Responder stamina band history: {h.responder_stamina_band_history}")
+        print(f"Initiator exhaustion modifier history: {h.initiator_exhaustion_modifier_history}")
+        print(f"Responder exhaustion modifier history: {h.responder_exhaustion_modifier_history}")
+        print(f"Exhaustion modifier history (combined): {h.exhaustion_modifier_history}")
     print(f"Clamp count: {h.clamp_count}")
     print(f"Escape threshold reached?: {'Yes' if h.escape_threshold_reached else 'No'}")
     print(f"Exit reason: {run.exit_reason or 'None'}")
@@ -648,11 +651,10 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 "is a stress projection, not expected-play pacing."
             )
             print(
-                "INFO: V0.2 RESPONSE-STAMINA DEBT: exhaustion currently weighs mainly on initiated "
-                "actions/Bottom escape attempts, while exhausted responders defend at full strength "
-                "and Top can often avoid spending. Do not retune 3/7/12 or CONSERVE recovery to "
-                "compensate in v0.1; revisit responder-side/setup pressure in v0.2 and Top spending "
-                "incentives with submissions in v0.3."
+                "INFO: V0.2 RESPONDER-STAMINA VALIDATION: an Exhausted responder now shifts the "
+                "initiated action +1 grade for the initiator; an Exhausted initiator remains -1, "
+                "so both Exhausted cancel. The 25/35 latch and pre-cost timing are shared, and "
+                "responding still has no direct stamina cost."
             )
             print(
                 "INFO: RESET/STALLING DEBT: RESET solves forced-action recovery but repeated no-action "
