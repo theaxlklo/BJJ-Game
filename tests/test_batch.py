@@ -111,6 +111,25 @@ class EscapeFirstInitiatorPolicyTests(unittest.TestCase):
         self.assertEqual(decision.action_id, TOP_HIGH_MOUNT_CLIMB)
         self.assertEqual(decision.reason, "setup")
 
+    def test_fresh_ready_americana_entry_uses_projected_four_to_three_mix(self):
+        match = MountMatch(
+            starting_axis=4.00,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+        )
+        match.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        match.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        match.set_behaviors(
+            top=TopBehavior.PRESSURE,
+            bottom=BottomBehavior.ESCAPE,
+        )
+
+        decision = EscapeFirstInitiatorPolicy().choose(match)
+
+        self.assertEqual(decision.action_id, TOP_AMERICANA_ARM_ISOLATION)
+        self.assertEqual(decision.reason, "submission")
+        self.assertAlmostEqual(decision.submission_progress_probability, 4 / 7)
+
     def test_v03_ready_americana_entry_precedes_position_and_reset_at_locked(self):
         match = MountMatch(
             starting_axis=4.00,
