@@ -3,7 +3,7 @@ import unittest
 from bjj_game.diagnostics.checker import (
     V02GateStatus,
     _commitment_low_dominance_probe,
-    _exhausted_positive_weight_escape_hits,
+    _exhausted_positive_weight_escape_routes_by_top_behavior,
     _responder_exhaustion_differential_count,
     _v02_standard_batch,
     measure_v02_definition_of_done,
@@ -64,9 +64,9 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         self.assertIs(self.gates[4].status, expected)
         self.assertIn(f"={bridge_count}/", self.gates[4].metric)
 
-    def test_gate_5_status_follows_top_position_attack_rate(self):
+    def test_gate_5_status_follows_top_followup_position_attack_rate(self):
         batch = _v02_standard_batch()
-        rate = batch.top_position_attack_count / batch.matches
+        rate = batch.top_followup_position_attack_count / batch.matches
         expected = (
             V02GateStatus.PASS
             if rate > 1.0
@@ -74,20 +74,27 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         )
         self.assertIs(self.gates[5].status, expected)
         self.assertIn(f"={rate:.3f}", self.gates[5].metric)
+        self.assertIn("opening attack excluded", self.gates[5].evidence)
 
-    def test_gate_6_status_follows_positive_weight_exhausted_reachability(self):
-        hits = _exhausted_positive_weight_escape_hits()
-        routes = {
-            (hit.action_id, hit.top_behavior, hit.destination)
-            for hit in hits
+    def test_gate_6_requires_escape_route_under_every_top_behavior(self):
+        routes_by_behavior = (
+            _exhausted_positive_weight_escape_routes_by_top_behavior()
+        )
+        counts = {
+            behavior: len(routes)
+            for behavior, routes in routes_by_behavior.items()
         }
         expected = (
             V02GateStatus.PASS
-            if routes
+            if all(count > 0 for count in counts.values())
             else V02GateStatus.OPEN
         )
         self.assertIs(self.gates[6].status, expected)
-        self.assertIn(f"={len(routes)}", self.gates[6].metric)
+        for behavior, count in counts.items():
+            self.assertIn(
+                f"{behavior.value}:{count}",
+                self.gates[6].metric,
+            )
 
     def test_gate_7_status_follows_low_dominance_probe(self):
         low_dominates, advantage_states = _commitment_low_dominance_probe()
