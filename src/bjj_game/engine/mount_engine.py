@@ -2,19 +2,29 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..domain.catalog import TechniqueCatalog
+from ..domain.matchup import MatchupTable
 from ..domain.model import Band, BandChange, BottomBehavior, DriftResult, ResolutionResult, Side, TopBehavior
-from ..positions.mount.catalog import BOTTOM_BRIDGE, MOUNT_CATALOG
+from ..positions.mount.catalog import MOUNT_CATALOG
 from ..positions.mount.matchups import MOUNT_MATCHUPS
 from ..positions.mount.rules import MOUNT_RULES, MountRuleSet
 
 
 @dataclass(frozen=True, slots=True)
 class MountResolutionEngine:
-    """Deterministic service that resolves Mount drift and action/response exchanges."""
+    """Deterministic service that resolves Mount drift and action/response exchanges.
 
-    rules: MountRuleSet = MOUNT_RULES
-    catalog = MOUNT_CATALOG
-    matchups = MOUNT_MATCHUPS
+    All policy/data dependencies are constructor-injected. ``default()`` wires the
+    production Mount-v0 catalog, matchup table and rule set.
+    """
+
+    rules: MountRuleSet
+    catalog: TechniqueCatalog
+    matchups: MatchupTable
+
+    @classmethod
+    def default(cls) -> "MountResolutionEngine":
+        return cls(rules=MOUNT_RULES, catalog=MOUNT_CATALOG, matchups=MOUNT_MATCHUPS)
 
     def simulate_drift(
         self,
@@ -72,12 +82,8 @@ class MountResolutionEngine:
             raise ValueError(f"{response_id} is not a {initiator.opponent.value} response")
 
         raw = self.matchups.grade(action_id, response_id)
-        bmod = self.rules.behavior_modifier(
-            initiator=initiator,
-            action_id=action_id,
-            top_behavior=top_behavior,
-            bottom_behavior=bottom_behavior,
-        )
+        opposing_behavior = bottom_behavior if initiator is Side.TOP else top_behavior
+        bmod = self.rules.behavior_modifier(action=action, opposing_behavior=opposing_behavior)
         behavior_grade = raw.shift(bmod)
         pmod = self.rules.positional_modifier(initiator=initiator, band=band)
         final = behavior_grade.shift(pmod)
@@ -85,13 +91,13 @@ class MountResolutionEngine:
         delta = float(value if initiator is Side.TOP else -value)
         proposed = round(axis + delta, 10)
 
-        bridge_clamp = False
+        special_clamp = False
         failure_clamp = False
         escape_threshold = False
         exit_destination = None
 
-        if action_id == BOTTOM_BRIDGE and proposed <= self.rules.min_axis:
-            bridge_clamp = True
+        if action.clamp_at_mount_floor and proposed <= self.rules.min_axis:
+            special_clamp = True
             axis_after = self.rules.min_axis
         elif final.failed and proposed <= self.rules.min_axis:
             failure_clamp = True
@@ -135,11 +141,11 @@ class MountResolutionEngine:
             band_after=band_after,
             band_changes=changes,
             failure_clamp_used=failure_clamp,
-            bridge_clamp_used=bridge_clamp,
+            bridge_clamp_used=special_clamp,
             escape_threshold_reached=escape_threshold,
             exit_capable_action=action.escape_capable,
             exit_destination=exit_destination,
         )
 
 
-MOUNT_ENGINE = MountResolutionEngine()
+MOUNT_ENGINE = MountResolutionEngine.default()
