@@ -30,6 +30,15 @@ class StaminaSpend:
         return self.shortfall == 0
 
 
+@dataclass(frozen=True, slots=True)
+class StaminaRecovery:
+    before: int
+    requested: int
+    recovered: int
+    overflow: int
+    after: int
+
+
 @dataclass(slots=True)
 class StaminaPool:
     """Player-owned stamina state.
@@ -79,6 +88,23 @@ class StaminaPool:
             requested=requested,
             charged=charged,
             shortfall=requested - charged,
+            after=self.current,
+        )
+
+    def recover_up_to(self, requested: int) -> StaminaRecovery:
+        if not isinstance(requested, int):
+            raise TypeError("stamina recovery must be an integer")
+        if requested < 0:
+            raise ValueError("stamina recovery cannot be negative")
+        before = self.current
+        room = self.maximum - before
+        recovered = min(room, requested)
+        self.current = before + recovered
+        return StaminaRecovery(
+            before=before,
+            requested=requested,
+            recovered=recovered,
+            overflow=requested - recovered,
             after=self.current,
         )
 
