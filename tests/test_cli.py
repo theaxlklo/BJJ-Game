@@ -287,7 +287,7 @@ class CliTests(unittest.TestCase):
         with redirect_stdout(output):
             code = bjj_main([
                 "--batch", "8",
-                "--initiator-policy", "greedy",
+                "--initiator-policy", "escape-first",
                 "--seed", "42",
                 "--clock", "0:30",
                 "--top-behavior", "HOLD",
@@ -302,6 +302,22 @@ class CliTests(unittest.TestCase):
         self.assertIn("Bottom behavior: CONSERVE", text)
         self.assertNotIn("TOP INITIATES", text)
         self.assertNotIn("BOTTOM RESPONSE", text)
+
+
+    def test_greedy_batch_policy_name_is_deprecated_alias(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--batch", "2",
+                "--initiator-policy", "greedy",
+                "--seed", "42",
+            ])
+        self.assertEqual(code, 0)
+        self.assertIn(
+            "--initiator-policy greedy is deprecated; using escape-first",
+            output.getvalue(),
+        )
+
 
     def test_batch_defaults_seed_and_behaviors_deterministically(self):
         output = io.StringIO()
@@ -323,7 +339,7 @@ class CliTests(unittest.TestCase):
     def test_initiator_policy_requires_batch(self):
         output = io.StringIO()
         with redirect_stdout(output):
-            code = bjj_main(["--initiator-policy", "greedy"])
+            code = bjj_main(["--initiator-policy", "escape-first"])
         self.assertEqual(code, 2)
         self.assertIn("--initiator-policy is only valid with --batch", output.getvalue())
 
@@ -426,6 +442,11 @@ class CliTests(unittest.TestCase):
             "-0.667; realized-axis -0.667..-0.270; escape 0.0%",
             text,
         )
+        self.assertIn(
+            "BATCH RESPONSE MIX LIMIT: unreachable under the fixed positive-weight "
+            "response mix: Open Guard",
+            text,
+        )
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
         output = io.StringIO()
@@ -444,6 +465,7 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("BLIND PLAYTEST MODE", text)
         self.assertNotIn("RANDOM BLIND RESPONDER MIX", text)
         self.assertNotIn("BLIND MIX BAND METRICS", text)
+        self.assertNotIn("BATCH RESPONSE MIX LIMIT", text)
 
 
 
