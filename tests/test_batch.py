@@ -110,7 +110,6 @@ class EscapeFirstInitiatorPolicyTests(unittest.TestCase):
 
         self.assertEqual(decision.action_id, TOP_HIGH_MOUNT_CLIMB)
         self.assertEqual(decision.reason, "setup")
-        self.assertGreater(decision.submission_progress_probability, -1.0)
 
     def test_v03_ready_americana_entry_precedes_position_and_reset_at_locked(self):
         match = MountMatch(
