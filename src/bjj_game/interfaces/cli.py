@@ -124,9 +124,10 @@ def _run_interactive(args: argparse.Namespace) -> int:
     try:
         top_behavior = _choose_behavior(Side.TOP)
         bottom_behavior = _choose_behavior(Side.BOTTOM)
+        run.set_behaviors(top=top_behavior, bottom=bottom_behavior)
 
         while not run.ended:
-            drift = run.drift(top_behavior, bottom_behavior)
+            drift = run.drift()
             print("\n" + format_drift(drift, top_behavior.value, bottom_behavior.value))
             if run.ended:
                 break
@@ -138,8 +139,6 @@ def _run_interactive(args: argparse.Namespace) -> int:
             result = run.decide(
                 action_id=action.id,
                 response_id=response.id,
-                top_behavior=top_behavior,
-                bottom_behavior=bottom_behavior,
             )
             print("\n" + format_resolution(result, run.clock_seconds, top_behavior.value, bottom_behavior.value))
             if run.ended:
@@ -147,6 +146,7 @@ def _run_interactive(args: argparse.Namespace) -> int:
 
             top_behavior = _choose_behavior(Side.TOP, current=top_behavior)
             bottom_behavior = _choose_behavior(Side.BOTTOM, current=bottom_behavior)
+            run.set_behaviors(top=top_behavior, bottom=bottom_behavior)
     except (EOFError, KeyboardInterrupt):
         run.exit_reason = "CANCELLED"
         print("\nRun cancelled.")
