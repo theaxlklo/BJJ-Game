@@ -1,5 +1,7 @@
 # Mount v0.3b — First Measurement
 
+> **SUPERSEDED FOR GATE-A / GATE-2 CLOSURE.** The original Gate-A probe in this measurement stopped immediately after the first one-band penalty instead of running to timeout. It therefore could not prove that deliberate stalling failed to retain Locked through the full match. Preserve this file as historical evidence only. Authoritative closure evidence is in `MOUNT_V0_3B_FULL_MATCH_STALLING_FAILURE.md` and `MOUNT_V0_3B_POSITION_RESET_FINAL_MEASUREMENT.md`.
+
 ## Evidence head
 
 Mechanics/checker head:
