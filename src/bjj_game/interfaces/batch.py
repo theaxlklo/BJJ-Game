@@ -86,6 +86,16 @@ class EscapeFirstInitiatorPolicy:
     Tie-breaks are realized axis, then raw axis, then catalog order.
     """
 
+    @staticmethod
+    def _ready_fallback_response_id(
+        match: MountMatch,
+        action_id: str,
+    ) -> str | None:
+        if not match.enable_v02_setup or not match.setup_state.is_ready(action_id):
+            return None
+        rule = match.setup_policy.rule_for_target(action_id)
+        return rule.stalemate_response_id if rule is not None else None
+
     def _submission_entry_probability(
         self,
         match: MountMatch,
@@ -93,6 +103,7 @@ class EscapeFirstInitiatorPolicy:
         action_id: str,
         external_grade_modifier: int,
         allowed_response_ids: tuple[str, ...],
+        fallback_response_id: str | None = None,
         ready_grade_overrides: dict[str, Grade] | None = None,
     ) -> float:
         """Exact probability that Ready Americana enters the submission track.
@@ -112,6 +123,7 @@ class EscapeFirstInitiatorPolicy:
         weighted = RandomBlindResponder.weighted_policy(
             Side.BOTTOM,
             allowed_response_ids=allowed_response_ids,
+            fallback_response_id=fallback_response_id,
         )
         total = sum(weight for _, weight in weighted)
         if total <= 0:
@@ -156,6 +168,10 @@ class EscapeFirstInitiatorPolicy:
         ready_ids = match.setup_policy.ready_response_ids(target)
         if not ready_ids:
             return False
+        rule = match.setup_policy.rule_for_target(target)
+        ready_fallback_response_id = (
+            rule.stalemate_response_id if rule is not None else None
+        )
         ready_grade_overrides = {
             response_id: override
             for response_id in ready_ids
@@ -185,6 +201,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=ready_ids,
+                fallback_response_id=ready_fallback_response_id,
                 ready_grade_overrides=ready_grade_overrides,
             )
             raw_axis = expected_raw_attacker_axis_delta(
@@ -196,6 +213,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=ready_ids,
+                fallback_response_id=ready_fallback_response_id,
                 ready_grade_overrides=ready_grade_overrides,
             )
             realized_axis = expected_realized_attacker_axis_delta(
@@ -207,6 +225,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=ready_ids,
+                fallback_response_id=ready_fallback_response_id,
                 ready_grade_overrides=ready_grade_overrides,
             )
         except ValueError:
@@ -217,6 +236,7 @@ class EscapeFirstInitiatorPolicy:
             action_id=target,
             external_grade_modifier=external_grade_modifier,
             allowed_response_ids=ready_ids,
+            fallback_response_id=ready_fallback_response_id,
             ready_grade_overrides=ready_grade_overrides,
         )
         return (
@@ -326,6 +346,10 @@ class EscapeFirstInitiatorPolicy:
                 action_id=action_id,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=allowed,
+                fallback_response_id=self._ready_fallback_response_id(
+                    match,
+                    action_id,
+                ),
                 ready_grade_overrides=ready_grade_overrides,
             )
 
@@ -361,6 +385,10 @@ class EscapeFirstInitiatorPolicy:
                 match.legal_response_ids(action.id)
                 if match.enable_v02_setup
                 else None
+            )
+            ready_fallback_response_id = self._ready_fallback_response_id(
+                match,
+                action.id,
             )
             ready_grade_overrides = (
                 {
@@ -400,6 +428,7 @@ class EscapeFirstInitiatorPolicy:
                     bottom_behavior=bottom_behavior,
                     external_grade_modifier=exhaustion_modifier,
                     allowed_response_ids=allowed,
+                    fallback_response_id=ready_fallback_response_id,
                     ready_grade_overrides=ready_grade_overrides,
                 )
                 submission_probability = self._submission_progress_probability(
@@ -421,6 +450,7 @@ class EscapeFirstInitiatorPolicy:
                     bottom_behavior=bottom_behavior,
                     external_grade_modifier=exhaustion_modifier,
                     allowed_response_ids=allowed,
+                    fallback_response_id=ready_fallback_response_id,
                     ready_grade_overrides=ready_grade_overrides,
                 )
                 realized_axis = expected_realized_attacker_axis_delta(
@@ -432,6 +462,7 @@ class EscapeFirstInitiatorPolicy:
                     bottom_behavior=bottom_behavior,
                     external_grade_modifier=exhaustion_modifier,
                     allowed_response_ids=allowed,
+                    fallback_response_id=ready_fallback_response_id,
                     ready_grade_overrides=ready_grade_overrides,
                 )
             rows.append(
@@ -774,6 +805,12 @@ def run_escape_first_batch(
                     side.opponent,
                     allowed_response_ids=match.legal_response_ids(
                         decision.action_id
+                    ),
+                    fallback_response_id=(
+                        policy._ready_fallback_response_id(
+                            match,
+                            decision.action_id,
+                        )
                     ),
                 )
             else:
