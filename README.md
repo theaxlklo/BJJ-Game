@@ -164,13 +164,13 @@ v0.1e was intentionally implemented before v0.1d so STABILIZE can be designed ag
 Minimal rule:
 
 ```text
-Initiator starts the action Exhausted (0–25 stamina)
+Initiator starts the action Exhausted
 → final initiated-action grade -1
 ```
 
-The band is read before the action's commitment cost is paid. If the current action pushes the fighter into Exhausted, the penalty begins on their next initiation.
+Exhaustion now has 25/35 hysteresis: enter at <=25, but once exhausted you must recover to >=35 before the penalty clears. The band is read before the action's commitment cost is paid. If the current action pushes the fighter into Exhausted, the penalty begins on their next initiation.
 
-`bjj_game --check` now reports projected time to Exhausted and zero stamina for LOW/MEDIUM/HIGH under active PRESSURE/ESCAPE. The current costs are intentionally left unchanged until playtests produce evidence.
+`bjj_game --check` now reports projected time to Exhausted and zero stamina for LOW/MEDIUM/HIGH under active PRESSURE/ESCAPE, plus exhausted escape reachability and the v0.2 responder-stamina debt. The current costs are intentionally left unchanged until playtests produce evidence.
 
 Behavior-stamina logs always include fixed-point carry so partial recovery/spend across behavior changes is visible.
 
