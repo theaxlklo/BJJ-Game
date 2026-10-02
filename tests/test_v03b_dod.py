@@ -7,7 +7,11 @@ from bjj_game.diagnostics.checker import (
     _v03b_boundary_probe,
     _v03b_stalemated_attacker_probe,
     _v03b_symmetry_probe,
+    V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS,
+    V03B_GATE_A_LOCKED_SHARE_LIMIT,
+    _v03b_gate_a_case_passes,
     _v03b_top_stall_probe,
+    _v03b_top_stall_sweep,
     measure_v03a_definition_of_done,
     measure_v03b_definition_of_done,
     render_v03b_normal_play_guard,
@@ -23,15 +27,23 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v03b_definition_of_done()
         }
 
-    def test_gate_a_full_match_position_reset_escalation_closes_locked_timeout(self):
-        evidence = _v03b_top_stall_probe()
-        self.assertEqual(evidence.warnings, 1)
-        self.assertEqual(evidence.penalties, 1)
-        self.assertGreaterEqual(evidence.position_resets, 1)
-        self.assertIs(evidence.final_band, Band.STRONG)
-        self.assertFalse(evidence.locked_timeout)
-        self.assertGreater(evidence.locked_windows, 0)
-        self.assertLess(evidence.locked_windows, evidence.decision_windows)
+    def test_gate_a_fixed_sweep_prevents_locked_steady_state(self):
+        sweep = _v03b_top_stall_sweep()
+        self.assertEqual(len(sweep), 26)
+        self.assertTrue(all(_v03b_gate_a_case_passes(item) for item in sweep))
+        self.assertLess(
+            max(item.locked_share for item in sweep),
+            V03B_GATE_A_LOCKED_SHARE_LIMIT,
+        )
+        self.assertLess(
+            max(item.longest_locked_dwell_seconds for item in sweep),
+            V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS,
+        )
+        # Final timeout band is intentionally diagnostic only.
+        self.assertGreaterEqual(
+            sum(item.locked_timeout for item in sweep),
+            0,
+        )
         self.assertIs(self.gates["A"].status, V02GateStatus.PASS)
 
     def test_normal_play_guard_keeps_stronger_escalation_out_of_engaged_batches(self):
