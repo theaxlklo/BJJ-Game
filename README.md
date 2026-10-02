@@ -357,16 +357,20 @@ v0.3a adds one modern-only Americana submission path around the frozen Mount-v0 
 Ready Americana -> Threat -> Control -> Finish -> Tap
 ```
 
-Mount is the currently implemented **entry context**, not ownership of the Americana. The submission-control state is intentionally separate so future Side Control, Knee-on-Belly, Guard, and other entry contexts can feed the same Americana control graph.
+Mount is only the currently implemented **entry context**. The Americana isolation/submission-control graph is intentionally separate so future Side Control, Knee-on-Belly, Guard, and other positions can feed the same submission logic through their own access rules.
 
-PR review exposed and corrected a legality contradiction: once Ready Americana establishes isolation, Tight Elbows cannot immediately become legal again during Threat/Control/Finish. Active stages therefore inherit the Ready isolation response set:
+Current isolation legality:
 
 ```text
-Forearm Frame
-Turn-In Recovery
+legal while Americana isolation holds:
+  Forearm Frame
+  Turn-In Recovery
+
+illegal until isolation is broken/rebuilt:
+  Tight Elbows
 ```
 
-Stage semantics are now:
+Submission-stage result semantics:
 
 ```text
 Success / Strong Success -> advance
@@ -374,55 +378,81 @@ Contested                -> hold current stage; no axis loss
 Failure / Strong Failure -> break track; axis -1.00 toward Bottom
 ```
 
-This keeps the Ready and submission stalemate concepts consistent. A fresh informed defender can hold with Turn-In; an Exhausted defender's same Turn-In becomes Success for Top and can be finished.
+A fresh informed Turn-In is therefore a stalemate. An Exhausted defender's same Turn-In becomes Success for Top, so the isolated Gate-E path can finish.
 
-The random responder still preserves ordinary response-policy mass under contextual legality. Ready/active Americana projects the removed Tight-Elbows mass onto the designated Turn-In stalemate defense:
+The responder policy preserves ordinary response mass under contextual legality:
 
 ```text
-ordinary: Frame=4 / Tight Elbows=3 / Turn-In=0
-isolated: Frame=4 / Turn-In=3
+ordinary Bottom mix: Frame=4 / Tight Elbows=3 / Turn-In=0
+isolated Americana:  Frame=4 / Turn-In=3
 ```
 
 No response weight is invented.
 
-Current amended v0.3a gate evidence:
+### Current Gate-B model
+
+"Competent defender" is now measured with an **informed Bottom responder** that chooses the legal response giving Top the lowest real final grade. The frozen random mix remains a non-gating contrast.
+
+The Gate-B numerical target is unchanged:
 
 ```text
-Gate A  PASS  Locked submission-progress probability=0.571
-Gate B  OPEN  Tap=98/100 under the unchanged 0% < Tap < 50% random-batch target
-Gate C  PASS  informed best fresh defense is exactly Contested at every reachable stage
-Gate D  PASS  one-sided exhaustion matters both ways; both Exhausted cancel
-Gate E  PASS  informed Exhausted defender cannot perfect-lock the submission
+0% < informed Tap rate < 50%
 ```
 
-Gate B reopened because correct Contested semantics turn Turn-In into a persistent hold rather than a track break. A random responder eventually samples enough Frames to advance through the three stages in almost every five-minute match. Gate C simultaneously proves that an informed fresh responder can hold indefinitely. That measurement/design mismatch is intentionally left visible rather than tuned away.
+### Submission-hold stamina experiment
 
-The v0.2 Gate-2 deferral also expires as planned:
+v0.3a now charges the responder the existing LOW cost of 3, after resolution, for a Contested Americana hold at either:
+
+- Ready Americana, when v0.3 submissions are enabled; or
+- active Threat / Control / Finish.
+
+The identical Ready exchange under v0.2-only remains response-cost free.
+
+This change creates more submission entry against informed defense, but LOW=3 is still insufficient to create a finishing fatigue gap:
+
+```text
+informed PRESSURE / ESCAPE:
+  Tap=0/100
+  Threat=78
+  Control=0
+  Finish=0
+  final stamina median=0/0
+
+random PRESSURE / ESCAPE contrast:
+  Tap=99/100
+```
+
+So the active design state is:
+
+```text
+Gate A PASS
+Gate B OPEN
+Gate C PASS
+Gate D PASS
+Gate E PASS
+```
+
+Gate C proves fresh informed defense holds rather than wins outright. Gate E proves Fresh Top can finish an already-Exhausted informed defender. Gate B remains OPEN because the full match drives Top into exhaustion too, causing the v0.2b modifiers to cancel before the fatigue advantage can convert into a finish.
+
+The v0.2 Gate-2 deferral remains intentionally expired:
 
 ```text
 Gate 2 OPEN
 ```
 
-because a real submission-finish route exists while repeated RESET still times out at Locked. Stalling/progress enforcement remains the planned v0.3b slice and now directly intersects the informed fresh submission stalemate.
+because a real submission-finish route exists while repeated RESET still times out at Locked.
 
-Current standard-batch stamina observation after the stalemate correction:
-
-```text
-Top median final stamina = 2
-Bottom median final stamina = 9
-Top RESETs = 0
-Bottom RESETs = 0
-```
-
-This remains non-gating debt; v0.3a does not retune stamina to change it.
+The setup/policy debt also remains explicit: Top can repeatedly rebuild Americana setup even when informed defense prevents conversion. This is observed, not tuned in v0.3a.
 
 See:
 
 - `docs/MOUNT_V0_3A_DEFINITION_OF_DONE.md`
 - `docs/MOUNT_V0_3A_STALEMATE_AMENDMENT.md`
-- `docs/MOUNT_V0_3A_STALEMATE_GATE_C_CLARIFICATION.md`
-- `docs/MOUNT_V0_3A_GATE_C_REACHABILITY.md`
 - `docs/MOUNT_V0_3A_OPTION_A_MEASUREMENT.md`
+- `docs/MOUNT_V0_3A_HOLD_STAMINA_AMENDMENT.md`
+- `docs/MOUNT_V0_3A_ACTIVE_HOLD_COST_MEASUREMENT.md`
+- `docs/MOUNT_V0_3A_READY_HOLD_STAMINA_AMENDMENT.md`
+- `docs/MOUNT_V0_3A_LOW3_HOLD_COST_MEASUREMENT.md`
 
 ## Known v0 limitation
 
