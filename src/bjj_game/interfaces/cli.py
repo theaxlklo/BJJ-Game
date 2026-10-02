@@ -463,6 +463,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bottom-behavior-policy", choices=("fixed", "recover"), help="batch behavior mode for Bottom; recover uses CONSERVE only while Exhausted")
     parser.add_argument("--batch", type=positive_int, help="run N deterministic non-interactive matches")
     parser.add_argument("--initiator-policy", choices=("escape-first", "greedy"), help="scripted batch initiator policy; greedy is a deprecated alias for escape-first")
+    parser.add_argument("--v02-setup", action="store_true", help="batch-only: enable experimental v0.2 setup/Ready legality")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -543,10 +544,11 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         or args.bottom_behavior_policy is not None
         or args.batch is not None
         or args.initiator_policy is not None
+        or args.v02_setup
     ):
         print(
             "ERROR: modern playtest flags (--blind/--blind-responder/--seed/"
-            "--top-behavior/--bottom-behavior/--batch/--initiator-policy) "
+            "--top-behavior/--bottom-behavior/--batch/--initiator-policy/--v02-setup) "
             "are available only on bjj_game."
         )
         return 2
@@ -583,12 +585,16 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             bottom_behavior_mode=BatchBehaviorMode(
                 args.bottom_behavior_policy or "fixed"
             ),
+            enable_v02_setup=args.v02_setup,
         )
         print(summary.render())
         return 0
 
     if args.initiator_policy is not None:
         print("ERROR: --initiator-policy is only valid with --batch.")
+        return 2
+    if args.v02_setup:
+        print("ERROR: --v02-setup is currently available only with --batch.")
         return 2
     if args.top_behavior_policy is not None or args.bottom_behavior_policy is not None:
         print("ERROR: --top-behavior-policy/--bottom-behavior-policy are only valid with --batch.")
