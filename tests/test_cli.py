@@ -582,12 +582,16 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.2 DOD GATE 6 [", text)
         self.assertIn("V0.2 DOD GATE 7 [", text)
         self.assertIn("V0.3a DOD GATE A [", text)
-        self.assertIn("V0.3a DOD GATE B [", text)
+        self.assertIn("V0.3a DOD GATE B [DEFERRED]", text)
         self.assertIn("V0.3a DOD GATE C [", text)
         self.assertIn("V0.3a DOD GATE D [", text)
         self.assertIn("V0.3a DOD GATE E [", text)
         self.assertIn("V0.3a PREDICTION PROBE", text)
         self.assertIn("V0.3a STAMINA SATURATION", text)
+        self.assertIn("V0.3a SUBMISSION-HOLD COST: PROVISIONAL", text)
+        self.assertIn("V0.3a SETUP-POLICY DEBT", text)
+        self.assertIn("informed PROTECT builds=", text)
+        self.assertIn("Threat entries=0", text)
         self.assertIn("V0.3a INFORMED DEFENDER PROBE", text)
         self.assertIn("Observational only; no gate or threshold.", text)
 
@@ -614,6 +618,8 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("V0.3a DOD GATE", text)
         self.assertNotIn("V0.3a PREDICTION PROBE", text)
         self.assertNotIn("V0.3a STAMINA SATURATION", text)
+        self.assertNotIn("V0.3a SUBMISSION-HOLD COST", text)
+        self.assertNotIn("V0.3a SETUP-POLICY DEBT", text)
         self.assertNotIn("V0.3a INFORMED DEFENDER PROBE", text)
 
 
