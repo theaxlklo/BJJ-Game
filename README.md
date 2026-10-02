@@ -280,6 +280,8 @@ Trap-and-Roll and Americana Isolation are setup-dependent in the v0.2 path: they
 
 Ready also has a defender-balance invariant: the best legal response in every reachable fresh Ready state is exactly Contested. Wide Mount Base is the Trap-and-Roll stalemate response; Turn-In Recovery is the Americana stalemate response. These are v0.2 Ready rules and do not modify the frozen 18-entry matrix.
 
+A setup builder also gets no progress when its entire positional result is absorbed at the +4.00 Mount cap. Partial movement into the cap can still progress setup; an already-capped exchange that stays at +4.00 cannot.
+
 The established-position order in setup-enabled batches is now:
 
 ```text
@@ -303,11 +305,11 @@ PYTHONPATH=src python -m bjj_game \
 The checker currently measures:
 
 ```text
-Gate 1  PASS  every reachable Ready state's best legal defense is Contested
-Gate 4  PASS  Bridge contributes to completed Trap-and-Roll chains
-Gate 5  PASS  1.140 meaningful Top follow-ups/match, counting setup
-              builders only when their Ready target is later consumed
-Gate 2  OPEN
+Gate 1  PASS      every reachable Ready state's best legal defense is Contested
+Gate 2  DEFERRED  to v0.3 while Locked has no submission-finish action
+Gate 4  PASS      Bridge contributes to completed Trap-and-Roll chains
+Gate 5  OPEN      0.630 meaningful Top follow-ups/match
+                  threshold 1.000; margin -0.370
 Gate 3  OPEN
 Gate 6  OPEN
 Gate 7  OPEN
