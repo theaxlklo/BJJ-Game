@@ -636,8 +636,16 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             for line in render_exhausted_reachability_summary():
                 print(f"INFO: {line}")
             print(
-                "INFO: V0.2 RESPONSE-STAMINA DEBT: exhausted responders still defend at full strength "
-                "and responses have no direct cost; revisit with triggered initiative."
+                "INFO: V0.1 STAMINA VALIDATION: under rational escape-first Mount-v0 play, "
+                "starting from 100 stamina rarely makes exhaustion binding; forced-attack pacing "
+                "is a stress projection, not expected-play pacing."
+            )
+            print(
+                "INFO: V0.2 RESPONSE-STAMINA DEBT: exhaustion currently weighs mainly on initiated "
+                "actions/Bottom escape attempts, while exhausted responders defend at full strength "
+                "and Top can often avoid spending. Do not retune 3/7/12 or CONSERVE recovery to "
+                "compensate in v0.1; revisit responder-side/setup pressure in v0.2 and Top spending "
+                "incentives with submissions in v0.3."
             )
             print(
                 "INFO: RESET/STALLING DEBT: RESET solves forced-action recovery but repeated no-action "
