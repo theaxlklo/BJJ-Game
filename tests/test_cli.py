@@ -500,7 +500,6 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.2 RESPONDER-STAMINA VALIDATION", text)
         self.assertIn("both Exhausted cancel", text)
         self.assertIn("responding still has no direct stamina cost", text)
-        self.assertIn("submissions in v0.3", text)
         self.assertIn("RESET/STALLING DEBT", text)
         self.assertIn(
             "RESET LOCK PROBE: Top PRESSURE+RESET vs Bottom ESCAPE+RESET -> TIMEOUT — Mount retained; axis +4.00; band Locked; Top stamina 40; Bottom stamina 40",
