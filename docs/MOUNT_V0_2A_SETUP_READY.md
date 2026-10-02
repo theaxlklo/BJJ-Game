@@ -30,9 +30,9 @@ The first implementation uses the smallest discrete model:
 
 ```text
 None
-  ↓ successful builder
+  ↓ builder attempt / forced defensive reaction
 Partial
-  ↓ successful builder
+  ↓ builder attempt / forced defensive reaction
 Ready
 ```
 
@@ -54,7 +54,7 @@ There is no decay or hysteresis in v0.2a because the exact persistence rules rem
 
 ```text
 Bridge
-  ↓ successful local result
+  ↓ forces a base/posture reaction even if locally countered
 Trap-and-Roll setup:
 None → Partial → Ready
 ```
@@ -75,7 +75,7 @@ This gives Bridge future value without buffing Bridge itself.
 
 ```text
 High Mount Climb
-  ↓ successful local result
+  ↓ forces defensive structure even if locally countered
 Americana Arm Isolation setup:
 None → Partial → Ready
 ```
@@ -105,8 +105,12 @@ Only modern `attempt()` can:
 
 - reject an unready setup-dependent action;
 - reject a response that is illegal against a Ready setup;
-- advance setup after a successful builder;
+- advance setup after a designated builder attempt;
 - consume Ready after the target is used.
+
+The builder's local grade and setup progress are separate signals. A defender may win the local exchange while still being forced into the reaction the setup chain is trying to provoke. This prevents a perfect responder from freezing setup at None forever.
+
+Correct-response disruption/decay is still deferred; when that layer exists it may reduce or erase setup progress after specific answers instead of making all setup building impossible.
 
 This preserves the legacy `mount_v0` path.
 
@@ -132,7 +136,7 @@ The setup-enabled batch policy is lexicographic:
 
 ```text
 1. immediate escape if available
-2. setup progress with positive advance probability
+2. setup progress only when the Ready target would have positive tactical value
 3. positive raw + realized positional gain
 4. RESET
 ```
@@ -163,7 +167,7 @@ Interactive Ready-aware action and response menus are deferred until the next in
 The measured checker currently reports:
 
 ```text
-Gate 1  Perfect-response lock          PASS
+Gate 1  Perfect-response lock          OPEN
 Gate 2  RESET/stalling                 OPEN
 Gate 3  Responder stamina              OPEN
 Gate 4  Bridge setup role              PASS
@@ -176,19 +180,25 @@ Current evidence:
 
 ```text
 Gate 1:
-Ready lock-free states
-Top: 18
-Bottom: 36
+Ready states reached against best-counter play:
+Top:    36 reachable / 6 lock-free / 0 guaranteed-attacker
+Bottom: 36 reachable / 36 lock-free / 24 guaranteed-attacker
+
+Ready reachability is no longer the blocker. Gate 1 stays OPEN because Bottom's current Ready Trap-and-Roll legality still creates guaranteed-attacker states.
 
 Gate 4:
-Bridge selections: 40 / 100 standard matches
-Bridge setup-priority selections: 40
+Bridge selections: 595 / 100 standard matches
+Bridge setup-priority selections: 595
+Bridge builds credited to completed chains: 590
+Completed Bottom setup chains: 295
 
 Gate 5:
-Top follow-up meaningful initiations / match: 2.550
-  position: 0.000
-  setup:    2.550
+Top follow-up meaningful initiations / match: 3.120
+  position:               1.370
+  completed setup builds: 1.750
 threshold: > 1.000
+
+Setup builders count only when their Ready target is later consumed in the same match.
 ```
 
 These statuses are calculated, not manually declared.
@@ -215,10 +225,10 @@ Those remain future v0.2/v0.3 work and must be added only when their correspondi
 
 ## Next slice
 
-The most connected remaining debt is RESET / stalling.
+Before RESET/stalling work, Gate 1 still needs one Ready-defense correction.
 
-Now that setup progress exists, the next design question can be measured directly:
+Setup is now reachable against best-counter play, but Bottom currently has reachable Ready Trap-and-Roll states where every legal response yields Success-or-better. The next design question is therefore:
 
-> What setup/progress cost should repeated RESET impose without removing legitimate passing/resetting from BJJ?
+> How should Ready narrow defense without turning a solved defender lock into a solved attacker win?
 
-Gate 2 remains OPEN until that rule is defined and the standardized RESET-lock probe no longer guarantees a Locked timeout.
+After that, RESET/stalling can use setup progress as a real cost surface.
