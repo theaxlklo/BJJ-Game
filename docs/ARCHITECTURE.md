@@ -224,6 +224,22 @@ Repeated RESET will eventually be governed by the planned progress-based stallin
 
 `StaminaPool.current` is a read-only property backed by private state. Exhaustion hysteresis can only be changed through controlled mutation methods, so direct assignment cannot desynchronize the latch.
 
+### Blind playtest boundary
+
+`--blind` is implemented entirely in the CLI/input layer.
+
+```text
+standard:
+action choice → response choice → MountMatch.attempt()
+
+blind:
+hidden response choice → action/RESET choice → MountMatch.attempt()
+```
+
+Both paths call the same match and resolution objects. No hidden-information state was added to `MountResolutionEngine`, `TechniqueCatalog`, or `MatchupTable`.
+
+This is a temporary playtest tool for the perfect-response lock, not the v0.2 Recognition implementation.
+
 ## Refactor proof
 
 The architecture-hardening pass is behavior-preserving:
