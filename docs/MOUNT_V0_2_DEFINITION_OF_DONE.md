@@ -25,16 +25,24 @@ With unrestricted full information, every initiated action has a legal response 
 
 With v0.2 setup/Ready/initiative legality enabled:
 
-- at least one Top action can be Ready in a state where no currently legal response forces Failure-or-worse; and
-- at least one Bottom action can be Ready in a state where no currently legal response forces Failure-or-worse.
+- Ready must actually be reachable against best-counter play;
+- at least one reachable Top Ready state must have no legal response that forces Failure-or-worse;
+- at least one reachable Bottom Ready state must have no legal response that forces Failure-or-worse; and
+- no reachable Ready state may make the attacker guaranteed to receive Success-or-better against every legal response.
 
-This must be demonstrated by an exhaustive checker over the v0.2 legal-response set, not by hiding the action from the checker.
+This must be demonstrated by an exhaustive checker over the v0.2 builder path and legal-response set, not by constructing Ready state by hand.
 
 ### Measurement
 
 The frozen `PERFECT-RESPONSE LOCK` diagnostic remains an unrestricted-v0 diagnostic.
 
-Gate 1 uses a separate Ready-aware exhaustive probe and reports, per side, how many Ready states have no legal Failure-or-worse response.
+Gate 1 uses a separate Ready-aware exhaustive probe. It first drives each setup to Ready while the responder always selects the legal best counter, then reports per side:
+
+- reachable Ready states;
+- lock-free Ready states;
+- guaranteed-attacker Ready states.
+
+PASS requires Ready reachability for both sides, at least one lock-free Ready state per side, and zero guaranteed-attacker Ready states.
 
 ## Gate 2 — RESET / stalling lock
 
@@ -84,7 +92,7 @@ Under at least one Ready/setup state, Bridge is selected by the scripted batch p
 
 ### Measurement
 
-Batch summaries must expose setup-producing action counts. At least one standardized v0.2 condition must record Bridge usage above zero for setup value.
+Batch summaries must expose setup-producing action counts and completed setup chains. At least one standardized v0.2 condition must record Bridge setup work that later contributes to a consumed Trap-and-Roll Ready chain.
 
 ## Gate 5 — Top is no longer passive after the opening
 
@@ -107,13 +115,15 @@ The metric should distinguish:
 
 ### Measurement
 
-Current v0.1/v0.2-baseline batch summary:
+The follow-up numerator contains:
 
 ```text
-Top follow-up position attacks / matches
+Top follow-up positional attacks
++
+Top follow-up setup-builder actions whose target is later consumed
 ```
 
-When setup-building actions exist, extend the follow-up numerator deliberately rather than counting the opening again.
+A setup builder that creates Ready but is never followed through does not count toward Gate 5.
 
 ## Gate 6 — Exhausted Bottom escape reachability
 
@@ -190,11 +200,11 @@ The current frozen digest is:
 The current evaluator uses:
 
 ```text
-Gate 1  Ready-aware legal-response lock-free states per side
+Gate 1  best-counter-reachable Ready states + lock-free/guaranteed checks
 Gate 2  standardized RESET-lock probe
 Gate 3  exhaustive fresh-vs-Exhausted responder exchange differential
-Gate 4  Bridge setup-priority selections in the setup-enabled standard batch
-Gate 5  Top follow-up position + setup initiations / match after the opening
+Gate 4  Bridge setup work credited to completed Trap-and-Roll chains
+Gate 5  Top follow-up position + completed-chain setup builds / match
 Gate 6  positive-weight Exhausted-Bottom routes under every Top behavior
 Gate 7  exhaustive funded LOW strict-dominance probe
 ```
@@ -236,12 +246,13 @@ Gate 6  Exhausted Bottom escape routes    OPEN — PRESSURE:1, HOLD:0, CONSERVE:
 The minimal Setup/Ready slice moves three gates automatically:
 
 ```text
-Gate 1  Perfect-response lock             PASS — Ready lock-free states Top:18, Bottom:36
+Gate 1  Perfect-response lock             OPEN — Top 36 reachable / 6 lock-free / 0 guaranteed
+                                                 Bottom 36 reachable / 36 lock-free / 24 guaranteed
 Gate 2  RESET/stalling lock               OPEN
 Gate 3  Responder stamina                 OPEN
-Gate 4  Bridge setup role                 PASS — Bridge 40/100, all 40 selected for setup value
-Gate 5  Top post-opening activity         PASS — 2.550 follow-up meaningful initiations/match
-                                                 position 0.000, setup 2.550
+Gate 4  Bridge setup role                 PASS — 590 Bridge builds credited to 295 completed Bottom chains
+Gate 5  Top post-opening activity         PASS — 3.120 meaningful follow-ups/match
+                                                 position 1.370, completed setup builds 1.750
 Gate 6  Exhausted Bottom escape routes    OPEN — PRESSURE:1, HOLD:0, CONSERVE:1
 Gate 7  Commitment meaning                OPEN
 ```
