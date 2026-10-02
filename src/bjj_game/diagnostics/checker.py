@@ -12,7 +12,9 @@ from ..positions.mount.catalog import (
     BOTTOM_ACTIONS,
     TOP_RESPONSES,
     BOTTOM_RESPONSES,
+    TOP_AMERICANA_SUBMISSION_FINISH,
     actions_for,
+    modern_actions_for,
     responses_for,
 )
 from ..positions.mount.matchups import RAW_GRADES, raw_grade
@@ -20,6 +22,8 @@ from ..engine.mount_engine import MOUNT_ENGINE
 from ..positions.mount.rules import MOUNT_RULES
 from ..domain.action import Commitment
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
+from ..domain.stamina import StaminaBand
+from ..domain.submission import SubmissionStage
 from ..positions.mount.names import RESOLVER, normalize_name
 
 V0_TOP_BEHAVIORS = (TopBehavior.PRESSURE, TopBehavior.HOLD)
@@ -373,6 +377,27 @@ def _v02_standard_batch():
     )
 
 
+@lru_cache(maxsize=1)
+def _v03_standard_batch():
+    """Frozen v0.3a standard batch from the pre-implementation DoD."""
+    from ..interfaces.batch import run_escape_first_batch
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+
+
 def _resolution_signature(result) -> tuple:
     return (
         result.final_grade,
@@ -674,7 +699,7 @@ def _submission_finish_present() -> bool:
     return any(
         action.category == "SUBMISSION_FINISH"
         for side in (Side.TOP, Side.BOTTOM)
-        for action in actions_for(side)
+        for action in modern_actions_for(side)
     )
 
 def measure_v02_definition_of_done(
@@ -919,6 +944,265 @@ def measure_v02_definition_of_done(
             ),
         ),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class V03GateMeasurement:
+    letter: str
+    name: str
+    status: V02GateStatus
+    metric: str
+    evidence: str
+
+    def render(self) -> str:
+        return (
+            f"V0.3a DOD GATE {self.letter} [{self.status.value}]: "
+            f"{self.name} — {self.metric}; {self.evidence}"
+        )
+
+
+@lru_cache(maxsize=1)
+def _v03_locked_submission_probe() -> tuple[float, bool]:
+    """Return (submission progress probability, policy selected submission)."""
+    from ..engine.match import MountMatch
+    from ..interfaces.batch import EscapeFirstInitiatorPolicy
+
+    match = MountMatch(
+        starting_axis=3.50,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+    match.submission_state.stage = SubmissionStage.THREAT
+    match.initiator = Side.TOP
+    match.set_behaviors(
+        top=TopBehavior.PRESSURE,
+        bottom=BottomBehavior.ESCAPE,
+    )
+    decision = EscapeFirstInitiatorPolicy().choose(match)
+    return (
+        decision.submission_progress_probability,
+        decision.reason == "submission"
+        and decision.action_id == TOP_AMERICANA_SUBMISSION_FINISH,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class V03DefenseStageEvidence:
+    reachable_states: int
+    best_defense_stops: int
+    guaranteed_advance_states: int
+
+
+@lru_cache(maxsize=1)
+def _v03_best_defense_evidence() -> dict[SubmissionStage, V03DefenseStageEvidence]:
+    """Fresh stage surface: defender's best legal response must stop progress."""
+    from ..engine.match import MountMatch
+
+    evidence: dict[SubmissionStage, V03DefenseStageEvidence] = {}
+    for stage in SubmissionStage:
+        reachable = 0
+        stopped = 0
+        guaranteed = 0
+        for band, axis in _V02_BAND_ANCHORS.items():
+            for bottom_behavior in BottomBehavior:
+                match = MountMatch(
+                    starting_axis=axis,
+                    enable_v02_setup=True,
+                    enable_v03_submissions=True,
+                )
+                match.submission_state.stage = stage
+                match.initiator = Side.TOP
+                match.set_behaviors(
+                    top=TopBehavior.PRESSURE,
+                    bottom=bottom_behavior,
+                )
+                if match.band is not band:
+                    raise AssertionError(
+                        f"v0.3a band anchor mismatch: expected {band}, got {match.band}"
+                    )
+                legal = match.legal_response_ids(TOP_AMERICANA_SUBMISSION_FINISH)
+                advances = [
+                    match.preview_submission_stage(response_id=response_id).final_grade.successful
+                    for response_id in legal
+                ]
+                reachable += 1
+                if any(not item for item in advances):
+                    stopped += 1
+                if all(advances):
+                    guaranteed += 1
+        evidence[stage] = V03DefenseStageEvidence(
+            reachable_states=reachable,
+            best_defense_stops=stopped,
+            guaranteed_advance_states=guaranteed,
+        )
+    return evidence
+
+
+def _v03_stage_signature(stage: SubmissionStage, result) -> tuple:
+    advanced = result.final_grade.successful
+    tapped = advanced and stage is SubmissionStage.FINISH
+    if not advanced or stage is SubmissionStage.FINISH:
+        after_stage = stage
+    elif stage is SubmissionStage.THREAT:
+        after_stage = SubmissionStage.CONTROL
+    else:
+        after_stage = SubmissionStage.FINISH
+    return (
+        advanced,
+        tapped,
+        after_stage,
+        round(result.axis_after, 8),
+        result.band_after,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03_exhaustion_differentials() -> tuple[int, int, int, int]:
+    """Return attacker changes, defender changes, cancellation mismatches, cases."""
+    from ..engine.match import MountMatch
+
+    attacker_changes = 0
+    defender_changes = 0
+    cancellation_mismatches = 0
+    cases = 0
+    for stage in SubmissionStage:
+        for _band, axis in _V02_BAND_ANCHORS.items():
+            for bottom_behavior in BottomBehavior:
+                match = MountMatch(
+                    starting_axis=axis,
+                    enable_v02_setup=True,
+                    enable_v03_submissions=True,
+                )
+                match.submission_state.stage = stage
+                match.initiator = Side.TOP
+                match.set_behaviors(
+                    top=TopBehavior.PRESSURE,
+                    bottom=bottom_behavior,
+                )
+                modifiers = {
+                    "fresh": match.exhaustion_policy.exchange_grade_modifier(
+                        initiator_band=StaminaBand.FRESH,
+                        responder_band=StaminaBand.FRESH,
+                    ),
+                    "attacker": match.exhaustion_policy.exchange_grade_modifier(
+                        initiator_band=StaminaBand.EXHAUSTED,
+                        responder_band=StaminaBand.FRESH,
+                    ),
+                    "defender": match.exhaustion_policy.exchange_grade_modifier(
+                        initiator_band=StaminaBand.FRESH,
+                        responder_band=StaminaBand.EXHAUSTED,
+                    ),
+                    "both": match.exhaustion_policy.exchange_grade_modifier(
+                        initiator_band=StaminaBand.EXHAUSTED,
+                        responder_band=StaminaBand.EXHAUSTED,
+                    ),
+                }
+                for response_id in match.legal_response_ids(
+                    TOP_AMERICANA_SUBMISSION_FINISH
+                ):
+                    results = {
+                        key: match.preview_submission_stage(
+                            response_id=response_id,
+                            external_grade_modifier=modifier,
+                        )
+                        for key, modifier in modifiers.items()
+                    }
+                    fresh_sig = _v03_stage_signature(stage, results["fresh"])
+                    if _v03_stage_signature(stage, results["attacker"]) != fresh_sig:
+                        attacker_changes += 1
+                    if _v03_stage_signature(stage, results["defender"]) != fresh_sig:
+                        defender_changes += 1
+                    if _v03_stage_signature(stage, results["both"]) != fresh_sig:
+                        cancellation_mismatches += 1
+                    cases += 1
+    return attacker_changes, defender_changes, cancellation_mismatches, cases
+
+
+def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
+    locked_probability, policy_selected = _v03_locked_submission_probe()
+    batch = _v03_standard_batch()
+    tap_count = batch.outcome_counts.get("TAP — Americana", 0)
+    tap_rate = tap_count / batch.matches
+    defense = _v03_best_defense_evidence()
+    defense_pass = all(
+        item.reachable_states > 0
+        and item.best_defense_stops == item.reachable_states
+        and item.guaranteed_advance_states == 0
+        for item in defense.values()
+    )
+    attacker_changes, defender_changes, cancellation_mismatches, cases = (
+        _v03_exhaustion_differentials()
+    )
+
+    defense_metric = ",".join(
+        f"{stage.value}:{item.reachable_states}/stopped:{item.best_defense_stops}/"
+        f"guaranteed:{item.guaranteed_advance_states}"
+        for stage, item in defense.items()
+    )
+
+    return (
+        V03GateMeasurement(
+            letter="A",
+            name="Locked submission purpose",
+            status=(
+                V02GateStatus.PASS
+                if locked_probability > 0 and policy_selected
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                f"Locked submission-progress probability={locked_probability:.3f}; "
+                f"policy_selected={policy_selected}"
+            ),
+            evidence=(
+                "submission progress is ranked before setup/position/RESET with no axis conversion"
+            ),
+        ),
+        V03GateMeasurement(
+            letter="B",
+            name="submission finish rate",
+            status=(
+                V02GateStatus.PASS
+                if 0 < tap_rate < 0.50
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                f"Tap={tap_count}/{batch.matches} ({tap_rate:.1%}); "
+                f"Threat={batch.matches_reached_submission_threat}; "
+                f"Control={batch.matches_reached_submission_control}; "
+                f"Finish={batch.matches_reached_submission_finish}; "
+                f"stage-attempts={batch.top_submission_attempt_count}"
+            ),
+            evidence="fresh competent defender must survive most standard-batch matches",
+        ),
+        V03GateMeasurement(
+            letter="C",
+            name="fresh best defense stops progress",
+            status=V02GateStatus.PASS if defense_pass else V02GateStatus.OPEN,
+            metric=defense_metric,
+            evidence="every reachable fresh stage state must have a legal defense that stops advancement",
+        ),
+        V03GateMeasurement(
+            letter="D",
+            name="submission exhaustion sensitivity",
+            status=(
+                V02GateStatus.PASS
+                if attacker_changes > 0
+                and defender_changes > 0
+                and cancellation_mismatches == 0
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                f"attacker-only changes={attacker_changes}; "
+                f"defender-only changes={defender_changes}; "
+                f"both-Exhausted cancellation mismatches={cancellation_mismatches}/{cases}"
+            ),
+            evidence="one-sided exhaustion must matter in both directions and both Exhausted must cancel",
+        ),
+    )
+
+
+def render_v03a_definition_of_done() -> tuple[str, ...]:
+    return tuple(gate.render() for gate in measure_v03a_definition_of_done())
 
 
 def render_v02_definition_of_done(
