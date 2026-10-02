@@ -240,6 +240,10 @@ Both paths call the same match and resolution objects. No hidden-information sta
 
 This is a temporary playtest tool for the perfect-response lock, not the v0.2 Recognition implementation.
 
+For solo sessions, `interfaces.blind.RandomBlindResponder` owns the seeded RNG, fixed weighted response policy, draw ordinal, and replay metadata. The CLI only asks it for a locked response and delays revealing that response until after the initiator commits.
+
+Keeping this object in `interfaces/` prevents the temporary playtest policy from becoming BJJ domain knowledge or resolution-engine state.
+
 ## Refactor proof
 
 The architecture-hardening pass is behavior-preserving:
