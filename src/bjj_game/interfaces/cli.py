@@ -48,6 +48,16 @@ def positive_int(value: str) -> int:
     return parsed
 
 
+def stamina_value(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("stamina must be an integer") from exc
+    if not 0 <= parsed <= 100:
+        raise argparse.ArgumentTypeError("stamina must be between 0 and 100")
+    return parsed
+
+
 def axis_value(value: str) -> float:
     try:
         parsed = float(value)
@@ -99,12 +109,17 @@ def _choose_behavior(side: Side, current=None):
 
 def _run_interactive(args: argparse.Namespace) -> int:
     run = MountRun(initial_clock=args.clock, starting_axis=args.axis, interval_seconds=args.interval)
+    run.top.stamina.set_current(args.top_stamina)
+    run.bottom.stamina.set_current(args.bottom_stamina)
     print("MOUNT v0 — HOT-SEAT PROTOTYPE")
     print(f"Clock: {format_clock(run.initial_clock)}")
     print(f"Starting axis: {run.axis:+.2f}")
     print(f"Initial visible band: {run.band.value}")
     print(f"Decision interval: {run.interval_seconds} simulated seconds")
     print("First initiator: Top")
+    print(f"Top stamina: {run.top.stamina.display}")
+    print(f"Bottom stamina: {run.bottom.stamina.display}")
+    print("Stamina effects: OFF (v0.1a telemetry only)")
 
     try:
         top_behavior = _choose_behavior(Side.TOP)
@@ -153,6 +168,8 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
     print(f"Mount duration: {format_clock(run.mount_duration)}")
     print(f"Starting axis: {run.starting_axis:+.2f}")
     print(f"Final axis: {run.axis:+.2f}")
+    print(f"Top stamina: {run.top.stamina.display}")
+    print(f"Bottom stamina: {run.bottom.stamina.display}")
     if run.exit_destination is None:
         print(f"Final visible band: {run.band.value}")
     else:
@@ -178,6 +195,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--axis", type=axis_value, default=DEFAULT_AXIS, help="starting Mount axis, 0.10..4.00")
     parser.add_argument("--clock", type=parse_clock, default=DEFAULT_CLOCK_SECONDS, help="M:SS or positive seconds")
     parser.add_argument("--interval", type=positive_int, default=DEFAULT_INTERVAL_SECONDS, help="decision interval in simulated seconds")
+    parser.add_argument("--top-stamina", type=stamina_value, default=100, help="starting Top stamina telemetry, 0..100")
+    parser.add_argument("--bottom-stamina", type=stamina_value, default=100, help="starting Bottom stamina telemetry, 0..100")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
