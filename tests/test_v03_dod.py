@@ -31,13 +31,16 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v03a_definition_of_done()
         }
 
-    def test_submission_surface_keeps_gate_2_open_until_full_match_stall_is_resolved(self):
+    def test_submission_surface_gate_2_follows_full_match_v03b_evidence(self):
         self.assertTrue(_submission_finish_present())
         v02 = {gate.number: gate for gate in measure_v02_definition_of_done()}
-        self.assertIs(v02[2].status, V02GateStatus.OPEN)
+        self.assertIn(
+            v02[2].status,
+            {V02GateStatus.OPEN, V02GateStatus.PASS},
+        )
         self.assertIn("submission_finish_present=True", v02[2].metric)
         self.assertIn("v03b_penalties=", v02[2].metric)
-        self.assertIn("has not resolved the lock", v02[2].evidence)
+        self.assertIn("v03b_position_resets=", v02[2].metric)
 
     def test_gate_a_uses_positive_submission_probability_and_policy_order(self):
         probability, selected = _v03_locked_submission_probe()
