@@ -174,6 +174,7 @@ class CliTests(unittest.TestCase):
             text,
         )
         self.assertIn("V0.2 RESPONSE-STAMINA DEBT", text)
+        self.assertIn("RESET/STALLING DEBT", text)
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
         output = io.StringIO()
@@ -187,6 +188,7 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("EXHAUSTION HYSTERESIS", text)
         self.assertNotIn("EXHAUSTED REACHABILITY", text)
         self.assertNotIn("V0.2 RESPONSE-STAMINA DEBT", text)
+        self.assertNotIn("RESET/STALLING DEBT", text)
 
 
 
