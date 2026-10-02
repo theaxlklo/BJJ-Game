@@ -5,6 +5,7 @@ from bjj_game.diagnostics.checker import (
     _commitment_low_dominance_probe,
     _exhausted_positive_weight_escape_routes_by_top_behavior,
     _responder_exhaustion_differential_count,
+    _v02_ready_lock_free_states,
     _v02_standard_batch,
     measure_v02_definition_of_done,
     render_reset_lock_probe,
@@ -22,13 +23,16 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             for gate in measure_v02_definition_of_done(cls.report)
         }
 
-    def test_gate_1_status_follows_perfect_response_measurement(self):
+    def test_gate_1_status_follows_ready_legal_response_measurement(self):
+        counts = _v02_ready_lock_free_states()
         expected = (
             V02GateStatus.PASS
-            if not self.report.perfect_response_lock
+            if all(counts[side] > 0 for side in counts)
             else V02GateStatus.OPEN
         )
         self.assertIs(self.gates[1].status, expected)
+        for side, count in counts.items():
+            self.assertIn(f"{side.value}:{count}", self.gates[1].metric)
 
     def test_gate_2_status_follows_reset_probe(self):
         probe = render_reset_lock_probe()
@@ -64,9 +68,11 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         self.assertIs(self.gates[4].status, expected)
         self.assertIn(f"={bridge_count}/", self.gates[4].metric)
 
-    def test_gate_5_status_follows_top_followup_position_attack_rate(self):
+    def test_gate_5_status_follows_top_followup_meaningful_rate(self):
         batch = _v02_standard_batch()
-        rate = batch.top_followup_position_attack_count / batch.matches
+        position_rate = batch.top_followup_position_attack_count / batch.matches
+        setup_rate = batch.top_followup_setup_action_count / batch.matches
+        rate = position_rate + setup_rate
         expected = (
             V02GateStatus.PASS
             if rate > 1.0
@@ -74,6 +80,8 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         )
         self.assertIs(self.gates[5].status, expected)
         self.assertIn(f"={rate:.3f}", self.gates[5].metric)
+        self.assertIn(f"position:{position_rate:.3f}", self.gates[5].metric)
+        self.assertIn(f"setup:{setup_rate:.3f}", self.gates[5].metric)
         self.assertIn("opening attack excluded", self.gates[5].evidence)
 
     def test_gate_6_requires_escape_route_under_every_top_behavior(self):
