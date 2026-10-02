@@ -148,6 +148,16 @@ class CliTests(unittest.TestCase):
         self.assertIn("Exhausted Top 1:25, Bottom 1:30", text)
         self.assertIn("STAMINA PACING HIGH", text)
         self.assertIn("Exhausted Top 0:55, Bottom 1:00", text)
+        self.assertIn("EXHAUSTION HYSTERESIS: enter Exhausted at <=25; recover only at >=35", text)
+        self.assertIn(
+            "EXHAUSTED REACHABILITY: Elbow-Knee Escape / Top PRESSURE: Half Guard=+0.10..+1.10; Open Guard=UNREACHABLE",
+            text,
+        )
+        self.assertIn(
+            "EXHAUSTED REACHABILITY: Trap-and-Roll Escape / Top HOLD: Reversal=UNREACHABLE",
+            text,
+        )
+        self.assertIn("V0.2 RESPONSE-STAMINA DEBT", text)
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
         output = io.StringIO()
@@ -157,6 +167,9 @@ class CliTests(unittest.TestCase):
         text = output.getvalue()
         self.assertNotIn("COMMITMENT DOMINANCE", text)
         self.assertNotIn("COMMITMENT VISIBILITY", text)
+        self.assertNotIn("EXHAUSTION HYSTERESIS", text)
+        self.assertNotIn("EXHAUSTED REACHABILITY", text)
+        self.assertNotIn("V0.2 RESPONSE-STAMINA DEBT", text)
 
 
 
