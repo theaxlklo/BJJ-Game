@@ -1680,6 +1680,8 @@ class V03BTopStallEvidence:
     final_axis: float
     final_band: Band
     locked_timeout: bool
+    decision_windows: int
+    locked_windows: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -1746,15 +1748,34 @@ def _v03b_match(*, axis: float):
 
 @lru_cache(maxsize=1)
 def _v03b_top_stall_probe() -> V03BTopStallEvidence:
-    """Isolate Top's advancement obligation without opponent engagement."""
+    """Run deliberate Top stalling through the full match clock.
+
+    Top keeps its normal default-interval initiation cadence (5s, 15s, 25s,
+    ...). Bottom's intervening initiation windows are suppressed so no Bottom
+    action/response can reset Top's advancement clock and confound ownership.
+    """
     match = _v03b_match(axis=4.00)
     match.submission_state.stage = SubmissionStage.THREAT
 
-    # Two 20-second offense periods: persistent Warning, then one-band penalty.
-    for _ in range(2):
-        for _tick in range(4):
-            match.advance()
-        match.initiator = Side.TOP
+    decision_windows = 0
+    locked_windows = 0
+
+    while not match.ended:
+        match.advance()
+        if match.ended:
+            break
+
+        decision_windows += 1
+        if match.band is Band.LOCKED:
+            locked_windows += 1
+
+        if match.initiator is Side.BOTTOM:
+            # Preserve elapsed game time and ordinary alternating cadence, but
+            # isolate Top's advancement obligation by suppressing Bottom's
+            # intervening initiation rather than recording fake engagement.
+            match.initiator = Side.TOP
+            continue
+
         match.reset_window()
 
     return V03BTopStallEvidence(
@@ -1766,6 +1787,8 @@ def _v03b_top_stall_probe() -> V03BTopStallEvidence:
             match.exit_reason == "TIMEOUT — Mount retained"
             and match.band is Band.LOCKED
         ),
+        decision_windows=decision_windows,
+        locked_windows=locked_windows,
     )
 
 
@@ -1916,11 +1939,13 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
                 f"warnings={top_stall.warnings}; penalties={top_stall.penalties}; "
                 f"final_axis={top_stall.final_axis:+.2f}; "
                 f"final_band={top_stall.final_band.value}; "
-                f"locked_timeout={top_stall.locked_timeout}"
+                f"locked_timeout={top_stall.locked_timeout}; "
+                f"Locked windows={top_stall.locked_windows}/{top_stall.decision_windows}"
             ),
             evidence=(
-                "Top repeatedly RESETs through a real active-submission route; "
-                "20s produces Warning, the next offense moves Locked to Strong"
+                "Top repeatedly RESETs through a real active-submission route for "
+                "the full match; PASS requires the stalling ladder to prevent a "
+                "Locked timeout, not merely dislodge Locked temporarily"
             ),
         ),
         V03BGateMeasurement(
