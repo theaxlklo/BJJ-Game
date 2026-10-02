@@ -30,12 +30,15 @@ class SubmissionState:
         self.stage = SubmissionStage.THREAT
         return SubmissionChange(before=before, after=self.stage)
 
-    def defend(self) -> SubmissionChange:
+    def break_track(self) -> SubmissionChange:
         before = self.stage
         if before is None:
-            raise RuntimeError("Cannot defend an inactive submission track")
+            raise RuntimeError("Cannot break an inactive submission track")
         self.stage = None
         return SubmissionChange(before=before, after=None)
+
+    def defend(self) -> SubmissionChange:
+        return self.break_track()
 
     def advance(self) -> SubmissionChange:
         before = self.stage
