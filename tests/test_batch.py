@@ -3,15 +3,15 @@ import unittest
 from bjj_game.domain.action import Commitment
 from bjj_game.domain.model import BottomBehavior, Side, TopBehavior
 from bjj_game.engine.match import MountMatch
-from bjj_game.interfaces.batch import GreedyInitiatorPolicy, run_greedy_batch
+from bjj_game.interfaces.batch import EscapeFirstInitiatorPolicy, run_escape_first_batch
 
 
-class GreedyInitiatorPolicyTests(unittest.TestCase):
+class EscapeFirstInitiatorPolicyTests(unittest.TestCase):
     def test_top_attacks_from_stable_when_realized_expectation_is_positive(self):
         match = MountMatch(starting_axis=1.50)
         match.set_behaviors(top=TopBehavior.PRESSURE, bottom=BottomBehavior.ESCAPE)
 
-        decision = GreedyInitiatorPolicy().choose(match)
+        decision = EscapeFirstInitiatorPolicy().choose(match)
 
         self.assertIsNotNone(decision.action_id)
         self.assertGreater(decision.expected_realized_axis, 0)
@@ -21,24 +21,37 @@ class GreedyInitiatorPolicyTests(unittest.TestCase):
         match.initiator = Side.BOTTOM
         match.set_behaviors(top=TopBehavior.PRESSURE, bottom=BottomBehavior.ESCAPE)
 
-        decision = GreedyInitiatorPolicy().choose(match)
+        decision = EscapeFirstInitiatorPolicy().choose(match)
 
         self.assertIsNone(decision.action_id)
         self.assertLess(decision.expected_realized_axis, 0)
 
-    def test_top_resets_from_locked_when_cap_skew_removes_positive_realized_gain(self):
-        match = MountMatch(starting_axis=3.50)
+    def test_bottom_at_mount_floor_attacks_for_escape_even_without_positive_axis_value(self):
+        match = MountMatch(starting_axis=0.10)
+        match.initiator = Side.BOTTOM
+        match.set_behaviors(top=TopBehavior.HOLD, bottom=BottomBehavior.ESCAPE)
+
+        decision = EscapeFirstInitiatorPolicy().choose(match)
+
+        self.assertEqual(decision.reason, "escape")
+        self.assertIsNotNone(decision.action_id)
+        self.assertAlmostEqual(decision.escape_probability, 2 / 3)
+
+    def test_bottom_at_locked_resets_when_only_cap_skew_makes_realized_axis_look_good(self):
+        match = MountMatch(starting_axis=4.00)
+        match.initiator = Side.BOTTOM
         match.set_behaviors(top=TopBehavior.PRESSURE, bottom=BottomBehavior.ESCAPE)
 
-        decision = GreedyInitiatorPolicy().choose(match)
+        decision = EscapeFirstInitiatorPolicy().choose(match)
 
         self.assertIsNone(decision.action_id)
-        self.assertLessEqual(decision.expected_realized_axis, 0)
+        self.assertEqual(decision.reason, "reset")
+        self.assertLessEqual(decision.expected_raw_axis, 0)
 
 
 class BatchSimulationTests(unittest.TestCase):
     def _run(self):
-        return run_greedy_batch(
+        return run_escape_first_batch(
             matches=12,
             base_seed=42,
             top_behavior=TopBehavior.HOLD,
@@ -67,12 +80,16 @@ class BatchSimulationTests(unittest.TestCase):
         text = self._run().render()
 
         self.assertIn("BATCH SUMMARY", text)
-        self.assertIn("Initiator policy: greedy realized-axis (>0 attack, otherwise RESET)", text)
+        self.assertIn("Initiator policy: escape-first lexicographic", text)
+        self.assertIn("Escape rule: highest exact escape probability first", text)
+        self.assertIn("Position rule: require raw axis > 0 AND realized axis > 0", text)
         self.assertIn("OUTCOMES", text)
         self.assertIn("FINAL STAMINA", text)
         self.assertIn("DECISIONS", text)
         self.assertIn("Top RESET count:", text)
         self.assertIn("Bottom RESET count:", text)
+        self.assertIn("Top escape-priority attacks:", text)
+        self.assertIn("Bottom escape-priority attacks:", text)
 
 
 if __name__ == "__main__":
