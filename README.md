@@ -254,7 +254,7 @@ For repeatable statistics instead of one seed at a time:
 ```bash
 PYTHONPATH=src python -m bjj_game \
   --batch 1000 \
-  --initiator-policy greedy \
+  --initiator-policy escape-first \
   --seed 42 \
   --top-behavior HOLD \
   --bottom-behavior CONSERVE
@@ -273,19 +273,21 @@ match 2 → seed 44
 
 Using the same base seed and match count across two behavior conditions therefore pairs comparable response streams.
 
-The current `greedy` initiator policy is deliberately simple:
+The official `escape-first` initiator policy is deliberately lexicographic:
 
 ```text
 at the exact current axis/band/stamina state
-→ compute expected realized attacker-favorable axis movement
-  against the fixed response mix
-→ attack with the highest-positive action
+→ if any action can escape, choose the highest exact escape probability
+→ otherwise require BOTH raw attacker-axis > 0 and realized attacker-axis > 0
+→ among those positional attacks, choose the highest realized expectation
 → otherwise RESET
 ```
 
-It includes current behavior, positional, exhaustion, floor, and cap effects. It does **not** assign a separate utility bonus to Half Guard, Open Guard, Reversal, stamina, or time. It is a reproducible test rule, not an optimal-opponent model.
+It includes current behavior, positional, exhaustion, floor, and cap effects. Escape is a lexicographic priority rather than a numeric bonus, so there is no hidden terminal-value conversion. Positional attacks must stay favorable both before and after clamping, which filters cap-only/floor-only gains. The policy does **not** assign a numeric value to Half Guard, Open Guard, Reversal, stamina, or time; it is a reproducible test rule, not an optimal-opponent model.
 
 Batch output reports outcome frequencies, mean/median final stamina, mean final axis, RESET counts, and action counts by side.
+
+Open Guard is unreachable under the fixed batch response mix because Hand Post and Base has zero response weight. `bjj_game --check` derives and reports unreachable Exit Map destinations automatically rather than hiding that limitation.
 
 Fixed-behavior batches measure extreme conditions such as HOLD-vs-CONSERVE or HOLD-vs-PROTECT. They do not answer whether short bursts of CONSERVE are useful; adaptive human sessions are still required for that question.
 
