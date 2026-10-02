@@ -83,8 +83,10 @@ class MountMatch:
         bottom_behavior: BottomBehavior | None,
     ) -> tuple[TopBehavior, BottomBehavior]:
         self.set_behaviors(top=top_behavior, bottom=bottom_behavior)
-        assert isinstance(self.top.behavior, TopBehavior)
-        assert isinstance(self.bottom.behavior, BottomBehavior)
+        if not isinstance(self.top.behavior, TopBehavior):
+            raise TypeError("Top competitor behavior is not a TopBehavior")
+        if not isinstance(self.bottom.behavior, BottomBehavior):
+            raise TypeError("Bottom competitor behavior is not a BottomBehavior")
         return self.top.behavior, self.bottom.behavior
 
     def drift(
