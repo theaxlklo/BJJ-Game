@@ -237,7 +237,7 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
         print("Action stamina costs: ON (LOW=3, MEDIUM=7, HIGH=12)")
         print(f"Standard commitment: {args.commitment.value}")
         print("Commitment resolution effects: OFF (LOW remains dominant; standard play defaults MEDIUM)")
-        print("Exhaustion consequence: initiator Exhausted -1 grade; responder Exhausted +1 grade; both cancel")
+        print("Exhaustion consequence: Exhausted initiator -1 grade; Exhausted responder +1 grade for initiator; both Exhausted cancel")
         print("Behavior stamina: PRESSURE/ESCAPE -1 per 5s; HOLD/PROTECT 0; CONSERVE +2 per 5s")
         if args.blind:
             if random_blind is None:
