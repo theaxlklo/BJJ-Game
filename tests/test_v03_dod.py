@@ -11,6 +11,9 @@ from bjj_game.diagnostics.checker import (
     _v03_informed_exhausted_defender_probe,
     _v03_informed_defender_sweep,
     _v03_informed_standard_batch,
+    _v03_gate_b_status,
+    _v03_recognition_mechanic_present,
+    _v03_response_commitment_present,
     _v03_locked_submission_probe,
     _v03_standard_batch,
     measure_v02_definition_of_done,
@@ -49,18 +52,17 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             self.gates["A"].metric,
         )
 
-    def test_gate_b_uses_informed_nonzero_below_half_tap_range(self):
+    def test_gate_b_defers_until_response_commitment_or_recognition_exists(self):
         informed = _v03_informed_standard_batch()
         random = _v03_standard_batch()
         taps = informed.outcome_counts.get("TAP — Americana", 0)
-        rate = taps / informed.matches
         random_taps = random.outcome_counts.get("TAP — Americana", 0)
-        expected = (
-            V02GateStatus.PASS
-            if 0 < rate < 0.50
-            else V02GateStatus.OPEN
-        )
-        self.assertIs(self.gates["B"].status, expected)
+
+        self.assertFalse(_v03_response_commitment_present())
+        self.assertFalse(_v03_recognition_mechanic_present())
+        self.assertIs(self.gates["B"].status, V02GateStatus.DEFERRED)
+        self.assertIn("response_commitment_present=False", self.gates["B"].metric)
+        self.assertIn("recognition_present=False", self.gates["B"].metric)
         self.assertIn(
             f"informed Tap={taps}/{informed.matches}",
             self.gates["B"].metric,
@@ -70,16 +72,47 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             self.gates["B"].metric,
         )
         self.assertIn(
-            f"Control={informed.matches_reached_submission_control}",
-            self.gates["B"].metric,
-        )
-        self.assertIn(
-            f"Finish={informed.matches_reached_submission_finish}",
-            self.gates["B"].metric,
-        )
-        self.assertIn(
             f"random contrast Tap={random_taps}/{random.matches}",
             self.gates["B"].metric,
+        )
+        self.assertIn("auto-expires", self.gates["B"].evidence)
+        self.assertIn("Exhausted initiator -1", self.gates["B"].evidence)
+        self.assertIn("Exhausted responder +1", self.gates["B"].evidence)
+        self.assertIn("uneven attacker/defender costs", self.gates["B"].evidence)
+        self.assertIn("no longer cancel", self.gates["B"].evidence)
+
+    def test_gate_b_deferral_auto_expires_on_either_future_capability(self):
+        self.assertIs(
+            _v03_gate_b_status(
+                tap_rate=0.0,
+                response_commitment_present=False,
+                recognition_present=False,
+            ),
+            V02GateStatus.DEFERRED,
+        )
+        self.assertIs(
+            _v03_gate_b_status(
+                tap_rate=0.0,
+                response_commitment_present=True,
+                recognition_present=False,
+            ),
+            V02GateStatus.OPEN,
+        )
+        self.assertIs(
+            _v03_gate_b_status(
+                tap_rate=0.0,
+                response_commitment_present=False,
+                recognition_present=True,
+            ),
+            V02GateStatus.OPEN,
+        )
+        self.assertIs(
+            _v03_gate_b_status(
+                tap_rate=0.25,
+                response_commitment_present=True,
+                recognition_present=False,
+            ),
+            V02GateStatus.PASS,
         )
 
     def test_gate_c_requires_exact_fresh_stalemate_at_every_reachable_stage(self):
