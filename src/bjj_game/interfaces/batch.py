@@ -6,7 +6,7 @@ from enum import Enum
 from statistics import mean, median
 
 from ..domain.action import Commitment
-from ..domain.model import Band, BottomBehavior, ExitDestination, Side, TopBehavior
+from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
 from ..domain.stamina import StaminaBand
 from ..engine.match import MountMatch
 from ..positions.mount.catalog import (
@@ -93,7 +93,7 @@ class EscapeFirstInitiatorPolicy:
         action_id: str,
         external_grade_modifier: int,
         allowed_response_ids: tuple[str, ...],
-        ready_grade_overrides: dict[str, object] | None = None,
+        ready_grade_overrides: dict[str, Grade] | None = None,
     ) -> float:
         """Exact probability that Ready Americana enters the submission track.
 
