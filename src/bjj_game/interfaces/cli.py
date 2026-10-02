@@ -10,7 +10,7 @@ from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, run_checks
 from ..engine.match import MountRun
 from .formatting import format_clock, format_drift, format_resolution
-from ..positions.mount.compat import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
+from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
 from ..domain.model import BottomBehavior, EntityKind, Side, TopBehavior
 from ..positions.mount.names import RESOLVER
 
