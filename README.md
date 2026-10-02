@@ -61,6 +61,14 @@ Targeted run:
 PYTHONPATH=src python -m bjj_game --axis 0.50 --clock 0:30 --interval 7 --log logs/session-001.txt
 ```
 
+Blind hot-seat playtest mode:
+
+```bash
+PYTHONPATH=src python -m bjj_game --blind --log logs/blind-session.txt
+```
+
+In `--blind`, the responder locks a hidden response before the initiator chooses an action or RESET. This changes input order only; resolution mechanics are unchanged. The legacy `mount_v0` path rejects `--blind`.
+
 Legacy compatibility remains available during migration:
 
 ```bash
@@ -189,6 +197,8 @@ Classification: KNOWN V0 SCAFFOLDING LIMITATION
 ```
 
 The matrix is intentionally **not** distorted to fix this. v0.2 setup/Ready/initiative legality is the planned layer that can restrict which responses are actually available or tactically valid.
+
+For v0.1 playtests, `bjj_game --blind` can remove the full-information response advantage without changing the matrix: the responder commits secretly before the initiated action is shown. This is a testing mode, not the final v0.2 information model.
 
 ## Final Elbow-Knee playtest tune
 
