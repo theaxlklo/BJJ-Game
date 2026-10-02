@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+from enum import Enum
 from statistics import mean, median
 
 from ..domain.action import Commitment
@@ -15,6 +16,45 @@ from .blind import (
     expected_raw_attacker_axis_delta,
     expected_realized_attacker_axis_delta,
 )
+
+
+class BatchBehaviorMode(str, Enum):
+    FIXED = "fixed"
+    RECOVER = "recover"
+
+
+@dataclass(frozen=True, slots=True)
+class AdaptiveBehaviorPolicy:
+    """Batch-only behavior switching around the existing Exhausted latch.
+
+    FIXED keeps the baseline behavior for the full match.
+    RECOVER uses CONSERVE while the competitor is latched Exhausted, then
+    returns to the supplied baseline as soon as the 35-point latch clears.
+    """
+
+    side: Side
+    baseline: TopBehavior | BottomBehavior
+    mode: BatchBehaviorMode = BatchBehaviorMode.FIXED
+
+    def __post_init__(self) -> None:
+        if self.side is Side.TOP and not isinstance(self.baseline, TopBehavior):
+            raise TypeError("Top adaptive policy requires TopBehavior baseline")
+        if self.side is Side.BOTTOM and not isinstance(self.baseline, BottomBehavior):
+            raise TypeError("Bottom adaptive policy requires BottomBehavior baseline")
+
+    @property
+    def conserve(self) -> TopBehavior | BottomBehavior:
+        return (
+            TopBehavior.CONSERVE
+            if self.side is Side.TOP
+            else BottomBehavior.CONSERVE
+        )
+
+    def choose(self, match: MountMatch) -> TopBehavior | BottomBehavior:
+        if self.mode is BatchBehaviorMode.FIXED:
+            return self.baseline
+        competitor = match.competitor(self.side)
+        return self.conserve if competitor.stamina.band is StaminaBand.EXHAUSTED else self.baseline
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,6 +185,12 @@ class BatchSummary:
     bottom_escape_priority_count: int
     top_position_attack_count: int
     bottom_position_attack_count: int
+    top_behavior_mode: BatchBehaviorMode
+    bottom_behavior_mode: BatchBehaviorMode
+    top_behavior_window_counts: dict[str, int]
+    bottom_behavior_window_counts: dict[str, int]
+    top_behavior_switch_count: int
+    bottom_behavior_switch_count: int
 
     def render(self) -> str:
         ordered_outcomes = [
@@ -162,8 +208,10 @@ class BatchSummary:
             "Initiator policy: escape-first lexicographic",
             "Escape rule: highest exact escape probability first",
             "Position rule: require raw axis > 0 AND realized axis > 0",
-            f"Top behavior: {self.top_behavior.value}",
-            f"Bottom behavior: {self.bottom_behavior.value}",
+            f"Top baseline behavior: {self.top_behavior.value}",
+            f"Top behavior policy: {self.top_behavior_mode.value}",
+            f"Bottom baseline behavior: {self.bottom_behavior.value}",
+            f"Bottom behavior policy: {self.bottom_behavior_mode.value}",
             f"Commitment: {self.commitment.value}",
             "",
             "OUTCOMES",
@@ -197,6 +245,12 @@ class BatchSummary:
             f"Bottom position attacks: {self.bottom_position_attack_count}",
             "Top actions: " + _render_counts(self.top_action_counts),
             "Bottom actions: " + _render_counts(self.bottom_action_counts),
+            "",
+            "BEHAVIOR USAGE",
+            "Top windows: " + _render_counts(self.top_behavior_window_counts),
+            "Bottom windows: " + _render_counts(self.bottom_behavior_window_counts),
+            f"Top behavior switches: {self.top_behavior_switch_count}",
+            f"Bottom behavior switches: {self.bottom_behavior_switch_count}",
         ]
         return "\n".join(lines)
 
@@ -219,6 +273,8 @@ def run_escape_first_batch(
     interval_seconds: int,
     top_stamina: int,
     bottom_stamina: int,
+    top_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
+    bottom_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
 ) -> BatchSummary:
     if matches <= 0:
         raise ValueError("matches must be > 0")
@@ -236,6 +292,10 @@ def run_escape_first_batch(
     bottom_escape_priority = 0
     top_position_attacks = 0
     bottom_position_attacks = 0
+    top_behavior_windows: Counter[str] = Counter()
+    bottom_behavior_windows: Counter[str] = Counter()
+    top_behavior_switches = 0
+    bottom_behavior_switches = 0
 
     for match_index in range(matches):
         match = MountMatch(
@@ -245,13 +305,50 @@ def run_escape_first_batch(
         )
         match.top.stamina.set_current(top_stamina)
         match.bottom.stamina.set_current(bottom_stamina)
-        match.set_behaviors(top=top_behavior, bottom=bottom_behavior)
+        top_policy = AdaptiveBehaviorPolicy(
+            side=Side.TOP,
+            baseline=top_behavior,
+            mode=top_behavior_mode,
+        )
+        bottom_policy = AdaptiveBehaviorPolicy(
+            side=Side.BOTTOM,
+            baseline=bottom_behavior,
+            mode=bottom_behavior_mode,
+        )
+        current_top = top_policy.choose(match)
+        current_bottom = bottom_policy.choose(match)
+        match.set_behaviors(top=current_top, bottom=current_bottom)
         responder = RandomBlindResponder(base_seed + match_index)
 
         while not match.ended:
+            # Choose behavior for the upcoming normal-speed interval.
+            next_top = top_policy.choose(match)
+            next_bottom = bottom_policy.choose(match)
+            if next_top is not current_top:
+                top_behavior_switches += 1
+                current_top = next_top
+            if next_bottom is not current_bottom:
+                bottom_behavior_switches += 1
+                current_bottom = next_bottom
+            match.set_behaviors(top=current_top, bottom=current_bottom)
+            top_behavior_windows[current_top.value] += 1
+            bottom_behavior_windows[current_bottom.value] += 1
+
             match.advance()
             if match.ended:
                 break
+
+            # If CONSERVE cleared the exhaustion latch during this interval,
+            # restore the baseline before action resolution at the decision window.
+            post_top = top_policy.choose(match)
+            post_bottom = bottom_policy.choose(match)
+            if post_top is not current_top:
+                top_behavior_switches += 1
+                current_top = post_top
+            if post_bottom is not current_bottom:
+                bottom_behavior_switches += 1
+                current_bottom = post_bottom
+            match.set_behaviors(top=current_top, bottom=current_bottom)
 
             side = match.initiator
             hidden = responder.choose(side.opponent)
@@ -314,6 +411,12 @@ def run_escape_first_batch(
         bottom_escape_priority_count=bottom_escape_priority,
         top_position_attack_count=top_position_attacks,
         bottom_position_attack_count=bottom_position_attacks,
+        top_behavior_mode=top_behavior_mode,
+        bottom_behavior_mode=bottom_behavior_mode,
+        top_behavior_window_counts=dict(top_behavior_windows),
+        bottom_behavior_window_counts=dict(bottom_behavior_windows),
+        top_behavior_switch_count=top_behavior_switches,
+        bottom_behavior_switch_count=bottom_behavior_switches,
     )
 
 
