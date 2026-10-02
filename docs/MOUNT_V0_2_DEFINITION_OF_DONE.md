@@ -53,15 +53,24 @@ PASS requires at least one reachable state for each side and `best-contested == 
 
 Top PRESSURE + repeated RESET against Bottom ESCAPE + repeated RESET reaches Locked and times out with Mount retained.
 
-### v0.2 is done when
+### v0.2 disposition
 
-The standardized RESET-lock probe no longer has a guaranteed Locked-timeout path under the v0.2 progress / initiative / stalling rules.
+**DEFERRED to v0.3 submissions.**
 
-The replacement rule must not simply remove RESET; passing remains a legitimate BJJ choice.
+The current standardized probe still reaches a Locked timeout, but Locked Top has no submission-finish/progress action in v0.2. Adding a stalling penalty now would punish a dominant state that has no legal way to advance.
+
+The deferral is conditional, not permanent:
+
+- while `submission_finish_present=False` and the Locked timeout remains, Gate 2 reports `DEFERRED`;
+- once a real submission-finish action exists, the deferral expires automatically;
+- if the Locked timeout still exists after submissions are present, Gate 2 returns to `OPEN` until the real stalling/progress rule resolves it;
+- if the probe no longer locks, Gate 2 reports `PASS`.
+
+RESET itself remains legal; the future rule must not remove legitimate passing/yielding.
 
 ### Measurement
 
-Reuse the current RESET-lock probe with v0.2 progress state enabled and report the terminal result plus any stalling/progress intervention.
+Reuse the current RESET-lock probe and pair it with an executable check for a real `SUBMISSION_FINISH` action in the Mount action catalog.
 
 ## Gate 3 — Responder stamina
 
@@ -129,6 +138,15 @@ Top follow-up setup-builder actions whose target is later consumed
 ```
 
 A setup builder that creates Ready but is never followed through does not count toward Gate 5.
+
+`--check` also prints the unchanged threshold and the signed margin:
+
+```text
+threshold=1.000
+margin=current_rate - 1.000
+```
+
+A later mechanics change may legitimately move Gate 5 across the line; the margin makes that movement visible without changing the criterion.
 
 ## Gate 6 — Exhausted Bottom escape reachability
 
@@ -208,7 +226,7 @@ The current evaluator uses:
 
 ```text
 Gate 1  best-counter-reachable Ready states + lock-free/guaranteed checks
-Gate 2  standardized RESET-lock probe
+Gate 2  standardized RESET-lock probe + submission-finish presence
 Gate 3  exhaustive fresh-vs-Exhausted responder exchange differential
 Gate 4  Bridge setup work credited to completed Trap-and-Roll chains
 Gate 5  Top follow-up position + completed-chain setup builds / match
@@ -254,13 +272,15 @@ The minimal Setup/Ready slice moves three gates automatically:
 
 ```text
 Gate 1  Perfect-response lock             PASS — Top 36/36 best-counter Contested
-                                                 Bottom 36/36 best-counter Contested
+                                                 Bottom 18/18 best-counter Contested
                                                  0 guaranteed-attacker states
-Gate 2  RESET/stalling lock               OPEN
+Gate 2  RESET/stalling lock               DEFERRED — locked_timeout=True
+                                                    submission_finish_present=False
 Gate 3  Responder stamina                 OPEN
-Gate 4  Bridge setup role                 PASS — 590 Bridge builds credited to 295 completed Bottom chains
-Gate 5  Top post-opening activity         PASS — 1.140 meaningful follow-ups/match
-                                                 position 0.560, completed setup builds 0.580
+Gate 4  Bridge setup role                 PASS — 415 Bridge builds credited to 135 completed Bottom chains
+Gate 5  Top post-opening activity         OPEN — 0.630 meaningful follow-ups/match
+                                                threshold 1.000, margin -0.370
+                                                position 0.310, completed setup builds 0.320
 Gate 6  Exhausted Bottom escape routes    OPEN — PRESSURE:1, HOLD:0, CONSERVE:1
 Gate 7  Commitment meaning                OPEN
 ```
