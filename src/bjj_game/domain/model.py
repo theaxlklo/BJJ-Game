@@ -149,10 +149,15 @@ class ResolutionResult:
     band_after: Band
     band_changes: tuple[BandChange, ...]
     failure_clamp_used: bool
-    bridge_clamp_used: bool
+    floor_clamp_used: bool
     escape_threshold_reached: bool
     exit_capable_action: bool
     exit_destination: ExitDestination | None
+
+    @property
+    def bridge_clamp_used(self) -> bool:
+        """Legacy Mount-v0 name for floor_clamp_used."""
+        return self.floor_clamp_used
 
 
 @dataclass(slots=True)
@@ -163,6 +168,10 @@ class RunHistory:
     response_history: list[str] = field(default_factory=list)
     raw_grade_history: list[str] = field(default_factory=list)
     modified_grade_history: list[str] = field(default_factory=list)
+    commitment_history: list[str] = field(default_factory=list)
+    stamina_requested_history: list[int] = field(default_factory=list)
+    stamina_charged_history: list[int] = field(default_factory=list)
+    stamina_shortfall_history: list[int] = field(default_factory=list)
     top_initiation_count: int = 0
     bottom_initiation_count: int = 0
     clamp_count: int = 0
