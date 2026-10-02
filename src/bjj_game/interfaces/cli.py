@@ -12,8 +12,8 @@ from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
-from .batch import run_greedy_batch
-from .blind import BlindResponseChoice, RandomBlindResponder, render_random_mix_band_metrics
+from .batch import run_escape_first_batch
+from .blind import BlindResponseChoice, RandomBlindResponder, render_random_mix_band_metrics, render_random_mix_exit_limit
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_reset_window, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
 from ..domain.model import BottomBehavior, EntityKind, Side, TopBehavior
@@ -460,7 +460,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--top-behavior", type=top_behavior_value, help="fix Top behavior for the entire modern playtest session")
     parser.add_argument("--bottom-behavior", type=bottom_behavior_value, help="fix Bottom behavior for the entire modern playtest session")
     parser.add_argument("--batch", type=positive_int, help="run N deterministic non-interactive matches")
-    parser.add_argument("--initiator-policy", choices=("greedy",), help="scripted batch initiator policy")
+    parser.add_argument("--initiator-policy", choices=("escape-first", "greedy"), help="scripted batch initiator policy; greedy is a deprecated alias for escape-first")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -557,11 +557,12 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 "do not combine it with --blind/--blind-responder."
             )
             return 2
-        policy = args.initiator_policy or "greedy"
-        if policy != "greedy":
-            print("ERROR: only --initiator-policy greedy is supported.")
-            return 2
-        summary = run_greedy_batch(
+        policy = args.initiator_policy or "escape-first"
+        if policy == "greedy":
+            print(
+                "INFO: --initiator-policy greedy is deprecated; using escape-first."
+            )
+        summary = run_escape_first_batch(
             matches=args.batch,
             base_seed=0 if args.seed is None else args.seed,
             top_behavior=args.top_behavior or TopBehavior.PRESSURE,
@@ -643,6 +644,7 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             )
             for line in render_random_mix_band_metrics():
                 print(f"INFO: {line}")
+            print("INFO: " + render_random_mix_exit_limit())
         report = run_checks()
         for message in report.info:
             print(f"INFO: {message}")
