@@ -14,7 +14,7 @@ from ..positions.mount.catalog import (
     responses_for,
 )
 from ..positions.mount.matchups import RAW_GRADES, raw_grade
-from ..positions.mount.compat import axis_can_have_band, resolve_action
+from ..engine.mount_engine import MOUNT_ENGINE\nfrom ..positions.mount.rules import MOUNT_RULES
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
 from ..positions.mount.names import RESOLVER, normalize_name
 
@@ -52,7 +52,7 @@ def _sample_axes() -> list[float]:
 
 
 def _final_grade_without_behavior(action_id: str, response_id: str, side: Side, band: Band) -> Grade:
-    result = resolve_action(
+    result = MOUNT_ENGINE.resolve_action(
         axis={Band.LOOSE: 0.50, Band.STABLE: 1.50, Band.STRONG: 2.50, Band.LOCKED: 3.50}[band],
         band=band,
         initiator=side,
@@ -79,10 +79,10 @@ def _collect_escape_reachability() -> dict[
                 reachability[(action.id, top_behavior, destination)] = []
             for band in Band:
                 for axis in _sample_axes():
-                    if not axis_can_have_band(axis, band):
+                    if not MOUNT_RULES.axis_can_have_band(axis, band):
                         continue
                     for response in TOP_RESPONSES:
-                        result = resolve_action(
+                        result = MOUNT_ENGINE.resolve_action(
                             axis=axis,
                             band=band,
                             initiator=Side.BOTTOM,
