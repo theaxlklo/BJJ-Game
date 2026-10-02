@@ -141,7 +141,7 @@ class MountResolutionEngine:
             band_after=band_after,
             band_changes=changes,
             failure_clamp_used=failure_clamp,
-            bridge_clamp_used=special_clamp,
+            floor_clamp_used=special_clamp,
             escape_threshold_reached=escape_threshold,
             exit_capable_action=action.escape_capable,
             exit_destination=exit_destination,
