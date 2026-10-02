@@ -63,24 +63,28 @@ class Band(str, Enum):
 class TopBehavior(str, Enum):
     PRESSURE = "PRESSURE"
     HOLD = "HOLD"
+    CONSERVE = "CONSERVE"
 
     @property
     def display(self) -> str:
         return {
             TopBehavior.PRESSURE: "Apply Pressure",
             TopBehavior.HOLD: "Hold Position",
+            TopBehavior.CONSERVE: "Conserve Energy",
         }[self]
 
 
 class BottomBehavior(str, Enum):
     ESCAPE = "ESCAPE"
     PROTECT = "PROTECT"
+    CONSERVE = "CONSERVE"
 
     @property
     def display(self) -> str:
         return {
             BottomBehavior.ESCAPE: "Work to Escape",
             BottomBehavior.PROTECT: "Protect / Survive",
+            BottomBehavior.CONSERVE: "Conserve Energy",
         }[self]
 
 
@@ -173,6 +177,9 @@ class RunHistory:
     stamina_requested_history: list[int] = field(default_factory=list)
     stamina_charged_history: list[int] = field(default_factory=list)
     stamina_shortfall_history: list[int] = field(default_factory=list)
+    stamina_funding_gap_history: list[int] = field(default_factory=list)
+    top_behavior_stamina_history: list[int] = field(default_factory=list)
+    bottom_behavior_stamina_history: list[int] = field(default_factory=list)
     top_initiation_count: int = 0
     bottom_initiation_count: int = 0
     clamp_count: int = 0
