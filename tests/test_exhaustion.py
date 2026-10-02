@@ -1,7 +1,7 @@
 import unittest
 
 from bjj_game.domain.action import Commitment
-from bjj_game.domain.model import Grade, Side
+from bjj_game.domain.model import BottomBehavior, Grade, Side, TopBehavior
 from bjj_game.domain.stamina import StaminaBand
 from bjj_game.engine.match import MountMatch
 from bjj_game.engine.stamina import (
@@ -59,6 +59,25 @@ class ExhaustionPolicyTests(unittest.TestCase):
         self.assertEqual(result.exhaustion_modifier, 0)
         self.assertEqual(result.base_resolution, result.resolution)
         self.assertIs(result.resolution.final_grade, Grade.SUCCESS)
+
+    def test_conserve_from_24_to_26_does_not_clear_exhaustion(self):
+        match = MountMatch(initial_clock=10, starting_axis=1.50, interval_seconds=5)
+        match.top.stamina.set_current(24)
+        match.set_behaviors(top=TopBehavior.CONSERVE, bottom=BottomBehavior.PROTECT)
+
+        advance = match.advance()
+        self.assertEqual(match.top.stamina.current, 26)
+        self.assertIs(match.top.stamina.band, StaminaBand.EXHAUSTED)
+        self.assertEqual(advance.top_stamina.recovered, 2)
+
+        result = match.attempt(
+            action_id=TOP_HIGH_MOUNT_CLIMB,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=Commitment.LOW,
+        )
+        self.assertEqual(result.exhaustion_modifier, -1)
+        self.assertIs(result.base_resolution.final_grade, Grade.SUCCESS)
+        self.assertIs(result.resolution.final_grade, Grade.CONTESTED)
 
     def test_action_that_enters_exhausted_is_not_retroactively_penalized(self):
         match = MountMatch(starting_axis=1.50)
