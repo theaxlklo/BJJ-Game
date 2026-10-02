@@ -149,7 +149,6 @@ class MountMatch:
             self.enable_v03_submissions
             and acting_side is Side.TOP
             and self.submission_state.active
-            and self.band in {Band.STRONG, Band.LOCKED}
         ):
             legal.append(TOP_AMERICANA_SUBMISSION_FINISH)
         return tuple(legal)
@@ -242,22 +241,6 @@ class MountMatch:
                 f"{action_id}:{change.before.display}->{change.after.display}"
             )
 
-    def _break_submission_if_not_dominant(self, *, reason: str) -> None:
-        if (
-            not self.enable_v03_submissions
-            or not self.submission_state.active
-            or self.position.broken
-            or self.band in {Band.STRONG, Band.LOCKED}
-        ):
-            return
-        before = self.submission_state.stage
-        change = self.submission_state.break_track()
-        if before is None or change.after is not None:
-            raise AssertionError("dominance-loss break must clear an active submission")
-        self.history.submission_change_history.append(
-            f"{before.value}->None:{reason}"
-        )
-
     def set_behaviors(
         self,
         *,
@@ -319,7 +302,6 @@ class MountMatch:
         """
         top_behavior, bottom_behavior = self._behaviors(None, None)
         drift = self.drift()
-        self._break_submission_if_not_dominant(reason="lost-dominance")
         duration = drift.start_clock - drift.end_clock
 
         top_stamina = self.behavior_stamina_policy.apply(
@@ -709,7 +691,6 @@ class MountMatch:
             target_was_ready=target_was_ready,
             stage_before=submission_stage_before,
         )
-        self._break_submission_if_not_dominant(reason="lost-dominance")
         return AttemptResult(
             attempt=attempt,
             requested_cost=requested_cost,

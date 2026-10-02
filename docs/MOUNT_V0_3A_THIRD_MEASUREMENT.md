@@ -92,31 +92,20 @@ exhausted-recover:
 
 This remains observational only.
 
-## Remaining structural inconsistency
+## Design correction after BJJ review
 
-v0.3a already requires Strong or Locked Mount to **enter** the Americana submission track.
+The measured 55% Gate-B failure above remains valid evidence.
 
-However, once Threat is active, the current legality rule keeps the Americana submission action legal even if normal match evolution drops Mount to Stable or Loose. The checker also treats active submission states in those lower bands as reachable.
+The proposed follow-up rule that an Americana track should automatically break when Mount falls below Strong/Locked is **rejected**. Americana is not Mount-exclusive and can remain mechanically relevant through transitions and from other positions. Encoding "lost dominant Mount = lost Americana" would make the current Mount slice easier to balance by asserting a false general BJJ rule.
 
-That means the submission can retain continuity after the dominant Mount condition that justified entry has been lost.
+Therefore this branch returns to the last mechanics state before that continuity experiment:
 
-## Pre-implementation continuity rule
+```text
+any defended submission stage -> track breaks
+defended stage -> axis -1.00
+submission may otherwise continue according to its own control state
+```
 
-Before another mechanics run, freeze this rule:
+Gate B remains honestly OPEN at 55/100 until a BJJ-valid submission/defense model resolves it. No threshold, response weight, raw matchup grade, stamina value, or commitment cost is changed to chase the remaining five points.
 
-> An active Americana submission track requires dominant Mount continuity. If Mount leaves Strong/Locked and becomes Stable/Loose before the next submission resolution, the active Americana track breaks.
-
-Consequences:
-
-- Strong/Locked remain the only bands with an active Threat/Control/Finish state.
-- Losing positional dominance gives Bottom genuine submission relief without inventing new response weights or grades.
-- The submission can be attempted again only by rebuilding the existing Americana setup and re-entering from Strong/Locked.
-- Any defended stage still breaks the track and applies the existing -1.00 axis penalty.
-- Gate B remains `0% < Tap < 50%`.
-- Gate C remains "best fresh defense stops every **reachable** stage state."
-- Gate D remains unchanged.
-- Gate 5 remains observational with its unchanged >1.000 threshold.
-
-No raw matchup grade, response weight, stamina value, commitment cost, or gate threshold changes.
-
-If this structural continuity rule still leaves Gate B OPEN, v0.3a should remain OPEN for design review rather than continue tuning numbers to chase the threshold.
+The next design step should model submission control independently from position ownership so that future Americana continuations can survive legitimate transitions without pretending that every positional loss preserves the same control either.
