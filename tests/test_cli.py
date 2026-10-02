@@ -366,7 +366,8 @@ class CliTests(unittest.TestCase):
         )
         self.assertIn("BLIND MIX BAND METRICS", text)
         self.assertIn(
-            "BLIND MIX: Bottom / Strong / Elbow-Knee Escape: attacker-axis -0.667; escape 0.0%",
+            "BLIND MIX: Bottom / Strong / Elbow-Knee Escape: raw attacker-axis "
+            "-0.667; realized-axis -0.667..-0.270; escape 0.0%",
             text,
         )
 
