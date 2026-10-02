@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from .model import ResolutionResult, Side
-from .stamina import StaminaSpend
+from .stamina import StaminaBand, StaminaSpend
 
 
 class Commitment(str, Enum):
@@ -45,4 +45,7 @@ class AttemptResult:
     effective_cost: int
     funding_gap: int
     stamina: StaminaSpend
+    stamina_band_before_action: StaminaBand
+    exhaustion_modifier: int
+    base_resolution: ResolutionResult
     resolution: ResolutionResult
