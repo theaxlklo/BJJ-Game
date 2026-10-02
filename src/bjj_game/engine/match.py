@@ -121,6 +121,29 @@ class MountMatch:
     def setup_tier(self, action_id: str) -> SetupTier:
         return self.setup_state.tier(action_id)
 
+    def legal_action_ids(self, side: Side | None = None) -> tuple[str, ...]:
+        acting_side = self.initiator if side is None else side
+        all_actions = self.engine.catalog.actions_for(acting_side)
+        if not self.enable_v02_setup:
+            return tuple(action.id for action in all_actions)
+
+        legal: list[str] = []
+        for action in all_actions:
+            setup_rule = self.setup_policy.rule_for_target(action.id)
+            if setup_rule is None or self.setup_state.is_ready(action.id):
+                legal.append(action.id)
+        return tuple(legal)
+
+    def _validate_action_legality(self, action_id: str) -> None:
+        if not self.enable_v02_setup:
+            return
+        if action_id not in self.legal_action_ids():
+            raise ValueError(
+                f"Action {action_id!r} is not legal at setup tier "
+                f"{self.setup_tier(action_id).display}; "
+                f"legal actions: {self.legal_action_ids()}"
+            )
+
     def legal_response_ids(self, action_id: str) -> tuple[str, ...]:
         action = self.engine.catalog.get(action_id)
         if action.side is not self.initiator:
@@ -128,6 +151,7 @@ class MountMatch:
                 f"{action.canonical_name} belongs to {action.side.value}, "
                 f"but current initiator is {self.initiator.value}"
             )
+        self._validate_action_legality(action_id)
         all_ids = tuple(
             response.id
             for response in self.engine.catalog.responses_for(action.side.opponent)
@@ -382,6 +406,7 @@ class MountMatch:
         """
         top_behavior, bottom_behavior = self._behaviors(None, None)
         initiator = self.initiator
+        self._validate_action_legality(action_id)
         self._validate_response_legality(action_id, response_id)
         target_was_ready = (
             self.enable_v02_setup and self.setup_state.is_ready(action_id)
