@@ -1,7 +1,7 @@
 import unittest
 
 from bjj_game.domain.action import Commitment
-from bjj_game.domain.model import Side
+from bjj_game.domain.model import BottomBehavior, Grade, Side
 from bjj_game.domain.setup import SetupState, SetupTier
 from bjj_game.engine.match import MountMatch
 from bjj_game.positions.mount.catalog import (
@@ -113,27 +113,49 @@ class MountSetupReadyTests(unittest.TestCase):
         match.initiator = Side.BOTTOM
 
         self.assertEqual(
-            match.legal_response_ids(BOTTOM_TRAP_AND_ROLL_ESCAPE),
-            (TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,),
+            set(match.legal_response_ids(BOTTOM_TRAP_AND_ROLL_ESCAPE)),
+            {
+                TOP_RESPONSE_WIDE_MOUNT_BASE,
+                TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,
+            },
         )
 
-        with self.assertRaises(ValueError):
-            match.attempt(
-                action_id=BOTTOM_TRAP_AND_ROLL_ESCAPE,
-                response_id=TOP_RESPONSE_WIDE_MOUNT_BASE,
-                commitment=Commitment.MEDIUM,
-            )
-
-        match.attempt(
+        stalled = match.attempt(
             action_id=BOTTOM_TRAP_AND_ROLL_ESCAPE,
-            response_id=TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,
+            response_id=TOP_RESPONSE_WIDE_MOUNT_BASE,
             commitment=Commitment.MEDIUM,
         )
+        self.assertIs(stalled.resolution.final_grade, Grade.CONTESTED)
         self.assertIs(
             match.setup_tier(BOTTOM_TRAP_AND_ROLL_ESCAPE),
             SetupTier.NONE,
         )
         self.assertEqual(len(match.history.setup_consumption_history), 1)
+
+    def test_ready_stalemate_response_is_post_positional_but_pre_exhaustion(self):
+        match = MountMatch(starting_axis=3.50, enable_v02_setup=True)
+        match.setup_state.advance(BOTTOM_TRAP_AND_ROLL_ESCAPE)
+        match.setup_state.advance(BOTTOM_TRAP_AND_ROLL_ESCAPE)
+        match.initiator = Side.BOTTOM
+
+        fresh = match.attempt(
+            action_id=BOTTOM_TRAP_AND_ROLL_ESCAPE,
+            response_id=TOP_RESPONSE_WIDE_MOUNT_BASE,
+            commitment=Commitment.MEDIUM,
+        )
+        self.assertIs(fresh.resolution.final_grade, Grade.CONTESTED)
+
+        exhausted = MountMatch(starting_axis=3.50, enable_v02_setup=True)
+        exhausted.setup_state.advance(BOTTOM_TRAP_AND_ROLL_ESCAPE)
+        exhausted.setup_state.advance(BOTTOM_TRAP_AND_ROLL_ESCAPE)
+        exhausted.initiator = Side.BOTTOM
+        exhausted.bottom.stamina.set_current(25)
+        tired = exhausted.attempt(
+            action_id=BOTTOM_TRAP_AND_ROLL_ESCAPE,
+            response_id=TOP_RESPONSE_WIDE_MOUNT_BASE,
+            commitment=Commitment.MEDIUM,
+        )
+        self.assertIs(tired.resolution.final_grade, Grade.FAILURE)
 
     def test_high_mount_successes_build_americana_ready(self):
         match = MountMatch(starting_axis=1.50, enable_v02_setup=True)
@@ -165,6 +187,22 @@ class MountSetupReadyTests(unittest.TestCase):
                 response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
                 commitment=Commitment.MEDIUM,
             )
+
+    def test_ready_americana_turn_in_is_stalemate_across_position_modifiers(self):
+        match = MountMatch(starting_axis=0.50, enable_v02_setup=True)
+        match.set_behaviors(
+            bottom=BottomBehavior.PROTECT,
+        )
+        match.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        match.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        match.initiator = Side.TOP
+
+        result = match.attempt(
+            action_id=TOP_AMERICANA_ARM_ISOLATION,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.MEDIUM,
+        )
+        self.assertIs(result.resolution.final_grade, Grade.CONTESTED)
 
     def test_setup_disabled_does_not_build_progress(self):
         match = MountMatch(starting_axis=1.50)
