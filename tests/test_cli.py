@@ -99,19 +99,24 @@ class CliTests(unittest.TestCase):
             self.assertIn("Unknown Mount v0 name: 'bogus'", saved)
 
 
-    def test_primary_cli_prompts_commitment_and_charges_stamina(self):
+    def test_primary_cli_defaults_medium_without_commitment_prompt_and_charges_stamina(self):
         output = io.StringIO()
-        inputs = ["1", "1", "1", "2", "2", KeyboardInterrupt]
+        inputs = ["1", "1", "1", "2", KeyboardInterrupt]
         with patch("builtins.input", side_effect=inputs), redirect_stdout(output):
             code = bjj_main(["--clock", "0:10", "--interval", "5"])
         self.assertEqual(code, 130)
         text = output.getvalue()
-        self.assertIn("MOUNT v0.1b — HOT-SEAT PROTOTYPE", text)
-        self.assertIn("Commitment", text)
+        self.assertIn("MOUNT v0.1c — HOT-SEAT PROTOTYPE", text)
+        self.assertIn("Standard commitment: MEDIUM", text)
+        self.assertNotIn("\nCommitment\n", text)
+        self.assertIn("Requested commitment: MEDIUM", text)
+        self.assertIn("Effective commitment: MEDIUM", text)
         self.assertIn("Requested cost: 7", text)
-        self.assertIn("Stamina after: 93", text)
-        self.assertIn("Commitment history: ['MEDIUM']", text)
-        self.assertIn("Top stamina: 93/100 (Fresh)", text)
+        self.assertIn("Top: 100 → 99 (-1)", text)
+        self.assertIn("Stamina after: 92", text)
+        self.assertIn("Requested commitment history: ['MEDIUM']", text)
+        self.assertIn("Effective commitment history: ['MEDIUM']", text)
+        self.assertIn("Top stamina: 92/100 (Fresh)", text)
 
     def test_legacy_cli_has_no_commitment_prompt_or_stamina_cost(self):
         output = io.StringIO()
@@ -122,7 +127,9 @@ class CliTests(unittest.TestCase):
         text = output.getvalue()
         self.assertIn("MOUNT v0 — HOT-SEAT PROTOTYPE", text)
         self.assertNotIn("\nCommitment\n", text)
+        self.assertNotIn("CONSERVE", text)
         self.assertNotIn("Requested cost:", text)
+        self.assertNotIn("BEHAVIOR STAMINA", text)
         self.assertIn("Top stamina: 100/100 (Fresh)", text)
 
 
