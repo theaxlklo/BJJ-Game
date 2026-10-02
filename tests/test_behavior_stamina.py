@@ -3,6 +3,7 @@ import unittest
 from bjj_game.domain.model import Band, BottomBehavior, Side, TopBehavior
 from bjj_game.engine.match import MountMatch
 from bjj_game.engine.mount_engine import MOUNT_ENGINE
+from bjj_game.interfaces.formatting import format_advance_result
 from bjj_game.positions.mount.catalog import (
     BOTTOM_BRIDGE,
     BOTTOM_RESPONSE_FOREARM_FRAME,
@@ -74,6 +75,9 @@ class BehaviorStaminaTests(unittest.TestCase):
         self.assertEqual(second.top_stamina.remainder_before, -4)
         self.assertEqual(second.top_stamina.remainder_after, 4)
         self.assertEqual(match.top.stamina.current, 50)
+
+        rendered = format_advance_result(second, "CONSERVE", "PROTECT")
+        self.assertIn("carry=-4→+4/5", rendered)
 
     def test_legacy_drift_does_not_apply_behavior_stamina(self):
         match = MountMatch(initial_clock=10, starting_axis=1.50, interval_seconds=5)
