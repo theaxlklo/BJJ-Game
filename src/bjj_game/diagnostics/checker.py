@@ -1065,12 +1065,7 @@ def _v03_stage_signature(stage: SubmissionStage, result) -> tuple:
         else:
             after_stage = SubmissionStage.FINISH
     else:
-        if stage is SubmissionStage.THREAT:
-            after_stage = None
-        elif stage is SubmissionStage.CONTROL:
-            after_stage = SubmissionStage.THREAT
-        else:
-            after_stage = SubmissionStage.CONTROL
+        after_stage = None
     return (
         advanced,
         tapped,
