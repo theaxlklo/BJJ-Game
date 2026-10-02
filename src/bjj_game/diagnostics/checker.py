@@ -754,12 +754,9 @@ def measure_v02_definition_of_done(
     )
     submission_finish_present = _submission_finish_present()
     v03b_top_stall = _v03b_top_stall_probe()
-    v03b_stalling_resolves_lock = (
-        v03b_top_stall.warnings == 1
-        and v03b_top_stall.penalties >= 1
-        and v03b_top_stall.position_resets >= 1
-        and v03b_top_stall.final_band is not Band.LOCKED
-        and not v03b_top_stall.locked_timeout
+    v03b_top_stall_sweep = _v03b_top_stall_sweep()
+    v03b_stalling_resolves_lock = _v03b_gate_a_sweep_passes(
+        v03b_top_stall_sweep
     )
 
     # Gate 4 stays pinned to the v0.2 batch that proved Bridge's setup role.
@@ -873,10 +870,15 @@ def measure_v02_definition_of_done(
             metric=(
                 f"legacy_locked_timeout={reset_locked_timeout}; "
                 f"submission_finish_present={submission_finish_present}; "
-                f"v03b_warnings={v03b_top_stall.warnings}; "
-                f"v03b_penalties={v03b_top_stall.penalties}; "
-                f"v03b_position_resets={v03b_top_stall.position_resets}; "
-                f"v03b_final_band={v03b_top_stall.final_band.value}"
+                f"v03b_sweep_cases={len(v03b_top_stall_sweep)}; "
+                f"v03b_sweep_failing="
+                f"{sum(not _v03b_gate_a_case_passes(item) for item in v03b_top_stall_sweep)}; "
+                f"v03b_max_locked_share="
+                f"{max(item.locked_share for item in v03b_top_stall_sweep):.3f}; "
+                f"v03b_max_locked_dwell="
+                f"{max(item.longest_locked_dwell_seconds for item in v03b_top_stall_sweep)}s; "
+                f"v03b_locked_timeout_cases="
+                f"{sum(item.locked_timeout for item in v03b_top_stall_sweep)}"
             ),
             evidence=(
                 reset_probe
@@ -886,9 +888,9 @@ def measure_v02_definition_of_done(
                     "would punish a state with no legal way to advance"
                     if reset_locked_timeout and not submission_finish_present
                     else (
-                        "; v0.3b one-sided ownership probe runs through timeout and "
-                        "reaches persistent Warning, one-band penalty, then "
-                        "Position Reset escalation, preventing a Locked timeout"
+                        "; v0.3b fixed interval/length sweep shows deliberate "
+                        "stalling cannot keep Locked as the steady state; "
+                        "timeout band is no longer the gate criterion"
                         if v03b_stalling_resolves_lock
                         else "; v0.3b stalling evidence has not resolved the lock"
                     )
@@ -1675,8 +1677,16 @@ def render_v03a_hold_cost_status() -> str:
     )
 
 
+V03B_GATE_A_INTERVALS = (5, 7)
+V03B_GATE_A_MATCH_LENGTHS = tuple(range(240, 301, 5))
+V03B_GATE_A_LOCKED_SHARE_LIMIT = 0.50
+V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS = 20
+
+
 @dataclass(frozen=True, slots=True)
 class V03BTopStallEvidence:
+    interval_seconds: int
+    match_length_seconds: int
     warnings: int
     penalties: int
     position_resets: int
@@ -1685,6 +1695,25 @@ class V03BTopStallEvidence:
     locked_timeout: bool
     decision_windows: int
     locked_windows: int
+    longest_locked_dwell_seconds: int
+
+    @property
+    def locked_share(self) -> float:
+        return (
+            self.locked_windows / self.decision_windows
+            if self.decision_windows
+            else 0.0
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class V03BStallActiveBottomEvidence:
+    matches: int
+    timeouts: int
+    escapes: int
+    warnings: int
+    penalties: int
+    position_resets: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -1731,13 +1760,18 @@ class V03BGateMeasurement:
         )
 
 
-def _v03b_match(*, axis: float):
+def _v03b_match(
+    *,
+    axis: float,
+    initial_clock: int = 300,
+    interval_seconds: int = 5,
+):
     from ..engine.match import MountMatch
 
     match = MountMatch(
-        initial_clock=300,
+        initial_clock=initial_clock,
         starting_axis=axis,
-        interval_seconds=5,
+        interval_seconds=interval_seconds,
         enable_v02_setup=True,
         enable_v03_submissions=True,
         enable_v03b_stalling=True,
@@ -1749,22 +1783,42 @@ def _v03b_match(*, axis: float):
     return match
 
 
-@lru_cache(maxsize=1)
-def _v03b_top_stall_probe() -> V03BTopStallEvidence:
-    """Run deliberate Top stalling through the full match clock.
-
-    Top keeps its normal default-interval initiation cadence (5s, 15s, 25s,
-    ...). Bottom's intervening initiation windows are suppressed so no Bottom
-    action/response can reset Top's advancement clock and confound ownership.
-    """
-    match = _v03b_match(axis=4.00)
+def _v03b_top_stall_case(
+    *,
+    match_length_seconds: int,
+    interval_seconds: int,
+) -> V03BTopStallEvidence:
+    """Measure deliberate Top stalling without opponent-engagement confounding."""
+    match = _v03b_match(
+        axis=4.00,
+        initial_clock=match_length_seconds,
+        interval_seconds=interval_seconds,
+    )
     match.submission_state.stage = SubmissionStage.THREAT
 
     decision_windows = 0
     locked_windows = 0
+    current_locked_dwell = 0
+    longest_locked_dwell = 0
 
     while not match.ended:
+        band_before_advance = match.band
+        clock_before_advance = match.clock_seconds
         match.advance()
+        elapsed = clock_before_advance - match.clock_seconds
+
+        # The visible band is persisted between engine events. If the match
+        # entered this interval Locked, the whole elapsed interval belongs to
+        # the uninterrupted Locked dwell until an event changes the band.
+        if band_before_advance is Band.LOCKED:
+            current_locked_dwell += elapsed
+            longest_locked_dwell = max(
+                longest_locked_dwell,
+                current_locked_dwell,
+            )
+        else:
+            current_locked_dwell = 0
+
         if match.ended:
             break
 
@@ -1780,8 +1834,12 @@ def _v03b_top_stall_probe() -> V03BTopStallEvidence:
             continue
 
         match.reset_window()
+        if match.band is not Band.LOCKED:
+            current_locked_dwell = 0
 
     return V03BTopStallEvidence(
+        interval_seconds=interval_seconds,
+        match_length_seconds=match_length_seconds,
         warnings=len(match.history.stalling_warning_history),
         penalties=len(match.history.stalling_penalty_history),
         position_resets=len(match.history.stalling_position_reset_history),
@@ -1793,7 +1851,48 @@ def _v03b_top_stall_probe() -> V03BTopStallEvidence:
         ),
         decision_windows=decision_windows,
         locked_windows=locked_windows,
+        longest_locked_dwell_seconds=longest_locked_dwell,
     )
+
+
+@lru_cache(maxsize=1)
+def _v03b_top_stall_probe() -> V03BTopStallEvidence:
+    """Historical/default 5:00, 5-second case retained for diagnostics."""
+    return _v03b_top_stall_case(
+        match_length_seconds=300,
+        interval_seconds=5,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_top_stall_sweep() -> tuple[V03BTopStallEvidence, ...]:
+    return tuple(
+        _v03b_top_stall_case(
+            match_length_seconds=match_length,
+            interval_seconds=interval,
+        )
+        for interval in V03B_GATE_A_INTERVALS
+        for match_length in V03B_GATE_A_MATCH_LENGTHS
+    )
+
+
+def _v03b_gate_a_case_passes(item: V03BTopStallEvidence) -> bool:
+    return (
+        item.warnings >= 1
+        and item.penalties >= 1
+        and item.position_resets >= 1
+        and item.locked_share < V03B_GATE_A_LOCKED_SHARE_LIMIT
+        and item.longest_locked_dwell_seconds
+        < V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS
+    )
+
+
+def _v03b_gate_a_sweep_passes(
+    sweep: tuple[V03BTopStallEvidence, ...],
+) -> bool:
+    return len(sweep) == (
+        len(V03B_GATE_A_INTERVALS) * len(V03B_GATE_A_MATCH_LENGTHS)
+    ) and all(_v03b_gate_a_case_passes(item) for item in sweep)
 
 
 @lru_cache(maxsize=1)
@@ -1889,6 +1988,7 @@ def _v03b_boundary_probe() -> V03BBoundaryEvidence:
 
 def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
     top_stall = _v03b_top_stall_probe()
+    top_stall_sweep = _v03b_top_stall_sweep()
     stalemate = _v03b_stalemated_attacker_probe()
     symmetry = _v03b_symmetry_probe()
     boundary = _v03b_boundary_probe()
@@ -1901,12 +2001,19 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
         if gate.letter == "B"
     )
 
-    gate_a_pass = (
-        top_stall.warnings == 1
-        and top_stall.penalties >= 1
-        and top_stall.position_resets >= 1
-        and top_stall.final_band is not Band.LOCKED
-        and not top_stall.locked_timeout
+    gate_a_pass = _v03b_gate_a_sweep_passes(top_stall_sweep)
+    gate_a_max_locked_share = max(
+        item.locked_share for item in top_stall_sweep
+    )
+    gate_a_max_locked_dwell = max(
+        item.longest_locked_dwell_seconds for item in top_stall_sweep
+    )
+    gate_a_locked_endings = sum(
+        item.locked_timeout for item in top_stall_sweep
+    )
+    gate_a_failing_cases = sum(
+        not _v03b_gate_a_case_passes(item)
+        for item in top_stall_sweep
     )
     gate_b_pass = (
         stalemate.attempts > 0
@@ -1941,17 +2048,23 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
             name="one-sided RESET lock is penalized",
             status=V02GateStatus.PASS if gate_a_pass else V02GateStatus.OPEN,
             metric=(
-                f"warnings={top_stall.warnings}; penalties={top_stall.penalties}; "
-                f"Position Resets={top_stall.position_resets}; "
-                f"final_axis={top_stall.final_axis:+.2f}; "
-                f"final_band={top_stall.final_band.value}; "
-                f"locked_timeout={top_stall.locked_timeout}; "
-                f"Locked windows={top_stall.locked_windows}/{top_stall.decision_windows}"
+                f"sweep_cases={len(top_stall_sweep)}; "
+                f"failing_cases={gate_a_failing_cases}; "
+                f"max_Locked_share={gate_a_max_locked_share:.3f}"
+                f"<{V03B_GATE_A_LOCKED_SHARE_LIMIT:.2f}; "
+                f"max_Locked_dwell={gate_a_max_locked_dwell}s"
+                f"<{V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS}s; "
+                f"Locked_timeout_cases={gate_a_locked_endings}/{len(top_stall_sweep)}; "
+                f"default_5m_5s=warnings:{top_stall.warnings},"
+                f"penalties:{top_stall.penalties},"
+                f"resets:{top_stall.position_resets},"
+                f"Locked:{top_stall.locked_windows}/{top_stall.decision_windows}"
             ),
             evidence=(
-                "Top repeatedly RESETs through a real active-submission route for "
-                "the full match; PASS requires Warning -> one-band penalty -> "
-                "Position Reset escalation to prevent a Locked timeout"
+                "fixed 26-case interval/length sweep measures whether Locked is "
+                "a steady state: every case must keep Locked below half of "
+                "decision windows and below one full 20s uninterrupted dwell; "
+                "final timeout band is diagnostic only"
             ),
         ),
         V03BGateMeasurement(
@@ -2140,6 +2253,102 @@ def render_v03b_normal_play_guard() -> str:
         f"{informed.top_stalling_position_reset_count}/"
         f"{informed.bottom_stalling_position_reset_count}. "
         "Executable guard; stronger stalling escalation must not punish engaged standard play."
+    )
+
+
+
+@lru_cache(maxsize=1)
+def _v03b_stall_vs_active_bottom_probe() -> V03BStallActiveBottomEvidence:
+    from ..interfaces.batch import EscapeFirstInitiatorPolicy
+    from ..interfaces.blind import RandomBlindResponder
+
+    matches = 100
+    timeouts = 0
+    escapes = 0
+    warnings = 0
+    penalties = 0
+    position_resets = 0
+
+    for match_index in range(matches):
+        match = _v03b_match(
+            axis=1.50,
+            initial_clock=300,
+            interval_seconds=5,
+        )
+        match.top.stamina.set_current(100)
+        match.bottom.stamina.set_current(100)
+        match.set_behaviors(
+            top=TopBehavior.PRESSURE,
+            bottom=BottomBehavior.ESCAPE,
+        )
+        policy = EscapeFirstInitiatorPolicy()
+        responder = RandomBlindResponder(42 + match_index)
+
+        while not match.ended:
+            free_window = match.consume_free_initiative_window()
+            if free_window is None:
+                match.advance()
+                if match.ended:
+                    break
+
+            side = match.initiator
+            if side is Side.TOP:
+                reset = match.reset_window()
+                if reset.stalling_consequence == "WARNING":
+                    warnings += 1
+                elif reset.stalling_consequence == "PENALTY":
+                    penalties += 1
+                elif reset.stalling_consequence == "POSITION_RESET":
+                    position_resets += 1
+                continue
+
+            decision = policy.choose(match)
+            if decision.action_id is None:
+                match.reset_window()
+                continue
+
+            hidden = responder.choose(
+                Side.TOP,
+                allowed_response_ids=match.legal_response_ids(
+                    decision.action_id
+                ),
+                fallback_response_id=policy._ready_fallback_response_id(
+                    match,
+                    decision.action_id,
+                ),
+            )
+            match.attempt(
+                action_id=decision.action_id,
+                response_id=hidden.response_id,
+                commitment=Commitment.MEDIUM,
+            )
+
+        if match.exit_destination is not None:
+            escapes += 1
+        elif match.exit_reason == "TIMEOUT — Mount retained":
+            timeouts += 1
+
+    return V03BStallActiveBottomEvidence(
+        matches=matches,
+        timeouts=timeouts,
+        escapes=escapes,
+        warnings=warnings,
+        penalties=penalties,
+        position_resets=position_resets,
+    )
+
+
+def render_v03b_stall_vs_active_bottom_observation() -> str:
+    evidence = _v03b_stall_vs_active_bottom_probe()
+    return (
+        "V0.3b STALL-vs-ACTIVE-BOTTOM OBSERVATION: "
+        f"matches={evidence.matches}; "
+        f"timeouts={evidence.timeouts}; escapes={evidence.escapes}; "
+        f"warnings={evidence.warnings}; penalties={evidence.penalties}; "
+        f"Position Resets={evidence.position_resets}. "
+        "Observational only: v0 does not yet define whether a Mount-retained "
+        "timeout is a win, draw, or loss; scoring/points consequences belong "
+        "to the later ruleset layer."
     )
 
 
