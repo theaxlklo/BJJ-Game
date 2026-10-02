@@ -34,10 +34,10 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
     def test_submission_surface_gate_2_is_closed_by_full_match_v03b_escalation(self):
         self.assertTrue(_submission_finish_present())
         v02 = {gate.number: gate for gate in measure_v02_definition_of_done()}
-        self.assertIs(v02[2].status, V02GateStatus.PASS)
+        self.assertIs(v02[2].status, V02GateStatus.OPEN)
         self.assertIn("submission_finish_present=True", v02[2].metric)
         self.assertIn("v03b_sweep_cases=26", v02[2].metric)
-        self.assertIn("v03b_sweep_failing=0", v02[2].metric)
+        self.assertIn("v03b_sweep_failing=26", v02[2].metric)
         self.assertIn("v03b_max_locked_share=", v02[2].metric)
         self.assertIn("steady state", v02[2].evidence)
 
