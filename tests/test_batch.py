@@ -181,6 +181,30 @@ class EscapeFirstInitiatorPolicyTests(unittest.TestCase):
             "mount.bottom_response.turn_in_recovery",
         )
 
+    def test_v03b_batch_mode_is_deterministic_and_keeps_gate_b_flags_external(self):
+        kwargs = dict(
+            matches=8,
+            base_seed=42,
+            top_behavior=TopBehavior.PRESSURE,
+            bottom_behavior=BottomBehavior.ESCAPE,
+            commitment=Commitment.MEDIUM,
+            initial_clock=120,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v03b_stalling=True,
+        )
+        first = run_escape_first_batch(**kwargs)
+        second = run_escape_first_batch(**kwargs)
+
+        self.assertEqual(first, second)
+        self.assertGreaterEqual(first.top_stalling_warning_count, 0)
+        self.assertGreaterEqual(first.bottom_stalling_warning_count, 0)
+        self.assertGreaterEqual(first.free_initiative_window_count, 0)
+
     def test_informed_batch_mode_is_deterministic(self):
         kwargs = dict(
             matches=8,
