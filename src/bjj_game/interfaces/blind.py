@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from ..domain.model import Band, BottomBehavior, Side, TechniqueEntity, TopBehavior
+from ..domain.model import Band, BottomBehavior, ExitDestination, Side, TechniqueEntity, TopBehavior
 from ..engine.mount_engine import MOUNT_ENGINE
 from ..positions.mount.rules import MOUNT_RULES
 from ..positions.mount.catalog import (
@@ -324,3 +324,39 @@ def render_random_mix_band_metrics(*, action_cost: int = 7) -> tuple[str, ...]:
                 f"negative-vs-RESET-axis={below_reset}"
             )
     return tuple(lines)
+
+
+def random_mix_reachable_exits() -> frozenset[ExitDestination]:
+    """Exit destinations reachable against positive-weight responses."""
+    reachable: set[ExitDestination] = set()
+    for action in actions_for(Side.BOTTOM):
+        for band in Band:
+            for axis in _axis_grid():
+                if not MOUNT_RULES.axis_can_have_band(axis, band):
+                    continue
+                for response_id, weight in RandomBlindResponder.POLICY[Side.TOP]:
+                    if weight <= 0:
+                        continue
+                    result = MOUNT_ENGINE.resolve_action(
+                        axis=axis,
+                        band=band,
+                        initiator=Side.BOTTOM,
+                        action_id=action.id,
+                        response_id=response_id,
+                        top_behavior=TopBehavior.PRESSURE,
+                        bottom_behavior=BottomBehavior.ESCAPE,
+                    )
+                    if result.exit_destination is not None:
+                        reachable.add(result.exit_destination)
+    return frozenset(reachable)
+
+
+def render_random_mix_exit_limit() -> str:
+    reachable = random_mix_reachable_exits()
+    missing = [destination.value for destination in ExitDestination if destination not in reachable]
+    if not missing:
+        return "BATCH RESPONSE MIX LIMIT: all current Exit Map destinations are reachable."
+    return (
+        "BATCH RESPONSE MIX LIMIT: unreachable under the fixed positive-weight "
+        "response mix: " + ", ".join(missing)
+    )
