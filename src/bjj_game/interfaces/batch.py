@@ -9,19 +9,35 @@ from ..domain.model import BottomBehavior, ExitDestination, Side, TopBehavior
 from ..domain.stamina import StaminaBand
 from ..engine.match import MountMatch
 from ..positions.mount.catalog import ENTITY_BY_ID, actions_for
-from .blind import RandomBlindResponder, expected_realized_attacker_axis_delta
+from .blind import (
+    RandomBlindResponder,
+    exact_escape_probability,
+    expected_raw_attacker_axis_delta,
+    expected_realized_attacker_axis_delta,
+)
 
 
 @dataclass(frozen=True, slots=True)
-class GreedyDecision:
+class BatchDecision:
     action_id: str | None
+    reason: str
+    escape_probability: float
+    expected_raw_axis: float
     expected_realized_axis: float
 
 
-class GreedyInitiatorPolicy:
-    """Fixed batch policy: attack only when expected realized axis gain is positive."""
+class EscapeFirstInitiatorPolicy:
+    """Lexicographic batch policy with no terminal-value conversion.
 
-    def choose(self, match: MountMatch) -> GreedyDecision:
+    1. If any action can escape now, choose the highest escape probability.
+    2. Otherwise, attack for position only when BOTH raw and realized expected
+       attacker-axis movement are positive.
+    3. Otherwise RESET.
+
+    Tie-breaks are realized axis, then raw axis, then catalog order.
+    """
+
+    def choose(self, match: MountMatch) -> BatchDecision:
         side = match.initiator
         top_behavior = match.top.behavior
         bottom_behavior = match.bottom.behavior
@@ -35,10 +51,9 @@ class GreedyInitiatorPolicy:
             match.exhaustion_policy.initiator_grade_modifier(stamina_band)
         )
 
-        best_id: str | None = None
-        best_value = float("-inf")
-        for action in actions_for(side):
-            value = expected_realized_attacker_axis_delta(
+        rows: list[tuple[str, float, float, float, int]] = []
+        for order, action in enumerate(actions_for(side)):
+            escape_probability = exact_escape_probability(
                 side=side,
                 action_id=action.id,
                 axis=match.axis,
@@ -47,13 +62,66 @@ class GreedyInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=exhaustion_modifier,
             )
-            if value > best_value:
-                best_id = action.id
-                best_value = value
+            raw_axis = expected_raw_attacker_axis_delta(
+                side=side,
+                action_id=action.id,
+                axis=match.axis,
+                band=match.band,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=exhaustion_modifier,
+            )
+            realized_axis = expected_realized_attacker_axis_delta(
+                side=side,
+                action_id=action.id,
+                axis=match.axis,
+                band=match.band,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=exhaustion_modifier,
+            )
+            rows.append(
+                (action.id, escape_probability, raw_axis, realized_axis, order)
+            )
 
-        if best_value <= 0:
-            return GreedyDecision(action_id=None, expected_realized_axis=best_value)
-        return GreedyDecision(action_id=best_id, expected_realized_axis=best_value)
+        escape_rows = [row for row in rows if row[1] > 0]
+        if escape_rows:
+            action_id, escape_probability, raw_axis, realized_axis, _ = max(
+                escape_rows,
+                key=lambda row: (row[1], row[3], row[2], -row[4]),
+            )
+            return BatchDecision(
+                action_id=action_id,
+                reason="escape",
+                escape_probability=escape_probability,
+                expected_raw_axis=raw_axis,
+                expected_realized_axis=realized_axis,
+            )
+
+        positional_rows = [
+            row for row in rows if row[2] > 0 and row[3] > 0
+        ]
+        if positional_rows:
+            action_id, escape_probability, raw_axis, realized_axis, _ = max(
+                positional_rows,
+                key=lambda row: (row[3], row[2], -row[4]),
+            )
+            return BatchDecision(
+                action_id=action_id,
+                reason="position",
+                escape_probability=escape_probability,
+                expected_raw_axis=raw_axis,
+                expected_realized_axis=realized_axis,
+            )
+
+        best = max(rows, key=lambda row: (row[3], row[2], -row[4]))
+        return BatchDecision(
+            action_id=None,
+            reason="reset",
+            escape_probability=0.0,
+            expected_raw_axis=best[2],
+            expected_realized_axis=best[3],
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +141,10 @@ class BatchSummary:
     bottom_reset_count: int
     top_action_counts: dict[str, int]
     bottom_action_counts: dict[str, int]
+    top_escape_priority_count: int
+    bottom_escape_priority_count: int
+    top_position_attack_count: int
+    bottom_position_attack_count: int
 
     def render(self) -> str:
         ordered_outcomes = [
@@ -87,7 +159,9 @@ class BatchSummary:
             f"Matches: {self.matches}",
             f"Base seed: {self.base_seed}",
             "Per-match seed: base_seed + zero-based match index",
-            "Initiator policy: greedy realized-axis (>0 attack, otherwise RESET)",
+            "Initiator policy: escape-first lexicographic",
+            "Escape rule: highest exact escape probability first",
+            "Position rule: require raw axis > 0 AND realized axis > 0",
             f"Top behavior: {self.top_behavior.value}",
             f"Bottom behavior: {self.bottom_behavior.value}",
             f"Commitment: {self.commitment.value}",
@@ -117,6 +191,10 @@ class BatchSummary:
             "DECISIONS",
             f"Top RESET count: {self.top_reset_count}",
             f"Bottom RESET count: {self.bottom_reset_count}",
+            f"Top escape-priority attacks: {self.top_escape_priority_count}",
+            f"Bottom escape-priority attacks: {self.bottom_escape_priority_count}",
+            f"Top position attacks: {self.top_position_attack_count}",
+            f"Bottom position attacks: {self.bottom_position_attack_count}",
             "Top actions: " + _render_counts(self.top_action_counts),
             "Bottom actions: " + _render_counts(self.bottom_action_counts),
         ]
@@ -129,7 +207,7 @@ def _render_counts(counts: dict[str, int]) -> str:
     return ", ".join(f"{name}={counts[name]}" for name in sorted(counts))
 
 
-def run_greedy_batch(
+def run_escape_first_batch(
     *,
     matches: int,
     base_seed: int,
@@ -145,7 +223,7 @@ def run_greedy_batch(
     if matches <= 0:
         raise ValueError("matches must be > 0")
 
-    policy = GreedyInitiatorPolicy()
+    policy = EscapeFirstInitiatorPolicy()
     outcomes: Counter[str] = Counter()
     top_final: list[int] = []
     bottom_final: list[int] = []
@@ -154,6 +232,10 @@ def run_greedy_batch(
     bottom_resets = 0
     top_actions: Counter[str] = Counter()
     bottom_actions: Counter[str] = Counter()
+    top_escape_priority = 0
+    bottom_escape_priority = 0
+    top_position_attacks = 0
+    bottom_position_attacks = 0
 
     for match_index in range(matches):
         match = MountMatch(
@@ -185,8 +267,16 @@ def run_greedy_batch(
             action = ENTITY_BY_ID[decision.action_id]
             if side is Side.TOP:
                 top_actions[action.short_name] += 1
+                if decision.reason == "escape":
+                    top_escape_priority += 1
+                else:
+                    top_position_attacks += 1
             else:
                 bottom_actions[action.short_name] += 1
+                if decision.reason == "escape":
+                    bottom_escape_priority += 1
+                else:
+                    bottom_position_attacks += 1
 
             match.attempt(
                 action_id=decision.action_id,
@@ -220,4 +310,16 @@ def run_greedy_batch(
         bottom_reset_count=bottom_resets,
         top_action_counts=dict(top_actions),
         bottom_action_counts=dict(bottom_actions),
+        top_escape_priority_count=top_escape_priority,
+        bottom_escape_priority_count=bottom_escape_priority,
+        top_position_attack_count=top_position_attacks,
+        bottom_position_attack_count=bottom_position_attacks,
     )
+
+
+def run_greedy_batch(**kwargs) -> BatchSummary:
+    """Compatibility alias for the pre-v0.1e batch function name.
+
+    The official batch policy is now escape-first lexicographic.
+    """
+    return run_escape_first_batch(**kwargs)
