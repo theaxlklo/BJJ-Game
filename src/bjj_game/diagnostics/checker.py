@@ -178,6 +178,40 @@ def render_reset_lock_probe() -> str:
         f"Bottom stamina {match.bottom.stamina.current}"
     )
 
+
+def render_v02_definition_of_done_baseline() -> tuple[str, ...]:
+    """Current v0.2 completion-gate baseline.
+
+    These lines are deliberately stable checker contracts. v0.2 work should
+    change individual gate status/evidence rather than deleting the gates.
+    """
+    reset_probe = render_reset_lock_probe()
+    reset_open = "TIMEOUT — Mount retained" in reset_probe and "band Locked" in reset_probe
+
+    return (
+        "V0.2 DOD GATE 1 [OPEN]: perfect-response lock — Ready-aware Top and Bottom "
+        "legal-response probes do not exist yet; current unrestricted lock remains PRESENT.",
+        (
+            "V0.2 DOD GATE 2 [OPEN]: RESET/stalling — standardized RESET lock still "
+            "reaches Locked timeout."
+            if reset_open
+            else
+            "V0.2 DOD GATE 2 [REVIEW]: RESET/stalling probe changed; evaluate against "
+            "the v0.2 completion condition."
+        ),
+        "V0.2 DOD GATE 3 [OPEN]: responder stamina — exhausted responders still defend "
+        "at full strength with no direct response cost/effect.",
+        "V0.2 DOD GATE 4 [OPEN]: Bridge setup role — no setup/Ready value exists yet; "
+        "current escape-first policy has no reason to select Bridge for future value.",
+        "V0.2 DOD GATE 5 [OPEN]: Top post-opening activity — no setup/submission continuation "
+        "exists yet to make Strong/Locked Top spend meaningfully after the opening.",
+        "V0.2 DOD GATE 6 [OPEN]: Exhausted Bottom escape reachability — current v0.1 "
+        "conditions can remove every positive-weight escape route; v0.2 must restore a "
+        "route or explicitly retain/document the lockout.",
+        "V0.2 DOD GATE 7 [OPEN]: commitment meaning — LOW/MEDIUM/HIGH still change cost "
+        "only; v0.2 must add an outcome-relevant effect or explicitly defer it again.",
+    )
+
 def run_checks() -> CheckReport:
     report = CheckReport()
 
