@@ -445,7 +445,9 @@ It includes current behavior, positional, exhaustion, floor, and cap effects. Es
 
 Batch output reports outcome frequencies, mean/median final stamina, mean final axis, RESET counts, and action counts by side.
 
-Open Guard is unreachable under the fixed batch response mix because Hand Post and Base has zero response weight. `bjj_game --check` derives and reports unreachable Exit Map destinations automatically rather than hiding that limitation.
+With a fresh responder, Open Guard remains unreachable under the fixed positive-weight response mix because Hand Post and Base has zero weight. Responder exhaustion changes that reachability: Wide Mount Base can be degraded enough for Elbow-Knee to reach Strong Success, so Open Guard can occur in exhausted-responder batch play.
+
+`bjj_game --check` reports fresh and Exhausted responder Exit Map reachability separately so this distinction remains visible.
 
 Fixed-behavior batches measure extreme conditions such as HOLD-vs-CONSERVE or HOLD-vs-PROTECT. They do not answer whether short bursts of CONSERVE are useful; adaptive human sessions are still required for that question.
 
