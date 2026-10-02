@@ -70,8 +70,8 @@ class EscapeFirstInitiatorPolicy:
     """Lexicographic batch policy with no terminal-value conversion.
 
     1. If any action can escape now, choose the highest escape probability.
-    2. Otherwise, if v0.2 setup is enabled, choose the setup builder with the
-       highest positive probability of advancing an unready target.
+    2. Otherwise, if v0.2 setup is enabled, choose a setup builder only when
+       the unready target would itself have positive tactical value if Ready.
     3. Otherwise, attack for position only when BOTH raw and realized expected
        attacker-axis movement are positive.
     4. Otherwise RESET.
@@ -392,6 +392,7 @@ class BatchSummary:
             "Per-match seed: base_seed + zero-based match index",
             "Initiator policy: escape-first lexicographic",
             "Escape rule: highest exact escape probability first",
+            "Setup rule: build only when the Ready target has positive tactical value",
             "Position rule: require raw axis > 0 AND realized axis > 0",
             f"Top baseline behavior: {self.top_behavior.value}",
             f"Top behavior policy: {self.top_behavior_mode.value}",
