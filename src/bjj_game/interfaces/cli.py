@@ -155,13 +155,38 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
 
             initiator = run.initiator
             action = _choose_entity(f"{initiator.value.upper()} INITIATES", initiator, EntityKind.ACTION)
+            commitment = _choose_commitment() if commitment_enabled else None
             responder = initiator.opponent
             response = _choose_entity(f"{responder.value.upper()} RESPONSE", responder, EntityKind.RESPONSE)
-            result = run.decide(
-                action_id=action.id,
-                response_id=response.id,
-            )
-            print("\n" + format_resolution(result, run.clock_seconds, top_behavior.value, bottom_behavior.value))
+            if commitment_enabled:
+                attempt_result = run.attempt(
+                    action_id=action.id,
+                    response_id=response.id,
+                    commitment=commitment,
+                )
+                print(
+                    "\n"
+                    + format_attempt_result(
+                        attempt_result,
+                        run.clock_seconds,
+                        top_behavior.value,
+                        bottom_behavior.value,
+                    )
+                )
+            else:
+                result = run.decide(
+                    action_id=action.id,
+                    response_id=response.id,
+                )
+                print(
+                    "\n"
+                    + format_resolution(
+                        result,
+                        run.clock_seconds,
+                        top_behavior.value,
+                        bottom_behavior.value,
+                    )
+                )
             if run.ended:
                 break
 
@@ -205,6 +230,11 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
     print(f"Response history: {response_history}")
     print(f"Raw-grade history: {h.raw_grade_history}")
     print(f"Modified-grade history: {h.modified_grade_history}")
+    if h.commitment_history:
+        print(f"Commitment history: {h.commitment_history}")
+        print(f"Stamina requested history: {h.stamina_requested_history}")
+        print(f"Stamina charged history: {h.stamina_charged_history}")
+        print(f"Stamina shortfall history: {h.stamina_shortfall_history}")
     print(f"Clamp count: {h.clamp_count}")
     print(f"Escape threshold reached?: {'Yes' if h.escape_threshold_reached else 'No'}")
     print(f"Exit reason: {run.exit_reason or 'None'}")
@@ -287,7 +317,7 @@ def _tee_to_log(path: Path):
             sys.stdout = previous
 
 
-def _dispatch(args: argparse.Namespace) -> int:
+def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> int:
     if args.enumerate:
         print(render_enumeration())
         return 0 if run_checks().ok else 1
@@ -301,15 +331,19 @@ def _dispatch(args: argparse.Namespace) -> int:
             print(f"ERROR: {error}")
         print(f"STATUS: {'PASS' if report.ok else 'FAIL'}")
         return 0 if report.ok else 1
-    return _run_interactive(args)
+    return _run_interactive(args, commitment_enabled=commitment_enabled)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    commitment_enabled: bool = True,
+) -> int:
     args = build_parser().parse_args(argv)
     if args.log is not None:
         with _tee_to_log(args.log):
-            return _dispatch(args)
-    return _dispatch(args)
+            return _dispatch(args, commitment_enabled=commitment_enabled)
+    return _dispatch(args, commitment_enabled=commitment_enabled)
 
 
 if __name__ == "__main__":
