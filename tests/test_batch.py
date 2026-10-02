@@ -151,6 +151,31 @@ class BatchSimulationTests(unittest.TestCase):
         self.assertGreaterEqual(summary.top_behavior_switch_count, 1)
         self.assertGreaterEqual(summary.bottom_behavior_switch_count, 1)
 
+    def test_followup_position_count_excludes_each_match_first_top_attack(self):
+        summary = run_escape_first_batch(
+            matches=12,
+            base_seed=42,
+            top_behavior=TopBehavior.PRESSURE,
+            bottom_behavior=BottomBehavior.ESCAPE,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
+        )
+
+        self.assertLessEqual(
+            summary.top_followup_position_attack_count,
+            summary.top_position_attack_count,
+        )
+        first_attacks = (
+            summary.top_position_attack_count
+            - summary.top_followup_position_attack_count
+        )
+        self.assertLessEqual(first_attacks, summary.matches)
+        self.assertGreater(first_attacks, 0)
+
     def test_batch_render_keeps_outcomes_stamina_and_decisions_separate(self):
         text = self._run().render()
 
@@ -166,6 +191,7 @@ class BatchSimulationTests(unittest.TestCase):
         self.assertIn("Bottom RESET count:", text)
         self.assertIn("Top escape-priority attacks:", text)
         self.assertIn("Bottom escape-priority attacks:", text)
+        self.assertIn("Top follow-up position attacks:", text)
 
 
 if __name__ == "__main__":
