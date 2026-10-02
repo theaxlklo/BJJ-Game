@@ -1985,6 +1985,91 @@ def render_v03b_definition_of_done() -> tuple[str, ...]:
     return tuple(gate.render() for gate in measure_v03b_definition_of_done())
 
 
+@lru_cache(maxsize=1)
+def _v03b_random_standard_batch():
+    from ..interfaces.batch import run_escape_first_batch
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v03b_stalling=True,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_informed_standard_batch():
+    from ..interfaces.batch import (
+        BatchResponderMode,
+        run_escape_first_batch,
+    )
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        bottom_responder_mode=BatchResponderMode.INFORMED,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v03b_stalling=True,
+    )
+
+
+def render_v03b_prediction_probe() -> str:
+    baseline_random = _v03_standard_batch()
+    stalling_random = _v03b_random_standard_batch()
+    baseline_informed = _v03_informed_standard_batch()
+    stalling_informed = _v03b_informed_standard_batch()
+
+    baseline_random_taps = baseline_random.outcome_counts.get(
+        "TAP — Americana",
+        0,
+    )
+    stalling_random_taps = stalling_random.outcome_counts.get(
+        "TAP — Americana",
+        0,
+    )
+    baseline_informed_taps = baseline_informed.outcome_counts.get(
+        "TAP — Americana",
+        0,
+    )
+    stalling_informed_taps = stalling_informed.outcome_counts.get(
+        "TAP — Americana",
+        0,
+    )
+
+    return (
+        "V0.3b PREDICTION PROBE — matched 100-seed PRESSURE/ESCAPE: "
+        f"Top RESETs {baseline_random.top_reset_count}"
+        f"->{stalling_random.top_reset_count}; "
+        f"random taps {baseline_random_taps}->{stalling_random_taps}; "
+        f"informed taps {baseline_informed_taps}->{stalling_informed_taps}; "
+        f"v0.3b warnings Top/Bottom="
+        f"{stalling_random.top_stalling_warning_count}/"
+        f"{stalling_random.bottom_stalling_warning_count}; "
+        f"penalties Top/Bottom="
+        f"{stalling_random.top_stalling_penalty_count}/"
+        f"{stalling_random.bottom_stalling_penalty_count}. "
+        "Observational only; no prediction is a tuning gate."
+    )
+
+
 def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     locked_probability, policy_selected = _v03_locked_submission_probe()
     random_batch = _v03_standard_batch()
