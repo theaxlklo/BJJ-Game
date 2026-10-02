@@ -621,6 +621,8 @@ Mount v0.1 stamina work is closed.
 
 Proceed to **v0.2 — setup / Ready / triggered initiative / information legality**.
 
+The authoritative completion contract is `MOUNT_V0_2_DEFINITION_OF_DONE.md`. `bjj_game --check` prints all seven v0.2 debt gates and their current baseline status.
+
 v0.2 should explicitly consume the debts discovered here:
 
 1. perfect-response lock and the temporary blind-play harness;
