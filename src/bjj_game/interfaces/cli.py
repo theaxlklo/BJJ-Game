@@ -12,7 +12,7 @@ from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
-from .batch import run_escape_first_batch
+from .batch import BatchBehaviorMode, run_escape_first_batch
 from .blind import BlindResponseChoice, RandomBlindResponder, render_random_mix_band_metrics, render_random_mix_exit_limit
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_reset_window, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
@@ -458,7 +458,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--blind-responder", choices=("human", "random"), default="human", help="blind responder source; random requires --blind and --seed")
     parser.add_argument("--seed", type=int, help="deterministic seed for --blind-responder random")
     parser.add_argument("--top-behavior", type=top_behavior_value, help="fix Top behavior for the entire modern playtest session")
-    parser.add_argument("--bottom-behavior", type=bottom_behavior_value, help="fix Bottom behavior for the entire modern playtest session")
+    parser.add_argument("--bottom-behavior", type=bottom_behavior_value, help="baseline/fixed Bottom behavior for modern playtests")
+    parser.add_argument("--top-behavior-policy", choices=("fixed", "recover"), help="batch behavior mode for Top; recover uses CONSERVE only while Exhausted")
+    parser.add_argument("--bottom-behavior-policy", choices=("fixed", "recover"), help="batch behavior mode for Bottom; recover uses CONSERVE only while Exhausted")
     parser.add_argument("--batch", type=positive_int, help="run N deterministic non-interactive matches")
     parser.add_argument("--initiator-policy", choices=("escape-first", "greedy"), help="scripted batch initiator policy; greedy is a deprecated alias for escape-first")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
@@ -537,6 +539,8 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         or args.seed is not None
         or args.top_behavior is not None
         or args.bottom_behavior is not None
+        or args.top_behavior_policy is not None
+        or args.bottom_behavior_policy is not None
         or args.batch is not None
         or args.initiator_policy is not None
     ):
@@ -573,12 +577,21 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             interval_seconds=args.interval,
             top_stamina=args.top_stamina,
             bottom_stamina=args.bottom_stamina,
+            top_behavior_mode=BatchBehaviorMode(
+                args.top_behavior_policy or "fixed"
+            ),
+            bottom_behavior_mode=BatchBehaviorMode(
+                args.bottom_behavior_policy or "fixed"
+            ),
         )
         print(summary.render())
         return 0
 
     if args.initiator_policy is not None:
         print("ERROR: --initiator-policy is only valid with --batch.")
+        return 2
+    if args.top_behavior_policy is not None or args.bottom_behavior_policy is not None:
+        print("ERROR: --top-behavior-policy/--bottom-behavior-policy are only valid with --batch.")
         return 2
     if args.blind_responder == "random" and not args.blind:
         print("ERROR: --blind-responder random requires --blind.")
