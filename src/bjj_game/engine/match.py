@@ -13,6 +13,7 @@ from ..domain.model import (
     Side,
     TopBehavior,
 )
+from ..domain.setup import SetupState, SetupTier
 from ..positions.mount.position import MountPosition
 from ..positions.mount.rules import (
     DEFAULT_AXIS,
@@ -20,6 +21,7 @@ from ..positions.mount.rules import (
     DEFAULT_INTERVAL_SECONDS,
 )
 from .mount_engine import MountResolutionEngine
+from .setup import DEFAULT_MOUNT_SETUP_POLICY, MountSetupPolicy
 from .stamina import (
     DEFAULT_BEHAVIOR_STAMINA_POLICY,
     DEFAULT_EXHAUSTION_POLICY,
@@ -56,6 +58,10 @@ class MountMatch:
     exhaustion_policy: ExhaustionPolicy = field(
         default_factory=lambda: DEFAULT_EXHAUSTION_POLICY, repr=False
     )
+    enable_v02_setup: bool = False
+    setup_policy: MountSetupPolicy = field(
+        default_factory=lambda: DEFAULT_MOUNT_SETUP_POLICY, repr=False
+    )
     clock_seconds: int = field(init=False)
     position: MountPosition = field(init=False)
     initial_band: Band = field(init=False)
@@ -67,6 +73,7 @@ class MountMatch:
     exit_reason: str | None = field(init=False, default=None)
     top_behavior_stamina_meter: BehaviorStaminaMeter = field(init=False)
     bottom_behavior_stamina_meter: BehaviorStaminaMeter = field(init=False)
+    setup_state: SetupState = field(init=False)
 
     def __post_init__(self) -> None:
         if self.initial_clock <= 0:
@@ -86,6 +93,7 @@ class MountMatch:
         )
         self.top_behavior_stamina_meter = BehaviorStaminaMeter()
         self.bottom_behavior_stamina_meter = BehaviorStaminaMeter()
+        self.setup_state = SetupState.for_targets(self.setup_policy.target_action_ids)
 
     @property
     def axis(self) -> float:
@@ -109,6 +117,72 @@ class MountMatch:
 
     def competitor(self, side: Side) -> Competitor:
         return self.top if side is Side.TOP else self.bottom
+
+    def setup_tier(self, action_id: str) -> SetupTier:
+        return self.setup_state.tier(action_id)
+
+    def legal_response_ids(self, action_id: str) -> tuple[str, ...]:
+        action = self.engine.catalog.get(action_id)
+        if action.side is not self.initiator:
+            raise ValueError(
+                f"{action.canonical_name} belongs to {action.side.value}, "
+                f"but current initiator is {self.initiator.value}"
+            )
+        all_ids = tuple(
+            response.id
+            for response in self.engine.catalog.responses_for(action.side.opponent)
+        )
+        if not self.enable_v02_setup or not self.setup_state.is_ready(action_id):
+            return all_ids
+
+        ready_ids = self.setup_policy.ready_response_ids(action_id)
+        if ready_ids is None:
+            return all_ids
+        legal = tuple(response_id for response_id in ready_ids if response_id in all_ids)
+        if not legal:
+            raise RuntimeError(
+                f"Ready setup for {action_id!r} leaves no legal responses"
+            )
+        return legal
+
+    def _validate_response_legality(self, action_id: str, response_id: str) -> None:
+        if not self.enable_v02_setup:
+            return
+        legal = self.legal_response_ids(action_id)
+        if response_id not in legal:
+            raise ValueError(
+                f"Response {response_id!r} is not legal against {action_id!r} "
+                f"at setup tier {self.setup_tier(action_id).display}; "
+                f"legal responses: {legal}"
+            )
+
+    def _apply_setup_after_attempt(
+        self,
+        *,
+        action_id: str,
+        resolution,
+        target_was_ready: bool,
+    ) -> None:
+        if not self.enable_v02_setup:
+            return
+
+        builder_target = self.setup_policy.target_for_builder(action_id)
+        if (
+            builder_target is not None
+            and self.setup_policy.setup_advances_from(resolution)
+            and not self.setup_state.is_ready(builder_target)
+        ):
+            change = self.setup_state.advance(builder_target)
+            self.history.setup_change_history.append(
+                f"{action_id}->{builder_target}:"
+                f"{change.before.display}->{change.after.display}"
+            )
+
+        if target_was_ready:
+            change = self.setup_state.consume(action_id)
+            self.history.setup_consumption_history.append(
+                f"{action_id}:{change.before.display}->{change.after.display}"
+            )
 
     def set_behaviors(
         self,
@@ -308,6 +382,10 @@ class MountMatch:
         """
         top_behavior, bottom_behavior = self._behaviors(None, None)
         initiator = self.initiator
+        self._validate_response_legality(action_id, response_id)
+        target_was_ready = (
+            self.enable_v02_setup and self.setup_state.is_ready(action_id)
+        )
         pool = self.competitor(initiator).stamina
         stamina_band_before_action = pool.band
         exhaustion_modifier = self.exhaustion_policy.initiator_grade_modifier(
@@ -366,6 +444,11 @@ class MountMatch:
         self.history.exhaustion_modifier_history.append(exhaustion_modifier)
 
         self._apply_resolution(result)
+        self._apply_setup_after_attempt(
+            action_id=action_id,
+            resolution=result,
+            target_was_ready=target_was_ready,
+        )
         return AttemptResult(
             attempt=attempt,
             requested_cost=requested_cost,
