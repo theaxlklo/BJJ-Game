@@ -286,3 +286,36 @@ def project_active_stamina_pacing(
         top_zero_seconds=int(zero["top"]),
         bottom_zero_seconds=int(zero["bottom"]),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class ConserveCycleNet:
+    commitment: Commitment
+    recovery_per_cycle: int
+    action_cost: int
+    attack_net: int
+    reset_net: int
+
+
+def conserve_cycle_net(
+    commitment: Commitment,
+    *,
+    action_policy: StaminaCostPolicy = DEFAULT_STAMINA_COST_POLICY,
+    behavior_policy: BehaviorStaminaPolicy = DEFAULT_BEHAVIOR_STAMINA_POLICY,
+    cycle_seconds: int = 10,
+) -> ConserveCycleNet:
+    """Nominal stamina balance for pure CONSERVE across one initiative cycle."""
+    if cycle_seconds % behavior_policy.quantum_seconds:
+        raise ValueError("cycle_seconds must align with the behavior stamina quantum")
+    quanta = cycle_seconds // behavior_policy.quantum_seconds
+    recovery = (
+        behavior_policy.points_per_quantum[TopBehavior.CONSERVE] * quanta
+    )
+    cost = action_policy.cost(commitment)
+    return ConserveCycleNet(
+        commitment=commitment,
+        recovery_per_cycle=recovery,
+        action_cost=cost,
+        attack_net=recovery - cost,
+        reset_net=recovery,
+    )
