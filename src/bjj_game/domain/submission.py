@@ -34,13 +34,8 @@ class SubmissionState:
         before = self.stage
         if before is None:
             raise RuntimeError("Cannot defend an inactive submission track")
-        if before is SubmissionStage.THREAT:
-            self.stage = None
-        elif before is SubmissionStage.CONTROL:
-            self.stage = SubmissionStage.THREAT
-        else:
-            self.stage = SubmissionStage.CONTROL
-        return SubmissionChange(before=before, after=self.stage)
+        self.stage = None
+        return SubmissionChange(before=before, after=None)
 
     def advance(self) -> SubmissionChange:
         before = self.stage
