@@ -728,23 +728,38 @@ def measure_v02_definition_of_done(
     )
     submission_finish_present = _submission_finish_present()
 
-    # Gates 4/5 share the same deterministic standard batch.
+    # Gate 4 stays pinned to the v0.2 batch that proved Bridge's setup role.
     standard_batch = _v02_standard_batch()
     bridge_count = standard_batch.bottom_action_counts.get("Bridge", 0)
     bridge_setup_count = standard_batch.bottom_setup_action_count
     bridge_completed_setup_builds = standard_batch.bottom_completed_setup_build_count
     bottom_completed_setup_chains = standard_batch.bottom_completed_setup_chain_count
+
+    # Gate 5 observes the current mechanics surface. Once a real submission
+    # finish exists, follow-up submission attempts count as meaningful work
+    # without changing the frozen >1.000 threshold.
+    activity_batch = (
+        _v03_standard_batch()
+        if submission_finish_present
+        else standard_batch
+    )
     top_followup_position_attacks_per_match = (
-        standard_batch.top_followup_position_attack_count
-        / standard_batch.matches
+        activity_batch.top_followup_position_attack_count
+        / activity_batch.matches
     )
     top_followup_completed_setup_builds_per_match = (
-        standard_batch.top_followup_completed_setup_build_count
-        / standard_batch.matches
+        activity_batch.top_followup_completed_setup_build_count
+        / activity_batch.matches
+    )
+    top_followup_submission_attempts_per_match = (
+        activity_batch.top_submission_attempt_count / activity_batch.matches
+        if submission_finish_present
+        else 0.0
     )
     top_followup_meaningful_per_match = (
         top_followup_position_attacks_per_match
         + top_followup_completed_setup_builds_per_match
+        + top_followup_submission_attempts_per_match
     )
     top_followup_threshold = 1.0
     top_followup_margin = (
@@ -883,11 +898,12 @@ def measure_v02_definition_of_done(
                 "standard batch Top follow-up meaningful initiations/match="
                 f"{top_followup_meaningful_per_match:.3f} "
                 f"(position:{top_followup_position_attacks_per_match:.3f},"
-                f"completed-setup-builds:{top_followup_completed_setup_builds_per_match:.3f}); "
+                f"completed-setup-builds:{top_followup_completed_setup_builds_per_match:.3f},"
+                f"submission-attempts:{top_followup_submission_attempts_per_match:.3f}); "
                 f"threshold={top_followup_threshold:.3f}; "
                 f"margin={top_followup_margin:+.3f}"
             ),
-            evidence="opening attack excluded; setup builders count only when their Ready target is later consumed; margin is measured against the unchanged >1.000 threshold",
+            evidence="opening attack excluded; setup builders count only when their Ready target is later consumed; v0.3 submission attempts count as terminal follow-up work; margin is measured against the unchanged >1.000 threshold",
         ),
         V02GateMeasurement(
             number=6,
