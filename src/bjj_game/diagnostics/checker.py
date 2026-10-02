@@ -1134,6 +1134,77 @@ def _v03_exhaustion_differentials() -> tuple[int, int, int, int]:
     return attacker_changes, defender_changes, cancellation_mismatches, cases
 
 
+@dataclass(frozen=True, slots=True)
+class V03RecoveryPredictionRow:
+    label: str
+    taps: int
+    escapes: int
+    timeouts: int
+    submission_attempts: int
+
+
+@lru_cache(maxsize=1)
+def _v03_bottom_recovery_prediction_probe() -> tuple[V03RecoveryPredictionRow, ...]:
+    """Non-gating prediction probe for exhausted Bottom under Top PRESSURE.
+
+    All three rows use the same 100 seeds and v0.3a mechanics. The only
+    intended differences are Bottom's starting stamina and whether the existing
+    adaptive recovery policy may switch an Exhausted Bottom to CONSERVE until
+    the 35-point latch clears.
+    """
+    from ..interfaces.batch import BatchBehaviorMode, run_escape_first_batch
+
+    specs = (
+        ("fresh-fixed", 100, BatchBehaviorMode.FIXED),
+        ("exhausted-fixed", 25, BatchBehaviorMode.FIXED),
+        ("exhausted-recover", 25, BatchBehaviorMode.RECOVER),
+    )
+    rows: list[V03RecoveryPredictionRow] = []
+    for label, bottom_stamina, bottom_mode in specs:
+        summary = run_escape_first_batch(
+            matches=100,
+            base_seed=42,
+            top_behavior=TopBehavior.PRESSURE,
+            bottom_behavior=BottomBehavior.ESCAPE,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=bottom_stamina,
+            bottom_behavior_mode=bottom_mode,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+        )
+        escapes = sum(
+            summary.outcome_counts.get(destination.value, 0)
+            for destination in ExitDestination
+        )
+        rows.append(
+            V03RecoveryPredictionRow(
+                label=label,
+                taps=summary.outcome_counts.get("TAP — Americana", 0),
+                escapes=escapes,
+                timeouts=summary.outcome_counts.get("TIMEOUT — Mount retained", 0),
+                submission_attempts=summary.top_submission_attempt_count,
+            )
+        )
+    return tuple(rows)
+
+
+def render_v03a_recovery_prediction_probe() -> str:
+    rows = _v03_bottom_recovery_prediction_probe()
+    return (
+        "V0.3a PREDICTION PROBE — Top PRESSURE / Bottom ESCAPE, 100 matched seeds: "
+        + "; ".join(
+            f"{row.label} taps={row.taps},escapes={row.escapes},"
+            f"timeouts={row.timeouts},submission-attempts={row.submission_attempts}"
+            for row in rows
+        )
+        + ". Observational only; no gate or threshold."
+    )
+
+
 def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     locked_probability, policy_selected = _v03_locked_submission_probe()
     batch = _v03_standard_batch()
