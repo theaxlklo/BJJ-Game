@@ -303,7 +303,7 @@ PYTHONPATH=src python -m bjj_game \
   --bottom-behavior ESCAPE
 ```
 
-The checker currently measures:
+At the reviewed v0.2b baseline before submission finishes existed, the checker measured:
 
 ```text
 Gate 1  PASS      every reachable Ready state's best legal defense is Contested
@@ -348,6 +348,58 @@ dynamic no-recovery escapes/100: PRESSURE:0 / HOLD:76 / CONSERVE:35
 A fresh HOLD Top may still completely shut down an already-Exhausted Bottom. That behavior is retained under Gate 6 path B because actual setup-driven play gives Bottom a measured route out once Top becomes Exhausted too.
 
 See `docs/MOUNT_V0_2B_RESPONDER_EXHAUSTION.md`.
+
+## Mount v0.3a — minimal Americana submission track
+
+v0.3a adds one modern-only submission path without extending the frozen 18-entry Mount-v0 matchup table:
+
+```text
+Ready Americana
+→ Threat
+→ Control
+→ Finish
+→ Tap
+```
+
+Mount is the current **entry context**, not ownership of the Americana technique. The submission-control track is intentionally separate from positional identity so later positions such as Side Control, Knee-on-Belly, or Guard can feed the same Americana graph through their own access/setup rules.
+
+A defended submission stage breaks the active Americana track and moves Mount control -1.00 toward Bottom. Ready Americana is consumed on use, so another attempt requires rebuilding setup before re-entry.
+
+The seeded responder now preserves response-policy mass when contextual Ready legality removes an ordinary response. For Ready Americana, ordinary Bottom response mass:
+
+```text
+Frame=4 / Tight Elbows=3 / Turn-In=0
+```
+
+projects to:
+
+```text
+Frame=4 / Turn-In=3
+```
+
+because Tight Elbows is illegal once the arm is isolated and Turn-In is the designated Ready stalemate defense. No new weight is invented; the original total mass is preserved. This projection is generic to context-specific legality rather than hardcoded to Mount or Americana.
+
+Final v0.3a evidence on the review branch:
+
+```text
+Gate A  PASS  Locked submission-progress probability=0.571
+Gate B  PASS  Tap=39/100 (39.0%) under the frozen 0% < Tap < 50% target
+Gate C  PASS  best fresh defense stops every reachable Threat/Control/Finish state
+Gate D  PASS  attacker exhaustion matters, defender exhaustion matters, both cancel
+```
+
+The v0.2 Gate-2 deferral therefore expires as planned:
+
+```text
+Gate 2  OPEN  real SUBMISSION_FINISH exists; repeated RESET still times out at Locked
+```
+
+Stalling remains a separate v0.3b slice. Gate 5 is still observational rather than a tuning target, and Gate 7 commitment meaning remains OPEN.
+
+See:
+
+- `docs/MOUNT_V0_3A_DEFINITION_OF_DONE.md`
+- `docs/MOUNT_V0_3A_FINAL_MEASUREMENT.md`
 
 ## Known v0 limitation
 
