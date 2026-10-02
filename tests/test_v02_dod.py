@@ -23,14 +23,13 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             for gate in measure_v02_definition_of_done(cls.report)
         }
 
-    def test_gate_1_status_follows_reachable_balanced_ready_measurement(self):
+    def test_gate_1_status_requires_contested_best_defense_everywhere(self):
         evidence = _v02_ready_gate_evidence()
         expected = (
             V02GateStatus.PASS
             if all(
                 item.reachable_states > 0
-                and item.lock_free_states > 0
-                and item.guaranteed_attacker_states == 0
+                and item.contested_best_states == item.reachable_states
                 for item in evidence.values()
             )
             else V02GateStatus.OPEN
@@ -39,7 +38,7 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         for side, item in evidence.items():
             self.assertIn(
                 f"{side.value}:{item.reachable_states}/"
-                f"lock-free:{item.lock_free_states}/"
+                f"best-contested:{item.contested_best_states}/"
                 f"guaranteed:{item.guaranteed_attacker_states}",
                 self.gates[1].metric,
             )
