@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
+from typing import Mapping
 
-from ..domain.model import Band, BottomBehavior, ExitDestination, Side, TechniqueEntity, TopBehavior
+from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TechniqueEntity, TopBehavior
 from ..engine.mount_engine import MOUNT_ENGINE
 from ..positions.mount.rules import MOUNT_RULES
 from ..positions.mount.catalog import (
@@ -157,6 +158,7 @@ def expected_raw_attacker_axis_delta(
     bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
     external_grade_modifier: int = 0,
     allowed_response_ids: tuple[str, ...] | None = None,
+    ready_grade_overrides: Mapping[str, Grade] | None = None,
 ) -> float:
     """Expected grade-derived axis delta before floor/cap/escape handling."""
     response_policy = _response_policy(side.opponent, allowed_response_ids)
@@ -172,6 +174,11 @@ def expected_raw_attacker_axis_delta(
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
             external_grade_modifier=external_grade_modifier,
+            post_positional_grade_override=(
+                ready_grade_overrides.get(response_id)
+                if ready_grade_overrides is not None
+                else None
+            ),
         )
         weighted += result.grade_value * weight
     return weighted / total_weight
@@ -187,6 +194,7 @@ def exact_escape_probability(
     bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
     external_grade_modifier: int = 0,
     allowed_response_ids: tuple[str, ...] | None = None,
+    ready_grade_overrides: Mapping[str, Grade] | None = None,
 ) -> float:
     """Exact escape probability at one state under the fixed blind response mix."""
     response_policy = _response_policy(side.opponent, allowed_response_ids)
@@ -202,6 +210,11 @@ def exact_escape_probability(
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
             external_grade_modifier=external_grade_modifier,
+            post_positional_grade_override=(
+                ready_grade_overrides.get(response_id)
+                if ready_grade_overrides is not None
+                else None
+            ),
         )
         if result.exit_destination is not None:
             escaped_weight += weight
@@ -218,6 +231,7 @@ def expected_realized_attacker_axis_delta(
     bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
     external_grade_modifier: int = 0,
     allowed_response_ids: tuple[str, ...] | None = None,
+    ready_grade_overrides: Mapping[str, Grade] | None = None,
 ) -> float:
     """Expected actual axis movement after floor/cap/escape resolution.
 
@@ -237,6 +251,11 @@ def expected_realized_attacker_axis_delta(
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
             external_grade_modifier=external_grade_modifier,
+            post_positional_grade_override=(
+                ready_grade_overrides.get(response_id)
+                if ready_grade_overrides is not None
+                else None
+            ),
         )
         world_delta = result.axis_after - axis
         attacker_delta = world_delta if side is Side.TOP else -world_delta
