@@ -244,6 +244,10 @@ For solo sessions, `interfaces.blind.RandomBlindResponder` owns the seeded RNG, 
 
 Keeping this object in `interfaces/` prevents the temporary playtest policy from becoming BJJ domain knowledge or resolution-engine state.
 
+Fixed behavior flags are also interface-only experiment controls. They initialize and retain the existing `Competitor.behavior`; they do not add a new behavior type or bypass `MountMatch.set_behaviors()`.
+
+The per-band random-mix report lives beside the temporary blind responder policy and reads the existing engine. It reports axis and escape signals separately rather than adding a utility model to the domain.
+
 ## Refactor proof
 
 The architecture-hardening pass is behavior-preserving:
