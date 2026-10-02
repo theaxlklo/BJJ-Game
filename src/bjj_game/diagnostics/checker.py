@@ -1005,69 +1005,90 @@ def _v03_locked_submission_probe() -> tuple[float, bool]:
 @dataclass(frozen=True, slots=True)
 class V03DefenseStageEvidence:
     reachable_states: int
-    best_defense_stops: int
+    best_contested_states: int
+    best_defender_win_states: int
     guaranteed_advance_states: int
 
 
 @lru_cache(maxsize=1)
 def _v03_best_defense_evidence() -> dict[SubmissionStage, V03DefenseStageEvidence]:
-    """Fresh stage surface: defender's best legal response must stop progress."""
+    """Reachable fresh baseline stages must have exactly Contested best defense."""
     from ..engine.match import MountMatch
 
     evidence: dict[SubmissionStage, V03DefenseStageEvidence] = {}
+    reachable_anchors = {
+        Band.STRONG: _V02_BAND_ANCHORS[Band.STRONG],
+        Band.LOCKED: _V02_BAND_ANCHORS[Band.LOCKED],
+    }
     for stage in SubmissionStage:
         reachable = 0
-        stopped = 0
+        best_contested = 0
+        defender_wins = 0
         guaranteed = 0
-        for band, axis in _V02_BAND_ANCHORS.items():
-            for bottom_behavior in BottomBehavior:
-                match = MountMatch(
-                    starting_axis=axis,
-                    enable_v02_setup=True,
-                    enable_v03_submissions=True,
+        for band, axis in reachable_anchors.items():
+            match = MountMatch(
+                starting_axis=axis,
+                enable_v02_setup=True,
+                enable_v03_submissions=True,
+            )
+            match.submission_state.stage = stage
+            match.initiator = Side.TOP
+            match.set_behaviors(
+                top=TopBehavior.PRESSURE,
+                bottom=BottomBehavior.ESCAPE,
+            )
+            if match.band is not band:
+                raise AssertionError(
+                    f"v0.3a band anchor mismatch: expected {band}, got {match.band}"
                 )
-                match.submission_state.stage = stage
-                match.initiator = Side.TOP
-                match.set_behaviors(
-                    top=TopBehavior.PRESSURE,
-                    bottom=bottom_behavior,
+            legal = match.legal_response_ids(TOP_AMERICANA_SUBMISSION_FINISH)
+            finals = [
+                match.preview_submission_stage(
+                    response_id=response_id
+                ).final_grade
+                for response_id in legal
+            ]
+            if not finals:
+                raise RuntimeError(
+                    f"v0.3a {stage.value} has no legal fresh defense"
                 )
-                if match.band is not band:
-                    raise AssertionError(
-                        f"v0.3a band anchor mismatch: expected {band}, got {match.band}"
-                    )
-                legal = match.legal_response_ids(TOP_AMERICANA_SUBMISSION_FINISH)
-                advances = [
-                    match.preview_submission_stage(response_id=response_id).final_grade.successful
-                    for response_id in legal
-                ]
-                reachable += 1
-                if any(not item for item in advances):
-                    stopped += 1
-                if all(advances):
-                    guaranteed += 1
+            best = min(finals)
+            reachable += 1
+            if best is Grade.CONTESTED:
+                best_contested += 1
+            if best.failed:
+                defender_wins += 1
+            if all(grade.successful for grade in finals):
+                guaranteed += 1
         evidence[stage] = V03DefenseStageEvidence(
             reachable_states=reachable,
-            best_defense_stops=stopped,
+            best_contested_states=best_contested,
+            best_defender_win_states=defender_wins,
             guaranteed_advance_states=guaranteed,
         )
     return evidence
 
 
 def _v03_stage_signature(stage: SubmissionStage, result) -> tuple:
-    advanced = result.final_grade.successful
-    tapped = advanced and stage is SubmissionStage.FINISH
-    if advanced:
+    if result.final_grade.successful:
+        disposition = "tap" if stage is SubmissionStage.FINISH else "advance"
+        tapped = stage is SubmissionStage.FINISH
         if stage is SubmissionStage.THREAT:
             after_stage = SubmissionStage.CONTROL
         elif stage is SubmissionStage.CONTROL:
             after_stage = SubmissionStage.FINISH
         else:
             after_stage = SubmissionStage.FINISH
-    else:
+    elif result.final_grade.failed:
+        disposition = "break"
+        tapped = False
         after_stage = None
+    else:
+        disposition = "hold"
+        tapped = False
+        after_stage = stage
     return (
-        advanced,
+        disposition,
         tapped,
         after_stage,
         round(result.axis_after, 8),
@@ -1135,6 +1156,65 @@ def _v03_exhaustion_differentials() -> tuple[int, int, int, int]:
                         cancellation_mismatches += 1
                     cases += 1
     return attacker_changes, defender_changes, cancellation_mismatches, cases
+
+
+@dataclass(frozen=True, slots=True)
+class V03InformedExhaustedEvidence:
+    tapped: bool
+    selected_responses: tuple[str, ...]
+    final_grades: tuple[Grade, ...]
+
+
+@lru_cache(maxsize=1)
+def _v03_informed_exhausted_defender_probe() -> V03InformedExhaustedEvidence:
+    """Best legal exhausted defense must not recreate a perfect-response lock."""
+    from ..engine.match import MountMatch
+
+    match = MountMatch(
+        starting_axis=3.50,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+    match.submission_state.stage = SubmissionStage.THREAT
+    match.top.stamina.set_current(100)
+    match.bottom.stamina.set_current(25)
+    match.set_behaviors(
+        top=TopBehavior.PRESSURE,
+        bottom=BottomBehavior.ESCAPE,
+    )
+
+    selected: list[str] = []
+    grades: list[Grade] = []
+    for _stage in SubmissionStage:
+        match.initiator = Side.TOP
+        legal = match.legal_response_ids(TOP_AMERICANA_SUBMISSION_FINISH)
+        candidates = [
+            (
+                match.preview_submission_stage(response_id=response_id).final_grade,
+                response_id,
+            )
+            for response_id in legal
+        ]
+        if not candidates:
+            break
+        best_grade, best_response = min(candidates)
+        selected.append(best_response)
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=best_response,
+            commitment=Commitment.LOW,
+        )
+        grades.append(result.resolution.final_grade)
+        if match.submission_tapped:
+            break
+        if not match.submission_state.active:
+            break
+
+    return V03InformedExhaustedEvidence(
+        tapped=match.submission_tapped,
+        selected_responses=tuple(selected),
+        final_grades=tuple(grades),
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1307,6 +1387,17 @@ def _v03_reacquisition_probability_sweep() -> tuple[V03ReacquisitionRow, ...]:
     return tuple(rows)
 
 
+def render_v03a_stamina_saturation_observation() -> str:
+    batch = _v03_standard_batch()
+    return (
+        "V0.3a STAMINA SATURATION — standard batch: "
+        f"Top median={batch.top_final_stamina_median:.1f},"
+        f"Bottom median={batch.bottom_final_stamina_median:.1f},"
+        f"Top RESETs={batch.top_reset_count},Bottom RESETs={batch.bottom_reset_count}. "
+        "Observational only; no stamina tuning in v0.3a."
+    )
+
+
 def render_v03a_behavior_and_reacquisition_probe() -> tuple[str, str]:
     behavior_rows = _v03_defender_behavior_sweep()
     reacquisition_rows = _v03_reacquisition_probability_sweep()
@@ -1339,16 +1430,20 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     defense = _v03_best_defense_evidence()
     defense_pass = all(
         item.reachable_states > 0
-        and item.best_defense_stops == item.reachable_states
+        and item.best_contested_states == item.reachable_states
+        and item.best_defender_win_states == 0
         and item.guaranteed_advance_states == 0
         for item in defense.values()
     )
     attacker_changes, defender_changes, cancellation_mismatches, cases = (
         _v03_exhaustion_differentials()
     )
+    informed = _v03_informed_exhausted_defender_probe()
 
     defense_metric = ",".join(
-        f"{stage.value}:{item.reachable_states}/stopped:{item.best_defense_stops}/"
+        f"{stage.value}:{item.reachable_states}/"
+        f"best-contested:{item.best_contested_states}/"
+        f"defender-wins:{item.best_defender_win_states}/"
         f"guaranteed:{item.guaranteed_advance_states}"
         for stage, item in defense.items()
     )
@@ -1389,10 +1484,13 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
         ),
         V03GateMeasurement(
             letter="C",
-            name="fresh best defense stops progress",
+            name="fresh best defense holds stage",
             status=V02GateStatus.PASS if defense_pass else V02GateStatus.OPEN,
             metric=defense_metric,
-            evidence="every reachable fresh stage state must have a legal defense that stops advancement",
+            evidence=(
+                "at every reachable PRESSURE/ESCAPE fresh stage state, "
+                "informed best defense is exactly Contested: no advance and no defender win"
+            ),
         ),
         V03GateMeasurement(
             letter="D",
@@ -1410,6 +1508,24 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
                 f"both-Exhausted cancellation mismatches={cancellation_mismatches}/{cases}"
             ),
             evidence="one-sided exhaustion must matter in both directions and both Exhausted must cancel",
+        ),
+        V03GateMeasurement(
+            letter="E",
+            name="informed exhausted defender is not a perfect lock",
+            status=(
+                V02GateStatus.PASS
+                if informed.tapped
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                f"tapped={informed.tapped}; "
+                f"best-responses={','.join(informed.selected_responses) or 'none'}; "
+                f"final-grades={','.join(grade.display for grade in informed.final_grades) or 'none'}"
+            ),
+            evidence=(
+                "Top Fresh vs Bottom Exhausted at active Threat must reach Tap "
+                "even when Bottom chooses the lowest-grade legal response at every stage"
+            ),
         ),
     )
 
