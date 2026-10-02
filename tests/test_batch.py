@@ -3,7 +3,37 @@ import unittest
 from bjj_game.domain.action import Commitment
 from bjj_game.domain.model import BottomBehavior, Side, TopBehavior
 from bjj_game.engine.match import MountMatch
-from bjj_game.interfaces.batch import EscapeFirstInitiatorPolicy, run_escape_first_batch
+from bjj_game.interfaces.batch import AdaptiveBehaviorPolicy, BatchBehaviorMode, EscapeFirstInitiatorPolicy, run_escape_first_batch
+
+
+class AdaptiveBehaviorPolicyTests(unittest.TestCase):
+    def test_bottom_recover_policy_uses_conserve_until_hysteresis_clears(self):
+        match = MountMatch(starting_axis=1.50)
+        match.bottom.stamina.set_current(25)
+        policy = AdaptiveBehaviorPolicy(
+            side=Side.BOTTOM,
+            baseline=BottomBehavior.PROTECT,
+            mode=BatchBehaviorMode.RECOVER,
+        )
+
+        self.assertIs(policy.choose(match), BottomBehavior.CONSERVE)
+        match.bottom.stamina.recover_up_to(9)
+        self.assertEqual(match.bottom.stamina.current, 34)
+        self.assertIs(policy.choose(match), BottomBehavior.CONSERVE)
+
+        match.bottom.stamina.recover_up_to(1)
+        self.assertEqual(match.bottom.stamina.current, 35)
+        self.assertIs(policy.choose(match), BottomBehavior.PROTECT)
+
+    def test_fixed_policy_never_switches_to_conserve(self):
+        match = MountMatch(starting_axis=1.50)
+        match.top.stamina.set_current(0)
+        policy = AdaptiveBehaviorPolicy(
+            side=Side.TOP,
+            baseline=TopBehavior.PRESSURE,
+            mode=BatchBehaviorMode.FIXED,
+        )
+        self.assertIs(policy.choose(match), TopBehavior.PRESSURE)
 
 
 class EscapeFirstInitiatorPolicyTests(unittest.TestCase):
@@ -98,6 +128,29 @@ class BatchSimulationTests(unittest.TestCase):
         self.assertGreater(escaped, 0)
         self.assertGreater(summary.bottom_escape_priority_count, 0)
 
+    def test_recover_batch_exercises_conserve_then_returns_to_baseline(self):
+        summary = run_escape_first_batch(
+            matches=1,
+            base_seed=42,
+            top_behavior=TopBehavior.HOLD,
+            bottom_behavior=BottomBehavior.PROTECT,
+            commitment=Commitment.MEDIUM,
+            initial_clock=60,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=25,
+            bottom_stamina=25,
+            top_behavior_mode=BatchBehaviorMode.RECOVER,
+            bottom_behavior_mode=BatchBehaviorMode.RECOVER,
+        )
+
+        self.assertGreater(summary.top_behavior_window_counts.get("CONSERVE", 0), 0)
+        self.assertGreater(summary.bottom_behavior_window_counts.get("CONSERVE", 0), 0)
+        self.assertGreater(summary.top_behavior_window_counts.get("HOLD", 0), 0)
+        self.assertGreater(summary.bottom_behavior_window_counts.get("PROTECT", 0), 0)
+        self.assertGreaterEqual(summary.top_behavior_switch_count, 1)
+        self.assertGreaterEqual(summary.bottom_behavior_switch_count, 1)
+
     def test_batch_render_keeps_outcomes_stamina_and_decisions_separate(self):
         text = self._run().render()
 
@@ -108,6 +161,7 @@ class BatchSimulationTests(unittest.TestCase):
         self.assertIn("OUTCOMES", text)
         self.assertIn("FINAL STAMINA", text)
         self.assertIn("DECISIONS", text)
+        self.assertIn("BEHAVIOR USAGE", text)
         self.assertIn("Top RESET count:", text)
         self.assertIn("Bottom RESET count:", text)
         self.assertIn("Top escape-priority attacks:", text)
