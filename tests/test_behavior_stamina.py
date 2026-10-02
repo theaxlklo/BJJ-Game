@@ -59,6 +59,22 @@ class BehaviorStaminaTests(unittest.TestCase):
         self.assertEqual(one.top_behavior_stamina_meter.remainder_units, 0)
         self.assertEqual(five.top_behavior_stamina_meter.remainder_units, 0)
 
+    def test_carry_is_visible_across_behavior_changes(self):
+        match = MountMatch(initial_clock=12, starting_axis=1.50, interval_seconds=4)
+        match.top.stamina.set_current(50)
+        match.set_behaviors(top=TopBehavior.PRESSURE, bottom=BottomBehavior.PROTECT)
+
+        first = match.advance()
+        self.assertEqual(first.top_stamina.remainder_before, 0)
+        self.assertEqual(first.top_stamina.remainder_after, -4)
+        self.assertEqual(match.top.stamina.current, 50)
+
+        match.set_behaviors(top=TopBehavior.CONSERVE)
+        second = match.advance()
+        self.assertEqual(second.top_stamina.remainder_before, -4)
+        self.assertEqual(second.top_stamina.remainder_after, 4)
+        self.assertEqual(match.top.stamina.current, 50)
+
     def test_legacy_drift_does_not_apply_behavior_stamina(self):
         match = MountMatch(initial_clock=10, starting_axis=1.50, interval_seconds=5)
         match.set_behaviors(top=TopBehavior.PRESSURE, bottom=BottomBehavior.ESCAPE)
