@@ -32,7 +32,9 @@ This must be demonstrated by an exhaustive checker over the v0.2 legal-response 
 
 ### Measurement
 
-The current `PERFECT-RESPONSE LOCK` diagnostic becomes a v0.2 Ready-aware probe and reports Top and Bottom separately.
+The frozen `PERFECT-RESPONSE LOCK` diagnostic remains an unrestricted-v0 diagnostic.
+
+Gate 1 uses a separate Ready-aware exhaustive probe and reports, per side, how many Ready states have no legal Failure-or-worse response.
 
 ## Gate 2 — RESET / stalling lock
 
@@ -188,11 +190,11 @@ The current frozen digest is:
 The current evaluator uses:
 
 ```text
-Gate 1  run_checks().perfect_response_lock
+Gate 1  Ready-aware legal-response lock-free states per side
 Gate 2  standardized RESET-lock probe
 Gate 3  exhaustive fresh-vs-Exhausted responder exchange differential
-Gate 4  Bridge selections in the standard batch
-Gate 5  Top follow-up position attacks / match after the opening
+Gate 4  Bridge setup-priority selections in the setup-enabled standard batch
+Gate 5  Top follow-up position + setup initiations / match after the opening
 Gate 6  positive-weight Exhausted-Bottom routes under every Top behavior
 Gate 7  exhaustive funded LOW strict-dominance probe
 ```
@@ -210,27 +212,39 @@ starting axis +1.50
 5-second interval
 100 / 100 starting stamina
 escape-first initiator policy
+v0.2 setup/Ready enabled
 ```
 
 Tests verify each printed status against its measurement formula. They do not assert a literal `[OPEN]` or `[PASS]` label.
 
 When v0.2 adds Ready/setup/initiative state, the relevant measurement hook must be extended to consume that state; the gate is not manually flipped.
 
-### Current measured baseline
+### Pre-v0.2 measured baseline
 
-Before any v0.2 mechanics are implemented, the current measurements are:
+Before v0.2a, all seven gates were OPEN.
+
+Notable pre-v0.2 values were:
 
 ```text
-Gate 1  Perfect-response lock             OPEN
+Gate 4  Bridge setup role                 OPEN — 0 setup selections
+Gate 5  Top post-opening activity         OPEN — 0.110 follow-up position attacks/match
+Gate 6  Exhausted Bottom escape routes    OPEN — PRESSURE:1, HOLD:0, CONSERVE:1
+```
+
+### Current measured state after v0.2a
+
+The minimal Setup/Ready slice moves three gates automatically:
+
+```text
+Gate 1  Perfect-response lock             PASS — Ready lock-free states Top:18, Bottom:36
 Gate 2  RESET/stalling lock               OPEN
 Gate 3  Responder stamina                 OPEN
-Gate 4  Bridge setup role                 OPEN
-Gate 5  Top post-opening activity         OPEN — 0.110 follow-up position attacks/match
+Gate 4  Bridge setup role                 PASS — Bridge 40/100, all 40 selected for setup value
+Gate 5  Top post-opening activity         PASS — 2.550 follow-up meaningful initiations/match
+                                                 position 0.000, setup 2.550
 Gate 6  Exhausted Bottom escape routes    OPEN — PRESSURE:1, HOLD:0, CONSERVE:1
 Gate 7  Commitment meaning                OPEN
 ```
-
-All seven gates are OPEN at the current pre-v0.2 baseline.
 
 Gate 5 excludes the opening attack because the debt is specifically post-opening passivity. Gate 6 evaluates each Top behavior separately because the debt is a condition-specific exhausted lockout.
 
