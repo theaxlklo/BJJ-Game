@@ -212,7 +212,7 @@ Underfunded commitment downgrades to the highest fully payable level; at zero st
 See `docs/MOUNT_V0_1C_CONSERVE.md`.
 ## Mount v0.1e — exhaustion consequence
 
-v0.1e was intentionally implemented before v0.1d so STABILIZE can be designed against a stamina system that already matters.
+v0.1e established the exhaustion consequence before the stamina layer was closed. The former standalone v0.1d STABILIZE step has since been retired into v0.2.
 
 Minimal rule:
 
@@ -257,6 +257,62 @@ v0.3 submissions
 The former standalone v0.1d STABILIZE step is retired; STABILIZE will be reconsidered inside v0.2 alongside initiative/setup behavior.
 
 v0.2 completion is defined by seven measurable debt gates in `docs/MOUNT_V0_2_DEFINITION_OF_DONE.md`. Modern `bjj_game --check` prints the current status of all seven gates so completion is measured against the original debts rather than code volume.
+
+## Mount v0.2a — minimal Setup / Ready
+
+The first v0.2 slice is implemented behind an opt-in batch flag. It adds discrete setup state without changing the frozen Mount-v0 grades:
+
+```text
+None → Partial → Ready
+```
+
+Two initial chains exist:
+
+```text
+Bridge success
+→ builds Trap-and-Roll setup
+
+High Mount Climb success
+→ builds Americana Arm Isolation setup
+```
+
+Trap-and-Roll and Americana Isolation are setup-dependent in the v0.2 path: they are unavailable until Ready. A Ready target narrows the legal response set and is consumed when used.
+
+The established-position order in setup-enabled batches is now:
+
+```text
+initiator locks action
+→ legal Ready-aware responses are derived
+→ responder chooses
+→ resolution
+```
+
+Run the v0.2a batch path with:
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --batch 100 \
+  --seed 42 \
+  --v02-setup \
+  --top-behavior PRESSURE \
+  --bottom-behavior ESCAPE
+```
+
+The checker currently measures:
+
+```text
+Gate 1  PASS  Ready lock-free states: Top 18, Bottom 36
+Gate 4  PASS  Bridge 40/100; 40 setup-priority selections
+Gate 5  PASS  2.550 Top follow-up meaningful initiations/match
+Gate 2  OPEN
+Gate 3  OPEN
+Gate 6  OPEN
+Gate 7  OPEN
+```
+
+No setup decay, setup disruption, commitment acceleration, exhaustion/setup interaction, RESET progress cost, STABILIZE, or submission finish is added in v0.2a.
+
+See `docs/MOUNT_V0_2A_SETUP_READY.md`.
 
 ## Known v0 limitation
 
@@ -344,6 +400,7 @@ The official `escape-first` initiator policy is deliberately lexicographic:
 ```text
 at the exact current axis/band/stamina state
 → if any action can escape, choose the highest exact escape probability
+→ with --v02-setup: otherwise build an unready setup when progress probability is positive
 → otherwise require BOTH raw attacker-axis > 0 and realized attacker-axis > 0
 → among those positional attacks, choose the highest realized expectation
 → otherwise RESET
