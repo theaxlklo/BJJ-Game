@@ -517,8 +517,8 @@ class CliTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "BATCH RESPONSE MIX LIMIT: unreachable under the fixed positive-weight "
-            "response mix: Open Guard",
+            "BATCH RESPONSE MIX REACHABILITY: fresh responder missing=Open Guard; "
+            "Exhausted responder missing=none.",
             text,
         )
         self.assertIn("V0.2 DOD GATE 1 [", text)
@@ -547,7 +547,7 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("BLIND PLAYTEST MODE", text)
         self.assertNotIn("RANDOM BLIND RESPONDER MIX", text)
         self.assertNotIn("BLIND MIX BAND METRICS", text)
-        self.assertNotIn("BATCH RESPONSE MIX LIMIT", text)
+        self.assertNotIn("BATCH RESPONSE MIX REACHABILITY", text)
         self.assertNotIn("V0.2 DOD GATE", text)
 
 
