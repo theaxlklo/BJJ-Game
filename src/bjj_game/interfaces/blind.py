@@ -3,13 +3,16 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from ..domain.model import Side, TechniqueEntity
+from ..domain.model import Band, BottomBehavior, Side, TechniqueEntity, TopBehavior
+from ..engine.mount_engine import MOUNT_ENGINE
+from ..positions.mount.rules import MOUNT_RULES
 from ..positions.mount.catalog import (
     BOTTOM_RESPONSE_FOREARM_FRAME,
     BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
     TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,
     TOP_RESPONSE_WIDE_MOUNT_BASE,
     ENTITY_BY_ID,
+    actions_for,
 )
 
 
@@ -78,3 +81,136 @@ class RandomBlindResponder:
             draw=draw,
             total_weight=total,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class BlindMixBandMetric:
+    side: Side
+    band: Band
+    action_id: str
+    expected_attacker_axis_delta: float
+    escape_probability_min: float
+    escape_probability_max: float
+
+    @property
+    def action(self) -> TechniqueEntity:
+        return ENTITY_BY_ID[self.action_id]
+
+
+_BAND_ANCHOR = {
+    Band.LOOSE: 0.50,
+    Band.STABLE: 1.50,
+    Band.STRONG: 2.50,
+    Band.LOCKED: 3.50,
+}
+
+
+def _axis_grid() -> tuple[float, ...]:
+    return tuple(round(i / 100, 2) for i in range(10, 401))
+
+
+def random_mix_band_metrics() -> tuple[BlindMixBandMetric, ...]:
+    """Report separate axis and escape signals under the fixed blind mix.
+
+    Baseline behaviors are PRESSURE for Top and ESCAPE for Bottom, with no
+    exhaustion modifier. Axis delta is the final grade value from the
+    initiator's perspective before floor/cap/escape clamping. Escape chance is
+    reported as a min/max over all 0.01-grid axis values compatible with the
+    visible band.
+    """
+
+    rows: list[BlindMixBandMetric] = []
+    for side in (Side.TOP, Side.BOTTOM):
+        response_policy = RandomBlindResponder.POLICY[side.opponent]
+        total_weight = sum(weight for _, weight in response_policy)
+        for band in Band:
+            anchor = _BAND_ANCHOR[band]
+            for action in actions_for(side):
+                weighted_grade = 0
+                for response_id, weight in response_policy:
+                    result = MOUNT_ENGINE.resolve_action(
+                        axis=anchor,
+                        band=band,
+                        initiator=side,
+                        action_id=action.id,
+                        response_id=response_id,
+                        top_behavior=TopBehavior.PRESSURE,
+                        bottom_behavior=BottomBehavior.ESCAPE,
+                    )
+                    weighted_grade += result.grade_value * weight
+
+                probabilities: list[float] = []
+                for axis in _axis_grid():
+                    if not MOUNT_RULES.axis_can_have_band(axis, band):
+                        continue
+                    escaped_weight = 0
+                    for response_id, weight in response_policy:
+                        result = MOUNT_ENGINE.resolve_action(
+                            axis=axis,
+                            band=band,
+                            initiator=side,
+                            action_id=action.id,
+                            response_id=response_id,
+                            top_behavior=TopBehavior.PRESSURE,
+                            bottom_behavior=BottomBehavior.ESCAPE,
+                        )
+                        if result.exit_destination is not None:
+                            escaped_weight += weight
+                    probabilities.append(escaped_weight / total_weight)
+
+                rows.append(
+                    BlindMixBandMetric(
+                        side=side,
+                        band=band,
+                        action_id=action.id,
+                        expected_attacker_axis_delta=weighted_grade / total_weight,
+                        escape_probability_min=min(probabilities, default=0.0),
+                        escape_probability_max=max(probabilities, default=0.0),
+                    )
+                )
+    return tuple(rows)
+
+
+def render_random_mix_band_metrics(*, action_cost: int = 7) -> tuple[str, ...]:
+    rows = random_mix_band_metrics()
+    lines: list[str] = [
+        (
+            "BLIND MIX BAND METRICS: baseline PRESSURE/ESCAPE, no exhaustion; "
+            f"action cost MEDIUM={action_cost}; axis and escape are reported separately."
+        )
+    ]
+    for row in rows:
+        escape = (
+            f"{row.escape_probability_min * 100:.1f}%"
+            if row.escape_probability_min == row.escape_probability_max
+            else (
+                f"{row.escape_probability_min * 100:.1f}%.."
+                f"{row.escape_probability_max * 100:.1f}%"
+            )
+        )
+        lines.append(
+            f"BLIND MIX: {row.side.value.title()} / {row.band.value} / "
+            f"{row.action.short_name}: attacker-axis "
+            f"{row.expected_attacker_axis_delta:+.3f}; escape {escape}"
+        )
+
+    for side in (Side.TOP, Side.BOTTOM):
+        for band in Band:
+            group = [row for row in rows if row.side is side and row.band is band]
+            best_value = max(row.expected_attacker_axis_delta for row in group)
+            best = ", ".join(
+                row.action.short_name
+                for row in group
+                if abs(row.expected_attacker_axis_delta - best_value) < 1e-12
+            )
+            below_reset = ", ".join(
+                row.action.short_name
+                for row in group
+                if row.expected_attacker_axis_delta < 0
+            ) or "none"
+            lines.append(
+                f"BLIND MIX SUMMARY: {side.value.title()} / {band.value}: "
+                f"best attacker-axis {best_value:+.3f} via {best}; "
+                f"negative-vs-RESET-axis={below_reset}"
+            )
+    return tuple(lines)
