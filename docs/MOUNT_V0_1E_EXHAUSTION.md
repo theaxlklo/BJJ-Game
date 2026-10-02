@@ -417,6 +417,50 @@ The seed is printed at run start. Each random response records its ordinal, cano
 
 That makes a saved log replayable without leaking the hidden choice during the decision.
 
+### Fixed behavior experiments
+
+Solo blind play still leaves behavior choice under the tester's control. To isolate behavior questions, the modern CLI now accepts:
+
+```text
+--top-behavior PRESSURE|HOLD|CONSERVE
+--bottom-behavior ESCAPE|PROTECT|CONSERVE
+```
+
+Example:
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --blind \
+  --blind-responder random \
+  --seed 42 \
+  --top-behavior HOLD \
+  --bottom-behavior CONSERVE \
+  --log docs/playtest/hold-vs-conserve-seed-42.txt
+```
+
+With both flags supplied, the experimental condition stays fixed for the whole match. The human tester chooses only action versus RESET and which action to attempt; the hidden response comes from the seeded policy.
+
+This is preferred over a scripted opponent for v0.1e because it adds no new attack/RESET strategy model that could contaminate the behavior comparison.
+
+### Per-band seeded-mix report
+
+`--check` now reports, for every side / visible band / action:
+
+1. expected attacker-favorable proposed axis delta against the fixed response mix, after current behavior/positional modifiers;
+2. escape probability as a min/max over the existing 0.01 legal-axis grid.
+
+Those values remain separate from the MEDIUM stamina cost.
+
+No conversion weight is assigned between:
+
+- one axis point
+- one stamina point
+- an escape
+
+so the checker reports evidence rather than selecting an overall best action.
+
+The report also exposes a correction to the raw simultaneous-game shorthand: **Top initiating from Loose receives the frozen -1 positional modifier**, so the raw response mix is not an equilibrium there in the same sense as Stable.
+
 ### Pre-session predictions
 
 Before tuning numbers, the first solo blind sessions should test these predictions:
