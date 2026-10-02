@@ -182,10 +182,10 @@ CONSERVE is a v0.1c extension layered around that frozen core.
 
 ## Next phase
 
-The next natural slice is **v0.1d — STABILIZE**.
+The implementation order was deliberately changed after review.
 
-STABILIZE must be distinct from CONSERVE:
+**v0.1e — exhaustion consequences** is implemented before v0.1d so stamina has a real consequence before STABILIZE is tuned.
 
-- STABILIZE protects/improves position
-- STABILIZE does not restore stamina for free
-- CONSERVE restores stamina but yields positional/defensive leverage
+See `MOUNT_V0_1E_EXHAUSTION.md`.
+
+v0.1d remains reserved for STABILIZE after exhaustion/CONSERVE playtests.
