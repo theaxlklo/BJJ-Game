@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
+from functools import lru_cache
 
 from ..positions.mount.catalog import (
     BOTTOM_ELBOW_KNEE_ESCAPE,
@@ -16,6 +18,7 @@ from ..positions.mount.catalog import (
 from ..positions.mount.matchups import RAW_GRADES, raw_grade
 from ..engine.mount_engine import MOUNT_ENGINE
 from ..positions.mount.rules import MOUNT_RULES
+from ..domain.action import Commitment
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
 from ..positions.mount.names import RESOLVER, normalize_name
 
@@ -179,38 +182,345 @@ def render_reset_lock_probe() -> str:
     )
 
 
-def render_v02_definition_of_done_baseline() -> tuple[str, ...]:
-    """Current v0.2 completion-gate baseline.
+class V02GateStatus(str, Enum):
+    OPEN = "OPEN"
+    PASS = "PASS"
+    REVIEW = "REVIEW"
+    UNAVAILABLE = "UNAVAILABLE"
+    DEFERRED = "DEFERRED"
 
-    These lines are deliberately stable checker contracts. v0.2 work should
-    change individual gate status/evidence rather than deleting the gates.
+
+@dataclass(frozen=True, slots=True)
+class V02GateMeasurement:
+    number: int
+    name: str
+    status: V02GateStatus
+    metric: str
+    evidence: str
+
+    def render(self) -> str:
+        return (
+            f"V0.2 DOD GATE {self.number} [{self.status.value}]: "
+            f"{self.name} — {self.metric}; {self.evidence}"
+        )
+
+
+_V02_BAND_ANCHORS = {
+    Band.LOOSE: 0.50,
+    Band.STABLE: 1.50,
+    Band.STRONG: 2.50,
+    Band.LOCKED: 3.50,
+}
+
+
+@lru_cache(maxsize=1)
+def _v02_standard_batch():
+    """One reproducible batch shared by Gates 4 and 5."""
+    from ..interfaces.batch import run_escape_first_batch
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+    )
+
+
+def _resolution_signature(result) -> tuple:
+    return (
+        result.final_grade,
+        round(result.axis_after, 8),
+        result.band_after,
+        result.exit_destination,
+        result.escape_threshold_reached,
+        result.failure_clamp_used,
+        result.floor_clamp_used,
+    )
+
+
+@lru_cache(maxsize=1)
+def _responder_exhaustion_differential_count() -> int:
+    """Count current one-exchange outcomes changed only by responder exhaustion.
+
+    This deliberately holds the initiator fresh and skips normal-speed advance,
+    isolating responder stamina from the existing initiator exhaustion rule.
     """
+    from ..engine.match import MountMatch
+
+    differences = 0
+    for side in (Side.TOP, Side.BOTTOM):
+        for band, axis in _V02_BAND_ANCHORS.items():
+            for top_behavior in V0_TOP_BEHAVIORS:
+                for bottom_behavior in (BottomBehavior.ESCAPE, BottomBehavior.PROTECT):
+                    for action in actions_for(side):
+                        for response in responses_for(side.opponent):
+                            signatures = []
+                            for responder_stamina in (100, 25):
+                                match = MountMatch(
+                                    initial_clock=300,
+                                    starting_axis=axis,
+                                    interval_seconds=5,
+                                )
+                                match.initiator = side
+                                match.set_behaviors(
+                                    top=top_behavior,
+                                    bottom=bottom_behavior,
+                                )
+                                match.competitor(side).stamina.set_current(100)
+                                match.competitor(side.opponent).stamina.set_current(
+                                    responder_stamina
+                                )
+                                try:
+                                    attempt = match.attempt(
+                                        action_id=action.id,
+                                        response_id=response.id,
+                                        commitment=Commitment.MEDIUM,
+                                    )
+                                except Exception as exc:
+                                    signatures.append(
+                                        ("ERROR", type(exc).__name__, str(exc))
+                                    )
+                                else:
+                                    signatures.append(
+                                        _resolution_signature(attempt.resolution)
+                                    )
+                            if signatures[0] != signatures[1]:
+                                differences += 1
+    return differences
+
+
+@lru_cache(maxsize=1)
+def _exhausted_positive_weight_escape_hits() -> tuple[ReachabilityHit, ...]:
+    """Exhausted Bottom exits reachable against positive-weight batch responses."""
+    from ..interfaces.blind import RandomBlindResponder
+
+    positive_response_ids = {
+        response_id
+        for response_id, weight in RandomBlindResponder.POLICY[Side.TOP]
+        if weight > 0
+    }
+    reachability = _collect_escape_reachability(external_grade_modifier=-1)
+    hits: list[ReachabilityHit] = []
+    for route_hits in reachability.values():
+        hits.extend(
+            hit for hit in route_hits if hit.response_id in positive_response_ids
+        )
+    return tuple(hits)
+
+
+@lru_cache(maxsize=1)
+def _commitment_outcome_effect_count() -> int:
+    """Count states where funded LOW/MEDIUM/HIGH change the current outcome surface."""
+    from ..engine.match import MountMatch
+
+    changed = 0
+    for side in (Side.TOP, Side.BOTTOM):
+        for band, axis in _V02_BAND_ANCHORS.items():
+            for top_behavior in V0_TOP_BEHAVIORS:
+                for bottom_behavior in (BottomBehavior.ESCAPE, BottomBehavior.PROTECT):
+                    for action in actions_for(side):
+                        for response in responses_for(side.opponent):
+                            signatures = []
+                            for commitment in Commitment:
+                                match = MountMatch(
+                                    initial_clock=300,
+                                    starting_axis=axis,
+                                    interval_seconds=5,
+                                )
+                                match.initiator = side
+                                match.set_behaviors(
+                                    top=top_behavior,
+                                    bottom=bottom_behavior,
+                                )
+                                match.competitor(side).stamina.set_current(100)
+                                attempt = match.attempt(
+                                    action_id=action.id,
+                                    response_id=response.id,
+                                    commitment=commitment,
+                                )
+                                signatures.append(
+                                    _resolution_signature(attempt.resolution)
+                                )
+                            if len(set(signatures)) > 1:
+                                changed += 1
+    return changed
+
+
+def measure_v02_definition_of_done(
+    report: CheckReport | None = None,
+) -> tuple[V02GateMeasurement, ...]:
+    """Compute v0.2 gate status from current executable evidence."""
+    if report is None:
+        report = run_checks()
+
+    # Gate 1: current perfect-response measurement. When v0.2 introduces
+    # Ready-aware legality, run_checks().perfect_response_lock is the hook that
+    # must become Ready-aware rather than this gate being manually flipped.
+    gate1_pass = not report.perfect_response_lock
+
+    # Gate 2: existing standardized RESET probe.
     reset_probe = render_reset_lock_probe()
-    reset_open = "TIMEOUT — Mount retained" in reset_probe and "band Locked" in reset_probe
+    reset_locked_timeout = (
+        "TIMEOUT — Mount retained" in reset_probe
+        and "band Locked" in reset_probe
+    )
+
+    # Gates 4/5 share the same deterministic standard batch.
+    standard_batch = _v02_standard_batch()
+    bridge_count = standard_batch.bottom_action_counts.get("Bridge", 0)
+    top_meaningful_initiations = sum(
+        standard_batch.top_action_counts.values()
+    )
+    top_initiations_per_match = (
+        top_meaningful_initiations / standard_batch.matches
+    )
+
+    # Gate 3: responder-only outcome differential.
+    responder_differences = _responder_exhaustion_differential_count()
+
+    # Gate 6: current positive-weight exhausted escape reachability.
+    exhausted_hits = _exhausted_positive_weight_escape_hits()
+    exhausted_routes = {
+        (hit.action_id, hit.top_behavior, hit.destination)
+        for hit in exhausted_hits
+    }
+
+    # Gate 7: exhaustive funded commitment outcome differential.
+    commitment_effects = _commitment_outcome_effect_count()
 
     return (
-        "V0.2 DOD GATE 1 [OPEN]: perfect-response lock — Ready-aware Top and Bottom "
-        "legal-response probes do not exist yet; current unrestricted lock remains PRESENT.",
-        (
-            "V0.2 DOD GATE 2 [OPEN]: RESET/stalling — standardized RESET lock still "
-            "reaches Locked timeout."
-            if reset_open
-            else
-            "V0.2 DOD GATE 2 [REVIEW]: RESET/stalling probe changed; evaluate against "
-            "the v0.2 completion condition."
+        V02GateMeasurement(
+            number=1,
+            name="perfect-response lock",
+            status=V02GateStatus.PASS if gate1_pass else V02GateStatus.OPEN,
+            metric=f"perfect_response_lock={report.perfect_response_lock}",
+            evidence=(
+                "current checker no longer finds an unrestricted Failure-or-worse "
+                "counter for every action"
+                if gate1_pass
+                else
+                "current checker still finds the unrestricted lock"
+            ),
         ),
-        "V0.2 DOD GATE 3 [OPEN]: responder stamina — exhausted responders still defend "
-        "at full strength with no direct response cost/effect.",
-        "V0.2 DOD GATE 4 [OPEN]: Bridge setup role — no setup/Ready value exists yet; "
-        "current escape-first policy has no reason to select Bridge for future value.",
-        "V0.2 DOD GATE 5 [OPEN]: Top post-opening activity — no setup/submission continuation "
-        "exists yet to make Strong/Locked Top spend meaningfully after the opening.",
-        "V0.2 DOD GATE 6 [OPEN]: Exhausted Bottom escape reachability — current v0.1 "
-        "conditions can remove every positive-weight escape route; v0.2 must restore a "
-        "route or explicitly retain/document the lockout.",
-        "V0.2 DOD GATE 7 [OPEN]: commitment meaning — LOW/MEDIUM/HIGH still change cost "
-        "only; v0.2 must add an outcome-relevant effect or explicitly defer it again.",
+        V02GateMeasurement(
+            number=2,
+            name="RESET/stalling",
+            status=(
+                V02GateStatus.OPEN
+                if reset_locked_timeout
+                else V02GateStatus.PASS
+            ),
+            metric=f"locked_timeout={reset_locked_timeout}",
+            evidence=reset_probe,
+        ),
+        V02GateMeasurement(
+            number=3,
+            name="responder stamina",
+            status=(
+                V02GateStatus.PASS
+                if responder_differences > 0
+                else V02GateStatus.OPEN
+            ),
+            metric=f"fresh-vs-exhausted responder outcome differences={responder_differences}",
+            evidence=(
+                "at least one isolated exchange changes when only responder stamina changes"
+                if responder_differences > 0
+                else
+                "isolated responder exhaustion changes no current exchange outcome"
+            ),
+        ),
+        V02GateMeasurement(
+            number=4,
+            name="Bridge setup role",
+            status=(
+                V02GateStatus.PASS
+                if bridge_count > 0
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                f"standard batch Bridge selections={bridge_count}/"
+                f"{standard_batch.matches}"
+            ),
+            evidence=(
+                "Bridge is selected by the scripted policy"
+                if bridge_count > 0
+                else
+                "Bridge is never selected in the standard batch"
+            ),
+        ),
+        V02GateMeasurement(
+            number=5,
+            name="Top post-opening activity",
+            status=(
+                V02GateStatus.PASS
+                if top_initiations_per_match > 1.0
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                "standard batch Top meaningful initiations/match="
+                f"{top_initiations_per_match:.3f}"
+            ),
+            evidence="pass threshold is >1.000 per match",
+        ),
+        V02GateMeasurement(
+            number=6,
+            name="Exhausted Bottom escape reachability",
+            status=(
+                V02GateStatus.PASS
+                if exhausted_routes
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                "positive-weight exhausted escape routes="
+                f"{len(exhausted_routes)}"
+            ),
+            evidence=(
+                "at least one route is currently reachable under the batch response mix"
+                if exhausted_routes
+                else
+                "no positive-weight exhausted escape route is reachable"
+            ),
+        ),
+        V02GateMeasurement(
+            number=7,
+            name="commitment meaning",
+            status=(
+                V02GateStatus.PASS
+                if commitment_effects > 0
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                "funded LOW/MEDIUM/HIGH outcome-differential states="
+                f"{commitment_effects}"
+            ),
+            evidence=(
+                "commitment changes at least one current outcome surface"
+                if commitment_effects > 0
+                else
+                "funded commitments remain outcome-equivalent; cost-only LOW dominance remains"
+            ),
+        ),
     )
+
+
+def render_v02_definition_of_done(
+    report: CheckReport | None = None,
+) -> tuple[str, ...]:
+    return tuple(
+        gate.render()
+        for gate in measure_v02_definition_of_done(report)
+    )
+
+
+def render_v02_definition_of_done_baseline() -> tuple[str, ...]:
+    """Compatibility alias for the original fixed-string renderer."""
+    return render_v02_definition_of_done()
 
 def run_checks() -> CheckReport:
     report = CheckReport()
