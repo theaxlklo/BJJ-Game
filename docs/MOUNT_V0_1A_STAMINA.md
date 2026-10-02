@@ -102,4 +102,4 @@ Those belong to later v0.1 slices after the state/telemetry layer is proven stab
 
 ## Next phase
 
-v0.1b should introduce commitment and explicit action costs while keeping the cost policy separate from the frozen Mount lookup matrix.
+v0.1b has now been implemented. See `MOUNT_V0_1B_COMMITMENT.md` for commitment and explicit action-cost semantics.
