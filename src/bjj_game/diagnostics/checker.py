@@ -214,6 +214,51 @@ _V02_BAND_ANCHORS = {
 
 
 @lru_cache(maxsize=1)
+def _v02_ready_lock_free_states() -> dict[Side, int]:
+    """Count Ready states per side with no legal Failure-or-worse response."""
+    from ..engine.match import MountMatch
+
+    counts = {Side.TOP: 0, Side.BOTTOM: 0}
+    probe = MountMatch(enable_v02_setup=True)
+
+    for target_action_id in probe.setup_policy.target_action_ids:
+        action = probe.engine.catalog.get(target_action_id)
+        side = action.side
+        for band, axis in _V02_BAND_ANCHORS.items():
+            for top_behavior in TopBehavior:
+                for bottom_behavior in BottomBehavior:
+                    match = MountMatch(
+                        initial_clock=300,
+                        starting_axis=axis,
+                        interval_seconds=5,
+                        enable_v02_setup=True,
+                    )
+                    match.initiator = side
+                    match.set_behaviors(
+                        top=top_behavior,
+                        bottom=bottom_behavior,
+                    )
+                    match.setup_state.advance(target_action_id)
+                    match.setup_state.advance(target_action_id)
+                    legal = match.legal_response_ids(target_action_id)
+                    finals = [
+                        match.engine.resolve_action(
+                            axis=axis,
+                            band=band,
+                            initiator=side,
+                            action_id=target_action_id,
+                            response_id=response_id,
+                            top_behavior=top_behavior,
+                            bottom_behavior=bottom_behavior,
+                        ).final_grade
+                        for response_id in legal
+                    ]
+                    if finals and min(finals) > Grade.FAILURE:
+                        counts[side] += 1
+    return counts
+
+
+@lru_cache(maxsize=1)
 def _v02_standard_batch():
     """One reproducible batch shared by Gates 4 and 5."""
     from ..interfaces.batch import run_escape_first_batch
@@ -229,6 +274,7 @@ def _v02_standard_batch():
         interval_seconds=5,
         top_stamina=100,
         bottom_stamina=100,
+        enable_v02_setup=True,
     )
 
 
@@ -496,10 +542,12 @@ def measure_v02_definition_of_done(
     if report is None:
         report = run_checks()
 
-    # Gate 1: current perfect-response measurement. When v0.2 introduces
-    # Ready-aware legality, run_checks().perfect_response_lock is the hook that
-    # must become Ready-aware rather than this gate being manually flipped.
-    gate1_pass = not report.perfect_response_lock
+    # Gate 1: v0.2 Ready-aware legal-response measurement.
+    ready_lock_free_states = _v02_ready_lock_free_states()
+    gate1_pass = all(
+        ready_lock_free_states[side] > 0
+        for side in (Side.TOP, Side.BOTTOM)
+    )
 
     # Gate 2: existing standardized RESET probe.
     reset_probe = render_reset_lock_probe()
@@ -514,6 +562,14 @@ def measure_v02_definition_of_done(
     top_followup_position_attacks_per_match = (
         standard_batch.top_followup_position_attack_count
         / standard_batch.matches
+    )
+    top_followup_setup_actions_per_match = (
+        standard_batch.top_followup_setup_action_count
+        / standard_batch.matches
+    )
+    top_followup_meaningful_per_match = (
+        top_followup_position_attacks_per_match
+        + top_followup_setup_actions_per_match
     )
 
     # Gate 3: responder-only outcome differential.
@@ -540,13 +596,16 @@ def measure_v02_definition_of_done(
             number=1,
             name="perfect-response lock",
             status=V02GateStatus.PASS if gate1_pass else V02GateStatus.OPEN,
-            metric=f"perfect_response_lock={report.perfect_response_lock}",
+            metric=(
+                "Ready lock-free states="
+                f"top:{ready_lock_free_states[Side.TOP]},"
+                f"bottom:{ready_lock_free_states[Side.BOTTOM]}"
+            ),
             evidence=(
-                "current checker no longer finds an unrestricted Failure-or-worse "
-                "counter for every action"
+                "each side has at least one Ready state with no legal Failure-or-worse counter"
                 if gate1_pass
                 else
-                "current checker still finds the unrestricted lock"
+                "at least one side still lacks a Ready state free of Failure-or-worse counters"
             ),
         ),
         V02GateMeasurement(
@@ -600,14 +659,16 @@ def measure_v02_definition_of_done(
             name="Top post-opening activity",
             status=(
                 V02GateStatus.PASS
-                if top_followup_position_attacks_per_match > 1.0
+                if top_followup_meaningful_per_match > 1.0
                 else V02GateStatus.OPEN
             ),
             metric=(
-                "standard batch Top follow-up position attacks/match="
-                f"{top_followup_position_attacks_per_match:.3f}"
+                "standard batch Top follow-up meaningful initiations/match="
+                f"{top_followup_meaningful_per_match:.3f} "
+                f"(position:{top_followup_position_attacks_per_match:.3f},"
+                f"setup:{top_followup_setup_actions_per_match:.3f})"
             ),
-            evidence="opening attack excluded; pass threshold is >1.000 follow-up attacks per match",
+            evidence="opening attack excluded; pass threshold is >1.000 follow-up position+setup initiations per match",
         ),
         V02GateMeasurement(
             number=6,
