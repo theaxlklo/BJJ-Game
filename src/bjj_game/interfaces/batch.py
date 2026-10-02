@@ -286,6 +286,7 @@ class EscapeFirstInitiatorPolicy:
                 }
                 if (
                     match.enable_v02_setup
+                    and action.id in match.setup_policy.target_action_ids
                     and match.setup_state.is_ready(action.id)
                 )
                 else None
