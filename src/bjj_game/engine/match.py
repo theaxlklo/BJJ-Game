@@ -398,6 +398,21 @@ class MountMatch:
             exit_destination=None,
         )
 
+    def preview_submission_stage(
+        self,
+        *,
+        response_id: str,
+        external_grade_modifier: int = 0,
+    ):
+        """Resolve the current submission-stage exchange without mutating match state."""
+        top_behavior, bottom_behavior = self._behaviors(None, None)
+        return self._resolve_submission_stage(
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            external_grade_modifier=external_grade_modifier,
+        )
+
     def _apply_submission_after_attempt(
         self,
         *,
