@@ -250,7 +250,7 @@ The per-band random-mix report lives beside the temporary blind responder policy
 
 ### Batch experiment boundary
 
-`interfaces.batch.GreedyInitiatorPolicy` and `BatchSummary` are experiment-harness objects.
+`interfaces.batch.EscapeFirstInitiatorPolicy` and `BatchSummary` are experiment-harness objects.
 
 They consume:
 
@@ -268,7 +268,7 @@ They do not modify:
 - frozen `decide()`
 - frozen enumeration
 
-The greedy policy selects only on expected realized attacker-axis movement at the exact current state. Outcome distributions are observations from that fixed rule, not a new game rule or learned opponent.
+The escape-first policy uses exact escape probability as the first lexicographic criterion; when no escape is reachable, it requires both raw and realized attacker-axis expectations to be positive. Outcome distributions are observations from that fixed rule, not a new game rule or learned opponent.
 
 ## Refactor proof
 
