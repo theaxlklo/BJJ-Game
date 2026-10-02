@@ -89,6 +89,8 @@ class BlindMixBandMetric:
     band: Band
     action_id: str
     expected_attacker_axis_delta: float
+    realized_attacker_axis_delta_min: float
+    realized_attacker_axis_delta_max: float
     escape_probability_min: float
     escape_probability_max: float
 
@@ -107,6 +109,41 @@ _BAND_ANCHOR = {
 
 def _axis_grid() -> tuple[float, ...]:
     return tuple(round(i / 100, 2) for i in range(10, 401))
+
+
+def expected_realized_attacker_axis_delta(
+    *,
+    side: Side,
+    action_id: str,
+    axis: float,
+    band: Band,
+    top_behavior: TopBehavior = TopBehavior.PRESSURE,
+    bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
+    external_grade_modifier: int = 0,
+) -> float:
+    """Expected actual axis movement after floor/cap/escape resolution.
+
+    Positive values favor the initiator. Escape crossings use the resolver's
+    crossing axis; non-escape results use the persisted clamped axis.
+    """
+    response_policy = RandomBlindResponder.POLICY[side.opponent]
+    total_weight = sum(weight for _, weight in response_policy)
+    weighted = 0.0
+    for response_id, weight in response_policy:
+        result = MOUNT_ENGINE.resolve_action(
+            axis=axis,
+            band=band,
+            initiator=side,
+            action_id=action_id,
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            external_grade_modifier=external_grade_modifier,
+        )
+        world_delta = result.axis_after - axis
+        attacker_delta = world_delta if side is Side.TOP else -world_delta
+        weighted += attacker_delta * weight
+    return weighted / total_weight
 
 
 def random_mix_band_metrics() -> tuple[BlindMixBandMetric, ...]:
@@ -140,10 +177,19 @@ def random_mix_band_metrics() -> tuple[BlindMixBandMetric, ...]:
                     weighted_grade += result.grade_value * weight
 
                 probabilities: list[float] = []
+                realized_axis_deltas: list[float] = []
                 for axis in _axis_grid():
                     if not MOUNT_RULES.axis_can_have_band(axis, band):
                         continue
                     escaped_weight = 0
+                    realized_axis_deltas.append(
+                        expected_realized_attacker_axis_delta(
+                            side=side,
+                            action_id=action.id,
+                            axis=axis,
+                            band=band,
+                        )
+                    )
                     for response_id, weight in response_policy:
                         result = MOUNT_ENGINE.resolve_action(
                             axis=axis,
@@ -164,6 +210,8 @@ def random_mix_band_metrics() -> tuple[BlindMixBandMetric, ...]:
                         band=band,
                         action_id=action.id,
                         expected_attacker_axis_delta=weighted_grade / total_weight,
+                        realized_attacker_axis_delta_min=min(realized_axis_deltas, default=0.0),
+                        realized_attacker_axis_delta_max=max(realized_axis_deltas, default=0.0),
                         escape_probability_min=min(probabilities, default=0.0),
                         escape_probability_max=max(probabilities, default=0.0),
                     )
@@ -176,7 +224,8 @@ def render_random_mix_band_metrics(*, action_cost: int = 7) -> tuple[str, ...]:
     lines: list[str] = [
         (
             "BLIND MIX BAND METRICS: baseline PRESSURE/ESCAPE, no exhaustion; "
-            f"action cost MEDIUM={action_cost}; axis and escape are reported separately."
+            f"action cost MEDIUM={action_cost}; raw grade-axis, realized post-clamp "
+            "axis range, and escape are reported separately."
         )
     ]
     for row in rows:
@@ -190,8 +239,10 @@ def render_random_mix_band_metrics(*, action_cost: int = 7) -> tuple[str, ...]:
         )
         lines.append(
             f"BLIND MIX: {row.side.value.title()} / {row.band.value} / "
-            f"{row.action.short_name}: attacker-axis "
-            f"{row.expected_attacker_axis_delta:+.3f}; escape {escape}"
+            f"{row.action.short_name}: raw attacker-axis "
+            f"{row.expected_attacker_axis_delta:+.3f}; realized-axis "
+            f"{row.realized_attacker_axis_delta_min:+.3f}.."
+            f"{row.realized_attacker_axis_delta_max:+.3f}; escape {escape}"
         )
 
     for side in (Side.TOP, Side.BOTTOM):
