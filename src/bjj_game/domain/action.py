@@ -23,17 +23,26 @@ class Commitment(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class ActionAttempt:
-    """An initiated action plus the effort the initiator commits to it."""
+    """An initiated action plus requested/effective effort."""
 
     initiator: Side
     action_id: str
-    commitment: Commitment
+    requested_commitment: Commitment
+    effective_commitment: Commitment | None
+
+    @property
+    def commitment(self) -> Commitment:
+        """Compatibility alias for the originally requested commitment."""
+        return self.requested_commitment
 
 
 @dataclass(frozen=True, slots=True)
 class AttemptResult:
-    """v0.1b bookkeeping around an unchanged Mount-v0 resolution."""
+    """Commitment/stamina bookkeeping around unchanged Mount-v0 resolution."""
 
     attempt: ActionAttempt
+    requested_cost: int
+    effective_cost: int
+    funding_gap: int
     stamina: StaminaSpend
     resolution: ResolutionResult
