@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..positions.mount.catalog import ENTITY_BY_ID
-from ..domain.action import AttemptResult
+from ..domain.action import AttemptResult, ResetWindowResult
 from ..engine.stamina import AdvanceResult, BehaviorStaminaResult
 from ..domain.model import DriftResult, ResolutionResult
 
@@ -132,5 +132,23 @@ def format_advance_result(
             "BEHAVIOR STAMINA",
             _format_behavior_stamina("Top", result.top_stamina),
             _format_behavior_stamina("Bottom", result.bottom_stamina),
+        ]
+    )
+
+
+def format_reset_window(result: ResetWindowResult) -> str:
+    return "\n".join(
+        [
+            "RESET / NO ACTION",
+            f"Initiator: {result.initiator.value.title()}",
+            "Initiated technique: None",
+            "Response: None",
+            "Action stamina cost: 0",
+            f"Stamina: {result.stamina}",
+            f"Axis unchanged: {result.axis:+.2f}",
+            f"Visible band unchanged: {result.band.value}",
+            f"Initiative passes to: {result.next_initiator.value.title()}",
+            "Clock cost in decision window: 0 simulated seconds",
+            "Next normal-speed interval still occurs before the next decision window.",
         ]
     )
