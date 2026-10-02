@@ -122,12 +122,23 @@ class RandomBlindResponderTests(unittest.TestCase):
         lines = render_random_mix_band_metrics()
         self.assertIn(
             "BLIND MIX BAND METRICS: baseline PRESSURE/ESCAPE, no exhaustion; "
-            "action cost MEDIUM=7; axis and escape are reported separately.",
+            "action cost MEDIUM=7; raw grade-axis, realized post-clamp axis range, "
+            "and escape are reported separately.",
+            lines,
+        )
+        self.assertIn(
+            "BLIND MIX: Top / Loose / Americana Isolation: raw attacker-axis -0.286; "
+            "realized-axis +0.104..+0.571; escape 0.0%",
+            lines,
+        )
+        self.assertIn(
+            "BLIND MIX: Top / Locked / Crossface: raw attacker-axis +0.286; "
+            "realized-axis -0.571..-0.061; escape 0.0%",
             lines,
         )
         self.assertIn(
             "BLIND MIX: Bottom / Strong / Elbow-Knee Escape: "
-            "attacker-axis -0.667; escape 0.0%",
+            "raw attacker-axis -0.667; realized-axis -0.667..-0.270; escape 0.0%",
             lines,
         )
         self.assertIn(
