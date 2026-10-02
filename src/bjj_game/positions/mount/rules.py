@@ -75,7 +75,9 @@ class MountRuleSet:
         return axis > 2.80
 
     def drift_rate(self, top_behavior: TopBehavior, bottom_behavior: BottomBehavior) -> float:
-        return DRIFT_RATES[(top_behavior, bottom_behavior)]
+        top_drift = TopBehavior.HOLD if top_behavior is TopBehavior.CONSERVE else top_behavior
+        bottom_drift = BottomBehavior.PROTECT if bottom_behavior is BottomBehavior.CONSERVE else bottom_behavior
+        return DRIFT_RATES[(top_drift, bottom_drift)]
 
     def behavior_modifier(self, *, action: TechniqueEntity, opposing_behavior: Behavior) -> int:
         return action.behavior_modifiers.get(opposing_behavior, 0)
