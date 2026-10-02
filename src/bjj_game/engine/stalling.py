@@ -13,6 +13,7 @@ class StallingConsequence(str, Enum):
     NONE = "NONE"
     WARNING = "WARNING"
     PENALTY = "PENALTY"
+    POSITION_RESET = "POSITION_RESET"
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,11 +81,14 @@ class StallingTracker:
             )
 
         self.offenses[side] += 1
-        if not self.warned[side]:
+        offense_number = self.offenses[side]
+        if offense_number == 1:
             self.warned[side] = True
             consequence = StallingConsequence.WARNING
-        else:
+        elif offense_number == 2:
             consequence = StallingConsequence.PENALTY
+        else:
+            consequence = StallingConsequence.POSITION_RESET
 
         # An adjudicated offense starts a new advancement period. The warning
         # itself persists for the rest of the match.
