@@ -5,6 +5,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
+from bjj_game.interfaces.cli import main as bjj_main
 from mount_v0.cli import _choose_entity, _print_summary, _read_input, _tee_to_log, main
 from mount_v0.engine import MountRun
 from mount_v0.model import EntityKind, Side
@@ -96,6 +97,34 @@ class CliTests(unittest.TestCase):
             self.assertIn("> \n", saved)
             self.assertIn("> bogus\n", saved)
             self.assertIn("Unknown Mount v0 name: 'bogus'", saved)
+
+
+    def test_primary_cli_prompts_commitment_and_charges_stamina(self):
+        output = io.StringIO()
+        inputs = ["1", "1", "1", "2", "2", KeyboardInterrupt]
+        with patch("builtins.input", side_effect=inputs), redirect_stdout(output):
+            code = bjj_main(["--clock", "0:10", "--interval", "5"])
+        self.assertEqual(code, 130)
+        text = output.getvalue()
+        self.assertIn("MOUNT v0.1b — HOT-SEAT PROTOTYPE", text)
+        self.assertIn("Commitment", text)
+        self.assertIn("Requested cost: 7", text)
+        self.assertIn("Stamina after: 93", text)
+        self.assertIn("Commitment history: ['MEDIUM']", text)
+        self.assertIn("Top stamina: 93/100 (Fresh)", text)
+
+    def test_legacy_cli_has_no_commitment_prompt_or_stamina_cost(self):
+        output = io.StringIO()
+        inputs = ["1", "1", "1", "2", KeyboardInterrupt]
+        with patch("builtins.input", side_effect=inputs), redirect_stdout(output):
+            code = main(["--clock", "0:10", "--interval", "5"])
+        self.assertEqual(code, 130)
+        text = output.getvalue()
+        self.assertIn("MOUNT v0 — HOT-SEAT PROTOTYPE", text)
+        self.assertNotIn("\nCommitment\n", text)
+        self.assertNotIn("Requested cost:", text)
+        self.assertIn("Top stamina: 100/100 (Fresh)", text)
+
 
 
 if __name__ == "__main__":
