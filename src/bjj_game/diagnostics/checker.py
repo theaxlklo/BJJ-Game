@@ -315,18 +315,37 @@ def _exhausted_positive_weight_escape_hits() -> tuple[ReachabilityHit, ...]:
 
 
 @lru_cache(maxsize=1)
-def _commitment_outcome_effect_count() -> int:
-    """Count states where funded LOW/MEDIUM/HIGH change the current outcome surface."""
+def _commitment_low_dominance_probe() -> tuple[bool, int]:
+    """Return (LOW strictly dominates higher commitments, advantage-state count).
+
+    A higher commitment breaks LOW dominance when, in an otherwise-identical
+    fully funded state, it produces a strictly better current resolution
+    outcome for the initiator: higher final grade, a terminal exit LOW did not
+    obtain, or more favorable realized axis movement.
+
+    When v0.2 adds setup/readiness/recognition state, extend this outcome
+    comparison rather than manually changing Gate 7.
+    """
     from ..engine.match import MountMatch
 
-    changed = 0
+    advantage_states = 0
+    probe_match = MountMatch()
+    low_cost = probe_match.stamina_cost_policy.cost(Commitment.LOW)
+    higher_costs = [
+        probe_match.stamina_cost_policy.cost(Commitment.MEDIUM),
+        probe_match.stamina_cost_policy.cost(Commitment.HIGH),
+    ]
+    low_has_strict_cost_advantage = all(
+        low_cost < cost for cost in higher_costs
+    )
+
     for side in (Side.TOP, Side.BOTTOM):
         for band, axis in _V02_BAND_ANCHORS.items():
             for top_behavior in V0_TOP_BEHAVIORS:
                 for bottom_behavior in (BottomBehavior.ESCAPE, BottomBehavior.PROTECT):
                     for action in actions_for(side):
                         for response in responses_for(side.opponent):
-                            signatures = []
+                            results = {}
                             for commitment in Commitment:
                                 match = MountMatch(
                                     initial_clock=300,
@@ -344,12 +363,39 @@ def _commitment_outcome_effect_count() -> int:
                                     response_id=response.id,
                                     commitment=commitment,
                                 )
-                                signatures.append(
-                                    _resolution_signature(attempt.resolution)
+                                results[commitment] = attempt.resolution
+
+                            low = results[Commitment.LOW]
+                            low_world_delta = low.axis_after - axis
+                            low_axis = (
+                                low_world_delta
+                                if side is Side.TOP
+                                else -low_world_delta
+                            )
+                            for higher in (Commitment.MEDIUM, Commitment.HIGH):
+                                candidate = results[higher]
+                                candidate_world_delta = candidate.axis_after - axis
+                                candidate_axis = (
+                                    candidate_world_delta
+                                    if side is Side.TOP
+                                    else -candidate_world_delta
                                 )
-                            if len(set(signatures)) > 1:
-                                changed += 1
-    return changed
+                                better = (
+                                    candidate.final_grade > low.final_grade
+                                    or (
+                                        candidate.exit_destination is not None
+                                        and low.exit_destination is None
+                                    )
+                                    or candidate_axis > low_axis + 1e-12
+                                )
+                                if better:
+                                    advantage_states += 1
+
+    low_strictly_dominates = (
+        low_has_strict_cost_advantage
+        and advantage_states == 0
+    )
+    return low_strictly_dominates, advantage_states
 
 
 def measure_v02_definition_of_done(
@@ -388,8 +434,8 @@ def measure_v02_definition_of_done(
         for hit in exhausted_hits
     }
 
-    # Gate 7: exhaustive funded commitment outcome differential.
-    commitment_effects = _commitment_outcome_effect_count()
+    # Gate 7: exhaustive funded LOW-dominance probe.
+    low_dominates, commitment_advantages = _commitment_low_dominance_probe()
 
     return (
         V02GateMeasurement(
@@ -488,19 +534,19 @@ def measure_v02_definition_of_done(
             number=7,
             name="commitment meaning",
             status=(
-                V02GateStatus.PASS
-                if commitment_effects > 0
-                else V02GateStatus.OPEN
+                V02GateStatus.OPEN
+                if low_dominates
+                else V02GateStatus.PASS
             ),
             metric=(
-                "funded LOW/MEDIUM/HIGH outcome-differential states="
-                f"{commitment_effects}"
+                f"low_strictly_dominates={low_dominates}; "
+                f"higher-commitment advantage states={commitment_advantages}"
             ),
             evidence=(
-                "commitment changes at least one current outcome surface"
-                if commitment_effects > 0
+                "cost-only LOW dominance remains on the measured outcome surface"
+                if low_dominates
                 else
-                "funded commitments remain outcome-equivalent; cost-only LOW dominance remains"
+                "LOW no longer strictly dominates the measured commitment outcome surface"
             ),
         ),
     )
