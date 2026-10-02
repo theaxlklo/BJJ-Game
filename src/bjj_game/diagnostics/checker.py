@@ -296,21 +296,112 @@ def _responder_exhaustion_differential_count() -> int:
 
 
 @lru_cache(maxsize=1)
-def _exhausted_positive_weight_escape_hits() -> tuple[ReachabilityHit, ...]:
-    """Exhausted Bottom exits reachable against positive-weight batch responses."""
+def _exhausted_positive_weight_escape_routes_by_top_behavior() -> dict[
+    TopBehavior, frozenset[tuple[str, ExitDestination]]
+]:
+    """Exhausted Bottom routes reachable against positive-weight batch responses.
+
+    Gate 6 is condition-sensitive: it passes only when every current Top
+    behavior leaves at least one positive-weight route.
+    """
     from ..interfaces.blind import RandomBlindResponder
 
-    positive_response_ids = {
+    positive_responses = tuple(
         response_id
         for response_id, weight in RandomBlindResponder.POLICY[Side.TOP]
         if weight > 0
+    )
+    routes: dict[TopBehavior, set[tuple[str, ExitDestination]]] = {
+        behavior: set() for behavior in TopBehavior
     }
-    reachability = _collect_escape_reachability(external_grade_modifier=-1)
+
+    for top_behavior in TopBehavior:
+        for action in BOTTOM_ACTIONS:
+            if not action.escape_capable:
+                continue
+            for band in Band:
+                for axis in _sample_axes():
+                    if not MOUNT_RULES.axis_can_have_band(axis, band):
+                        continue
+                    for response_id in positive_responses:
+                        result = MOUNT_ENGINE.resolve_action(
+                            axis=axis,
+                            band=band,
+                            initiator=Side.BOTTOM,
+                            action_id=action.id,
+                            response_id=response_id,
+                            top_behavior=top_behavior,
+                            bottom_behavior=BottomBehavior.ESCAPE,
+                            external_grade_modifier=-1,
+                        )
+                        if result.exit_destination is not None:
+                            routes[top_behavior].add(
+                                (action.id, result.exit_destination)
+                            )
+
+    return {
+        behavior: frozenset(found)
+        for behavior, found in routes.items()
+    }
+
+
+@lru_cache(maxsize=1)
+def _exhausted_positive_weight_escape_hits() -> tuple[ReachabilityHit, ...]:
+    """Compatibility view of Gate 6 reachability, including CONSERVE."""
+    from ..interfaces.blind import RandomBlindResponder
+
+    positive_responses = tuple(
+        response_id
+        for response_id, weight in RandomBlindResponder.POLICY[Side.TOP]
+        if weight > 0
+    )
     hits: list[ReachabilityHit] = []
-    for route_hits in reachability.values():
-        hits.extend(
-            hit for hit in route_hits if hit.response_id in positive_response_ids
-        )
+    seen: set[tuple] = set()
+
+    for top_behavior in TopBehavior:
+        for action in BOTTOM_ACTIONS:
+            if not action.escape_capable:
+                continue
+            for band in Band:
+                for axis in _sample_axes():
+                    if not MOUNT_RULES.axis_can_have_band(axis, band):
+                        continue
+                    for response_id in positive_responses:
+                        result = MOUNT_ENGINE.resolve_action(
+                            axis=axis,
+                            band=band,
+                            initiator=Side.BOTTOM,
+                            action_id=action.id,
+                            response_id=response_id,
+                            top_behavior=top_behavior,
+                            bottom_behavior=BottomBehavior.ESCAPE,
+                            external_grade_modifier=-1,
+                        )
+                        if result.exit_destination is None:
+                            continue
+                        key = (
+                            action.id,
+                            top_behavior,
+                            result.exit_destination,
+                            band,
+                            axis,
+                            response_id,
+                            result.final_grade,
+                        )
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        hits.append(
+                            ReachabilityHit(
+                                action_id=action.id,
+                                top_behavior=top_behavior,
+                                destination=result.exit_destination,
+                                band=band,
+                                axis=axis,
+                                response_id=response_id,
+                                final_grade=result.final_grade,
+                            )
+                        )
     return tuple(hits)
 
 
@@ -420,19 +511,26 @@ def measure_v02_definition_of_done(
     # Gates 4/5 share the same deterministic standard batch.
     standard_batch = _v02_standard_batch()
     bridge_count = standard_batch.bottom_action_counts.get("Bridge", 0)
-    top_position_attacks_per_match = (
-        standard_batch.top_position_attack_count / standard_batch.matches
+    top_followup_position_attacks_per_match = (
+        standard_batch.top_followup_position_attack_count
+        / standard_batch.matches
     )
 
     # Gate 3: responder-only outcome differential.
     responder_differences = _responder_exhaustion_differential_count()
 
-    # Gate 6: current positive-weight exhausted escape reachability.
-    exhausted_hits = _exhausted_positive_weight_escape_hits()
-    exhausted_routes = {
-        (hit.action_id, hit.top_behavior, hit.destination)
-        for hit in exhausted_hits
+    # Gate 6: every current Top behavior must leave at least one
+    # positive-weight Exhausted-Bottom escape route.
+    exhausted_routes_by_behavior = (
+        _exhausted_positive_weight_escape_routes_by_top_behavior()
+    )
+    exhausted_route_counts = {
+        behavior: len(routes)
+        for behavior, routes in exhausted_routes_by_behavior.items()
     }
+    every_behavior_has_escape = all(
+        count > 0 for count in exhausted_route_counts.values()
+    )
 
     # Gate 7: exhaustive funded LOW-dominance probe.
     low_dominates, commitment_advantages = _commitment_low_dominance_probe()
@@ -502,32 +600,35 @@ def measure_v02_definition_of_done(
             name="Top post-opening activity",
             status=(
                 V02GateStatus.PASS
-                if top_position_attacks_per_match > 1.0
+                if top_followup_position_attacks_per_match > 1.0
                 else V02GateStatus.OPEN
             ),
             metric=(
-                "standard batch Top position attacks/match="
-                f"{top_position_attacks_per_match:.3f}"
+                "standard batch Top follow-up position attacks/match="
+                f"{top_followup_position_attacks_per_match:.3f}"
             ),
-            evidence="pass threshold is >1.000 per match",
+            evidence="opening attack excluded; pass threshold is >1.000 follow-up attacks per match",
         ),
         V02GateMeasurement(
             number=6,
             name="Exhausted Bottom escape reachability",
             status=(
                 V02GateStatus.PASS
-                if exhausted_routes
+                if every_behavior_has_escape
                 else V02GateStatus.OPEN
             ),
             metric=(
-                "positive-weight exhausted escape routes="
-                f"{len(exhausted_routes)}"
+                "positive-weight exhausted escape routes by Top behavior="
+                + ",".join(
+                    f"{behavior.value}:{exhausted_route_counts[behavior]}"
+                    for behavior in TopBehavior
+                )
             ),
             evidence=(
-                "at least one route is currently reachable under the batch response mix"
-                if exhausted_routes
+                "every Top behavior leaves at least one Exhausted-Bottom escape route"
+                if every_behavior_has_escape
                 else
-                "no positive-weight exhausted escape route is reachable"
+                "at least one Top behavior removes every positive-weight Exhausted-Bottom escape route"
             ),
         ),
         V02GateMeasurement(
