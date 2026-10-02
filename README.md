@@ -174,6 +174,10 @@ Exhaustion now has 25/35 hysteresis: enter at <=25, but once exhausted you must 
 
 Behavior-stamina logs always include fixed-point carry so partial recovery/spend across behavior changes is visible.
 
+The modern v0.1 flow also offers **RESET / NO ACTION**. It yields the current attack window with no action cost or immediate axis change, allowing CONSERVE to recover from Exhausted instead of forcing another paid technique every 10 seconds. Repeated RESET is explicitly tracked as a future stalling-system debt.
+
+`StaminaPool.current` is read-only; supported mutation routes all refresh the 25/35 exhaustion latch. Latched displays explain the recovery threshold, e.g. `30/100 (Exhausted — recovers at 35)`.
+
 See `docs/MOUNT_V0_1E_EXHAUSTION.md`.
 ## Known v0 limitation
 
