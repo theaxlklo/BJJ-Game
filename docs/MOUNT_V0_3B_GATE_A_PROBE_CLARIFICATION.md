@@ -1,5 +1,7 @@
 # Mount v0.3b — Gate A One-Sided Probe Clarification
 
+> **FULL-MATCH CLARIFICATION:** Gate A must run this isolated ownership probe through the entire 5:00 match. Stopping immediately after the first positional penalty is insufficient. The authoritative corrected evidence and escalation are recorded in `MOUNT_V0_3B_FULL_MATCH_STALLING_FAILURE.md` and `MOUNT_V0_3B_POSITION_RESET_FINAL_MEASUREMENT.md`.
+
 ## Status
 
 FROZEN BEFORE v0.3b CHECKER IMPLEMENTATION.
