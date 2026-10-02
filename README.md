@@ -46,17 +46,27 @@ The implementation also includes the final coding cleanups agreed after the revi
 
 ## Run without installing
 
+Primary OOP entry point:
+
 ```bash
-PYTHONPATH=src python -m mount_v0 --check
-PYTHONPATH=src python -m mount_v0 --enumerate
-PYTHONPATH=src python -m mount_v0
-PYTHONPATH=src python -m mount_v0 --log logs/session-001.txt
+PYTHONPATH=src python -m bjj_game --check
+PYTHONPATH=src python -m bjj_game --enumerate
+PYTHONPATH=src python -m bjj_game
+PYTHONPATH=src python -m bjj_game --log logs/session-001.txt
 ```
 
 Targeted run:
 
 ```bash
-PYTHONPATH=src python -m mount_v0 --axis 0.50 --clock 0:30 --interval 7 --log logs/session-001.txt
+PYTHONPATH=src python -m bjj_game --axis 0.50 --clock 0:30 --interval 7 --log logs/session-001.txt
+```
+
+Legacy compatibility remains available during migration:
+
+```bash
+PYTHONPATH=src python -m mount_v0 --check
+PYTHONPATH=src python -m mount_v0 --enumerate
+PYTHONPATH=src python -m mount_v0
 ```
 
 ## Install editable
@@ -65,10 +75,12 @@ PYTHONPATH=src python -m mount_v0 --axis 0.50 --clock 0:30 --interval 7 --log lo
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
-mount-v0 --check
-mount-v0 --enumerate
-mount-v0
+bjj-game --check
+bjj-game --enumerate
+bjj-game
 ```
+
+`mount-v0` remains installed as a legacy alias.
 
 ## Test
 
@@ -77,6 +89,8 @@ No third-party test runner is required:
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
+
+CI runs the full suite and both semantic-check entry points on Python 3.11 and 3.13.
 
 ## Known v0 limitation
 
@@ -110,24 +124,23 @@ Trap-and-Roll → Reversal with HOLD: +0.10..+1.10
 
 The numerical overshoot still does not choose the branch; the final grade plus the already-visible band does. See `docs/Mount_v0_Final_Playtest_Tuning.md` and `docs/PLAYTEST_REPORT.md`.
 
-
 ## Object-oriented architecture
 
 The frozen Mount v0 mechanics now run through the `bjj_game` object model. The historical `mount_v0` package remains as a compatibility facade so the original v0 regression suite and command line continue to work unchanged.
 
 Core responsibilities are separated deliberately:
 
-- `Competitor` owns grappler identity/state and is the extension point for v0.1 stamina, then later belt/style/injury/run state.
+- `Competitor` owns grappler identity and current behavior now; v0.1 stamina/commitment and later belt/style/injury/run state attach here through composition.
 - `MountMatch` owns mutable match state: competitors, clock, current position, initiative, history and exit state.
 - `MountPosition` owns the Mount positional state; future positions can implement the same `Position` abstraction.
-- `MountAxis` owns the positional control value and visible hysteresis band.
-- `MountRuleSet` owns frozen Mount thresholds, drift rates, behavior modifiers, positional modifiers and Exit Map policy.
+- `MountAxis` is the only persisted Mount-control state writer. It always stays inside `+0.10..+4.00`; escape overshoot is stored separately on `MountPosition`.
+- `MountRuleSet` owns frozen Mount thresholds, drift rates, positional modifiers and Exit Map policy. Technique-specific behavior sensitivities and special-clamp metadata live in the catalog.
 - `TechniqueCatalog` owns canonical technique/response definitions and lookup indexes.
 - `MatchupTable` owns the 18 hand-authored deterministic BJJ grades.
-- `MountResolutionEngine` resolves drift and exchanges without owning mutable match state.
+- `MountResolutionEngine` resolves drift and exchanges without owning mutable match state. Its rule set, catalog and matchup table are explicit constructor-injected dataclass fields; `default()` wires production v0 dependencies.
 - `diagnostics` and `interfaces` are separated from the domain/engine so future UI layers do not need to rewrite grappling mechanics.
 
-The design favors composition over deep inheritance. Techniques, belts, styles and future stamina/commitment are data/state attached to domain objects rather than subclass trees.
+The design favors composition over deep inheritance. Techniques, behaviors, belts, styles and future stamina/commitment are data/state attached to domain objects rather than subclass trees. The CLI uses competitor-owned behavior; method behavior arguments remain only for frozen v0 API compatibility.
 
 Primary entry point:
 
@@ -145,12 +158,11 @@ PYTHONPATH=src python -m mount_v0 --check
 
 ### Refactor safety gate
 
-The OOP migration changed architecture only, not Mount v0 mechanics. The original 44 tests pass unchanged, six architecture tests were added, `--enumerate` is byte-identical to the pre-refactor build, and the Session 11/12 blunder replay logs are byte-identical apart from the absolute `LOG FILE` path line.
-
+The architecture-hardening pass changed architecture only, not Mount v0 mechanics. The original 44 tests still pass unchanged, 13 architecture tests now cover real dependency injection, data-driven special rules, competitor-owned behavior, and legal persisted-axis state; `--enumerate` remains byte-identical to the pre-hardening build.
 
 ## Blunder playtests
 
-Sessions 11 and 12 in `docs/playtest/` (also in `playtest_logs/blunders/`) show what happens when one player picks a bad move: a Bottom blunder that jumps Top from Stable to Locked, and a Top blunder that is clamped at Loose and then punished with Open Guard. `tests/test_blunder_replays.py` replays both. See the "Blunder sessions" section of `docs/PLAYTEST_REPORT.md`.
+Sessions 11 and 12 in `docs/playtest/` show what happens when one player picks a bad move: a Bottom blunder that jumps Top from Stable to Locked, and a Top blunder that is clamped at Loose and then punished with Open Guard. `tests/test_blunder_replays.py` replays both. See the "Blunder sessions" section of `docs/PLAYTEST_REPORT.md`.
 
 ## Session logging and cancellation
 
