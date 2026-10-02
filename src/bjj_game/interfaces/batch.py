@@ -6,11 +6,12 @@ from enum import Enum
 from statistics import mean, median
 
 from ..domain.action import Commitment
-from ..domain.model import BottomBehavior, ExitDestination, Side, TopBehavior
+from ..domain.model import Band, BottomBehavior, ExitDestination, Side, TopBehavior
 from ..domain.stamina import StaminaBand
 from ..engine.match import MountMatch
 from ..positions.mount.catalog import (
     MODERN_ENTITY_BY_ID,
+    TOP_AMERICANA_ARM_ISOLATION,
     TOP_AMERICANA_SUBMISSION_FINISH,
     actions_for,
 )
@@ -85,6 +86,62 @@ class EscapeFirstInitiatorPolicy:
     Tie-breaks are realized axis, then raw axis, then catalog order.
     """
 
+    def _submission_entry_probability(
+        self,
+        match: MountMatch,
+        *,
+        action_id: str,
+        external_grade_modifier: int,
+        allowed_response_ids: tuple[str, ...],
+        ready_grade_overrides: dict[str, object] | None = None,
+    ) -> float:
+        """Exact probability that Ready Americana enters the submission track.
+
+        This is terminal-route probability, not converted axis value. It may be
+        evaluated prospectively for an unready setup target by supplying the
+        target's eventual Ready response set and grade overrides.
+        """
+        if (
+            not match.enable_v03_submissions
+            or match.initiator is not Side.TOP
+            or action_id != TOP_AMERICANA_ARM_ISOLATION
+            or match.band not in {Band.STRONG, Band.LOCKED}
+        ):
+            return 0.0
+
+        weighted = RandomBlindResponder.weighted_policy(
+            Side.BOTTOM,
+            allowed_response_ids=allowed_response_ids,
+        )
+        total = sum(weight for _, weight in weighted)
+        if total <= 0:
+            return 0.0
+
+        top_behavior = match.top.behavior
+        bottom_behavior = match.bottom.behavior
+        if not isinstance(top_behavior, TopBehavior):
+            raise TypeError("Top behavior is not a TopBehavior")
+        if not isinstance(bottom_behavior, BottomBehavior):
+            raise TypeError("Bottom behavior is not a BottomBehavior")
+
+        overrides = ready_grade_overrides or {}
+        success_weight = 0
+        for response_id, weight in weighted:
+            result = match.engine.resolve_action(
+                axis=match.axis,
+                band=match.band,
+                initiator=Side.TOP,
+                action_id=action_id,
+                response_id=response_id,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=external_grade_modifier,
+                post_positional_grade_override=overrides.get(response_id),
+            )
+            if result.final_grade.successful:
+                success_weight += weight
+        return success_weight / total
+
     def _ready_target_has_value(
         self,
         match: MountMatch,
@@ -155,8 +212,16 @@ class EscapeFirstInitiatorPolicy:
         except ValueError:
             return False
 
+        submission_entry_probability = self._submission_entry_probability(
+            match,
+            action_id=target,
+            external_grade_modifier=external_grade_modifier,
+            allowed_response_ids=ready_ids,
+            ready_grade_overrides=ready_grade_overrides,
+        )
         return (
-            escape_probability > 0
+            submission_entry_probability > 0
+            or escape_probability > 0
             or (raw_axis > 0 and realized_axis > 0)
         )
 
@@ -209,38 +274,62 @@ class EscapeFirstInitiatorPolicy:
                 success_weight += weight
         return success_weight / total
 
-    def _submission_advance_probability(
+    def _submission_progress_probability(
         self,
         match: MountMatch,
         *,
         action_id: str,
         external_grade_modifier: int,
     ) -> float:
-        if (
-            not match.enable_v03_submissions
-            or action_id != TOP_AMERICANA_SUBMISSION_FINISH
-            or not match.submission_state.active
-            or match.initiator is not Side.TOP
-        ):
+        if not match.enable_v03_submissions or match.initiator is not Side.TOP:
             return 0.0
 
-        allowed = match.legal_response_ids(action_id)
-        weighted = RandomBlindResponder.weighted_policy(
-            Side.BOTTOM,
-            allowed_response_ids=allowed,
-        )
-        total = sum(weight for _, weight in weighted)
-        if total <= 0:
-            return 0.0
-        success_weight = 0
-        for response_id, weight in weighted:
-            result = match.preview_submission_stage(
-                response_id=response_id,
-                external_grade_modifier=external_grade_modifier,
+        if (
+            action_id == TOP_AMERICANA_SUBMISSION_FINISH
+            and match.submission_state.active
+        ):
+            allowed = match.legal_response_ids(action_id)
+            weighted = RandomBlindResponder.weighted_policy(
+                Side.BOTTOM,
+                allowed_response_ids=allowed,
             )
-            if result.final_grade.successful:
-                success_weight += weight
-        return success_weight / total
+            total = sum(weight for _, weight in weighted)
+            if total <= 0:
+                return 0.0
+            success_weight = 0
+            for response_id, weight in weighted:
+                result = match.preview_submission_stage(
+                    response_id=response_id,
+                    external_grade_modifier=external_grade_modifier,
+                )
+                if result.final_grade.successful:
+                    success_weight += weight
+            return success_weight / total
+
+        if (
+            action_id == TOP_AMERICANA_ARM_ISOLATION
+            and match.setup_state.is_ready(action_id)
+        ):
+            allowed = match.legal_response_ids(action_id)
+            ready_grade_overrides = {
+                response_id: override
+                for response_id in allowed
+                if (
+                    override := match.setup_policy.ready_final_grade_override(
+                        action_id,
+                        response_id,
+                    )
+                ) is not None
+            }
+            return self._submission_entry_probability(
+                match,
+                action_id=action_id,
+                external_grade_modifier=external_grade_modifier,
+                allowed_response_ids=allowed,
+                ready_grade_overrides=ready_grade_overrides,
+            )
+
+        return 0.0
 
     def choose(self, match: MountMatch) -> BatchDecision:
         side = match.initiator
@@ -293,7 +382,7 @@ class EscapeFirstInitiatorPolicy:
             )
             if action.id == TOP_AMERICANA_SUBMISSION_FINISH:
                 escape_probability = 0.0
-                submission_probability = self._submission_advance_probability(
+                submission_probability = self._submission_progress_probability(
                     match,
                     action_id=action.id,
                     external_grade_modifier=exhaustion_modifier,
@@ -313,7 +402,11 @@ class EscapeFirstInitiatorPolicy:
                     allowed_response_ids=allowed,
                     ready_grade_overrides=ready_grade_overrides,
                 )
-                submission_probability = 0.0
+                submission_probability = self._submission_progress_probability(
+                    match,
+                    action_id=action.id,
+                    external_grade_modifier=exhaustion_modifier,
+                )
                 setup_probability = self._setup_advance_probability(
                     match,
                     action_id=action.id,
