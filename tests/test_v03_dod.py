@@ -4,6 +4,7 @@ from bjj_game.diagnostics.checker import (
     V02GateStatus,
     _submission_finish_present,
     _v03_best_defense_evidence,
+    _v03_bottom_recovery_prediction_probe,
     _v03_exhaustion_differentials,
     _v03_locked_submission_probe,
     _v03_standard_batch,
@@ -90,6 +91,18 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
                 f"guaranteed:{item.guaranteed_advance_states}",
                 self.gates["C"].metric,
             )
+
+    def test_recovery_prediction_probe_is_observational_and_matched(self):
+        rows = _v03_bottom_recovery_prediction_probe()
+        self.assertEqual(
+            [row.label for row in rows],
+            ["fresh-fixed", "exhausted-fixed", "exhausted-recover"],
+        )
+        for row in rows:
+            self.assertGreaterEqual(row.taps, 0)
+            self.assertGreaterEqual(row.escapes, 0)
+            self.assertGreaterEqual(row.timeouts, 0)
+            self.assertGreaterEqual(row.submission_attempts, 0)
 
     def test_gate_d_checks_both_one_sided_directions_and_cancellation(self):
         attacker, defender, mismatches, cases = _v03_exhaustion_differentials()
