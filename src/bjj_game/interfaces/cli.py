@@ -6,10 +6,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TextIO
 
+from ..domain.action import Commitment
 from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, run_checks
 from ..engine.match import MountRun
-from .formatting import format_clock, format_drift, format_resolution
+from .formatting import format_attempt_result, format_clock, format_drift, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
 from ..domain.model import BottomBehavior, EntityKind, Side, TopBehavior
 from ..positions.mount.names import RESOLVER
@@ -107,11 +108,27 @@ def _choose_behavior(side: Side, current=None):
         print("Unknown behavior")
 
 
-def _run_interactive(args: argparse.Namespace) -> int:
+def _choose_commitment() -> Commitment:
+    choices = list(Commitment)
+    while True:
+        print("\nCommitment")
+        for i, commitment in enumerate(choices, 1):
+            print(f"  {i}. {commitment.value}")
+        value = _read_input("> ").strip()
+        if value.isdigit() and 1 <= int(value) <= len(choices):
+            return choices[int(value) - 1]
+        upper = value.upper()
+        for commitment in choices:
+            if upper == commitment.value:
+                return commitment
+        print("Unknown commitment")
+
+
+def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = True) -> int:
     run = MountRun(initial_clock=args.clock, starting_axis=args.axis, interval_seconds=args.interval)
     run.top.stamina.set_current(args.top_stamina)
     run.bottom.stamina.set_current(args.bottom_stamina)
-    print("MOUNT v0 — HOT-SEAT PROTOTYPE")
+    print("MOUNT v0.1b — HOT-SEAT PROTOTYPE" if commitment_enabled else "MOUNT v0 — HOT-SEAT PROTOTYPE")
     print(f"Clock: {format_clock(run.initial_clock)}")
     print(f"Starting axis: {run.axis:+.2f}")
     print(f"Initial visible band: {run.band.value}")
@@ -119,7 +136,11 @@ def _run_interactive(args: argparse.Namespace) -> int:
     print("First initiator: Top")
     print(f"Top stamina: {run.top.stamina.display}")
     print(f"Bottom stamina: {run.bottom.stamina.display}")
-    print("Stamina effects: OFF (v0.1a telemetry only)")
+    if commitment_enabled:
+        print("Stamina costs: ON (LOW=3, MEDIUM=7, HIGH=12)")
+        print("Commitment resolution effects: OFF (v0.1b cost-only slice)")
+    else:
+        print("Stamina effects: OFF (legacy Mount v0 path)")
 
     try:
         top_behavior = _choose_behavior(Side.TOP)
