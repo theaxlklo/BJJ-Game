@@ -126,6 +126,41 @@ class V03BStallingTests(unittest.TestCase):
         self.assertIs(match.band, Band.STRONG)
         self.assertFalse(penalty.free_initiative_window)
 
+    def test_third_and_later_offenses_position_reset_to_default_stable(self):
+        match = self._active_threat(axis=4.00)
+
+        match.stalling_tracker.advance(20)
+        warning = match.reset_window()
+        self.assertEqual(warning.stalling_consequence, "WARNING")
+
+        match.initiator = Side.TOP
+        match.stalling_tracker.advance(20)
+        penalty = match.reset_window()
+        self.assertEqual(penalty.stalling_consequence, "PENALTY")
+        self.assertAlmostEqual(match.axis, 2.80)
+
+        match.initiator = Side.TOP
+        match.stalling_tracker.advance(20)
+        reset = match.reset_window()
+        self.assertEqual(reset.stalling_consequence, "POSITION_RESET")
+        self.assertTrue(reset.position_reset)
+        self.assertAlmostEqual(reset.position_reset_axis_before, 2.80)
+        self.assertAlmostEqual(reset.position_reset_axis_after, 1.50)
+        self.assertAlmostEqual(match.axis, 1.50)
+        self.assertIs(match.band, Band.STABLE)
+        self.assertTrue(match.stalling_warned(Side.TOP))
+        self.assertIs(match.submission_state.stage, SubmissionStage.THREAT)
+        self.assertEqual(len(match.history.stalling_position_reset_history), 1)
+
+        match.initiator = Side.TOP
+        match.position.apply_control(4.00, Band.LOCKED)
+        match.stalling_tracker.advance(20)
+        repeat = match.reset_window()
+        self.assertEqual(repeat.stalling_consequence, "POSITION_RESET")
+        self.assertAlmostEqual(match.axis, 1.50)
+        self.assertIs(match.band, Band.STABLE)
+        self.assertEqual(len(match.history.stalling_position_reset_history), 2)
+
     def test_bottom_can_receive_same_penalty_toward_top(self):
         match = self._match(axis=1.50)
         match.initiator = Side.BOTTOM
