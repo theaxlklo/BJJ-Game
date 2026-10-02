@@ -162,7 +162,7 @@ MountMatch
 Planned objects:
 
 - `StaminaPool` — implemented in v0.1a
-- `StaminaBand` — implemented in v0.1a, observational only
+- `StaminaBand` — implemented in v0.1a; Exhausted becomes mechanical in v0.1e with 25/35 hysteresis
 - `Commitment` — implemented in v0.1b
 - `ActionAttempt` — implemented in v0.1b
 - `StaminaCostPolicy` — implemented in v0.1b and injected into `MountMatch`
