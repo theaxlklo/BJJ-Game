@@ -200,6 +200,30 @@ class CliTests(unittest.TestCase):
         self.assertGreater(reveal_index, reset_index)
         self.assertIn("Response history: []", text)
 
+
+    def test_random_blind_session_log_contains_seed_and_choice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "random-blind.txt"
+            terminal = io.StringIO()
+            inputs = ["1", "1", "2", KeyboardInterrupt]
+            with patch("builtins.input", side_effect=inputs), redirect_stdout(terminal):
+                code = bjj_main([
+                    "--clock", "0:10",
+                    "--interval", "5",
+                    "--blind",
+                    "--blind-responder", "random",
+                    "--seed", "42",
+                    "--log", str(path),
+                ])
+            self.assertEqual(code, 130)
+            saved = path.read_text(encoding="utf-8")
+            self.assertIn("Random blind responder seed: 42", saved)
+            self.assertIn(
+                "RANDOM BLIND RESPONSE #1: Tight-Elbow Arm Defense [draw 5/6]",
+                saved,
+            )
+
+
     def test_random_blind_requires_blind_and_seed(self):
         output = io.StringIO()
         with redirect_stdout(output):
