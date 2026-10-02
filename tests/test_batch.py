@@ -148,7 +148,7 @@ class BatchSimulationTests(unittest.TestCase):
             bottom_behavior=BottomBehavior.PROTECT,
             commitment=Commitment.MEDIUM,
             initial_clock=60,
-            starting_axis=1.50,
+            starting_axis=3.50,
             interval_seconds=5,
             top_stamina=25,
             bottom_stamina=25,
