@@ -106,7 +106,8 @@ class StaminaIdentityTests(unittest.TestCase):
         text = output.getvalue()
         self.assertIn("Top stamina: 75/100 (Working)", text)
         self.assertIn("Bottom stamina: 25/100 (Exhausted)", text)
-        self.assertIn("Stamina effects: OFF (v0.1a telemetry only)", text)
+        self.assertIn("Stamina costs: ON (LOW=3, MEDIUM=7, HIGH=12)", text)
+        self.assertIn("Commitment resolution effects: OFF (v0.1b cost-only slice)", text)
 
 
 if __name__ == "__main__":
