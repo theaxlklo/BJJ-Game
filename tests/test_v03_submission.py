@@ -113,20 +113,37 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
         self.assertFalse(result.resolution.final_grade.successful)
         self.assertEqual(result.resolution.proposed_axis, 3.00)
         self.assertEqual(match.axis, 3.00)
+        self.assertIsNone(match.submission_state.stage)
+        self.assertNotIn(
+            TOP_AMERICANA_SUBMISSION_FINISH,
+            match.legal_action_ids(Side.TOP),
+        )
+
+    def test_defended_control_regresses_to_threat(self):
+        match = self._active_stage(
+            axis=4.00,
+            stage=SubmissionStage.CONTROL,
+        )
+        match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+            commitment=Commitment.LOW,
+        )
+        self.assertEqual(match.axis, 3.00)
         self.assertIs(match.submission_state.stage, SubmissionStage.THREAT)
 
-    def test_repeated_best_defense_cannot_remain_unchanged_at_locked_cap(self):
-        match = self._active_stage(axis=4.00)
-        for _ in range(2):
-            match.initiator = Side.TOP
-            match.attempt(
-                action_id=TOP_AMERICANA_SUBMISSION_FINISH,
-                response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
-                commitment=Commitment.LOW,
-            )
-        self.assertEqual(match.axis, 2.00)
-        self.assertIs(match.band, Band.STRONG)
-        self.assertIs(match.submission_state.stage, SubmissionStage.THREAT)
+    def test_defended_finish_regresses_to_control(self):
+        match = self._active_stage(
+            axis=4.00,
+            stage=SubmissionStage.FINISH,
+        )
+        match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+            commitment=Commitment.LOW,
+        )
+        self.assertEqual(match.axis, 3.00)
+        self.assertIs(match.submission_state.stage, SubmissionStage.CONTROL)
 
     def test_success_from_finish_taps_and_ends_match(self):
         match = self._active_stage(stage=SubmissionStage.FINISH)
@@ -160,7 +177,7 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
             commitment=Commitment.LOW,
         )
         self.assertIs(exhausted_result.resolution.final_grade, Grade.CONTESTED)
-        self.assertIs(exhausted.submission_state.stage, SubmissionStage.THREAT)
+        self.assertIsNone(exhausted.submission_state.stage)
         self.assertEqual(exhausted.axis, 2.50)
 
     def test_exhausted_defender_can_turn_fresh_stalemate_into_progress(self):
@@ -171,7 +188,7 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
             commitment=Commitment.LOW,
         )
         self.assertIs(fresh_result.resolution.final_grade, Grade.CONTESTED)
-        self.assertIs(fresh.submission_state.stage, SubmissionStage.THREAT)
+        self.assertIsNone(fresh.submission_state.stage)
 
         exhausted = self._active_stage(axis=3.50)
         exhausted.bottom.stamina.set_current(25)
