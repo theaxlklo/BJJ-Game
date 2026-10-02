@@ -9,6 +9,7 @@ from ..domain.model import (
     Band,
     BottomBehavior,
     ExitDestination,
+    Grade,
     RunHistory,
     Side,
     TopBehavior,
@@ -575,7 +576,9 @@ class MountMatch:
         Both stamina bands are read before the initiator's action cost is paid.
         Initiator Exhausted shifts the action down one grade; responder Exhausted
         shifts it up one grade. If both are Exhausted the modifiers cancel.
-        Responding still has no direct stamina cost.
+        Ordinary responding still has no direct stamina cost. A Contested hold
+        during an active Americana submission stage pays the existing LOW cost
+        after resolution, so it can affect only later exchanges.
         """
         top_behavior, bottom_behavior = self._behaviors(None, None)
         initiator = self.initiator
@@ -673,6 +676,25 @@ class MountMatch:
             effective_commitment=effective_commitment,
         )
         spend = pool.spend_up_to(effective_cost)
+
+        if (
+            action_id == TOP_AMERICANA_SUBMISSION_FINISH
+            and result.final_grade is Grade.CONTESTED
+        ):
+            hold_cost = self.stamina_cost_policy.cost(Commitment.LOW)
+            hold_spend = responder_pool.spend_up_to(hold_cost)
+            self.history.submission_hold_responder_side_history.append(
+                initiator.opponent.value
+            )
+            self.history.submission_hold_stamina_requested_history.append(
+                hold_cost
+            )
+            self.history.submission_hold_stamina_charged_history.append(
+                hold_spend.charged
+            )
+            self.history.submission_hold_stamina_shortfall_history.append(
+                hold_spend.shortfall
+            )
 
         self.history.commitment_history.append(commitment.value)
         self.history.effective_commitment_history.append(
