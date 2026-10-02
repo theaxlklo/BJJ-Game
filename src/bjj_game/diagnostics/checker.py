@@ -19,6 +19,8 @@ from ..positions.mount.rules import MOUNT_RULES
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
 from ..positions.mount.names import RESOLVER, normalize_name
 
+V0_TOP_BEHAVIORS = (TopBehavior.PRESSURE, TopBehavior.HOLD)
+
 
 @dataclass(frozen=True, slots=True)
 class ReachabilityHit:
@@ -75,7 +77,7 @@ def _collect_escape_reachability() -> dict[
         if not action.escape_capable:
             continue
         destinations = set(action.exit_map.values()) | set(action.band_exit_overrides.values())
-        for top_behavior in TopBehavior:
+        for top_behavior in V0_TOP_BEHAVIORS:
             for destination in destinations:
                 reachability[(action.id, top_behavior, destination)] = []
             for band in Band:
@@ -295,7 +297,7 @@ def _render_reachability_ranges(report: CheckReport) -> list[str]:
         if not action.escape_capable:
             continue
         destinations = sorted(set(action.exit_map.values()) | set(action.band_exit_overrides.values()), key=lambda d: d.value)
-        for top_behavior in TopBehavior:
+        for top_behavior in V0_TOP_BEHAVIORS:
             lines.append(f"\n{action.canonical_name} — Top {top_behavior.value}")
             for destination in destinations:
                 hits = report.escape_reachability.get((action.id, top_behavior, destination), [])
