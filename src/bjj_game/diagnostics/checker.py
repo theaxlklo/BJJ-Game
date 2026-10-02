@@ -149,6 +149,35 @@ def render_exhausted_reachability_summary() -> list[str]:
             )
     return lines
 
+
+def render_reset_lock_probe() -> str:
+    """Modern v0.1 diagnostic for the always-RESET full-information strategy."""
+    from ..engine.match import MountMatch
+
+    match = MountMatch(
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+    )
+    match.set_behaviors(
+        top=TopBehavior.PRESSURE,
+        bottom=BottomBehavior.ESCAPE,
+    )
+
+    while not match.ended:
+        match.advance()
+        if match.ended:
+            break
+        match.reset_window()
+
+    reason = match.exit_reason or "None"
+    return (
+        "RESET LOCK PROBE: Top PRESSURE+RESET vs Bottom ESCAPE+RESET "
+        f"-> {reason}; axis {match.axis:+.2f}; band {match.band.value}; "
+        f"Top stamina {match.top.stamina.current}; "
+        f"Bottom stamina {match.bottom.stamina.current}"
+    )
+
 def run_checks() -> CheckReport:
     report = CheckReport()
 
