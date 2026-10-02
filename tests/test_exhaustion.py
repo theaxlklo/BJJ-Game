@@ -10,6 +10,8 @@ from bjj_game.engine.stamina import (
 )
 from bjj_game.positions.mount.catalog import (
     BOTTOM_RESPONSE_FOREARM_FRAME,
+    BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+    TOP_AMERICANA_ARM_ISOLATION,
     TOP_HIGH_MOUNT_CLIMB,
 )
 
@@ -28,6 +30,80 @@ class ExhaustionPolicyTests(unittest.TestCase):
         self.assertEqual(
             DEFAULT_EXHAUSTION_POLICY.initiator_grade_modifier(StaminaBand.EXHAUSTED), -1
         )
+
+    def test_only_exhausted_responder_gets_grade_bonus(self):
+        self.assertEqual(
+            DEFAULT_EXHAUSTION_POLICY.responder_grade_modifier(StaminaBand.FRESH), 0
+        )
+        self.assertEqual(
+            DEFAULT_EXHAUSTION_POLICY.responder_grade_modifier(StaminaBand.WORKING), 0
+        )
+        self.assertEqual(
+            DEFAULT_EXHAUSTION_POLICY.responder_grade_modifier(StaminaBand.TIRED), 0
+        )
+        self.assertEqual(
+            DEFAULT_EXHAUSTION_POLICY.responder_grade_modifier(StaminaBand.EXHAUSTED), +1
+        )
+
+    def test_exhausted_responder_defends_one_grade_worse(self):
+        match = MountMatch(starting_axis=1.50)
+        match.bottom.stamina.set_current(25)
+
+        result = match.attempt(
+            action_id=TOP_HIGH_MOUNT_CLIMB,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=Commitment.LOW,
+        )
+
+        self.assertIs(
+            result.responder_stamina_band_before_action,
+            StaminaBand.EXHAUSTED,
+        )
+        self.assertEqual(result.initiator_exhaustion_modifier, 0)
+        self.assertEqual(result.responder_exhaustion_modifier, +1)
+        self.assertEqual(result.exhaustion_modifier, +1)
+        self.assertIs(result.base_resolution.final_grade, Grade.SUCCESS)
+        self.assertIs(result.resolution.final_grade, Grade.STRONG_SUCCESS)
+
+    def test_both_exhausted_modifiers_cancel(self):
+        match = MountMatch(starting_axis=1.50)
+        match.top.stamina.set_current(25)
+        match.bottom.stamina.set_current(25)
+
+        result = match.attempt(
+            action_id=TOP_HIGH_MOUNT_CLIMB,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=Commitment.LOW,
+        )
+
+        self.assertEqual(result.initiator_exhaustion_modifier, -1)
+        self.assertEqual(result.responder_exhaustion_modifier, +1)
+        self.assertEqual(result.exhaustion_modifier, 0)
+        self.assertEqual(result.base_resolution, result.resolution)
+
+    def test_ready_stalemate_stays_contested_fresh_but_breaks_against_exhausted_responder(self):
+        fresh = MountMatch(starting_axis=1.50, enable_v02_setup=True)
+        fresh.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        fresh.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        fresh.initiator = Side.TOP
+        fresh_result = fresh.attempt(
+            action_id=TOP_AMERICANA_ARM_ISOLATION,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+        self.assertIs(fresh_result.resolution.final_grade, Grade.CONTESTED)
+
+        exhausted = MountMatch(starting_axis=1.50, enable_v02_setup=True)
+        exhausted.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        exhausted.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+        exhausted.bottom.stamina.set_current(25)
+        exhausted.initiator = Side.TOP
+        exhausted_result = exhausted.attempt(
+            action_id=TOP_AMERICANA_ARM_ISOLATION,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+        self.assertIs(exhausted_result.resolution.final_grade, Grade.SUCCESS)
 
     def test_exhausted_initiator_drops_one_grade(self):
         match = MountMatch(starting_axis=1.50)
