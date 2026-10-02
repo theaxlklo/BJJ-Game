@@ -155,6 +155,72 @@ class CliTests(unittest.TestCase):
         self.assertIn("Initiated-action history: []", text)
 
 
+
+    def test_seeded_random_blind_responder_is_hidden_until_after_action(self):
+        output = io.StringIO()
+        inputs = ["1", "1", "2", KeyboardInterrupt]
+        with patch("builtins.input", side_effect=inputs), redirect_stdout(output):
+            code = bjj_main([
+                "--clock", "0:10",
+                "--interval", "5",
+                "--blind",
+                "--blind-responder", "random",
+                "--seed", "42",
+            ])
+        self.assertEqual(code, 130)
+        text = output.getvalue()
+        self.assertIn("Random blind responder seed: 42", text)
+        self.assertIn("Random blind Bottom response mix: Frame=4, Tight Elbows=3", text)
+        self.assertIn("Random blind Top response mix: Wide Base=2, Hip Follow=1", text)
+
+        lock_index = text.index("BOTTOM RESPONSE — RANDOM BLIND LOCK")
+        action_index = text.index("TOP INITIATES")
+        reveal_index = text.index("RANDOM BLIND RESPONSE #1: Tight-Elbow Arm Defense")
+        self.assertLess(lock_index, action_index)
+        self.assertGreater(reveal_index, action_index)
+        self.assertIn("[draw 5/6]", text)
+
+    def test_seeded_random_blind_reset_logs_unused_choice_after_reset(self):
+        output = io.StringIO()
+        inputs = ["3", "3", "4", KeyboardInterrupt]
+        with patch("builtins.input", side_effect=inputs), redirect_stdout(output):
+            code = bjj_main([
+                "--clock", "0:10",
+                "--interval", "5",
+                "--blind",
+                "--blind-responder", "random",
+                "--seed", "42",
+            ])
+        self.assertEqual(code, 130)
+        text = output.getvalue()
+        reset_index = text.index("RESET / NO ACTION")
+        reveal_index = text.index(
+            "RANDOM BLIND RESPONSE #1 UNUSED (RESET): Tight-Elbow Arm Defense"
+        )
+        self.assertGreater(reveal_index, reset_index)
+        self.assertIn("Response history: []", text)
+
+    def test_random_blind_requires_blind_and_seed(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--blind-responder", "random", "--seed", "42"])
+        self.assertEqual(code, 2)
+        self.assertIn("--blind-responder random requires --blind", output.getvalue())
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--blind", "--blind-responder", "random"])
+        self.assertEqual(code, 2)
+        self.assertIn("--blind-responder random requires --seed N", output.getvalue())
+
+    def test_seed_rejected_without_random_blind_responder(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--blind", "--seed", "42"])
+        self.assertEqual(code, 2)
+        self.assertIn("--seed is only valid with --blind-responder random", output.getvalue())
+
+
     def test_primary_cli_can_reset_without_response_or_action_cost(self):
         output = io.StringIO()
         inputs = ["3", "3", "4", KeyboardInterrupt]
@@ -191,7 +257,7 @@ class CliTests(unittest.TestCase):
         with redirect_stdout(output):
             code = main(["--blind"])
         self.assertEqual(code, 2)
-        self.assertIn("--blind is available only on the modern bjj_game testing path", output.getvalue())
+        self.assertIn("blind testing flags are available only on the modern bjj_game path", output.getvalue())
 
 
     def test_primary_check_reports_commitment_dominance_and_visibility_debt(self):
@@ -225,6 +291,10 @@ class CliTests(unittest.TestCase):
             text,
         )
         self.assertIn("BLIND PLAYTEST MODE: use --blind", text)
+        self.assertIn(
+            "RANDOM BLIND RESPONDER MIX: Bottom Frame=4, Tight Elbows=3; Top Wide Base=2, Hip Follow=1",
+            text,
+        )
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
         output = io.StringIO()
@@ -241,6 +311,7 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("RESET/STALLING DEBT", text)
         self.assertNotIn("RESET LOCK PROBE", text)
         self.assertNotIn("BLIND PLAYTEST MODE", text)
+        self.assertNotIn("RANDOM BLIND RESPONDER MIX", text)
 
 
 
