@@ -70,7 +70,18 @@ class MountSetupPolicy:
         return rule.ready_response_ids if rule is not None else None
 
     def setup_advances_from(self, result: ResolutionResult) -> bool:
-        return result.final_grade.successful
+        """A designated builder creates setup pressure even when answered.
+
+        v0.2a originally advanced only on Success+, which let a perfect
+        responder deny Ready forever by repeating the builder's best counter.
+        For the minimal setup chains, the builder itself represents forcing a
+        reaction: Bridge makes Top commit base/posture, and High Mount Climb
+        makes Bottom commit defensive structure. The local exchange grade still
+        controls axis movement; setup pressure is a separate state signal.
+
+        Correct-response disruption/decay is intentionally a later v0.2 rule.
+        """
+        return self.rule_for_builder(result.action_id) is not None
 
 
 DEFAULT_MOUNT_SETUP_POLICY = MountSetupPolicy.default()
