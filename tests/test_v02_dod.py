@@ -57,16 +57,21 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
         self.assertIs(self.gates[3].status, expected)
         self.assertIn(f"={differences}", self.gates[3].metric)
 
-    def test_gate_4_status_follows_bridge_count_in_standard_batch(self):
+    def test_gate_4_status_follows_bridge_setup_value_in_standard_batch(self):
         batch = _v02_standard_batch()
         bridge_count = batch.bottom_action_counts.get("Bridge", 0)
+        setup_count = batch.bottom_setup_action_count
         expected = (
             V02GateStatus.PASS
-            if bridge_count > 0
+            if setup_count > 0
             else V02GateStatus.OPEN
         )
         self.assertIs(self.gates[4].status, expected)
         self.assertIn(f"={bridge_count}/", self.gates[4].metric)
+        self.assertIn(
+            f"setup-priority selections={setup_count}",
+            self.gates[4].metric,
+        )
 
     def test_gate_5_status_follows_top_followup_meaningful_rate(self):
         batch = _v02_standard_batch()
