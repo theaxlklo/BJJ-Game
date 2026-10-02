@@ -248,6 +248,28 @@ Fixed behavior flags are also interface-only experiment controls. They initializ
 
 The per-band random-mix report lives beside the temporary blind responder policy and reads the existing engine. It reports raw grade-axis, realized post-clamp axis range, and escape probability separately rather than adding a utility model to the domain.
 
+### Adaptive behavior experiment boundary
+
+`interfaces.batch.AdaptiveBehaviorPolicy` is a batch-only controller over the existing competitor behavior state.
+
+It owns no stamina and defines no new BJJ rule. It reads `StaminaPool.band` and chooses between:
+
+```text
+baseline behavior
+CONSERVE
+```
+
+For `recover` mode, the existing Exhausted hysteresis is authoritative:
+
+```text
+Exhausted latch active → CONSERVE
+latch clears at >=35   → baseline
+```
+
+The selected behavior is still applied through `MountMatch.set_behaviors()`, so drift and action modifiers continue to use the same production objects.
+
+Behavior-window counts and switch counts live only in `BatchSummary` as experiment evidence.
+
 ### Batch experiment boundary
 
 `interfaces.batch.EscapeFirstInitiatorPolicy` and `BatchSummary` are experiment-harness objects.
