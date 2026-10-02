@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from .model import ResolutionResult, Side
+from .model import Band, ResolutionResult, Side
 from .stamina import StaminaBand, StaminaSpend
 
 
@@ -49,3 +49,15 @@ class AttemptResult:
     exhaustion_modifier: int
     base_resolution: ResolutionResult
     resolution: ResolutionResult
+
+
+@dataclass(frozen=True, slots=True)
+class ResetWindowResult:
+    """A deliberate no-action decision in the modern v0.1 flow."""
+
+    initiator: Side
+    next_initiator: Side
+    clock_seconds: int
+    axis: float
+    band: Band
+    stamina: int
