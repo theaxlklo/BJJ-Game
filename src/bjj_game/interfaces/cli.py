@@ -12,6 +12,7 @@ from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
+from .blind import BlindResponseChoice, RandomBlindResponder
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_reset_window, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
 from ..domain.model import BottomBehavior, EntityKind, Side, TopBehavior
@@ -105,6 +106,17 @@ def _read_hidden_input(prompt: str = "") -> str:
     return value
 
 
+
+def _random_blind_response(
+    responder: Side,
+    policy: RandomBlindResponder,
+) -> BlindResponseChoice:
+    choice = policy.choose(responder)
+    print(f"\n{responder.value.upper()} RESPONSE — RANDOM BLIND LOCK")
+    print("Response locked by seeded random policy.")
+    return choice
+
+
 def _choose_blind_response(side: Side):
     entities = responses_for(side)
     while True:
@@ -196,6 +208,12 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
     print("First initiator: Top")
     print(f"Top stamina: {run.top.stamina.display}")
     print(f"Bottom stamina: {run.bottom.stamina.display}")
+    random_blind = (
+        RandomBlindResponder(args.seed)
+        if commitment_enabled and args.blind and args.blind_responder == "random"
+        else None
+    )
+
     if commitment_enabled:
         print("Action stamina costs: ON (LOW=3, MEDIUM=7, HIGH=12)")
         print(f"Standard commitment: {args.commitment.value}")
@@ -203,7 +221,19 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
         print("Exhaustion consequence: Exhausted initiator -1 grade")
         print("Behavior stamina: PRESSURE/ESCAPE -1 per 5s; HOLD/PROTECT 0; CONSERVE +2 per 5s")
         if args.blind:
-            print("Blind hot-seat testing: responder locks hidden response before action/RESET is chosen")
+            if random_blind is None:
+                print("Blind hot-seat testing: human responder locks hidden response before action/RESET is chosen")
+            else:
+                print("Blind hot-seat testing: seeded random responder locks response before action/RESET is chosen")
+                print(f"Random blind responder seed: {random_blind.seed}")
+                print(
+                    "Random blind Bottom response mix: "
+                    + RandomBlindResponder.mix_description(Side.BOTTOM)
+                )
+                print(
+                    "Random blind Top response mix: "
+                    + RandomBlindResponder.mix_description(Side.TOP)
+                )
     else:
         print("Stamina effects: OFF (legacy Mount v0 path)")
 
@@ -232,8 +262,15 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
             initiator = run.initiator
             if commitment_enabled:
                 responder = initiator.opponent
+                blind_choice = (
+                    _random_blind_response(responder, random_blind)
+                    if random_blind is not None
+                    else None
+                )
                 blind_response = (
-                    _choose_blind_response(responder)
+                    blind_choice.response
+                    if blind_choice is not None
+                    else _choose_blind_response(responder)
                     if args.blind
                     else None
                 )
@@ -241,6 +278,13 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
                 if action is None:
                     reset_result = run.reset_window()
                     print("\n" + format_reset_window(reset_result))
+                    if blind_choice is not None:
+                        print(
+                            "RANDOM BLIND RESPONSE "
+                            f"#{blind_choice.ordinal} UNUSED (RESET): "
+                            f"{blind_choice.response.canonical_name} "
+                            f"[draw {blind_choice.draw}/{blind_choice.total_weight - 1}]"
+                        )
                 else:
                     response = (
                         blind_response
@@ -265,6 +309,13 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
                             bottom_behavior.value,
                         )
                     )
+                    if blind_choice is not None:
+                        print(
+                            "RANDOM BLIND RESPONSE "
+                            f"#{blind_choice.ordinal}: "
+                            f"{blind_choice.response.canonical_name} "
+                            f"[draw {blind_choice.draw}/{blind_choice.total_weight - 1}]"
+                        )
             else:
                 action = _choose_entity(
                     f"{initiator.value.upper()} INITIATES",
@@ -363,6 +414,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bottom-stamina", type=stamina_value, default=100, help="starting Bottom stamina telemetry, 0..100")
     parser.add_argument("--commitment", type=commitment_value, default=Commitment.MEDIUM, help="fixed v0.1c action commitment; defaults to MEDIUM")
     parser.add_argument("--blind", action="store_true", help="testing mode: responder locks a hidden response before the action/RESET choice")
+    parser.add_argument("--blind-responder", choices=("human", "random"), default="human", help="blind responder source; random requires --blind and --seed")
+    parser.add_argument("--seed", type=int, help="deterministic seed for --blind-responder random")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -433,8 +486,19 @@ def _tee_to_log(path: Path):
 
 
 def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> int:
-    if args.blind and not commitment_enabled:
-        print("ERROR: --blind is available only on the modern bjj_game testing path.")
+    if not commitment_enabled and (
+        args.blind or args.blind_responder != "human" or args.seed is not None
+    ):
+        print("ERROR: blind testing flags are available only on the modern bjj_game path.")
+        return 2
+    if args.blind_responder == "random" and not args.blind:
+        print("ERROR: --blind-responder random requires --blind.")
+        return 2
+    if args.blind_responder == "random" and args.seed is None:
+        print("ERROR: --blind-responder random requires --seed N for replayability.")
+        return 2
+    if args.seed is not None and args.blind_responder != "random":
+        print("ERROR: --seed is only valid with --blind-responder random.")
         return 2
     if args.enumerate:
         print(render_enumeration())
@@ -481,6 +545,13 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             print(
                 "INFO: BLIND PLAYTEST MODE: use --blind to lock the responder before the action is shown; "
                 "testing only, no resolution rules change."
+            )
+            print(
+                "INFO: RANDOM BLIND RESPONDER MIX: Bottom "
+                + RandomBlindResponder.mix_description(Side.BOTTOM)
+                + "; Top "
+                + RandomBlindResponder.mix_description(Side.TOP)
+                + ". Use --blind --blind-responder random --seed N for solo replayable sessions."
             )
         report = run_checks()
         for message in report.info:
