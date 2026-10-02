@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...domain.model import Band, BandChange, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
-from .catalog import BOTTOM_BRIDGE, BOTTOM_TRAP_AND_ROLL_ESCAPE, TOP_AMERICANA_ARM_ISOLATION
+from ...domain.model import Band, BandChange, Behavior, BottomBehavior, ExitDestination, Grade, Side, TechniqueEntity, TopBehavior
 
 MIN_AXIS = 0.10
 MAX_AXIS = 4.00
@@ -78,14 +77,8 @@ class MountRuleSet:
     def drift_rate(self, top_behavior: TopBehavior, bottom_behavior: BottomBehavior) -> float:
         return DRIFT_RATES[(top_behavior, bottom_behavior)]
 
-    def behavior_modifier(self, *, initiator: Side, action_id: str, top_behavior: TopBehavior, bottom_behavior: BottomBehavior) -> int:
-        if initiator is Side.BOTTOM and top_behavior is TopBehavior.HOLD:
-            if action_id in {BOTTOM_BRIDGE, BOTTOM_TRAP_AND_ROLL_ESCAPE}:
-                return -1
-        if initiator is Side.TOP and bottom_behavior is BottomBehavior.PROTECT:
-            if action_id == TOP_AMERICANA_ARM_ISOLATION:
-                return -1
-        return 0
+    def behavior_modifier(self, *, action: TechniqueEntity, opposing_behavior: Behavior) -> int:
+        return action.behavior_modifiers.get(opposing_behavior, 0)
 
     def positional_modifier(self, *, initiator: Side, band: Band) -> int:
         if initiator is Side.BOTTOM and band in {Band.STRONG, Band.LOCKED}:
@@ -94,7 +87,7 @@ class MountRuleSet:
             return -1
         return 0
 
-    def exit_destination(self, *, action, final_grade: Grade, band_before: Band) -> ExitDestination | None:
+    def exit_destination(self, *, action: TechniqueEntity, final_grade: Grade, band_before: Band) -> ExitDestination | None:
         return action.band_exit_overrides.get((final_grade, band_before), action.exit_map.get(final_grade))
 
 
