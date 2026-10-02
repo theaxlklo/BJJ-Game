@@ -7,8 +7,8 @@ from enum import Enum
 class StaminaBand(str, Enum):
     """Stamina bands introduced in Mount v0.1a.
 
-    These bands do not modify resolution in v0.1a. They exist only so stamina
-    state has a stable, readable representation before costs/effects are added.
+    v0.1e gives only EXHAUSTED a resolution consequence for initiated actions.
+    The other bands remain observational.
     """
 
     FRESH = "Fresh"
@@ -43,8 +43,8 @@ class StaminaRecovery:
 class StaminaPool:
     """Player-owned stamina state.
 
-    v0.1a is telemetry-only: no drift, grade, axis, clamp, or Exit Map rule
-    reads this object. Mechanical stamina effects begin in a later v0.1 phase.
+    v0.1c changes this pool through action/behavior economics. v0.1e reads its
+    band in the match-layer ExhaustionPolicy; frozen Mount lookup data never does.
     """
 
     current: int = 100
@@ -114,8 +114,7 @@ class StaminaPool:
 
     @property
     def band(self) -> StaminaBand:
-        # Quartiles are intentionally observational in v0.1a; no mechanic
-        # depends on these thresholds yet.
+        # Only EXHAUSTED has a mechanical consequence in v0.1e.
         ratio = self.ratio
         if ratio > 0.75:
             return StaminaBand.FRESH
