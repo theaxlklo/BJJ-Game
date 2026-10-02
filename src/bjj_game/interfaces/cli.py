@@ -231,6 +231,7 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
     print(f"Raw-grade history: {h.raw_grade_history}")
     print(f"Modified-grade history: {h.modified_grade_history}")
     if h.commitment_history:
+        print(f"Commitment initiator history: {h.commitment_initiator_history}")
         print(f"Commitment history: {h.commitment_history}")
         print(f"Stamina requested history: {h.stamina_requested_history}")
         print(f"Stamina charged history: {h.stamina_charged_history}")
