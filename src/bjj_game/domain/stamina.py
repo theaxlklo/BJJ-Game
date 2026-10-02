@@ -17,6 +17,19 @@ class StaminaBand(str, Enum):
     EXHAUSTED = "Exhausted"
 
 
+@dataclass(frozen=True, slots=True)
+class StaminaSpend:
+    before: int
+    requested: int
+    charged: int
+    shortfall: int
+    after: int
+
+    @property
+    def fully_paid(self) -> bool:
+        return self.shortfall == 0
+
+
 @dataclass(slots=True)
 class StaminaPool:
     """Player-owned stamina state.
@@ -46,6 +59,28 @@ class StaminaPool:
         if value > self.maximum:
             raise ValueError("current stamina cannot exceed maximum stamina")
         self.current = value
+
+    def spend_up_to(self, requested: int) -> StaminaSpend:
+        """Charge as much of a non-negative cost as the pool can currently pay.
+
+        v0.1b records any shortfall but does not block or modify the action. This
+        keeps the commitment-cost slice playable before recovery and exhaustion
+        consequences are added in later v0.1 phases.
+        """
+        if not isinstance(requested, int):
+            raise TypeError("stamina cost must be an integer")
+        if requested < 0:
+            raise ValueError("stamina cost cannot be negative")
+        before = self.current
+        charged = min(before, requested)
+        self.current = before - charged
+        return StaminaSpend(
+            before=before,
+            requested=requested,
+            charged=charged,
+            shortfall=requested - charged,
+            after=self.current,
+        )
 
     @property
     def ratio(self) -> float:
