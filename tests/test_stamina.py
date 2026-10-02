@@ -2,6 +2,7 @@ import hashlib
 import io
 import unittest
 from contextlib import redirect_stdout
+from unittest.mock import patch
 
 from bjj_game.diagnostics.checker import render_enumeration
 from bjj_game.domain.competitor import Competitor
@@ -99,10 +100,8 @@ class StaminaIdentityTests(unittest.TestCase):
 
     def test_cli_accepts_observational_starting_stamina(self):
         output = io.StringIO()
-        with redirect_stdout(output):
+        with patch("builtins.input", side_effect=EOFError), redirect_stdout(output):
             code = main(["--clock", "1", "--top-stamina", "75", "--bottom-stamina", "25"])
-        # Interactive input reaches EOF immediately under unittest capture.
-        # The cancellation summary must still expose the configured telemetry.
         self.assertEqual(code, 130)
         text = output.getvalue()
         self.assertIn("Top stamina: 75/100 (Working)", text)
