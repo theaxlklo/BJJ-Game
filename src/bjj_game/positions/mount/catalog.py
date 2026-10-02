@@ -63,6 +63,7 @@ ENTITIES: tuple[TechniqueEntity, ...] = (
         aliases=("Americana Setup", "Americana Isolation", "Bent-Arm Isolation", "Keylock Setup"),
         category="SUBMISSION_SETUP",
         description="Separate and control the arm in the bent-arm structure associated with an Americana attack.",
+        behavior_modifiers={BottomBehavior.PROTECT: -1},
     ),
     TechniqueEntity(
         id=BOTTOM_BRIDGE,
@@ -75,7 +76,8 @@ ENTITIES: tuple[TechniqueEntity, ...] = (
         category="DISRUPTION",
         description="Elevate the hips to disrupt balance and create space without completing an escape.",
         escape_capable=False,
-        special_rule="bridge_clamp",
+        behavior_modifiers={TopBehavior.HOLD: -1},
+        clamp_at_mount_floor=True,
     ),
     TechniqueEntity(
         id=BOTTOM_ELBOW_KNEE_ESCAPE,
@@ -107,6 +109,7 @@ ENTITIES: tuple[TechniqueEntity, ...] = (
         category="ESCAPE",
         description="Remove a posting structure, bridge, and roll toward the compromised side.",
         escape_capable=True,
+        behavior_modifiers={TopBehavior.HOLD: -1},
         exit_map={
             Grade.SUCCESS: ExitDestination.REVERSAL,
             Grade.STRONG_SUCCESS: ExitDestination.REVERSAL,
