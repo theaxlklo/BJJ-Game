@@ -2,7 +2,9 @@ import unittest
 
 from bjj_game.domain.action import Commitment
 from bjj_game.domain.model import BottomBehavior, Side, TopBehavior
+from bjj_game.domain.submission import SubmissionStage
 from bjj_game.engine.match import MountMatch
+from bjj_game.positions.mount.catalog import TOP_AMERICANA_SUBMISSION_FINISH
 from bjj_game.interfaces.batch import AdaptiveBehaviorPolicy, BatchBehaviorMode, EscapeFirstInitiatorPolicy, run_escape_first_batch
 
 
@@ -66,6 +68,27 @@ class EscapeFirstInitiatorPolicyTests(unittest.TestCase):
         self.assertEqual(decision.reason, "escape")
         self.assertIsNotNone(decision.action_id)
         self.assertAlmostEqual(decision.escape_probability, 2 / 3)
+
+    def test_submission_progress_precedes_position_and_reset_at_locked(self):
+        match = MountMatch(
+            starting_axis=3.50,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+        )
+        match.submission_state.stage = SubmissionStage.THREAT
+        match.initiator = Side.TOP
+        match.set_behaviors(
+            top=TopBehavior.PRESSURE,
+            bottom=BottomBehavior.ESCAPE,
+        )
+
+        decision = EscapeFirstInitiatorPolicy().choose(match)
+
+        self.assertEqual(decision.action_id, TOP_AMERICANA_SUBMISSION_FINISH)
+        self.assertEqual(decision.reason, "submission")
+        self.assertAlmostEqual(decision.submission_progress_probability, 4 / 7)
+        self.assertEqual(decision.expected_raw_axis, 0.0)
+        self.assertEqual(decision.expected_realized_axis, 0.0)
 
     def test_setup_policy_does_not_build_useless_locked_top_target(self):
         match = MountMatch(starting_axis=4.00, enable_v02_setup=True)
