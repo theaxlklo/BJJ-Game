@@ -162,18 +162,71 @@ The current frozen digest is:
 3ee55429434f8f95c592183317292d3e824768135d7834c44bae82a6c1a59ff2
 ```
 
-## Current baseline
+## Automatic gate evaluation
 
-Before any v0.2 mechanics are implemented:
+`bjj_game --check` computes gate status from executable evidence.
+
+The current evaluator uses:
+
+```text
+Gate 1  run_checks().perfect_response_lock
+Gate 2  standardized RESET-lock probe
+Gate 3  exhaustive fresh-vs-Exhausted responder exchange differential
+Gate 4  Bridge selections in the standard batch
+Gate 5  Top position attacks / match in the standard batch
+Gate 6  positive-weight Exhausted-Bottom escape reachability
+Gate 7  exhaustive funded LOW/MEDIUM/HIGH outcome differential
+```
+
+The shared standard batch for Gates 4 and 5 is pinned to:
+
+```text
+100 matches
+base seed 42
+Top PRESSURE
+Bottom ESCAPE
+MEDIUM commitment
+5:00 clock
+starting axis +1.50
+5-second interval
+100 / 100 starting stamina
+escape-first initiator policy
+```
+
+Tests verify each printed status against its measurement formula. They do not assert a literal `[OPEN]` or `[PASS]` label.
+
+When v0.2 adds Ready/setup/initiative state, the relevant measurement hook must be extended to consume that state; the gate is not manually flipped.
+
+### Current measured baseline
+
+Before any v0.2 mechanics are implemented, the current measurements are:
 
 ```text
 Gate 1  Perfect-response lock             OPEN
 Gate 2  RESET/stalling lock               OPEN
 Gate 3  Responder stamina                 OPEN
 Gate 4  Bridge setup role                 OPEN
-Gate 5  Top post-opening activity         OPEN
-Gate 6  Exhausted Bottom escape routes    OPEN / design choice unresolved
-Gate 7  Commitment meaning                OPEN / explicit deferral allowed
+Gate 5  Top post-opening activity         PASS under the current >1.0 threshold
+Gate 6  Exhausted Bottom escape routes    PASS because one positive-weight route exists
+Gate 7  Commitment meaning                OPEN
 ```
 
-v0.2 is not complete until every gate is either PASS or an explicitly accepted DEFERRED state where this document allows deferral.
+Gate 5 and Gate 6 being PASS at baseline is intentional evidence, not a declaration. If those thresholds are later judged too permissive, change the completion criterion first and let the checker recompute the status.
+
+v0.2 is not complete until every required gate is PASS or an explicitly accepted DEFERRED state where this document allows deferral.
+
+## Measurement integrity
+
+Gate status must be derived from a metric, never from a hand-edited label.
+
+A documentation-only decision may mark a gate DEFERRED only where this document explicitly allows deferral; a PASS requires executable evidence.
+
+The current v0.2 checker evaluator is implemented in `diagnostics/checker.py` as typed gate measurements containing:
+
+- gate number
+- gate name
+- status
+- metric
+- evidence
+
+Rendering happens after measurement.
