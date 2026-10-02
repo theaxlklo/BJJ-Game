@@ -245,6 +245,42 @@ class CliTests(unittest.TestCase):
         self.assertIn("--seed is only valid with --blind-responder random", output.getvalue())
 
 
+
+    def test_fixed_behavior_flags_remove_behavior_prompts(self):
+        output = io.StringIO()
+        inputs = ["4", KeyboardInterrupt]
+        with patch("builtins.input", side_effect=inputs), redirect_stdout(output):
+            code = bjj_main([
+                "--clock", "0:10",
+                "--interval", "5",
+                "--top-behavior", "PRESSURE",
+                "--bottom-behavior", "ESCAPE",
+            ])
+        self.assertEqual(code, 130)
+        text = output.getvalue()
+        self.assertIn("Top behavior fixed for session: PRESSURE", text)
+        self.assertIn("Bottom behavior fixed for session: ESCAPE", text)
+        self.assertNotIn("\nTop behavior\n", text)
+        self.assertNotIn("\nBottom behavior\n", text)
+        self.assertIn("Top behavior history: ['PRESSURE']", text)
+        self.assertIn("Bottom behavior history: ['ESCAPE']", text)
+
+    def test_one_fixed_behavior_leaves_other_side_interactive(self):
+        output = io.StringIO()
+        inputs = ["1", "4", KeyboardInterrupt]
+        with patch("builtins.input", side_effect=inputs), redirect_stdout(output):
+            code = bjj_main([
+                "--clock", "0:10",
+                "--interval", "5",
+                "--top-behavior", "HOLD",
+            ])
+        self.assertEqual(code, 130)
+        text = output.getvalue()
+        self.assertIn("Top behavior fixed for session: HOLD", text)
+        self.assertNotIn("\nTop behavior\n", text)
+        self.assertIn("\nBottom behavior\n", text)
+
+
     def test_primary_cli_can_reset_without_response_or_action_cost(self):
         output = io.StringIO()
         inputs = ["3", "3", "4", KeyboardInterrupt]
@@ -284,6 +320,15 @@ class CliTests(unittest.TestCase):
         self.assertIn("blind testing flags are available only on the modern bjj_game path", output.getvalue())
 
 
+
+    def test_legacy_cli_rejects_fixed_behavior_flags(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["--top-behavior", "PRESSURE"])
+        self.assertEqual(code, 2)
+        self.assertIn("modern playtest flags", output.getvalue())
+
+
     def test_primary_check_reports_commitment_dominance_and_visibility_debt(self):
         output = io.StringIO()
         with redirect_stdout(output):
@@ -319,6 +364,11 @@ class CliTests(unittest.TestCase):
             "RANDOM BLIND RESPONDER MIX: Bottom Frame=4, Tight Elbows=3; Top Wide Base=2, Hip Follow=1",
             text,
         )
+        self.assertIn("BLIND MIX BAND METRICS", text)
+        self.assertIn(
+            "BLIND MIX: Bottom / Strong / Elbow-Knee Escape: attacker-axis -0.667; escape 0.0%",
+            text,
+        )
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
         output = io.StringIO()
@@ -336,6 +386,7 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("RESET LOCK PROBE", text)
         self.assertNotIn("BLIND PLAYTEST MODE", text)
         self.assertNotIn("RANDOM BLIND RESPONDER MIX", text)
+        self.assertNotIn("BLIND MIX BAND METRICS", text)
 
 
 
