@@ -148,15 +148,19 @@ class RandomBlindResponderTests(unittest.TestCase):
             lines,
         )
 
-    def test_open_guard_is_unreachable_under_exact_batch_mix(self):
-        reachable = random_mix_reachable_exits()
-        self.assertIn(ExitDestination.HALF_GUARD, reachable)
-        self.assertIn(ExitDestination.REVERSAL, reachable)
-        self.assertNotIn(ExitDestination.OPEN_GUARD, reachable)
+    def test_open_guard_reachability_changes_with_responder_exhaustion(self):
+        fresh = random_mix_reachable_exits()
+        exhausted_responder = random_mix_reachable_exits(
+            external_grade_modifier=+1
+        )
+        self.assertIn(ExitDestination.HALF_GUARD, fresh)
+        self.assertIn(ExitDestination.REVERSAL, fresh)
+        self.assertNotIn(ExitDestination.OPEN_GUARD, fresh)
+        self.assertIn(ExitDestination.OPEN_GUARD, exhausted_responder)
         self.assertEqual(
             render_random_mix_exit_limit(),
-            "BATCH RESPONSE MIX LIMIT: unreachable under the fixed positive-weight "
-            "response mix: Open Guard",
+            "BATCH RESPONSE MIX REACHABILITY: fresh responder missing=Open Guard; "
+            "Exhausted responder missing=none.",
         )
 
     def test_zero_weight_responses_never_exist_in_policy(self):
