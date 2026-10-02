@@ -1,5 +1,7 @@
 # v0.3a Final Measurement — Ready Response Projection
 
+> **Superseded by PR-review Option A.** This file preserves the pre-stalemate measurement in which every non-success broke the submission track. The current amended result is in `docs/MOUNT_V0_3A_OPTION_A_MEASUREMENT.md`: Gate B reopened at 98/100 while Gates A/C/D/E pass. Do not treat the 39/100 result below as current.
+
 ## Final reviewed candidate
 
 ```text
