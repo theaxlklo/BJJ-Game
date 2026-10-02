@@ -184,6 +184,7 @@ class BatchSummary:
     top_escape_priority_count: int
     bottom_escape_priority_count: int
     top_position_attack_count: int
+    top_followup_position_attack_count: int
     bottom_position_attack_count: int
     top_behavior_mode: BatchBehaviorMode
     bottom_behavior_mode: BatchBehaviorMode
@@ -242,6 +243,7 @@ class BatchSummary:
             f"Top escape-priority attacks: {self.top_escape_priority_count}",
             f"Bottom escape-priority attacks: {self.bottom_escape_priority_count}",
             f"Top position attacks: {self.top_position_attack_count}",
+            f"Top follow-up position attacks: {self.top_followup_position_attack_count}",
             f"Bottom position attacks: {self.bottom_position_attack_count}",
             "Top actions: " + _render_counts(self.top_action_counts),
             "Bottom actions: " + _render_counts(self.bottom_action_counts),
@@ -291,6 +293,7 @@ def run_escape_first_batch(
     top_escape_priority = 0
     bottom_escape_priority = 0
     top_position_attacks = 0
+    top_followup_position_attacks = 0
     bottom_position_attacks = 0
     top_behavior_windows: Counter[str] = Counter()
     bottom_behavior_windows: Counter[str] = Counter()
@@ -319,6 +322,7 @@ def run_escape_first_batch(
         current_bottom = bottom_policy.choose(match)
         match.set_behaviors(top=current_top, bottom=current_bottom)
         responder = RandomBlindResponder(base_seed + match_index)
+        top_has_initiated_action = False
 
         while not match.ended:
             # Choose behavior for the upcoming normal-speed interval.
@@ -368,6 +372,9 @@ def run_escape_first_batch(
                     top_escape_priority += 1
                 else:
                     top_position_attacks += 1
+                    if top_has_initiated_action:
+                        top_followup_position_attacks += 1
+                top_has_initiated_action = True
             else:
                 bottom_actions[action.short_name] += 1
                 if decision.reason == "escape":
@@ -410,6 +417,7 @@ def run_escape_first_batch(
         top_escape_priority_count=top_escape_priority,
         bottom_escape_priority_count=bottom_escape_priority,
         top_position_attack_count=top_position_attacks,
+        top_followup_position_attack_count=top_followup_position_attacks,
         bottom_position_attack_count=bottom_position_attacks,
         top_behavior_mode=top_behavior_mode,
         bottom_behavior_mode=bottom_behavior_mode,
