@@ -67,6 +67,18 @@ class EscapeFirstInitiatorPolicyTests(unittest.TestCase):
         self.assertIsNotNone(decision.action_id)
         self.assertAlmostEqual(decision.escape_probability, 2 / 3)
 
+    def test_setup_policy_does_not_build_useless_locked_top_target(self):
+        match = MountMatch(starting_axis=4.00, enable_v02_setup=True)
+        match.set_behaviors(
+            top=TopBehavior.PRESSURE,
+            bottom=BottomBehavior.ESCAPE,
+        )
+
+        decision = EscapeFirstInitiatorPolicy().choose(match)
+
+        self.assertIsNone(decision.action_id)
+        self.assertEqual(decision.reason, "reset")
+
     def test_bottom_at_locked_resets_when_only_cap_skew_makes_realized_axis_look_good(self):
         match = MountMatch(starting_axis=4.00)
         match.initiator = Side.BOTTOM
