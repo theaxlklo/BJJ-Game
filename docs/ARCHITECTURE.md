@@ -57,7 +57,7 @@ There is deliberately no compatibility module under `bjj_game/positions/mount/`;
 
 Represents a grappler and owns player-specific changing state.
 
-Mount v0.1c stores:
+Mount v0.1e stores:
 
 - side
 - name
@@ -168,6 +168,7 @@ Planned objects:
 - `StaminaCostPolicy` — implemented in v0.1b and injected into `MountMatch`
 - `BehaviorStaminaPolicy` — implemented in v0.1c with fixed-point interval carry
 - `CONSERVE` — implemented in v0.1c as a recovery behavior layered around frozen drift
+- `ExhaustionPolicy` — implemented in v0.1e; computes a generic -1 initiated-action modifier only for Exhausted competitors
 
 `CONSERVE` and `STABILIZE` are behaviors/policies, not competitor subclasses. v0.1b does not yet add either behavior.
 
@@ -184,6 +185,21 @@ ActionAttempt
 ```
 
 This keeps stamina economics outside the BJJ matchup table and resolution engine.
+### Exhaustion boundary
+
+The stamina system does not move exhaustion knowledge into the frozen matchup table.
+
+```text
+Competitor.StaminaPool
+→ ExhaustionPolicy
+→ generic external_grade_modifier
+→ MountResolutionEngine
+```
+
+The engine's default modifier is zero, so frozen v0 behavior is unchanged. The modern `attempt()` path reads the stamina band before action cost, applies `-1` only when Exhausted, and records both the base and adjusted resolution.
+
+`decide()` remains the legacy cost-free/exhaustion-free path.
+
 ## Refactor proof
 
 The architecture-hardening pass is behavior-preserving:
