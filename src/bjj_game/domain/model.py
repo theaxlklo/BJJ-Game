@@ -144,6 +144,7 @@ class ResolutionResult:
     final_grade: Grade
     behavior_modifier: int
     positional_modifier: int
+    external_grade_modifier: int
     grade_value: int
     axis_before: float
     axis_delta: float
