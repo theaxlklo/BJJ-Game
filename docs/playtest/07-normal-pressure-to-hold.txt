@@ -1,0 +1,375 @@
+LOG FILE: playtest_logs/07-normal-pressure-to-hold.txt
+MOUNT v0 — HOT-SEAT PROTOTYPE
+Clock: 5:00
+Starting axis: +1.50
+Initial visible band: Stable
+Decision interval: 5 simulated seconds
+First initiator: Top
+
+Top behavior
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 1
+
+Bottom behavior
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 2
+
+DRIFT SUMMARY
+Clock: 5:00 → 4:55
+Actual Duration: 5 simulated seconds
+Top: PRESSURE
+Bottom: PROTECT
+Start Axis: +1.50
+Total Drift: +0.75
+End Axis: +2.25
+Visible Band: Strong
+Band Change: Stable → Strong at 4:55
+
+TOP INITIATES
+  1. High Mount Climb
+  2. Crossface Pressure
+  3. Americana Arm Isolation
+> 2
+
+BOTTOM RESPONSE
+  1. Forearm Frame
+  2. Turn-In Recovery
+  3. Tight-Elbow Arm Defense
+> 3
+
+DECISION
+Clock: 4:55
+Axis before: +2.25
+Visible band before: Strong
+Top behavior: PRESSURE
+Bottom behavior: PROTECT
+Initiator: Top
+Initiated action: Crossface Pressure [mount.top.crossface_pressure]
+Response: Tight-Elbow Arm Defense [mount.bottom_response.tight_elbow_arm_defense]
+Raw grade: Strong Success (+2)
+Behavior modifier: None
+Grade after behavior: Strong Success
+Positional modifier: None
+Final grade: Strong Success (+2)
+Grade numeric value: +2
+Axis delta: +2.00
+Proposed axis: +4.25
+Failure clamp used?: No
+Bridge clamp used?: No
+Escape threshold reached?: No
+Exit-capable action?: No
+Axis after: +4.00
+Visible band after: Locked
+Exit destination: None
+Band Change: Strong → Locked
+
+Top behavior [Enter keeps PRESSURE]
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 2
+
+Bottom behavior [Enter keeps PROTECT]
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 1
+
+DRIFT SUMMARY
+Clock: 4:55 → 4:50
+Actual Duration: 5 simulated seconds
+Top: HOLD
+Bottom: ESCAPE
+Start Axis: +4.00
+Total Drift: -0.50
+End Axis: +3.50
+Visible Band: Locked
+
+BOTTOM INITIATES
+  1. Bridge
+  2. Elbow-Knee Escape
+  3. Trap-and-Roll Escape
+> 3
+
+TOP RESPONSE
+  1. Hand Post and Base
+  2. Wide Mount Base
+  3. Hip Follow and Knee Re-Pummel
+> 3
+
+DECISION
+Clock: 4:50
+Axis before: +3.50
+Visible band before: Locked
+Top behavior: HOLD
+Bottom behavior: ESCAPE
+Initiator: Bottom
+Initiated action: Trap-and-Roll Escape [mount.bottom.trap_and_roll_escape]
+Response: Hip Follow and Knee Re-Pummel [mount.top_response.hip_follow_repummel]
+Raw grade: Strong Success (+2)
+Behavior modifier: -1 grade
+Grade after behavior: Success
+Positional modifier: -1 grade
+Final grade: Contested (+0)
+Grade numeric value: +0
+Axis delta: +0.00
+Proposed axis: +3.50
+Failure clamp used?: No
+Bridge clamp used?: No
+Escape threshold reached?: No
+Exit-capable action?: Yes
+Axis after: +3.50
+Visible band after: Locked
+Exit destination: None
+
+Top behavior [Enter keeps HOLD]
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 
+
+Bottom behavior [Enter keeps ESCAPE]
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 
+
+DRIFT SUMMARY
+Clock: 4:50 → 4:45
+Actual Duration: 5 simulated seconds
+Top: HOLD
+Bottom: ESCAPE
+Start Axis: +3.50
+Total Drift: -0.50
+End Axis: +3.00
+Visible Band: Locked
+
+TOP INITIATES
+  1. High Mount Climb
+  2. Crossface Pressure
+  3. Americana Arm Isolation
+> 1
+
+BOTTOM RESPONSE
+  1. Forearm Frame
+  2. Turn-In Recovery
+  3. Tight-Elbow Arm Defense
+> 3
+
+DECISION
+Clock: 4:45
+Axis before: +3.00
+Visible band before: Locked
+Top behavior: HOLD
+Bottom behavior: ESCAPE
+Initiator: Top
+Initiated action: High Mount Climb [mount.top.high_mount_climb]
+Response: Tight-Elbow Arm Defense [mount.bottom_response.tight_elbow_arm_defense]
+Raw grade: Failure (-1)
+Behavior modifier: None
+Grade after behavior: Failure
+Positional modifier: None
+Final grade: Failure (-1)
+Grade numeric value: -1
+Axis delta: -1.00
+Proposed axis: +2.00
+Failure clamp used?: No
+Bridge clamp used?: No
+Escape threshold reached?: No
+Exit-capable action?: No
+Axis after: +2.00
+Visible band after: Strong
+Exit destination: None
+Band Change: Locked → Strong
+
+Top behavior [Enter keeps HOLD]
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 
+
+Bottom behavior [Enter keeps ESCAPE]
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 
+
+DRIFT SUMMARY
+Clock: 4:45 → 4:40
+Actual Duration: 5 simulated seconds
+Top: HOLD
+Bottom: ESCAPE
+Start Axis: +2.00
+Total Drift: -0.50
+End Axis: +1.50
+Visible Band: Stable
+Band Change: Strong → Stable at 4:43
+
+BOTTOM INITIATES
+  1. Bridge
+  2. Elbow-Knee Escape
+  3. Trap-and-Roll Escape
+> 3
+
+TOP RESPONSE
+  1. Hand Post and Base
+  2. Wide Mount Base
+  3. Hip Follow and Knee Re-Pummel
+> 3
+
+DECISION
+Clock: 4:40
+Axis before: +1.50
+Visible band before: Stable
+Top behavior: HOLD
+Bottom behavior: ESCAPE
+Initiator: Bottom
+Initiated action: Trap-and-Roll Escape [mount.bottom.trap_and_roll_escape]
+Response: Hip Follow and Knee Re-Pummel [mount.top_response.hip_follow_repummel]
+Raw grade: Strong Success (+2)
+Behavior modifier: -1 grade
+Grade after behavior: Success
+Positional modifier: None
+Final grade: Success (+1)
+Grade numeric value: +1
+Axis delta: -1.00
+Proposed axis: +0.50
+Failure clamp used?: No
+Bridge clamp used?: No
+Escape threshold reached?: No
+Exit-capable action?: Yes
+Axis after: +0.50
+Visible band after: Loose
+Exit destination: None
+Band Change: Stable → Loose
+
+Top behavior [Enter keeps HOLD]
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 
+
+Bottom behavior [Enter keeps ESCAPE]
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 
+
+DRIFT SUMMARY
+Clock: 4:40 → 4:35
+Actual Duration: 5 simulated seconds
+Top: HOLD
+Bottom: ESCAPE
+Start Axis: +0.50
+Total Drift: -0.40
+End Axis: +0.10
+Visible Band: Loose
+
+TOP INITIATES
+  1. High Mount Climb
+  2. Crossface Pressure
+  3. Americana Arm Isolation
+> 1
+
+BOTTOM RESPONSE
+  1. Forearm Frame
+  2. Turn-In Recovery
+  3. Tight-Elbow Arm Defense
+> 1
+
+DECISION
+Clock: 4:35
+Axis before: +0.10
+Visible band before: Loose
+Top behavior: HOLD
+Bottom behavior: ESCAPE
+Initiator: Top
+Initiated action: High Mount Climb [mount.top.high_mount_climb]
+Response: Forearm Frame [mount.bottom_response.forearm_frame]
+Raw grade: Success (+1)
+Behavior modifier: None
+Grade after behavior: Success
+Positional modifier: -1 grade
+Final grade: Contested (+0)
+Grade numeric value: +0
+Axis delta: +0.00
+Proposed axis: +0.10
+Failure clamp used?: No
+Bridge clamp used?: No
+Escape threshold reached?: No
+Exit-capable action?: No
+Axis after: +0.10
+Visible band after: Loose
+Exit destination: None
+
+Top behavior [Enter keeps HOLD]
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 
+
+Bottom behavior [Enter keeps ESCAPE]
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 
+
+DRIFT SUMMARY
+Clock: 4:35 → 4:30
+Actual Duration: 5 simulated seconds
+Top: HOLD
+Bottom: ESCAPE
+Start Axis: +0.10
+Total Drift: +0.00
+End Axis: +0.10
+Visible Band: Loose
+
+BOTTOM INITIATES
+  1. Bridge
+  2. Elbow-Knee Escape
+  3. Trap-and-Roll Escape
+> 3
+
+TOP RESPONSE
+  1. Hand Post and Base
+  2. Wide Mount Base
+  3. Hip Follow and Knee Re-Pummel
+> 3
+
+DECISION
+Clock: 4:30
+Axis before: +0.10
+Visible band before: Loose
+Top behavior: HOLD
+Bottom behavior: ESCAPE
+Initiator: Bottom
+Initiated action: Trap-and-Roll Escape [mount.bottom.trap_and_roll_escape]
+Response: Hip Follow and Knee Re-Pummel [mount.top_response.hip_follow_repummel]
+Raw grade: Strong Success (+2)
+Behavior modifier: -1 grade
+Grade after behavior: Success
+Positional modifier: None
+Final grade: Success (+1)
+Grade numeric value: +1
+Axis delta: -1.00
+Proposed axis: -0.90
+Failure clamp used?: No
+Bridge clamp used?: No
+Escape threshold reached?: Yes
+Exit-capable action?: Yes
+Axis after: -0.90
+Visible band after: Loose
+Exit destination: Reversal
+
+RUN SUMMARY
+===========
+Initial clock: 5:00
+Elapsed simulated time: 0:30
+Mount duration: 0:30
+Starting axis: +1.50
+Final axis: -0.90
+Final visible band: Mount broken (last visible: Loose)
+Top behavior history: ['PRESSURE', 'HOLD', 'HOLD', 'HOLD', 'HOLD', 'HOLD']
+Bottom behavior history: ['PROTECT', 'ESCAPE', 'ESCAPE', 'ESCAPE', 'ESCAPE', 'ESCAPE']
+Top initiation count: 3
+Bottom initiation count: 3
+Initiated-action history: ['Crossface', 'Trap-and-Roll', 'Climb High', 'Trap-and-Roll', 'Climb High', 'Trap-and-Roll']
+Response history: ['Tight Elbows', 'Hip Follow', 'Tight Elbows', 'Hip Follow', 'Frame', 'Hip Follow']
+Raw-grade history: ['Strong Success', 'Strong Success', 'Failure', 'Strong Success', 'Success', 'Strong Success']
+Modified-grade history: ['Strong Success', 'Contested', 'Failure', 'Success', 'Contested', 'Success']
+Clamp count: 0
+Escape threshold reached?: Yes
+Exit reason: Trap-and-Roll Escape reached the escape threshold with final grade Success
+Exit destination: Reversal
