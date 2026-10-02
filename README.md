@@ -138,6 +138,25 @@ These are prototype cost values. Commitment changes stamina cost only in v0.1b; 
 The legacy `mount_v0` CLI keeps the old prompt sequence and calls cost-free `decide()`.
 
 See `docs/MOUNT_V0_1B_COMMITMENT.md`.
+## Mount v0.1c — behavior stamina + CONSERVE
+
+The normal-speed behavior layer now has a stamina economy:
+
+```text
+PRESSURE   -1 / 5s
+ESCAPE     -1 / 5s
+HOLD        0 / 5s
+PROTECT     0 / 5s
+CONSERVE   +2 / 5s
+```
+
+`CONSERVE` projects onto HOLD/PROTECT for positional drift but does **not** inherit their special resolution modifier. Five 1-second windows equal one 5-second window through fixed-point carry.
+
+Standard play defaults commitment to `MEDIUM` because LOW still strictly dominates while commitment has no outcome effect. Use `--commitment LOW|MEDIUM|HIGH` for targeted tests.
+
+Underfunded commitment downgrades to the highest fully payable level; at zero stamina it becomes `UNFUNDED`, preventing future HIGH effects from being free.
+
+See `docs/MOUNT_V0_1C_CONSERVE.md`.
 ## Known v0 limitation
 
 The responder sees the exact initiated action and has unrestricted access to every response. Every action therefore has a Failure-or-worse best counter. `--enumerate` reports:
