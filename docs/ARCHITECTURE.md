@@ -200,6 +200,30 @@ The engine's default modifier is zero, so frozen v0 behavior is unchanged. The m
 
 `decide()` remains the legacy cost-free/exhaustion-free path.
 
+### Reset / no-action boundary
+
+The modern match aggregate now owns a `reset_window()` transition:
+
+```text
+scheduled initiator
+→ chooses no technique
+→ no action stamina cost
+→ no response object
+→ axis unchanged immediately
+→ initiative passes
+→ normal-speed simulation resumes
+```
+
+This is intentionally outside `TechniqueCatalog`: RESET is not a BJJ technique or fake matchup-table row.
+
+The legacy `mount_v0` CLI never exposes this path.
+
+Repeated RESET will eventually be governed by the planned progress-based stalling system.
+
+### Stamina mutation boundary
+
+`StaminaPool.current` is a read-only property backed by private state. Exhaustion hysteresis can only be changed through controlled mutation methods, so direct assignment cannot desynchronize the latch.
+
 ## Refactor proof
 
 The architecture-hardening pass is behavior-preserving:
