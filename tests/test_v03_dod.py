@@ -13,6 +13,7 @@ from bjj_game.diagnostics.checker import (
     measure_v02_definition_of_done,
     measure_v03a_definition_of_done,
 )
+from bjj_game.domain.model import BottomBehavior
 from bjj_game.domain.submission import SubmissionStage
 
 
