@@ -269,14 +269,14 @@ None → Partial → Ready
 Two initial chains exist:
 
 ```text
-Bridge success
+Bridge attempt / forced base reaction
 → builds Trap-and-Roll setup
 
-High Mount Climb success
+High Mount Climb attempt / forced defensive structure
 → builds Americana Arm Isolation setup
 ```
 
-Trap-and-Roll and Americana Isolation are setup-dependent in the v0.2 path: they are unavailable until Ready. A Ready target narrows the legal response set and is consumed when used.
+Trap-and-Roll and Americana Isolation are setup-dependent in the v0.2 path: they are unavailable until Ready. A designated builder advances setup even when the defender wins that local exchange, so a perfect responder cannot freeze setup forever by repeating the same counter. A Ready target narrows the legal response set and is consumed when used.
 
 The established-position order in setup-enabled batches is now:
 
@@ -301,9 +301,11 @@ PYTHONPATH=src python -m bjj_game \
 The checker currently measures:
 
 ```text
-Gate 1  PASS  Ready lock-free states: Top 18, Bottom 36
-Gate 4  PASS  Bridge 40/100; 40 setup-priority selections
-Gate 5  PASS  2.550 Top follow-up meaningful initiations/match
+Gate 1  OPEN  Ready is reachable against best counters, but Bottom has
+              reachable guaranteed-attacker Ready states
+Gate 4  PASS  Bridge contributes to completed Trap-and-Roll chains
+Gate 5  PASS  3.120 meaningful Top follow-ups/match, counting setup
+              builders only when their Ready target is later consumed
 Gate 2  OPEN
 Gate 3  OPEN
 Gate 6  OPEN
@@ -400,7 +402,7 @@ The official `escape-first` initiator policy is deliberately lexicographic:
 ```text
 at the exact current axis/band/stamina state
 → if any action can escape, choose the highest exact escape probability
-→ with --v02-setup: otherwise build an unready setup when progress probability is positive
+→ with --v02-setup: otherwise build an unready setup only when its Ready target would have positive tactical value
 → otherwise require BOTH raw attacker-axis > 0 and realized attacker-axis > 0
 → among those positional attacks, choose the highest realized expectation
 → otherwise RESET
