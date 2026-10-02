@@ -262,8 +262,8 @@ class CliTests(unittest.TestCase):
         self.assertIn("Bottom behavior fixed for session: ESCAPE", text)
         self.assertNotIn("\nTop behavior\n", text)
         self.assertNotIn("\nBottom behavior\n", text)
-        self.assertIn("Top behavior history: ['PRESSURE']", text)
-        self.assertIn("Bottom behavior history: ['ESCAPE']", text)
+        self.assertIn("Top behavior history: ['PRESSURE', 'PRESSURE']", text)
+        self.assertIn("Bottom behavior history: ['ESCAPE', 'ESCAPE']", text)
 
     def test_one_fixed_behavior_leaves_other_side_interactive(self):
         output = io.StringIO()
