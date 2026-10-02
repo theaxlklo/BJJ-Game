@@ -378,6 +378,31 @@ def _v02_standard_batch():
 
 
 @lru_cache(maxsize=1)
+def _v03_informed_standard_batch():
+    """Gate-B competent-defender batch: Bottom chooses best legal response."""
+    from ..interfaces.batch import (
+        BatchResponderMode,
+        run_escape_first_batch,
+    )
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        bottom_responder_mode=BatchResponderMode.INFORMED,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+
+
+@lru_cache(maxsize=1)
 def _v03_standard_batch():
     """Frozen v0.3a standard batch from the pre-implementation DoD."""
     from ..interfaces.batch import run_escape_first_batch
@@ -1218,6 +1243,132 @@ def _v03_informed_exhausted_defender_probe() -> V03InformedExhaustedEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class V03InformedMatchRow:
+    label: str
+    taps: int
+    reached_threat: int
+    escapes: int
+    timeouts: int
+    top_stamina_median: float
+    bottom_stamina_median: float
+    top_resets: int
+    bottom_resets: int
+    setup_builds: int
+
+
+@lru_cache(maxsize=1)
+def _v03_informed_defender_sweep() -> tuple[V03InformedMatchRow, ...]:
+    """Non-gating full-match probe with informed Bottom defense."""
+    from ..interfaces.batch import (
+        BatchBehaviorMode,
+        BatchResponderMode,
+        run_escape_first_batch,
+    )
+
+    specs = (
+        (
+            "PRESSURE/ESCAPE fixed",
+            TopBehavior.PRESSURE,
+            BottomBehavior.ESCAPE,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "PRESSURE/ESCAPE recover",
+            TopBehavior.PRESSURE,
+            BottomBehavior.ESCAPE,
+            BatchBehaviorMode.RECOVER,
+        ),
+        (
+            "PRESSURE/PROTECT",
+            TopBehavior.PRESSURE,
+            BottomBehavior.PROTECT,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "PRESSURE/CONSERVE",
+            TopBehavior.PRESSURE,
+            BottomBehavior.CONSERVE,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "HOLD/ESCAPE",
+            TopBehavior.HOLD,
+            BottomBehavior.ESCAPE,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "CONSERVE/ESCAPE",
+            TopBehavior.CONSERVE,
+            BottomBehavior.ESCAPE,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "CONSERVE/PROTECT",
+            TopBehavior.CONSERVE,
+            BottomBehavior.PROTECT,
+            BatchBehaviorMode.FIXED,
+        ),
+    )
+
+    rows: list[V03InformedMatchRow] = []
+    for label, top_behavior, bottom_behavior, bottom_mode in specs:
+        summary = run_escape_first_batch(
+            matches=100,
+            base_seed=42,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
+            bottom_behavior_mode=bottom_mode,
+            bottom_responder_mode=BatchResponderMode.INFORMED,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+        )
+        escapes = sum(
+            summary.outcome_counts.get(destination.value, 0)
+            for destination in ExitDestination
+        )
+        rows.append(
+            V03InformedMatchRow(
+                label=label,
+                taps=summary.outcome_counts.get("TAP — Americana", 0),
+                reached_threat=summary.matches_reached_submission_threat,
+                escapes=escapes,
+                timeouts=summary.outcome_counts.get("TIMEOUT — Mount retained", 0),
+                top_stamina_median=summary.top_final_stamina_median,
+                bottom_stamina_median=summary.bottom_final_stamina_median,
+                top_resets=summary.top_reset_count,
+                bottom_resets=summary.bottom_reset_count,
+                setup_builds=summary.top_completed_setup_build_count,
+            )
+        )
+    return tuple(rows)
+
+
+def render_v03a_informed_defender_probe() -> str:
+    random_batch = _v03_standard_batch()
+    rows = _v03_informed_defender_sweep()
+    random_taps = random_batch.outcome_counts.get("TAP — Americana", 0)
+    return (
+        "V0.3a INFORMED DEFENDER PROBE — 100 matched seeds: "
+        + "; ".join(
+            f"{row.label} taps={row.taps},Threat={row.reached_threat},"
+            f"escapes={row.escapes},timeouts={row.timeouts},"
+            f"stamina={row.top_stamina_median:.0f}/{row.bottom_stamina_median:.0f},"
+            f"RESETs={row.top_resets}/{row.bottom_resets},"
+            f"setup-builds={row.setup_builds}"
+            for row in rows
+        )
+        + f"; random PRESSURE/ESCAPE taps={random_taps}. "
+        "Only the informed standard row feeds Gate B."
+    )
+
+
+@dataclass(frozen=True, slots=True)
 class V03RecoveryPredictionRow:
     label: str
     taps: int
@@ -1424,9 +1575,12 @@ def render_v03a_behavior_and_reacquisition_probe() -> tuple[str, str]:
 
 def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     locked_probability, policy_selected = _v03_locked_submission_probe()
-    batch = _v03_standard_batch()
-    tap_count = batch.outcome_counts.get("TAP — Americana", 0)
-    tap_rate = tap_count / batch.matches
+    random_batch = _v03_standard_batch()
+    informed_batch = _v03_informed_standard_batch()
+    tap_count = informed_batch.outcome_counts.get("TAP — Americana", 0)
+    tap_rate = tap_count / informed_batch.matches
+    random_tap_count = random_batch.outcome_counts.get("TAP — Americana", 0)
+    random_tap_rate = random_tap_count / random_batch.matches
     defense = _v03_best_defense_evidence()
     defense_pass = all(
         item.reachable_states > 0
@@ -1474,13 +1628,18 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
                 else V02GateStatus.OPEN
             ),
             metric=(
-                f"Tap={tap_count}/{batch.matches} ({tap_rate:.1%}); "
-                f"Threat={batch.matches_reached_submission_threat}; "
-                f"Control={batch.matches_reached_submission_control}; "
-                f"Finish={batch.matches_reached_submission_finish}; "
-                f"stage-attempts={batch.top_submission_attempt_count}"
+                f"informed Tap={tap_count}/{informed_batch.matches} ({tap_rate:.1%}); "
+                f"Threat={informed_batch.matches_reached_submission_threat}; "
+                f"Control={informed_batch.matches_reached_submission_control}; "
+                f"Finish={informed_batch.matches_reached_submission_finish}; "
+                f"stage-attempts={informed_batch.top_submission_attempt_count}; "
+                f"random contrast Tap={random_tap_count}/{random_batch.matches} "
+                f"({random_tap_rate:.1%})"
             ),
-            evidence="fresh competent defender must survive most standard-batch matches",
+            evidence=(
+                "competent defender is measured by informed best legal responses; "
+                "the frozen random response mix remains a non-gating contrast"
+            ),
         ),
         V03GateMeasurement(
             letter="C",
