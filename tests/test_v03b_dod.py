@@ -22,13 +22,14 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v03b_definition_of_done()
         }
 
-    def test_gate_a_one_sided_stall_breaks_locked_retention(self):
+    def test_gate_a_full_match_probe_exposes_current_locked_timeout(self):
         evidence = _v03b_top_stall_probe()
         self.assertEqual(evidence.warnings, 1)
         self.assertGreaterEqual(evidence.penalties, 1)
-        self.assertIs(evidence.final_band, Band.STRONG)
-        self.assertFalse(evidence.locked_timeout)
-        self.assertIs(self.gates["A"].status, V02GateStatus.PASS)
+        self.assertIs(evidence.final_band, Band.LOCKED)
+        self.assertTrue(evidence.locked_timeout)
+        self.assertGreater(evidence.locked_windows, 0)
+        self.assertIs(self.gates["A"].status, V02GateStatus.OPEN)
 
     def test_gate_b_stalemated_attacker_and_defender_remain_engaged(self):
         evidence = _v03b_stalemated_attacker_probe()
