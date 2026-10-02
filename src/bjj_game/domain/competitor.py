@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .model import Behavior, BottomBehavior, Side, TopBehavior
+from .stamina import StaminaPool
 
 
 @dataclass(slots=True)
@@ -16,6 +17,7 @@ class Competitor:
     side: Side
     name: str
     behavior: Behavior
+    stamina: StaminaPool = field(default_factory=StaminaPool)
 
     def __post_init__(self) -> None:
         self.set_behavior(self.behavior)
