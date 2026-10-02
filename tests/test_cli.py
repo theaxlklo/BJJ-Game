@@ -317,7 +317,7 @@ class CliTests(unittest.TestCase):
         with redirect_stdout(output):
             code = main(["--blind"])
         self.assertEqual(code, 2)
-        self.assertIn("blind testing flags are available only on the modern bjj_game path", output.getvalue())
+        self.assertIn("modern playtest flags", output.getvalue())
 
 
 
