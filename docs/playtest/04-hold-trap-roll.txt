@@ -1,0 +1,150 @@
+LOG FILE: playtest_logs/04-hold-trap-roll.txt
+MOUNT v0 — HOT-SEAT PROTOTYPE
+Clock: 1:00
+Starting axis: +1.50
+Initial visible band: Stable
+Decision interval: 1 simulated seconds
+First initiator: Top
+
+Top behavior
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 2
+
+Bottom behavior
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 2
+
+DRIFT SUMMARY
+Clock: 1:00 → 0:59
+Actual Duration: 1 simulated seconds
+Top: HOLD
+Bottom: PROTECT
+Start Axis: +1.50
+Total Drift: +0.00
+End Axis: +1.50
+Visible Band: Stable
+
+TOP INITIATES
+  1. High Mount Climb
+  2. Crossface Pressure
+  3. Americana Arm Isolation
+> 1
+
+BOTTOM RESPONSE
+  1. Forearm Frame
+  2. Turn-In Recovery
+  3. Tight-Elbow Arm Defense
+> 2
+
+DECISION
+Clock: 0:59
+Axis before: +1.50
+Visible band before: Stable
+Top behavior: HOLD
+Bottom behavior: PROTECT
+Initiator: Top
+Initiated action: High Mount Climb [mount.top.high_mount_climb]
+Response: Turn-In Recovery [mount.bottom_response.turn_in_recovery]
+Raw grade: Contested (+0)
+Behavior modifier: None
+Grade after behavior: Contested
+Positional modifier: None
+Final grade: Contested (+0)
+Grade numeric value: +0
+Axis delta: +0.00
+Proposed axis: +1.50
+Failure clamp used?: No
+Bridge clamp used?: No
+Escape threshold reached?: No
+Exit-capable action?: No
+Axis after: +1.50
+Visible band after: Stable
+Exit destination: None
+
+Top behavior [Enter keeps HOLD]
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 
+
+Bottom behavior [Enter keeps PROTECT]
+  1. ESCAPE — Work to Escape
+  2. PROTECT — Protect / Survive
+> 
+
+DRIFT SUMMARY
+Clock: 0:59 → 0:58
+Actual Duration: 1 simulated seconds
+Top: HOLD
+Bottom: PROTECT
+Start Axis: +1.50
+Total Drift: +0.00
+End Axis: +1.50
+Visible Band: Stable
+
+BOTTOM INITIATES
+  1. Bridge
+  2. Elbow-Knee Escape
+  3. Trap-and-Roll Escape
+> 3
+
+TOP RESPONSE
+  1. Hand Post and Base
+  2. Wide Mount Base
+  3. Hip Follow and Knee Re-Pummel
+> 3
+
+DECISION
+Clock: 0:58
+Axis before: +1.50
+Visible band before: Stable
+Top behavior: HOLD
+Bottom behavior: PROTECT
+Initiator: Bottom
+Initiated action: Trap-and-Roll Escape [mount.bottom.trap_and_roll_escape]
+Response: Hip Follow and Knee Re-Pummel [mount.top_response.hip_follow_repummel]
+Raw grade: Strong Success (+2)
+Behavior modifier: -1 grade
+Grade after behavior: Success
+Positional modifier: None
+Final grade: Success (+1)
+Grade numeric value: +1
+Axis delta: -1.00
+Proposed axis: +0.50
+Failure clamp used?: No
+Bridge clamp used?: No
+Escape threshold reached?: No
+Exit-capable action?: Yes
+Axis after: +0.50
+Visible band after: Loose
+Exit destination: None
+Band Change: Stable → Loose
+
+Top behavior [Enter keeps HOLD]
+  1. PRESSURE — Apply Pressure
+  2. HOLD — Hold Position
+> 
+Run cancelled.
+
+RUN SUMMARY
+===========
+Run status: CANCELLED
+Initial clock: 1:00
+Elapsed simulated time: 0:02
+Mount duration: 0:02
+Starting axis: +1.50
+Final axis: +0.50
+Final visible band: Loose
+Top behavior history: ['HOLD', 'HOLD']
+Bottom behavior history: ['PROTECT', 'PROTECT']
+Top initiation count: 1
+Bottom initiation count: 1
+Initiated-action history: ['Climb High', 'Trap-and-Roll']
+Response history: ['Turn In', 'Hip Follow']
+Raw-grade history: ['Contested', 'Strong Success']
+Modified-grade history: ['Contested', 'Success']
+Clamp count: 0
+Escape threshold reached?: No
+Exit reason: CANCELLED
+Exit destination: None
