@@ -12,6 +12,7 @@ from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
+from .batch import run_greedy_batch
 from .blind import BlindResponseChoice, RandomBlindResponder, render_random_mix_band_metrics
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_reset_window, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
@@ -458,6 +459,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, help="deterministic seed for --blind-responder random")
     parser.add_argument("--top-behavior", type=top_behavior_value, help="fix Top behavior for the entire modern playtest session")
     parser.add_argument("--bottom-behavior", type=bottom_behavior_value, help="fix Bottom behavior for the entire modern playtest session")
+    parser.add_argument("--batch", type=positive_int, help="run N deterministic non-interactive matches")
+    parser.add_argument("--initiator-policy", choices=("greedy",), help="scripted batch initiator policy")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -534,11 +537,47 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         or args.seed is not None
         or args.top_behavior is not None
         or args.bottom_behavior is not None
+        or args.batch is not None
+        or args.initiator_policy is not None
     ):
         print(
             "ERROR: modern playtest flags (--blind/--blind-responder/--seed/"
-            "--top-behavior/--bottom-behavior) are available only on bjj_game."
+            "--top-behavior/--bottom-behavior/--batch/--initiator-policy) "
+            "are available only on bjj_game."
         )
+        return 2
+
+    if args.batch is not None:
+        if args.enumerate or args.check:
+            print("ERROR: --batch cannot be combined with --check or --enumerate.")
+            return 2
+        if args.blind or args.blind_responder != "human":
+            print(
+                "ERROR: --batch already uses the seeded random response mix; "
+                "do not combine it with --blind/--blind-responder."
+            )
+            return 2
+        policy = args.initiator_policy or "greedy"
+        if policy != "greedy":
+            print("ERROR: only --initiator-policy greedy is supported.")
+            return 2
+        summary = run_greedy_batch(
+            matches=args.batch,
+            base_seed=0 if args.seed is None else args.seed,
+            top_behavior=args.top_behavior or TopBehavior.PRESSURE,
+            bottom_behavior=args.bottom_behavior or BottomBehavior.ESCAPE,
+            commitment=args.commitment,
+            initial_clock=args.clock,
+            starting_axis=args.axis,
+            interval_seconds=args.interval,
+            top_stamina=args.top_stamina,
+            bottom_stamina=args.bottom_stamina,
+        )
+        print(summary.render())
+        return 0
+
+    if args.initiator_policy is not None:
+        print("ERROR: --initiator-policy is only valid with --batch.")
         return 2
     if args.blind_responder == "random" and not args.blind:
         print("ERROR: --blind-responder random requires --blind.")
@@ -547,7 +586,7 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         print("ERROR: --blind-responder random requires --seed N for replayability.")
         return 2
     if args.seed is not None and args.blind_responder != "random":
-        print("ERROR: --seed is only valid with --blind-responder random.")
+        print("ERROR: --seed is only valid with --blind-responder random or --batch.")
         return 2
     if args.enumerate:
         print(render_enumeration())
