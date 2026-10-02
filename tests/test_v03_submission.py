@@ -80,16 +80,28 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
         self.assertTrue(result.resolution.final_grade.successful)
         self.assertIsNone(match.submission_state.stage)
 
-    def test_submission_stage_uses_existing_bottom_responses(self):
+    def test_submission_stage_inherits_ready_isolation_responses(self):
         match = self._active_stage()
         self.assertEqual(
             set(match.legal_response_ids(TOP_AMERICANA_SUBMISSION_FINISH)),
             {
                 BOTTOM_RESPONSE_FOREARM_FRAME,
                 BOTTOM_RESPONSE_TURN_IN_RECOVERY,
-                BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
             },
         )
+        self.assertNotIn(
+            BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+            match.legal_response_ids(TOP_AMERICANA_SUBMISSION_FINISH),
+        )
+
+    def test_tight_elbows_cannot_reappear_after_americana_isolation(self):
+        match = self._active_stage()
+        with self.assertRaises(ValueError):
+            match.attempt(
+                action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+                response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+                commitment=Commitment.LOW,
+            )
 
     def test_successful_stage_advances_without_free_axis_gain(self):
         match = self._active_stage(axis=3.50)
@@ -103,14 +115,31 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
         self.assertEqual(match.axis, before)
         self.assertIs(match.submission_state.stage, SubmissionStage.CONTROL)
 
-    def test_defended_stage_moves_axis_one_step_toward_bottom(self):
+    def test_contested_turn_in_holds_stage_without_axis_loss(self):
         match = self._active_stage(axis=4.00)
         result = match.attempt(
             action_id=TOP_AMERICANA_SUBMISSION_FINISH,
-            response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
             commitment=Commitment.LOW,
         )
-        self.assertFalse(result.resolution.final_grade.successful)
+        self.assertIs(result.resolution.final_grade, Grade.CONTESTED)
+        self.assertEqual(result.resolution.proposed_axis, 4.00)
+        self.assertEqual(match.axis, 4.00)
+        self.assertIs(match.submission_state.stage, SubmissionStage.THREAT)
+        self.assertIn(
+            "Threat->Threat:held",
+            match.history.submission_change_history,
+        )
+
+    def test_failure_breaks_stage_and_moves_axis_one_step_toward_bottom(self):
+        match = self._active_stage(axis=4.00)
+        match.set_behaviors(bottom=BottomBehavior.PROTECT)
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+        self.assertIs(result.resolution.final_grade, Grade.FAILURE)
         self.assertEqual(result.resolution.proposed_axis, 3.00)
         self.assertEqual(match.axis, 3.00)
         self.assertIsNone(match.submission_state.stage)
@@ -119,27 +148,29 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
             match.legal_action_ids(Side.TOP),
         )
 
-    def test_defended_control_breaks_submission_track(self):
+    def test_failure_from_control_breaks_submission_track(self):
         match = self._active_stage(
             axis=4.00,
             stage=SubmissionStage.CONTROL,
         )
+        match.set_behaviors(bottom=BottomBehavior.PROTECT)
         match.attempt(
             action_id=TOP_AMERICANA_SUBMISSION_FINISH,
-            response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
             commitment=Commitment.LOW,
         )
         self.assertEqual(match.axis, 3.00)
         self.assertIsNone(match.submission_state.stage)
 
-    def test_defended_finish_breaks_submission_track(self):
+    def test_failure_from_finish_breaks_submission_track(self):
         match = self._active_stage(
             axis=4.00,
             stage=SubmissionStage.FINISH,
         )
+        match.set_behaviors(bottom=BottomBehavior.PROTECT)
         match.attempt(
             action_id=TOP_AMERICANA_SUBMISSION_FINISH,
-            response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
             commitment=Commitment.LOW,
         )
         self.assertEqual(match.axis, 3.00)
@@ -177,8 +208,8 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
             commitment=Commitment.LOW,
         )
         self.assertIs(exhausted_result.resolution.final_grade, Grade.CONTESTED)
-        self.assertIsNone(exhausted.submission_state.stage)
-        self.assertEqual(exhausted.axis, 2.50)
+        self.assertIs(exhausted.submission_state.stage, SubmissionStage.THREAT)
+        self.assertEqual(exhausted.axis, 3.50)
 
     def test_exhausted_defender_can_turn_fresh_stalemate_into_progress(self):
         fresh = self._active_stage(axis=3.50)
@@ -188,7 +219,7 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
             commitment=Commitment.LOW,
         )
         self.assertIs(fresh_result.resolution.final_grade, Grade.CONTESTED)
-        self.assertIsNone(fresh.submission_state.stage)
+        self.assertIs(fresh.submission_state.stage, SubmissionStage.THREAT)
 
         exhausted = self._active_stage(axis=3.50)
         exhausted.bottom.stamina.set_current(25)
