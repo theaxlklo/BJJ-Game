@@ -59,16 +59,37 @@ class RandomBlindResponder:
         cls,
         side: Side,
         allowed_response_ids: tuple[str, ...] | None = None,
+        fallback_response_id: str | None = None,
     ) -> tuple[tuple[str, int], ...]:
         weighted = cls.POLICY[side]
         if allowed_response_ids is None:
             return weighted
         allowed = set(allowed_response_ids)
-        filtered = tuple(
+        filtered = [
             (response_id, weight)
             for response_id, weight in weighted
             if response_id in allowed and weight > 0
-        )
+        ]
+
+        if fallback_response_id is not None:
+            if fallback_response_id not in allowed:
+                raise ValueError(
+                    f"Fallback response {fallback_response_id!r} is not legal"
+                )
+            redirected = sum(
+                weight
+                for response_id, weight in weighted
+                if response_id not in allowed and weight > 0
+            )
+            if redirected > 0:
+                for index, (response_id, weight) in enumerate(filtered):
+                    if response_id == fallback_response_id:
+                        filtered[index] = (response_id, weight + redirected)
+                        break
+                else:
+                    filtered.append((fallback_response_id, redirected))
+
+        filtered = tuple(filtered)
         if not filtered:
             raise ValueError(
                 f"No positive-weight random responses remain legal for {side.value}: "
@@ -88,8 +109,13 @@ class RandomBlindResponder:
         self,
         responder: Side,
         allowed_response_ids: tuple[str, ...] | None = None,
+        fallback_response_id: str | None = None,
     ) -> BlindResponseChoice:
-        weighted = self.weighted_policy(responder, allowed_response_ids)
+        weighted = self.weighted_policy(
+            responder,
+            allowed_response_ids,
+            fallback_response_id,
+        )
         total = sum(weight for _, weight in weighted)
         draw = self._rng.randrange(total)
 
@@ -143,10 +169,12 @@ def _axis_grid() -> tuple[float, ...]:
 def _response_policy(
     responder: Side,
     allowed_response_ids: tuple[str, ...] | None = None,
+    fallback_response_id: str | None = None,
 ) -> tuple[tuple[str, int], ...]:
     return RandomBlindResponder.weighted_policy(
         responder,
         allowed_response_ids=allowed_response_ids,
+        fallback_response_id=fallback_response_id,
     )
 
 def expected_raw_attacker_axis_delta(
@@ -159,10 +187,15 @@ def expected_raw_attacker_axis_delta(
     bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
     external_grade_modifier: int = 0,
     allowed_response_ids: tuple[str, ...] | None = None,
+    fallback_response_id: str | None = None,
     ready_grade_overrides: Mapping[str, Grade] | None = None,
 ) -> float:
     """Expected grade-derived axis delta before floor/cap/escape handling."""
-    response_policy = _response_policy(side.opponent, allowed_response_ids)
+    response_policy = _response_policy(
+        side.opponent,
+        allowed_response_ids,
+        fallback_response_id,
+    )
     total_weight = sum(weight for _, weight in response_policy)
     weighted = 0.0
     for response_id, weight in response_policy:
@@ -195,10 +228,15 @@ def exact_escape_probability(
     bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
     external_grade_modifier: int = 0,
     allowed_response_ids: tuple[str, ...] | None = None,
+    fallback_response_id: str | None = None,
     ready_grade_overrides: Mapping[str, Grade] | None = None,
 ) -> float:
     """Exact escape probability at one state under the fixed blind response mix."""
-    response_policy = _response_policy(side.opponent, allowed_response_ids)
+    response_policy = _response_policy(
+        side.opponent,
+        allowed_response_ids,
+        fallback_response_id,
+    )
     total_weight = sum(weight for _, weight in response_policy)
     escaped_weight = 0
     for response_id, weight in response_policy:
@@ -232,6 +270,7 @@ def expected_realized_attacker_axis_delta(
     bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
     external_grade_modifier: int = 0,
     allowed_response_ids: tuple[str, ...] | None = None,
+    fallback_response_id: str | None = None,
     ready_grade_overrides: Mapping[str, Grade] | None = None,
 ) -> float:
     """Expected actual axis movement after floor/cap/escape resolution.
@@ -239,7 +278,11 @@ def expected_realized_attacker_axis_delta(
     Positive values favor the initiator. Escape crossings use the resolver's
     crossing axis; non-escape results use the persisted clamped axis.
     """
-    response_policy = _response_policy(side.opponent, allowed_response_ids)
+    response_policy = _response_policy(
+        side.opponent,
+        allowed_response_ids,
+        fallback_response_id,
+    )
     total_weight = sum(weight for _, weight in response_policy)
     weighted = 0.0
     for response_id, weight in response_policy:
