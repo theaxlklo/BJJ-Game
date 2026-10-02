@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 
@@ -49,6 +49,7 @@ class StaminaPool:
 
     current: int = 100
     maximum: int = 100
+    _exhausted_latched: bool = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._validate(self.current)
@@ -56,6 +57,7 @@ class StaminaPool:
             raise ValueError("maximum stamina must be > 0")
         if self.current > self.maximum:
             raise ValueError("current stamina cannot exceed maximum stamina")
+        self._exhausted_latched = self.ratio <= 0.25
 
     def _validate(self, value: int) -> None:
         if not isinstance(value, int):
@@ -68,6 +70,7 @@ class StaminaPool:
         if value > self.maximum:
             raise ValueError("current stamina cannot exceed maximum stamina")
         self.current = value
+        self._refresh_exhaustion_latch()
 
     def spend_up_to(self, requested: int) -> StaminaSpend:
         """Charge as much of a non-negative cost as the pool can currently pay.
@@ -83,6 +86,7 @@ class StaminaPool:
         before = self.current
         charged = min(before, requested)
         self.current = before - charged
+        self._refresh_exhaustion_latch()
         return StaminaSpend(
             before=before,
             requested=requested,
@@ -100,6 +104,7 @@ class StaminaPool:
         room = self.maximum - before
         recovered = min(room, requested)
         self.current = before + recovered
+        self._refresh_exhaustion_latch()
         return StaminaRecovery(
             before=before,
             requested=requested,
@@ -107,6 +112,15 @@ class StaminaPool:
             overflow=requested - recovered,
             after=self.current,
         )
+
+    def _refresh_exhaustion_latch(self) -> None:
+        """25/35 hysteresis for the only mechanically meaningful stamina band."""
+        ratio = self.ratio
+        if self._exhausted_latched:
+            if ratio >= 0.35:
+                self._exhausted_latched = False
+        elif ratio <= 0.25:
+            self._exhausted_latched = True
 
     @property
     def ratio(self) -> float:
@@ -116,13 +130,13 @@ class StaminaPool:
     def band(self) -> StaminaBand:
         # Only EXHAUSTED has a mechanical consequence in v0.1e.
         ratio = self.ratio
+        if self._exhausted_latched:
+            return StaminaBand.EXHAUSTED
         if ratio > 0.75:
             return StaminaBand.FRESH
         if ratio > 0.50:
             return StaminaBand.WORKING
-        if ratio > 0.25:
-            return StaminaBand.TIRED
-        return StaminaBand.EXHAUSTED
+        return StaminaBand.TIRED
 
     @property
     def display(self) -> str:
