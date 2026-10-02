@@ -22,10 +22,12 @@ from ..positions.mount.rules import (
 from .mount_engine import MountResolutionEngine
 from .stamina import (
     DEFAULT_BEHAVIOR_STAMINA_POLICY,
+    DEFAULT_EXHAUSTION_POLICY,
     DEFAULT_STAMINA_COST_POLICY,
     AdvanceResult,
     BehaviorStaminaMeter,
     BehaviorStaminaPolicy,
+    ExhaustionPolicy,
     StaminaCostPolicy,
 )
 
@@ -34,9 +36,9 @@ from .stamina import (
 class MountMatch:
     """Stateful Mount match aggregate.
 
-    Mount-v0 resolution remains inside MountResolutionEngine. v0.1b adds
-    commitment/stamina bookkeeping around that frozen resolution rather than
-    modifying the lookup table or grade math.
+    Mount-v0 resolution remains inside MountResolutionEngine. v0.1 layers add
+    stamina/commitment policy around that frozen resolution. v0.1e supplies a
+    generic post-positional grade modifier for exhausted initiators.
     """
 
     initial_clock: int = DEFAULT_CLOCK_SECONDS
@@ -50,6 +52,9 @@ class MountMatch:
     )
     behavior_stamina_policy: BehaviorStaminaPolicy = field(
         default_factory=lambda: DEFAULT_BEHAVIOR_STAMINA_POLICY, repr=False
+    )
+    exhaustion_policy: ExhaustionPolicy = field(
+        default_factory=lambda: DEFAULT_EXHAUSTION_POLICY, repr=False
     )
     clock_seconds: int = field(init=False)
     position: MountPosition = field(init=False)
@@ -150,6 +155,7 @@ class MountMatch:
             duration_seconds=self.interval_seconds,
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
+            external_grade_modifier=external_grade_modifier,
         )
         self.position.apply_control(result.end_axis, result.end_band)
         self.clock_seconds = result.end_clock
@@ -195,6 +201,7 @@ class MountMatch:
         response_id: str,
         top_behavior: TopBehavior,
         bottom_behavior: BottomBehavior,
+        external_grade_modifier: int = 0,
     ):
         if self.clock_seconds <= 0:
             raise RuntimeError("Cannot resolve a decision after timeout")
@@ -268,21 +275,37 @@ class MountMatch:
         response_id: str,
         commitment: Commitment,
     ) -> AttemptResult:
-        """Resolve an initiated action and account for v0.1b stamina cost.
+        """Resolve a v0.1 action with commitment and exhaustion policy.
 
-        The commitment cost is charged to the initiator. A cost shortfall is
-        recorded but has no resolution effect in v0.1b; recovery, lockouts and
-        exhaustion consequences are later v0.1 slices.
+        Exhaustion is read before the action cost is paid. Entering Exhausted
+        because of this action therefore affects the next initiation, not this one.
         """
         top_behavior, bottom_behavior = self._behaviors(None, None)
         initiator = self.initiator
-        result = self._resolve(
+        pool = self.competitor(initiator).stamina
+        stamina_band_before_action = pool.band
+        exhaustion_modifier = self.exhaustion_policy.initiator_grade_modifier(
+            stamina_band_before_action
+        )
+
+        base_resolution = self._resolve(
             action_id=action_id,
             response_id=response_id,
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
         )
-        pool = self.competitor(initiator).stamina
+        result = (
+            base_resolution
+            if exhaustion_modifier == 0
+            else self._resolve(
+                action_id=action_id,
+                response_id=response_id,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=exhaustion_modifier,
+            )
+        )
+
         requested_cost = self.stamina_cost_policy.cost(commitment)
         effective_commitment = self.stamina_cost_policy.effective_commitment(
             requested=commitment,
@@ -311,6 +334,10 @@ class MountMatch:
         self.history.stamina_charged_history.append(spend.charged)
         self.history.stamina_shortfall_history.append(spend.shortfall)
         self.history.stamina_funding_gap_history.append(funding_gap)
+        self.history.stamina_band_at_initiation_history.append(
+            stamina_band_before_action.value
+        )
+        self.history.exhaustion_modifier_history.append(exhaustion_modifier)
 
         self._apply_resolution(result)
         return AttemptResult(
@@ -319,6 +346,9 @@ class MountMatch:
             effective_cost=effective_cost,
             funding_gap=funding_gap,
             stamina=spend,
+            stamina_band_before_action=stamina_band_before_action,
+            exhaustion_modifier=exhaustion_modifier,
+            base_resolution=base_resolution,
             resolution=result,
         )
 
