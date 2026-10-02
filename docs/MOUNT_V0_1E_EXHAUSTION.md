@@ -223,30 +223,25 @@ Top HOLD → Reversal unreachable
 
 This makes the positional + exhaustion stack visible instead of hiding it inside individual playtests.
 
-## v0.2 responder-stamina debt
+## v0.2 responder-stamina resolution
 
-Exhaustion still affects initiated actions only.
+v0.1 intentionally left responder stamina mechanically free.
 
-An exhausted responder currently:
+v0.2b resolves that debt with a mirrored grade consequence:
 
-- defends at full grade
-- pays no direct response stamina cost
+```text
+Exhausted initiator  → -1 grade
+Exhausted responder  → +1 grade for the initiator
+both Exhausted       → modifiers cancel
+```
 
-The 25-stamina batch matrix made the asymmetry concrete:
+Responding still has no direct stamina cost. The same 25/35 exhaustion latch is used, and both stamina bands are read before the initiator's action cost is paid.
 
-- with fixed HOLD vs ESCAPE and both competitors Exhausted, sampled matches produced 100% timeout because the weighted Bottom escape routes were removed by HOLD + exhaustion;
-- letting only Bottom recover changed HOLD vs ESCAPE to 100% Half Guard in the sampled 1,000-match run;
-- letting only Top recover created large Reversal rates because CONSERVE removes HOLD's defensive modifier and changes drift;
-- under normal 100-stamina escape-first play, recovery policy activates only rarely because rational players initiate few paid actions.
+The exhaustive responder-only checker now finds **258** exchanges whose result changes when only responder stamina changes, so Gate 3 reports PASS.
 
-This means v0 exhaustion currently weighs much more heavily on the side that must initiate to escape than on a Top player who can often defend, RESET, and avoid spending.
+Gate 6 deliberately retains the fresh-HOLD lockout under path B. Static exhausted-Bottom routes remain PRESSURE:1 / HOLD:0 / CONSERVE:1, but the standardized no-recovery match-evolution probe produces 76/100 HOLD escapes as Top tires from setup work. Gate 6 therefore reports ACCEPTED rather than PASS.
 
-**Decision: do not add new exhausted-behavior penalties in v0.1.** That would compensate for missing future systems rather than fix a demonstrated stamina arithmetic bug.
-
-`bjj_game --check` now records this as a v0.2/v0.3 design debt:
-
-- v0.2 should revisit responder-side stamina, triggered initiative, setup/Ready pressure, and information/recognition;
-- v0.3 submissions should give Top productive reasons to spend stamina from Strong/Locked instead of sitting at the cap.
+See `MOUNT_V0_2B_RESPONDER_EXHAUSTION.md` for the v0.2 rule and evidence.
 
 ## CONSERVE / HOLD / PROTECT tuning watch
 
@@ -627,7 +622,7 @@ v0.2 should explicitly consume the debts discovered here:
 
 1. perfect-response lock and the temporary blind-play harness;
 2. Bridge's lack of setup purpose;
-3. responder-side stamina being effectively free;
+3. responder-side stamina being effectively free — resolved by v0.2b responder exhaustion;
 4. Top having little reason to spend stamina once Strong/Locked;
 5. RESET/stalling behavior;
 6. STABILIZE's distinction from HOLD/PROTECT/CONSERVE.
