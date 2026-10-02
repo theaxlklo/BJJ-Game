@@ -53,6 +53,28 @@ class RandomBlindResponder:
         self._ordinal = 0
 
     @classmethod
+    def weighted_policy(
+        cls,
+        side: Side,
+        allowed_response_ids: tuple[str, ...] | None = None,
+    ) -> tuple[tuple[str, int], ...]:
+        weighted = cls.POLICY[side]
+        if allowed_response_ids is None:
+            return weighted
+        allowed = set(allowed_response_ids)
+        filtered = tuple(
+            (response_id, weight)
+            for response_id, weight in weighted
+            if response_id in allowed and weight > 0
+        )
+        if not filtered:
+            raise ValueError(
+                f"No positive-weight random responses remain legal for {side.value}: "
+                f"{allowed_response_ids}"
+            )
+        return filtered
+
+    @classmethod
     def mix_description(cls, side: Side) -> str:
         parts = []
         for response_id, weight in cls.POLICY[side]:
@@ -60,8 +82,12 @@ class RandomBlindResponder:
             parts.append(f"{response.short_name}={weight}")
         return ", ".join(parts)
 
-    def choose(self, responder: Side) -> BlindResponseChoice:
-        weighted = self.POLICY[responder]
+    def choose(
+        self,
+        responder: Side,
+        allowed_response_ids: tuple[str, ...] | None = None,
+    ) -> BlindResponseChoice:
+        weighted = self.weighted_policy(responder, allowed_response_ids)
         total = sum(weight for _, weight in weighted)
         draw = self._rng.randrange(total)
 
@@ -111,6 +137,16 @@ def _axis_grid() -> tuple[float, ...]:
     return tuple(round(i / 100, 2) for i in range(10, 401))
 
 
+
+def _response_policy(
+    responder: Side,
+    allowed_response_ids: tuple[str, ...] | None = None,
+) -> tuple[tuple[str, int], ...]:
+    return RandomBlindResponder.weighted_policy(
+        responder,
+        allowed_response_ids=allowed_response_ids,
+    )
+
 def expected_raw_attacker_axis_delta(
     *,
     side: Side,
@@ -120,9 +156,10 @@ def expected_raw_attacker_axis_delta(
     top_behavior: TopBehavior = TopBehavior.PRESSURE,
     bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
     external_grade_modifier: int = 0,
+    allowed_response_ids: tuple[str, ...] | None = None,
 ) -> float:
     """Expected grade-derived axis delta before floor/cap/escape handling."""
-    response_policy = RandomBlindResponder.POLICY[side.opponent]
+    response_policy = _response_policy(side.opponent, allowed_response_ids)
     total_weight = sum(weight for _, weight in response_policy)
     weighted = 0.0
     for response_id, weight in response_policy:
@@ -149,9 +186,10 @@ def exact_escape_probability(
     top_behavior: TopBehavior = TopBehavior.PRESSURE,
     bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
     external_grade_modifier: int = 0,
+    allowed_response_ids: tuple[str, ...] | None = None,
 ) -> float:
     """Exact escape probability at one state under the fixed blind response mix."""
-    response_policy = RandomBlindResponder.POLICY[side.opponent]
+    response_policy = _response_policy(side.opponent, allowed_response_ids)
     total_weight = sum(weight for _, weight in response_policy)
     escaped_weight = 0
     for response_id, weight in response_policy:
@@ -179,13 +217,14 @@ def expected_realized_attacker_axis_delta(
     top_behavior: TopBehavior = TopBehavior.PRESSURE,
     bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
     external_grade_modifier: int = 0,
+    allowed_response_ids: tuple[str, ...] | None = None,
 ) -> float:
     """Expected actual axis movement after floor/cap/escape resolution.
 
     Positive values favor the initiator. Escape crossings use the resolver's
     crossing axis; non-escape results use the persisted clamped axis.
     """
-    response_policy = RandomBlindResponder.POLICY[side.opponent]
+    response_policy = _response_policy(side.opponent, allowed_response_ids)
     total_weight = sum(weight for _, weight in response_policy)
     weighted = 0.0
     for response_id, weight in response_policy:
