@@ -61,11 +61,21 @@ None → Partial → Ready
 
 Before Ready, Trap-and-Roll is not a legal v0.2 action.
 
-At Ready, the legal response set is narrowed to:
+At Ready, the legal response set is:
 
 ```text
+Wide Mount Base
 Hip Follow and Knee Re-Pummel
 ```
+
+Ready uses a separate v0.2 stalemate rule:
+
+```text
+Trap-and-Roll × Wide Mount Base
+→ Contested
+```
+
+This is not written into the frozen 18-entry matchup matrix. It is a Ready-only, post-behavior/post-positional override. Exhaustion still applies afterward, so an Exhausted initiator can have the Ready stalemate degraded to Failure.
 
 The frozen raw Trap-and-Roll grades are unchanged.
 
@@ -89,9 +99,32 @@ Forearm Frame
 Turn-In Recovery
 ```
 
-Tight-Elbow Arm Defense is no longer legal after the arm-isolation setup is Ready.
+Turn-In Recovery is the designated Ready stalemate response and resolves to Contested after behavior/positional modifiers. Tight-Elbow Arm Defense is no longer legal after the arm-isolation setup is Ready.
 
 The frozen raw Americana grades are unchanged.
+
+## Ready-defense invariant
+
+v0.2a now applies one general rule to every setup-dependent Ready action:
+
+> **Ready turns the defender's perfect counter into a stalemate, not a loss.**
+
+For every Ready setup rule:
+
+- one legal response is designated as the stalemate response;
+- that response resolves to post-positional `Contested`;
+- at least one other legal response may still be worse for the defender;
+- no fresh Ready state may have a best legal response below Contested;
+- no fresh Ready state may make every legal response Success-or-better.
+
+Current stalemate responses:
+
+```text
+Ready Trap-and-Roll   → Wide Mount Base
+Ready Americana       → Turn-In Recovery
+```
+
+The override occurs before the external exhaustion modifier. Therefore an Exhausted initiator can still have a Ready stalemate shifted down to Failure.
 
 ## Modern-path boundary
 
@@ -167,7 +200,7 @@ Interactive Ready-aware action and response menus are deferred until the next in
 The measured checker currently reports:
 
 ```text
-Gate 1  Perfect-response lock          OPEN
+Gate 1  Perfect-response lock          PASS
 Gate 2  RESET/stalling                 OPEN
 Gate 3  Responder stamina              OPEN
 Gate 4  Bridge setup role              PASS
@@ -181,10 +214,10 @@ Current evidence:
 ```text
 Gate 1:
 Ready states reached against best-counter play:
-Top:    36 reachable / 6 lock-free / 0 guaranteed-attacker
-Bottom: 36 reachable / 36 lock-free / 24 guaranteed-attacker
+Top:    36 reachable / 36 best-counter Contested / 0 guaranteed-attacker
+Bottom: 36 reachable / 36 best-counter Contested / 0 guaranteed-attacker
 
-Ready reachability is no longer the blocker. Gate 1 stays OPEN because Bottom's current Ready Trap-and-Roll legality still creates guaranteed-attacker states.
+Gate 1 now passes because every reachable Ready state follows the Ready-defense invariant exactly.
 
 Gate 4:
 Bridge selections: 595 / 100 standard matches
@@ -193,9 +226,9 @@ Bridge builds credited to completed chains: 590
 Completed Bottom setup chains: 295
 
 Gate 5:
-Top follow-up meaningful initiations / match: 3.120
-  position:               1.370
-  completed setup builds: 1.750
+Top follow-up meaningful initiations / match: 1.140
+  position:               0.560
+  completed setup builds: 0.580
 threshold: > 1.000
 
 Setup builders count only when their Ready target is later consumed in the same match.
@@ -225,10 +258,8 @@ Those remain future v0.2/v0.3 work and must be added only when their correspondi
 
 ## Next slice
 
-Before RESET/stalling work, Gate 1 still needs one Ready-defense correction.
+Gate 1 is now settled by the Ready-defense invariant.
 
-Setup is now reachable against best-counter play, but Bottom currently has reachable Ready Trap-and-Roll states where every legal response yields Success-or-better. The next design question is therefore:
+The next experimental pass is the 25-stamina setup matrix, because setup chains now create enough action volume for exhaustion to become common. That evidence should be collected before changing responder stamina, exhausted escape reachability, or commitment.
 
-> How should Ready narrow defense without turning a solved defender lock into a solved attacker win?
-
-After that, RESET/stalling can use setup progress as a real cost surface.
+The Locked/cap setup treadmill remains intentionally open and should be considered together with RESET/stalling, because both concern progress that can be accumulated cheaply while positional movement is absorbed.
