@@ -131,6 +131,79 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
             match.history.submission_change_history,
         )
 
+    def test_contested_hold_charges_existing_low_responder_cost(self):
+        match = self._active_stage(axis=4.00)
+        before = match.bottom.stamina.current
+
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+
+        self.assertIs(result.resolution.final_grade, Grade.CONTESTED)
+        self.assertEqual(match.bottom.stamina.current, before - 3)
+        self.assertEqual(
+            match.history.submission_hold_responder_side_history,
+            [Side.BOTTOM.value],
+        )
+        self.assertEqual(
+            match.history.submission_hold_stamina_requested_history,
+            [3],
+        )
+        self.assertEqual(
+            match.history.submission_hold_stamina_charged_history,
+            [3],
+        )
+        self.assertEqual(
+            match.history.submission_hold_stamina_shortfall_history,
+            [0],
+        )
+
+    def test_hold_cost_affects_only_later_exchanges(self):
+        match = self._active_stage(axis=3.50)
+        match.bottom.stamina.set_current(26)
+
+        first = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+
+        self.assertIs(first.resolution.final_grade, Grade.CONTESTED)
+        self.assertEqual(first.responder_exhaustion_modifier, 0)
+        self.assertEqual(match.bottom.stamina.current, 23)
+        self.assertIs(match.submission_state.stage, SubmissionStage.THREAT)
+
+        match.initiator = Side.TOP
+        second = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+
+        self.assertEqual(second.responder_exhaustion_modifier, 1)
+        self.assertIs(second.resolution.final_grade, Grade.SUCCESS)
+        self.assertIs(match.submission_state.stage, SubmissionStage.CONTROL)
+
+    def test_failure_break_does_not_charge_hold_cost(self):
+        match = self._active_stage(axis=4.00)
+        match.set_behaviors(bottom=BottomBehavior.PROTECT)
+        before = match.bottom.stamina.current
+
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+
+        self.assertIs(result.resolution.final_grade, Grade.FAILURE)
+        self.assertEqual(match.bottom.stamina.current, before)
+        self.assertEqual(
+            match.history.submission_hold_stamina_charged_history,
+            [],
+        )
+
     def test_failure_breaks_stage_and_moves_axis_one_step_toward_bottom(self):
         match = self._active_stage(axis=4.00)
         match.set_behaviors(bottom=BottomBehavior.PROTECT)
