@@ -236,6 +236,46 @@ Setup builders count only when their Ready target is later consumed in the same 
 
 These statuses are calculated, not manually declared.
 
+## 25-stamina setup validation after Ready balancing
+
+After the Ready stalemate invariant was implemented, the earlier v0.1 low-stamina comparisons were rerun with v0.2 setup enabled.
+
+All runs used:
+
+```text
+1,000 matches
+base seed 42
+MEDIUM commitment
+Top stamina 25
+Bottom stamina 25
+v0.2 setup/Ready enabled
+```
+
+Results:
+
+| Condition | Half Guard | Reversal | Timeout | Mean Top stamina | Mean Bottom stamina |
+|---|---:|---:|---:|---:|---:|
+| HOLD vs ESCAPE — both fixed | 0.0% | 0.0% | 100.0% | 18.00 | 0.00 |
+| HOLD vs ESCAPE — Bottom recovers only | 99.8% | 0.0% | 0.2% | 7.54 | 26.26 |
+| HOLD vs ESCAPE — Top recovers only | 0.0% | 93.1% | 6.9% | 14.40 | 0.41 |
+| PRESSURE vs ESCAPE — both fixed | 0.0% | 0.0% | 100.0% | 0.00 | 0.00 |
+| PRESSURE vs ESCAPE — Top recovers only | 0.0% | 92.8% | 7.2% | 13.95 | 0.41 |
+| PRESSURE vs PROTECT — Top recovers only | 0.0% | 0.6% | 99.4% | 30.99 | 23.19 |
+| HOLD vs PROTECT — Bottom recovers only | 48.0% | 0.0% | 52.0% | 11.89 | 30.02 |
+| PRESSURE vs PROTECT — Bottom recovers only | 0.0% | 0.0% | 100.0% | 0.00 | 29.26 |
+
+Interpretation:
+
+- Setup chains now create enough paid action volume that stamina is genuinely binding. Under fixed PRESSURE conditions, both competitors can end at zero stamina.
+- An Exhausted Bottom still cannot escape in the fixed HOLD-vs-ESCAPE condition, but Bottom-only recovery changes that condition from 100% timeout to 99.8% Half Guard.
+- Top-only recovery is strategically dangerous in ESCAPE conditions: switching to CONSERVE gives up the stronger Top defensive behavior and produces Reversal rates above 92%.
+- Bottom recovery does not overcome PRESSURE-vs-PROTECT drift; recovering stamina is not itself an escape.
+- Gate 3 remains OPEN because the responder-only fresh-vs-Exhausted exchange differential is still zero. These outcome changes come from initiator exhaustion and behavior switching, not from an Exhausted responder being mechanically weaker.
+- Gate 6 remains OPEN because HOLD still has zero positive-weight Exhausted-Bottom escape routes without recovery.
+- Gate 7 remains OPEN because commitment still changes cost only.
+
+This confirms the v0.1 prediction that setup layers would create natural stamina pressure without retuning the 3/7/12 costs.
+
 ## Intentionally deferred from v0.2a
 
 The following are not implemented in this slice:
