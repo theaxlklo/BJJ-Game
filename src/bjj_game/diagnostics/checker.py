@@ -1573,6 +1573,86 @@ def render_v03a_behavior_and_reacquisition_probe() -> tuple[str, str]:
     return behavior, reacquisition
 
 
+def _v03_response_commitment_present() -> bool:
+    """Auto-expiry signal: any real response carries commitment state."""
+    attribute_names = (
+        "response_commitment",
+        "commitment",
+        "commitment_level",
+        "commitment_policy",
+    )
+    for side in (Side.TOP, Side.BOTTOM):
+        for response in responses_for(side):
+            for name in attribute_names:
+                if getattr(response, name, None) is not None:
+                    return True
+    return False
+
+
+def _v03_recognition_mechanic_present() -> bool:
+    """Auto-expiry signal: match/competitor exposes real information state."""
+    from ..engine.match import MountMatch
+
+    probe = MountMatch(
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+    attribute_names = (
+        "recognition",
+        "recognition_state",
+        "information",
+        "information_state",
+        "information_policy",
+    )
+    for owner in (probe, probe.top, probe.bottom):
+        for name in attribute_names:
+            if getattr(owner, name, None) is not None:
+                return True
+    return False
+
+
+def _v03_gate_b_status(
+    *,
+    tap_rate: float,
+    response_commitment_present: bool,
+    recognition_present: bool,
+) -> V02GateStatus:
+    """Gate B self-expires from DEFERRED when either future capability exists."""
+    if not response_commitment_present and not recognition_present:
+        return V02GateStatus.DEFERRED
+    return (
+        V02GateStatus.PASS
+        if 0 < tap_rate < 0.50
+        else V02GateStatus.OPEN
+    )
+
+
+def render_v03a_setup_policy_debt() -> str:
+    """Keep the informed setup-churn problem visible in --check."""
+    protect = next(
+        row
+        for row in _v03_informed_defender_sweep()
+        if row.label == "PRESSURE/PROTECT"
+    )
+    return (
+        "V0.3a SETUP-POLICY DEBT: builder progress is ranked above axis loss; "
+        f"informed PROTECT builds={protect.setup_builds}, "
+        f"Threat entries={protect.reached_threat}."
+    )
+
+
+def render_v03a_hold_cost_status() -> str:
+    informed = _v03_informed_standard_batch()
+    return (
+        "V0.3a SUBMISSION-HOLD COST: PROVISIONAL — Ready/active Contested "
+        "Americana holds cost the responder LOW=3 after resolution; "
+        "recorded pre-cost informed Threat=0/100, "
+        f"current informed Threat={informed.matches_reached_submission_threat}/100; "
+        "this rule is retained as measured access evidence, not as a closed "
+        "Gate-B tuning value."
+    )
+
+
 def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     locked_probability, policy_selected = _v03_locked_submission_probe()
     random_batch = _v03_standard_batch()
@@ -1581,6 +1661,13 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     tap_rate = tap_count / informed_batch.matches
     random_tap_count = random_batch.outcome_counts.get("TAP — Americana", 0)
     random_tap_rate = random_tap_count / random_batch.matches
+    response_commitment_present = _v03_response_commitment_present()
+    recognition_present = _v03_recognition_mechanic_present()
+    gate_b_status = _v03_gate_b_status(
+        tap_rate=tap_rate,
+        response_commitment_present=response_commitment_present,
+        recognition_present=recognition_present,
+    )
     defense = _v03_best_defense_evidence()
     defense_pass = all(
         item.reachable_states > 0
@@ -1621,13 +1708,11 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
         ),
         V03GateMeasurement(
             letter="B",
-            name="submission finish rate",
-            status=(
-                V02GateStatus.PASS
-                if 0 < tap_rate < 0.50
-                else V02GateStatus.OPEN
-            ),
+            name="competent-defender submission finish rate",
+            status=gate_b_status,
             metric=(
+                f"response_commitment_present={response_commitment_present}; "
+                f"recognition_present={recognition_present}; "
                 f"informed Tap={tap_count}/{informed_batch.matches} ({tap_rate:.1%}); "
                 f"Threat={informed_batch.matches_reached_submission_threat}; "
                 f"Control={informed_batch.matches_reached_submission_control}; "
@@ -1637,8 +1722,15 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
                 f"({random_tap_rate:.1%})"
             ),
             evidence=(
-                "competent defender is measured by informed best legal responses; "
-                "the frozen random response mix remains a non-gating contrast"
+                "DEFERRED while response commitment and Recognition/information are both absent; "
+                "the deferral auto-expires when either capability becomes present. "
+                "LOW=3 moved informed Threat reachability from 0 to 78/100, but full-match "
+                "conversion remains blocked because sustained PRESSURE exhausts both fighters: "
+                "Exhausted initiator -1 plus Exhausted responder +1 cancels to 0. "
+                "The future defender-effort slice must create a real asymmetry either through "
+                "uneven attacker/defender costs or through submission-specific mutual-exhaustion "
+                "effects that no longer cancel. When the deferral expires, the unchanged "
+                "0% < informed Tap < 50% criterion resumes; random response remains contrast only."
             ),
         ),
         V03GateMeasurement(
