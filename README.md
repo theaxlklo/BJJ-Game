@@ -223,7 +223,7 @@ Initiator starts the action Exhausted
 
 Exhaustion now has 25/35 hysteresis: enter at <=25, but once exhausted you must recover to >=35 before the penalty clears. The band is read before the action's commitment cost is paid. If the current action pushes the fighter into Exhausted, the penalty begins on their next initiation.
 
-`bjj_game --check` now reports projected time to Exhausted and zero stamina for LOW/MEDIUM/HIGH under active PRESSURE/ESCAPE, plus exhausted escape reachability and the v0.2 responder-stamina debt. The current costs are intentionally left unchanged until playtests produce evidence.
+`bjj_game --check` now reports projected time to Exhausted and zero stamina for LOW/MEDIUM/HIGH under active PRESSURE/ESCAPE, plus exhausted escape reachability and the responder-exhaustion validation. The current costs are intentionally left unchanged until playtests produce evidence.
 
 Behavior-stamina logs always include fixed-point carry so partial recovery/spend across behavior changes is visible.
 
@@ -240,7 +240,7 @@ Mount v0.1 stamina is **validated and closed for Mount v0**.
 Batch and low-stamina stress tests show two important limits of the current scaffold:
 
 - rational escape-first play from 100 stamina rarely spends enough for exhaustion to become binding;
-- when exhaustion does matter, it weighs primarily on initiated attacks/Bottom escape attempts, while Top can often avoid spending and responders defend for free.
+- before v0.2b, exhaustion weighed primarily on initiated attacks/Bottom escape attempts, while responders defended at full strength; v0.2b closes that responder-side gap with a mirrored grade modifier.
 
 The forced-attack pacing projection is therefore a **stress case**, not expected rational-play pacing. Do not retune the prototype 3/7/12 action costs or CONSERVE's +2/5s recovery merely to make v0 consume more stamina.
 
@@ -308,14 +308,38 @@ Gate 4  PASS  Bridge contributes to completed Trap-and-Roll chains
 Gate 5  PASS  1.140 meaningful Top follow-ups/match, counting setup
               builders only when their Ready target is later consumed
 Gate 2  OPEN
-Gate 3  OPEN
-Gate 6  OPEN
+Gate 3  PASS
+Gate 6  ACCEPTED
 Gate 7  OPEN
 ```
 
 No setup decay, setup disruption, commitment acceleration, exhaustion/setup interaction, RESET progress cost, STABILIZE, or submission finish is added in v0.2a.
 
 See `docs/MOUNT_V0_2A_SETUP_READY.md`.
+
+## Mount v0.2b — responder exhaustion
+
+Responder stamina now has a direct mechanical consequence:
+
+```text
+Exhausted initiator  → action -1 grade
+Exhausted responder  → action +1 grade for initiator
+both Exhausted       → modifiers cancel
+```
+
+Both stamina bands are read before the current action cost. Responses still cost no stamina directly.
+
+The checker currently reports:
+
+```text
+Gate 3  PASS      258 isolated exchanges change when only responder stamina changes
+Gate 6  ACCEPTED  static HOLD remains 0 routes, but 76/100 fixed-HOLD
+                  matches escape without Bottom recovery as Top becomes exhausted
+```
+
+Fresh Ready stalemates remain Contested; responder exhaustion is applied afterward, so a tired defender can no longer hold the stalemate at full strength.
+
+See `docs/MOUNT_V0_2B_RESPONDER_EXHAUSTION.md`.
 
 ## Known v0 limitation
 
