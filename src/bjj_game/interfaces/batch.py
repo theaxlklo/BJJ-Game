@@ -6,10 +6,15 @@ from enum import Enum
 from statistics import mean, median
 
 from ..domain.action import Commitment
-from ..domain.model import BottomBehavior, ExitDestination, Side, TopBehavior
+from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
 from ..domain.stamina import StaminaBand
 from ..engine.match import MountMatch
-from ..positions.mount.catalog import ENTITY_BY_ID, actions_for
+from ..positions.mount.catalog import (
+    MODERN_ENTITY_BY_ID,
+    TOP_AMERICANA_ARM_ISOLATION,
+    TOP_AMERICANA_SUBMISSION_FINISH,
+    actions_for,
+)
 from .blind import (
     RandomBlindResponder,
     exact_escape_probability,
@@ -21,6 +26,11 @@ from .blind import (
 class BatchBehaviorMode(str, Enum):
     FIXED = "fixed"
     RECOVER = "recover"
+
+
+class BatchResponderMode(str, Enum):
+    RANDOM = "random"
+    INFORMED = "informed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +72,7 @@ class BatchDecision:
     action_id: str | None
     reason: str
     escape_probability: float
+    submission_progress_probability: float
     expected_raw_axis: float
     expected_realized_axis: float
 
@@ -70,14 +81,94 @@ class EscapeFirstInitiatorPolicy:
     """Lexicographic batch policy with no terminal-value conversion.
 
     1. If any action can escape now, choose the highest escape probability.
-    2. Otherwise, if v0.2 setup is enabled, choose a setup builder only when
+    2. Otherwise choose the highest positive submission-progress probability.
+    3. Otherwise, if v0.2 setup is enabled, choose a setup builder only when
        the unready target would itself have positive tactical value if Ready.
-    3. Otherwise, attack for position only when BOTH raw and realized expected
+    4. Otherwise, attack for position only when BOTH raw and realized expected
        attacker-axis movement are positive.
-    4. Otherwise RESET.
+    5. Otherwise RESET.
 
     Tie-breaks are realized axis, then raw axis, then catalog order.
     """
+
+    @staticmethod
+    def _ready_fallback_response_id(
+        match: MountMatch,
+        action_id: str,
+    ) -> str | None:
+        if not match.enable_v02_setup:
+            return None
+        if (
+            action_id == TOP_AMERICANA_SUBMISSION_FINISH
+            and match.enable_v03_submissions
+            and match.submission_state.active
+        ):
+            rule = match.setup_policy.rule_for_target(
+                TOP_AMERICANA_ARM_ISOLATION
+            )
+            return rule.stalemate_response_id if rule is not None else None
+        if not match.setup_state.is_ready(action_id):
+            return None
+        rule = match.setup_policy.rule_for_target(action_id)
+        return rule.stalemate_response_id if rule is not None else None
+
+    def _submission_entry_probability(
+        self,
+        match: MountMatch,
+        *,
+        action_id: str,
+        external_grade_modifier: int,
+        allowed_response_ids: tuple[str, ...],
+        fallback_response_id: str | None = None,
+        ready_grade_overrides: dict[str, Grade] | None = None,
+    ) -> float:
+        """Exact probability that Ready Americana enters the submission track.
+
+        This is terminal-route probability, not converted axis value. It may be
+        evaluated prospectively for an unready setup target by supplying the
+        target's eventual Ready response set and grade overrides.
+        """
+        if (
+            not match.enable_v03_submissions
+            or match.initiator is not Side.TOP
+            or action_id != TOP_AMERICANA_ARM_ISOLATION
+            or match.band not in {Band.STRONG, Band.LOCKED}
+        ):
+            return 0.0
+
+        weighted = RandomBlindResponder.weighted_policy(
+            Side.BOTTOM,
+            allowed_response_ids=allowed_response_ids,
+            fallback_response_id=fallback_response_id,
+        )
+        total = sum(weight for _, weight in weighted)
+        if total <= 0:
+            return 0.0
+
+        top_behavior = match.top.behavior
+        bottom_behavior = match.bottom.behavior
+        if not isinstance(top_behavior, TopBehavior):
+            raise TypeError("Top behavior is not a TopBehavior")
+        if not isinstance(bottom_behavior, BottomBehavior):
+            raise TypeError("Bottom behavior is not a BottomBehavior")
+
+        overrides = ready_grade_overrides or {}
+        success_weight = 0
+        for response_id, weight in weighted:
+            result = match.engine.resolve_action(
+                axis=match.axis,
+                band=match.band,
+                initiator=Side.TOP,
+                action_id=action_id,
+                response_id=response_id,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=external_grade_modifier,
+                post_positional_grade_override=overrides.get(response_id),
+            )
+            if result.final_grade.successful:
+                success_weight += weight
+        return success_weight / total
 
     def _ready_target_has_value(
         self,
@@ -93,6 +184,10 @@ class EscapeFirstInitiatorPolicy:
         ready_ids = match.setup_policy.ready_response_ids(target)
         if not ready_ids:
             return False
+        rule = match.setup_policy.rule_for_target(target)
+        ready_fallback_response_id = (
+            rule.stalemate_response_id if rule is not None else None
+        )
         ready_grade_overrides = {
             response_id: override
             for response_id in ready_ids
@@ -122,6 +217,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=ready_ids,
+                fallback_response_id=ready_fallback_response_id,
                 ready_grade_overrides=ready_grade_overrides,
             )
             raw_axis = expected_raw_attacker_axis_delta(
@@ -133,6 +229,7 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=ready_ids,
+                fallback_response_id=ready_fallback_response_id,
                 ready_grade_overrides=ready_grade_overrides,
             )
             realized_axis = expected_realized_attacker_axis_delta(
@@ -144,13 +241,23 @@ class EscapeFirstInitiatorPolicy:
                 bottom_behavior=bottom_behavior,
                 external_grade_modifier=external_grade_modifier,
                 allowed_response_ids=ready_ids,
+                fallback_response_id=ready_fallback_response_id,
                 ready_grade_overrides=ready_grade_overrides,
             )
         except ValueError:
             return False
 
+        submission_entry_probability = self._submission_entry_probability(
+            match,
+            action_id=target,
+            external_grade_modifier=external_grade_modifier,
+            allowed_response_ids=ready_ids,
+            fallback_response_id=ready_fallback_response_id,
+            ready_grade_overrides=ready_grade_overrides,
+        )
         return (
-            escape_probability > 0
+            submission_entry_probability > 0
+            or escape_probability > 0
             or (raw_axis > 0 and realized_axis > 0)
         )
 
@@ -203,6 +310,71 @@ class EscapeFirstInitiatorPolicy:
                 success_weight += weight
         return success_weight / total
 
+    def _submission_progress_probability(
+        self,
+        match: MountMatch,
+        *,
+        action_id: str,
+        external_grade_modifier: int,
+    ) -> float:
+        if not match.enable_v03_submissions or match.initiator is not Side.TOP:
+            return 0.0
+
+        if (
+            action_id == TOP_AMERICANA_SUBMISSION_FINISH
+            and match.submission_state.active
+        ):
+            allowed = match.legal_response_ids(action_id)
+            weighted = RandomBlindResponder.weighted_policy(
+                Side.BOTTOM,
+                allowed_response_ids=allowed,
+                fallback_response_id=self._ready_fallback_response_id(
+                    match,
+                    action_id,
+                ),
+            )
+            total = sum(weight for _, weight in weighted)
+            if total <= 0:
+                return 0.0
+            success_weight = 0
+            for response_id, weight in weighted:
+                result = match.preview_submission_stage(
+                    response_id=response_id,
+                    external_grade_modifier=external_grade_modifier,
+                )
+                if result.final_grade.successful:
+                    success_weight += weight
+            return success_weight / total
+
+        if (
+            action_id == TOP_AMERICANA_ARM_ISOLATION
+            and match.setup_state.is_ready(action_id)
+        ):
+            allowed = match.legal_response_ids(action_id)
+            ready_grade_overrides = {
+                response_id: override
+                for response_id in allowed
+                if (
+                    override := match.setup_policy.ready_final_grade_override(
+                        action_id,
+                        response_id,
+                    )
+                ) is not None
+            }
+            return self._submission_entry_probability(
+                match,
+                action_id=action_id,
+                external_grade_modifier=external_grade_modifier,
+                allowed_response_ids=allowed,
+                fallback_response_id=self._ready_fallback_response_id(
+                    match,
+                    action_id,
+                ),
+                ready_grade_overrides=ready_grade_overrides,
+            )
+
+        return 0.0
+
     def choose(self, match: MountMatch) -> BatchDecision:
         side = match.initiator
         top_behavior = match.top.behavior
@@ -219,10 +391,10 @@ class EscapeFirstInitiatorPolicy:
             responder_band=responder_stamina_band,
         )
 
-        rows: list[tuple[str, float, float, float, float, int]] = []
+        rows: list[tuple[str, float, float, float, float, float, int]] = []
         candidate_actions = (
             tuple(
-                ENTITY_BY_ID[action_id]
+                MODERN_ENTITY_BY_ID[action_id]
                 for action_id in match.legal_action_ids(side)
             )
             if match.enable_v02_setup
@@ -233,6 +405,10 @@ class EscapeFirstInitiatorPolicy:
                 match.legal_response_ids(action.id)
                 if match.enable_v02_setup
                 else None
+            )
+            ready_fallback_response_id = self._ready_fallback_response_id(
+                match,
+                action.id,
             )
             ready_grade_overrides = (
                 {
@@ -247,52 +423,73 @@ class EscapeFirstInitiatorPolicy:
                 }
                 if (
                     match.enable_v02_setup
+                    and action.id in match.setup_policy.target_action_ids
                     and match.setup_state.is_ready(action.id)
                 )
                 else None
             )
-            escape_probability = exact_escape_probability(
-                side=side,
-                action_id=action.id,
-                axis=match.axis,
-                band=match.band,
-                top_behavior=top_behavior,
-                bottom_behavior=bottom_behavior,
-                external_grade_modifier=exhaustion_modifier,
-                allowed_response_ids=allowed,
-                ready_grade_overrides=ready_grade_overrides,
-            )
-            setup_probability = self._setup_advance_probability(
-                match,
-                action_id=action.id,
-                external_grade_modifier=exhaustion_modifier,
-            )
-            raw_axis = expected_raw_attacker_axis_delta(
-                side=side,
-                action_id=action.id,
-                axis=match.axis,
-                band=match.band,
-                top_behavior=top_behavior,
-                bottom_behavior=bottom_behavior,
-                external_grade_modifier=exhaustion_modifier,
-                allowed_response_ids=allowed,
-                ready_grade_overrides=ready_grade_overrides,
-            )
-            realized_axis = expected_realized_attacker_axis_delta(
-                side=side,
-                action_id=action.id,
-                axis=match.axis,
-                band=match.band,
-                top_behavior=top_behavior,
-                bottom_behavior=bottom_behavior,
-                external_grade_modifier=exhaustion_modifier,
-                allowed_response_ids=allowed,
-                ready_grade_overrides=ready_grade_overrides,
-            )
+            if action.id == TOP_AMERICANA_SUBMISSION_FINISH:
+                escape_probability = 0.0
+                submission_probability = self._submission_progress_probability(
+                    match,
+                    action_id=action.id,
+                    external_grade_modifier=exhaustion_modifier,
+                )
+                setup_probability = 0.0
+                raw_axis = 0.0
+                realized_axis = 0.0
+            else:
+                escape_probability = exact_escape_probability(
+                    side=side,
+                    action_id=action.id,
+                    axis=match.axis,
+                    band=match.band,
+                    top_behavior=top_behavior,
+                    bottom_behavior=bottom_behavior,
+                    external_grade_modifier=exhaustion_modifier,
+                    allowed_response_ids=allowed,
+                    fallback_response_id=ready_fallback_response_id,
+                    ready_grade_overrides=ready_grade_overrides,
+                )
+                submission_probability = self._submission_progress_probability(
+                    match,
+                    action_id=action.id,
+                    external_grade_modifier=exhaustion_modifier,
+                )
+                setup_probability = self._setup_advance_probability(
+                    match,
+                    action_id=action.id,
+                    external_grade_modifier=exhaustion_modifier,
+                )
+                raw_axis = expected_raw_attacker_axis_delta(
+                    side=side,
+                    action_id=action.id,
+                    axis=match.axis,
+                    band=match.band,
+                    top_behavior=top_behavior,
+                    bottom_behavior=bottom_behavior,
+                    external_grade_modifier=exhaustion_modifier,
+                    allowed_response_ids=allowed,
+                    fallback_response_id=ready_fallback_response_id,
+                    ready_grade_overrides=ready_grade_overrides,
+                )
+                realized_axis = expected_realized_attacker_axis_delta(
+                    side=side,
+                    action_id=action.id,
+                    axis=match.axis,
+                    band=match.band,
+                    top_behavior=top_behavior,
+                    bottom_behavior=bottom_behavior,
+                    external_grade_modifier=exhaustion_modifier,
+                    allowed_response_ids=allowed,
+                    fallback_response_id=ready_fallback_response_id,
+                    ready_grade_overrides=ready_grade_overrides,
+                )
             rows.append(
                 (
                     action.id,
                     escape_probability,
+                    submission_probability,
                     setup_probability,
                     raw_axis,
                     realized_axis,
@@ -302,76 +499,74 @@ class EscapeFirstInitiatorPolicy:
 
         escape_rows = [row for row in rows if row[1] > 0]
         if escape_rows:
-            (
-                action_id,
-                escape_probability,
-                _setup_probability,
-                raw_axis,
-                realized_axis,
-                _,
-            ) = max(
+            row = max(
                 escape_rows,
-                key=lambda row: (row[1], row[4], row[3], -row[5]),
+                key=lambda item: (item[1], item[5], item[4], -item[6]),
             )
             return BatchDecision(
-                action_id=action_id,
+                action_id=row[0],
                 reason="escape",
-                escape_probability=escape_probability,
-                expected_raw_axis=raw_axis,
-                expected_realized_axis=realized_axis,
+                escape_probability=row[1],
+                submission_progress_probability=row[2],
+                expected_raw_axis=row[4],
+                expected_realized_axis=row[5],
             )
 
-        setup_rows = [row for row in rows if row[2] > 0]
-        if setup_rows:
-            (
-                action_id,
-                escape_probability,
-                _setup_probability,
-                raw_axis,
-                realized_axis,
-                _,
-            ) = max(
-                setup_rows,
-                key=lambda row: (row[2], row[4], row[3], -row[5]),
+        submission_rows = [row for row in rows if row[2] > 0]
+        if submission_rows:
+            row = max(
+                submission_rows,
+                key=lambda item: (item[2], item[5], item[4], -item[6]),
             )
             return BatchDecision(
-                action_id=action_id,
+                action_id=row[0],
+                reason="submission",
+                escape_probability=row[1],
+                submission_progress_probability=row[2],
+                expected_raw_axis=row[4],
+                expected_realized_axis=row[5],
+            )
+
+        setup_rows = [row for row in rows if row[3] > 0]
+        if setup_rows:
+            row = max(
+                setup_rows,
+                key=lambda item: (item[3], item[5], item[4], -item[6]),
+            )
+            return BatchDecision(
+                action_id=row[0],
                 reason="setup",
-                escape_probability=escape_probability,
-                expected_raw_axis=raw_axis,
-                expected_realized_axis=realized_axis,
+                escape_probability=row[1],
+                submission_progress_probability=row[2],
+                expected_raw_axis=row[4],
+                expected_realized_axis=row[5],
             )
 
         positional_rows = [
-            row for row in rows if row[3] > 0 and row[4] > 0
+            row for row in rows if row[4] > 0 and row[5] > 0
         ]
         if positional_rows:
-            (
-                action_id,
-                escape_probability,
-                _setup_probability,
-                raw_axis,
-                realized_axis,
-                _,
-            ) = max(
+            row = max(
                 positional_rows,
-                key=lambda row: (row[4], row[3], -row[5]),
+                key=lambda item: (item[5], item[4], -item[6]),
             )
             return BatchDecision(
-                action_id=action_id,
+                action_id=row[0],
                 reason="position",
-                escape_probability=escape_probability,
-                expected_raw_axis=raw_axis,
-                expected_realized_axis=realized_axis,
+                escape_probability=row[1],
+                submission_progress_probability=row[2],
+                expected_raw_axis=row[4],
+                expected_realized_axis=row[5],
             )
 
-        best = max(rows, key=lambda row: (row[4], row[3], -row[5]))
+        best = max(rows, key=lambda item: (item[5], item[4], -item[6]))
         return BatchDecision(
             action_id=None,
             reason="reset",
             escape_probability=0.0,
-            expected_raw_axis=best[3],
-            expected_realized_axis=best[4],
+            submission_progress_probability=0.0,
+            expected_raw_axis=best[4],
+            expected_realized_axis=best[5],
         )
 
 
@@ -379,6 +574,7 @@ class EscapeFirstInitiatorPolicy:
 class BatchSummary:
     matches: int
     base_seed: int
+    bottom_responder_mode: BatchResponderMode
     top_behavior: TopBehavior
     bottom_behavior: BottomBehavior
     commitment: Commitment
@@ -394,6 +590,11 @@ class BatchSummary:
     bottom_action_counts: dict[str, int]
     top_escape_priority_count: int
     bottom_escape_priority_count: int
+    top_submission_priority_count: int
+    top_submission_attempt_count: int
+    matches_reached_submission_threat: int
+    matches_reached_submission_control: int
+    matches_reached_submission_finish: int
     top_position_attack_count: int
     top_followup_position_attack_count: int
     top_followup_setup_action_count: int
@@ -427,12 +628,14 @@ class BatchSummary:
             "Per-match seed: base_seed + zero-based match index",
             "Initiator policy: escape-first lexicographic",
             "Escape rule: highest exact escape probability first",
+            "Submission rule: positive submission-progress probability before setup/position/RESET",
             "Setup rule: build only when the Ready target has positive tactical value",
             "Position rule: require raw axis > 0 AND realized axis > 0",
             f"Top baseline behavior: {self.top_behavior.value}",
             f"Top behavior policy: {self.top_behavior_mode.value}",
             f"Bottom baseline behavior: {self.bottom_behavior.value}",
             f"Bottom behavior policy: {self.bottom_behavior_mode.value}",
+            f"Bottom responder policy: {self.bottom_responder_mode.value}",
             f"Commitment: {self.commitment.value}",
             "",
             "OUTCOMES",
@@ -462,6 +665,11 @@ class BatchSummary:
             f"Bottom RESET count: {self.bottom_reset_count}",
             f"Top escape-priority attacks: {self.top_escape_priority_count}",
             f"Bottom escape-priority attacks: {self.bottom_escape_priority_count}",
+            f"Top submission-priority attacks: {self.top_submission_priority_count}",
+            f"Top submission-stage attempts: {self.top_submission_attempt_count}",
+            f"Matches reaching submission Threat: {self.matches_reached_submission_threat}",
+            f"Matches reaching submission Control: {self.matches_reached_submission_control}",
+            f"Matches reaching submission Finish: {self.matches_reached_submission_finish}",
             f"Top position attacks: {self.top_position_attack_count}",
             f"Top follow-up position attacks: {self.top_followup_position_attack_count}",
             f"Top follow-up setup actions: {self.top_followup_setup_action_count}",
@@ -491,6 +699,66 @@ def _render_counts(counts: dict[str, int]) -> str:
     return ", ".join(f"{name}={counts[name]}" for name in sorted(counts))
 
 
+def _informed_bottom_response_id(
+    match: MountMatch,
+    *,
+    action_id: str,
+) -> str:
+    """Choose Bottom's legal response that minimizes Top's final grade."""
+    if match.initiator is not Side.TOP:
+        raise ValueError("informed Bottom response requires Top as initiator")
+
+    legal = match.legal_response_ids(action_id)
+    if not legal:
+        raise RuntimeError(f"No legal responses for {action_id!r}")
+
+    initiator_band = match.top.stamina.band
+    responder_band = match.bottom.stamina.band
+    exhaustion_modifier = match.exhaustion_policy.exchange_grade_modifier(
+        initiator_band=initiator_band,
+        responder_band=responder_band,
+    )
+    top_behavior = match.top.behavior
+    bottom_behavior = match.bottom.behavior
+    if not isinstance(top_behavior, TopBehavior):
+        raise TypeError("Top behavior is not a TopBehavior")
+    if not isinstance(bottom_behavior, BottomBehavior):
+        raise TypeError("Bottom behavior is not a BottomBehavior")
+
+    candidates: list[tuple[Grade, int, str]] = []
+    for order, response_id in enumerate(legal):
+        if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
+            result = match.preview_submission_stage(
+                response_id=response_id,
+                external_grade_modifier=exhaustion_modifier,
+            )
+        else:
+            target_was_ready = (
+                match.enable_v02_setup
+                and action_id in match.setup_policy.target_action_ids
+                and match.setup_state.is_ready(action_id)
+            )
+            ready_override = (
+                match.setup_policy.ready_final_grade_override(
+                    action_id,
+                    response_id,
+                )
+                if target_was_ready
+                else None
+            )
+            result = match._resolve(
+                action_id=action_id,
+                response_id=response_id,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=exhaustion_modifier,
+                post_positional_grade_override=ready_override,
+            )
+        candidates.append((result.final_grade, order, response_id))
+
+    return min(candidates)[2]
+
+
 def run_escape_first_batch(
     *,
     matches: int,
@@ -505,10 +773,14 @@ def run_escape_first_batch(
     bottom_stamina: int,
     top_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
     bottom_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
+    bottom_responder_mode: BatchResponderMode = BatchResponderMode.RANDOM,
     enable_v02_setup: bool = False,
+    enable_v03_submissions: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
         raise ValueError("matches must be > 0")
+    if enable_v03_submissions and not enable_v02_setup:
+        raise ValueError("v0.3a submissions require v0.2 setup/Ready")
 
     policy = EscapeFirstInitiatorPolicy()
     outcomes: Counter[str] = Counter()
@@ -521,6 +793,11 @@ def run_escape_first_batch(
     bottom_actions: Counter[str] = Counter()
     top_escape_priority = 0
     bottom_escape_priority = 0
+    top_submission_priority = 0
+    top_submission_attempts = 0
+    matches_reached_threat = 0
+    matches_reached_control = 0
+    matches_reached_finish = 0
     top_position_attacks = 0
     top_followup_position_attacks = 0
     top_followup_setup_actions = 0
@@ -543,6 +820,7 @@ def run_escape_first_batch(
             starting_axis=starting_axis,
             interval_seconds=interval_seconds,
             enable_v02_setup=enable_v02_setup,
+            enable_v03_submissions=enable_v03_submissions,
         )
         match.top.stamina.set_current(top_stamina)
         match.bottom.stamina.set_current(bottom_stamina)
@@ -606,15 +884,32 @@ def run_escape_first_batch(
                     else:
                         bottom_resets += 1
                     continue
-                hidden = responder.choose(
-                    side.opponent,
-                    allowed_response_ids=match.legal_response_ids(
-                        decision.action_id
-                    ),
-                )
+                if (
+                    side is Side.TOP
+                    and bottom_responder_mode is BatchResponderMode.INFORMED
+                ):
+                    response_id = _informed_bottom_response_id(
+                        match,
+                        action_id=decision.action_id,
+                    )
+                else:
+                    hidden = responder.choose(
+                        side.opponent,
+                        allowed_response_ids=match.legal_response_ids(
+                            decision.action_id
+                        ),
+                        fallback_response_id=(
+                            policy._ready_fallback_response_id(
+                                match,
+                                decision.action_id,
+                            )
+                        ),
+                    )
+                    response_id = hidden.response_id
             else:
                 # v0.1 blind harness preserves historical responder-first sampling.
                 hidden = responder.choose(side.opponent)
+                response_id = hidden.response_id
                 decision = policy.choose(match)
                 if decision.action_id is None:
                     match.reset_window()
@@ -624,7 +919,7 @@ def run_escape_first_batch(
                         bottom_resets += 1
                     continue
 
-            action = ENTITY_BY_ID[decision.action_id]
+            action = MODERN_ENTITY_BY_ID[decision.action_id]
             setup_target = (
                 match.setup_policy.target_for_builder(action.id)
                 if enable_v02_setup
@@ -632,6 +927,7 @@ def run_escape_first_batch(
             )
             target_was_ready = (
                 enable_v02_setup
+                and action.id in match.setup_policy.target_action_ids
                 and match.setup_state.is_ready(action.id)
             )
 
@@ -639,6 +935,9 @@ def run_escape_first_batch(
                 top_actions[action.short_name] += 1
                 if decision.reason == "escape":
                     top_escape_priority += 1
+                elif decision.reason == "submission":
+                    top_submission_priority += 1
+                    top_submission_attempts += 1
                 elif decision.reason == "setup":
                     top_setup_actions += 1
                     if setup_target is not None:
@@ -665,7 +964,7 @@ def run_escape_first_batch(
 
             match.attempt(
                 action_id=decision.action_id,
-                response_id=hidden.response_id,
+                response_id=response_id,
                 commitment=commitment,
             )
 
@@ -683,6 +982,14 @@ def run_escape_first_batch(
                     bottom_completed_setup_chains += 1
                     bottom_completed_setup_builds += credited
 
+        changes = match.history.submission_change_history
+        if any("->Threat" in change for change in changes):
+            matches_reached_threat += 1
+        if any("->Control" in change for change in changes):
+            matches_reached_control += 1
+        if any("->Finish" in change for change in changes):
+            matches_reached_finish += 1
+
         outcome = (
             match.exit_destination.value
             if match.exit_destination is not None
@@ -696,6 +1003,7 @@ def run_escape_first_batch(
     return BatchSummary(
         matches=matches,
         base_seed=base_seed,
+        bottom_responder_mode=bottom_responder_mode,
         top_behavior=top_behavior,
         bottom_behavior=bottom_behavior,
         commitment=commitment,
@@ -711,6 +1019,11 @@ def run_escape_first_batch(
         bottom_action_counts=dict(bottom_actions),
         top_escape_priority_count=top_escape_priority,
         bottom_escape_priority_count=bottom_escape_priority,
+        top_submission_priority_count=top_submission_priority,
+        top_submission_attempt_count=top_submission_attempts,
+        matches_reached_submission_threat=matches_reached_threat,
+        matches_reached_submission_control=matches_reached_control,
+        matches_reached_submission_finish=matches_reached_finish,
         top_position_attack_count=top_position_attacks,
         top_followup_position_attack_count=top_followup_position_attacks,
         top_followup_setup_action_count=top_followup_setup_actions,

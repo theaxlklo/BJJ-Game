@@ -303,7 +303,7 @@ PYTHONPATH=src python -m bjj_game \
   --bottom-behavior ESCAPE
 ```
 
-The checker currently measures:
+At the reviewed v0.2b baseline before submission finishes existed, the checker measured:
 
 ```text
 Gate 1  PASS      every reachable Ready state's best legal defense is Contested
@@ -348,6 +348,164 @@ dynamic no-recovery escapes/100: PRESSURE:0 / HOLD:76 / CONSERVE:35
 A fresh HOLD Top may still completely shut down an already-Exhausted Bottom. That behavior is retained under Gate 6 path B because actual setup-driven play gives Bottom a measured route out once Top becomes Exhausted too.
 
 See `docs/MOUNT_V0_2B_RESPONDER_EXHAUSTION.md`.
+
+## Mount v0.3a — minimal Americana submission track
+
+v0.3a adds one modern-only Americana submission path around the frozen Mount-v0 matrix:
+
+```text
+Ready Americana -> Threat -> Control -> Finish -> Tap
+```
+
+Mount is only the currently implemented **entry context**. The Americana isolation/submission-control graph is intentionally separate so future Side Control, Knee-on-Belly, Guard, and other positions can feed the same submission logic through their own access rules.
+
+Current isolation legality:
+
+```text
+legal while Americana isolation holds:
+  Forearm Frame
+  Turn-In Recovery
+
+illegal until isolation is broken/rebuilt:
+  Tight Elbows
+```
+
+Submission-stage result semantics:
+
+```text
+Success / Strong Success -> advance
+Contested                -> hold current stage; no axis loss
+Failure / Strong Failure -> break track; axis -1.00 toward Bottom
+```
+
+A fresh informed Turn-In is therefore a stalemate. An Exhausted defender's same Turn-In becomes Success for Top, so the isolated Gate-E path can finish.
+
+The responder policy preserves ordinary response mass under contextual legality:
+
+```text
+ordinary Bottom mix: Frame=4 / Tight Elbows=3 / Turn-In=0
+isolated Americana:  Frame=4 / Turn-In=3
+```
+
+No response weight is invented.
+
+### Current Gate-B model
+
+"Competent defender" is measured with an **informed Bottom responder** that chooses the legal response giving Top the lowest real final grade. The frozen random mix remains a non-gating contrast.
+
+The numerical criterion is unchanged:
+
+```text
+0% < informed Tap rate < 50%
+```
+
+Gate B is currently **DEFERRED** rather than OPEN because the model has neither response-side commitment nor a Recognition/information mechanic.
+
+The checker carries two live expiry signals:
+
+```text
+response_commitment_present
+recognition_present
+```
+
+Current state:
+
+```text
+False / False -> Gate B DEFERRED
+```
+
+As soon as either capability becomes present, the deferral automatically expires and Gate B resumes PASS/OPEN evaluation against the unchanged range.
+
+### Provisional submission-hold stamina rule
+
+v0.3a retains the existing LOW cost of 3, charged after resolution for a Contested Americana hold at either:
+
+- Ready Americana, when v0.3 submissions are enabled; or
+- active Threat / Control / Finish.
+
+The identical Ready exchange under v0.2-only remains response-cost free.
+
+The value is explicitly **provisional**. Its measured contribution is submission access:
+
+```text
+without hold cost:
+  informed Threat=0/100
+
+with LOW=3:
+  informed Threat=78/100
+```
+
+It does not solve full-match conversion:
+
+```text
+informed PRESSURE / ESCAPE:
+  Tap=0/100
+  Threat=78
+  Control=0
+  Finish=0
+  final stamina median=0/0
+
+random PRESSURE / ESCAPE contrast:
+  Tap=99/100
+```
+
+The reason is now explicit. At MEDIUM commitment Top pays 7 per initiated action, while the defender pays 3 per Contested submission hold. Sustained pressure exhausts both fighters; then:
+
+```text
+Exhausted initiator -1
+Exhausted responder +1
+net = 0
+```
+
+Turn-In becomes Contested again.
+
+The future defender-effort/information slice must create a principled asymmetry through one of two paths:
+
+- **uneven costs:** a defender maintaining the submission stalemate drains differently from the attacker forcing it; or
+- **uneven exhaustion effects:** mutual exhaustion stops canceling specifically for submission exchanges.
+
+The project will not increase the cost post-hoc merely until Gate B passes.
+
+Current v0.3a closure state:
+
+```text
+Gate A PASS
+Gate B DEFERRED
+Gate C PASS
+Gate D PASS
+Gate E PASS
+```
+
+Gate C proves fresh informed defense holds rather than wins outright. Gate E proves Fresh Top can finish an already-Exhausted informed Bottom.
+
+The setup-policy debt also remains explicit in `--check`. Under informed PRESSURE / PROTECT, Top can repeatedly build setup while failing to convert it:
+
+```text
+V0.3a SETUP-POLICY DEBT: builder progress is ranked above axis loss; informed PROTECT builds=1768, Threat entries=0.
+```
+
+This is observed debt, not tuned in v0.3a.
+
+The v0.2 Gate-2 deferral remains intentionally expired:
+
+```text
+Gate 2 OPEN
+```
+
+because a real submission-finish route exists while repeated RESET still times out at Locked.
+
+The setup/policy debt also remains explicit: Top can repeatedly rebuild Americana setup even when informed defense prevents conversion. This is observed, not tuned in v0.3a.
+
+See:
+
+- `docs/MOUNT_V0_3A_DEFINITION_OF_DONE.md`
+- `docs/MOUNT_V0_3A_STALEMATE_AMENDMENT.md`
+- `docs/MOUNT_V0_3A_OPTION_A_MEASUREMENT.md`
+- `docs/MOUNT_V0_3A_HOLD_STAMINA_AMENDMENT.md`
+- `docs/MOUNT_V0_3A_ACTIVE_HOLD_COST_MEASUREMENT.md`
+- `docs/MOUNT_V0_3A_READY_HOLD_STAMINA_AMENDMENT.md`
+- `docs/MOUNT_V0_3A_LOW3_HOLD_COST_MEASUREMENT.md`
+- `docs/MOUNT_V0_3A_GATE_B_DEFERRAL.md`
 
 ## Known v0 limitation
 

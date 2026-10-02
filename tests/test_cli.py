@@ -403,6 +403,38 @@ class CliTests(unittest.TestCase):
         self.assertIn("--v02-setup is currently available only with --batch", output.getvalue())
 
 
+    def test_v03_submission_batch_flag_requires_v02_setup(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--batch", "2", "--v03-submissions"])
+        self.assertEqual(code, 2)
+        self.assertIn("--v03-submissions requires --v02-setup", output.getvalue())
+
+    def test_v03_submission_batch_reports_submission_metrics(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--batch", "20",
+                "--seed", "42",
+                "--v02-setup",
+                "--v03-submissions",
+                "--top-behavior", "PRESSURE",
+                "--bottom-behavior", "ESCAPE",
+            ])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Submission rule: positive submission-progress probability", text)
+        self.assertIn("Top submission-priority attacks:", text)
+        self.assertIn("Top submission-stage attempts:", text)
+        self.assertIn("Matches reaching submission Threat:", text)
+
+    def test_v03_submissions_requires_batch(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--v03-submissions"])
+        self.assertEqual(code, 2)
+        self.assertIn("--v03-submissions is currently available only with --batch", output.getvalue())
+
     def test_batch_rejects_interactive_blind_flags(self):
         output = io.StringIO()
         with redirect_stdout(output):
@@ -484,6 +516,13 @@ class CliTests(unittest.TestCase):
         self.assertIn("modern playtest flags", output.getvalue())
 
 
+    def test_legacy_cli_rejects_v03_submission_flag(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["--v03-submissions"])
+        self.assertEqual(code, 2)
+        self.assertIn("modern playtest flags", output.getvalue())
+
     def test_primary_check_reports_commitment_dominance_and_visibility_debt(self):
         output = io.StringIO()
         with redirect_stdout(output):
@@ -512,7 +551,8 @@ class CliTests(unittest.TestCase):
         self.assertIn("forced-attack pacing is a stress projection", text)
         self.assertIn("V0.2 RESPONDER-STAMINA VALIDATION", text)
         self.assertIn("both Exhausted cancel", text)
-        self.assertIn("responding still has no direct stamina cost", text)
+        self.assertIn("Ordinary responses still have no direct stamina cost", text)
+        self.assertIn("Contested holds pay the existing LOW cost of 3", text)
         self.assertIn("RESET/STALLING DEBT", text)
         self.assertIn(
             "RESET LOCK PROBE: Top PRESSURE+RESET vs Bottom ESCAPE+RESET -> TIMEOUT — Mount retained; axis +4.00; band Locked; Top stamina 40; Bottom stamina 40",
@@ -541,6 +581,19 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.2 DOD GATE 5 [", text)
         self.assertIn("V0.2 DOD GATE 6 [", text)
         self.assertIn("V0.2 DOD GATE 7 [", text)
+        self.assertIn("V0.3a DOD GATE A [", text)
+        self.assertIn("V0.3a DOD GATE B [DEFERRED]", text)
+        self.assertIn("V0.3a DOD GATE C [", text)
+        self.assertIn("V0.3a DOD GATE D [", text)
+        self.assertIn("V0.3a DOD GATE E [", text)
+        self.assertIn("V0.3a PREDICTION PROBE", text)
+        self.assertIn("V0.3a STAMINA SATURATION", text)
+        self.assertIn("V0.3a SUBMISSION-HOLD COST: PROVISIONAL", text)
+        self.assertIn("V0.3a SETUP-POLICY DEBT", text)
+        self.assertIn("informed PROTECT builds=", text)
+        self.assertIn("Threat entries=0", text)
+        self.assertIn("V0.3a INFORMED DEFENDER PROBE", text)
+        self.assertIn("Observational only; no gate or threshold.", text)
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
         output = io.StringIO()
@@ -562,6 +615,12 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("BLIND MIX BAND METRICS", text)
         self.assertNotIn("BATCH RESPONSE MIX REACHABILITY", text)
         self.assertNotIn("V0.2 DOD GATE", text)
+        self.assertNotIn("V0.3a DOD GATE", text)
+        self.assertNotIn("V0.3a PREDICTION PROBE", text)
+        self.assertNotIn("V0.3a STAMINA SATURATION", text)
+        self.assertNotIn("V0.3a SUBMISSION-HOLD COST", text)
+        self.assertNotIn("V0.3a SETUP-POLICY DEBT", text)
+        self.assertNotIn("V0.3a INFORMED DEFENDER PROBE", text)
 
 
 

@@ -9,6 +9,7 @@ from bjj_game.diagnostics.checker import (
     _submission_finish_present,
     _v02_ready_gate_evidence,
     _v02_standard_batch,
+    _v03_standard_batch,
     measure_v02_definition_of_done,
     render_reset_lock_probe,
     render_v02_definition_of_done,
@@ -103,13 +104,19 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             self.gates[4].metric,
         )
 
-    def test_gate_5_status_follows_completed_setup_chain_activity(self):
-        batch = _v02_standard_batch()
+    def test_gate_5_status_follows_current_meaningful_activity_surface(self):
+        submission_present = _submission_finish_present()
+        batch = _v03_standard_batch() if submission_present else _v02_standard_batch()
         position_rate = batch.top_followup_position_attack_count / batch.matches
         completed_setup_rate = (
             batch.top_followup_completed_setup_build_count / batch.matches
         )
-        rate = position_rate + completed_setup_rate
+        submission_rate = (
+            batch.top_submission_attempt_count / batch.matches
+            if submission_present
+            else 0.0
+        )
+        rate = position_rate + completed_setup_rate + submission_rate
         expected = (
             V02GateStatus.PASS
             if rate > 1.0
@@ -125,7 +132,12 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
             f"completed-setup-builds:{completed_setup_rate:.3f}",
             self.gates[5].metric,
         )
+        self.assertIn(
+            f"submission-attempts:{submission_rate:.3f}",
+            self.gates[5].metric,
+        )
         self.assertIn("setup builders count only when", self.gates[5].evidence)
+        self.assertIn("unchanged >1.000 threshold", self.gates[5].evidence)
 
     def test_gate_6_accepts_measured_path_b_when_static_lockout_has_dynamic_route(self):
         routes_by_behavior = (

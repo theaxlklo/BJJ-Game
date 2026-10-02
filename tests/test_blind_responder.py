@@ -2,6 +2,10 @@ import unittest
 
 from bjj_game.domain.model import Band, ExitDestination, Side
 from bjj_game.engine.stamina import DEFAULT_EXHAUSTION_POLICY
+from bjj_game.positions.mount.catalog import (
+    BOTTOM_RESPONSE_FOREARM_FRAME,
+    BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+)
 from bjj_game.interfaces.blind import RandomBlindResponder, random_mix_band_metrics, random_mix_reachable_exits, render_random_mix_band_metrics, render_random_mix_exit_limit
 
 
@@ -15,6 +19,34 @@ class RandomBlindResponderTests(unittest.TestCase):
             RandomBlindResponder.mix_description(Side.TOP),
             "Wide Base=2, Hip Follow=1",
         )
+
+    def test_ready_projection_preserves_removed_response_mass(self):
+        allowed = (
+            BOTTOM_RESPONSE_FOREARM_FRAME,
+            BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+        )
+        ordinary_filter = RandomBlindResponder.weighted_policy(
+            Side.BOTTOM,
+            allowed_response_ids=allowed,
+        )
+        projected = RandomBlindResponder.weighted_policy(
+            Side.BOTTOM,
+            allowed_response_ids=allowed,
+            fallback_response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+        )
+
+        self.assertEqual(
+            ordinary_filter,
+            ((BOTTOM_RESPONSE_FOREARM_FRAME, 4),),
+        )
+        self.assertEqual(
+            projected,
+            (
+                (BOTTOM_RESPONSE_FOREARM_FRAME, 4),
+                (BOTTOM_RESPONSE_TURN_IN_RECOVERY, 3),
+            ),
+        )
+        self.assertEqual(sum(weight for _, weight in projected), 7)
 
     def test_seeded_sequence_is_replayable(self):
         first = RandomBlindResponder(42)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..positions.mount.catalog import ENTITY_BY_ID
+from ..positions.mount.catalog import MODERN_ENTITY_BY_ID
 from ..domain.action import AttemptResult, ResetWindowResult
 from ..engine.stamina import AdvanceResult, BehaviorStaminaResult
 from ..domain.model import DriftResult, ResolutionResult
@@ -30,8 +30,8 @@ def format_drift(result: DriftResult, top_behavior: str, bottom_behavior: str) -
 
 
 def format_resolution(result: ResolutionResult, clock_seconds: int, top_behavior: str, bottom_behavior: str) -> str:
-    action = ENTITY_BY_ID[result.action_id]
-    response = ENTITY_BY_ID[result.response_id]
+    action = MODERN_ENTITY_BY_ID[result.action_id]
+    response = MODERN_ENTITY_BY_ID[result.response_id]
     behavior_text = "None" if result.behavior_modifier == 0 else f"{result.behavior_modifier:+d} grade"
     position_text = "None" if result.positional_modifier == 0 else f"{result.positional_modifier:+d} grade"
     exit_text = result.exit_destination.value if result.exit_destination else "None"

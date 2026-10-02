@@ -12,7 +12,9 @@ from ..positions.mount.catalog import (
     BOTTOM_ACTIONS,
     TOP_RESPONSES,
     BOTTOM_RESPONSES,
+    TOP_AMERICANA_SUBMISSION_FINISH,
     actions_for,
+    modern_actions_for,
     responses_for,
 )
 from ..positions.mount.matchups import RAW_GRADES, raw_grade
@@ -20,6 +22,8 @@ from ..engine.mount_engine import MOUNT_ENGINE
 from ..positions.mount.rules import MOUNT_RULES
 from ..domain.action import Commitment
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
+from ..domain.stamina import StaminaBand
+from ..domain.submission import SubmissionStage
 from ..positions.mount.names import RESOLVER, normalize_name
 
 V0_TOP_BEHAVIORS = (TopBehavior.PRESSURE, TopBehavior.HOLD)
@@ -373,6 +377,52 @@ def _v02_standard_batch():
     )
 
 
+@lru_cache(maxsize=1)
+def _v03_informed_standard_batch():
+    """Gate-B competent-defender batch: Bottom chooses best legal response."""
+    from ..interfaces.batch import (
+        BatchResponderMode,
+        run_escape_first_batch,
+    )
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        bottom_responder_mode=BatchResponderMode.INFORMED,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03_standard_batch():
+    """Frozen v0.3a standard batch from the pre-implementation DoD."""
+    from ..interfaces.batch import run_escape_first_batch
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+
+
 def _resolution_signature(result) -> tuple:
     return (
         result.final_grade,
@@ -674,7 +724,7 @@ def _submission_finish_present() -> bool:
     return any(
         action.category == "SUBMISSION_FINISH"
         for side in (Side.TOP, Side.BOTTOM)
-        for action in actions_for(side)
+        for action in modern_actions_for(side)
     )
 
 def measure_v02_definition_of_done(
@@ -703,23 +753,38 @@ def measure_v02_definition_of_done(
     )
     submission_finish_present = _submission_finish_present()
 
-    # Gates 4/5 share the same deterministic standard batch.
+    # Gate 4 stays pinned to the v0.2 batch that proved Bridge's setup role.
     standard_batch = _v02_standard_batch()
     bridge_count = standard_batch.bottom_action_counts.get("Bridge", 0)
     bridge_setup_count = standard_batch.bottom_setup_action_count
     bridge_completed_setup_builds = standard_batch.bottom_completed_setup_build_count
     bottom_completed_setup_chains = standard_batch.bottom_completed_setup_chain_count
+
+    # Gate 5 observes the current mechanics surface. Once a real submission
+    # finish exists, follow-up submission attempts count as meaningful work
+    # without changing the frozen >1.000 threshold.
+    activity_batch = (
+        _v03_standard_batch()
+        if submission_finish_present
+        else standard_batch
+    )
     top_followup_position_attacks_per_match = (
-        standard_batch.top_followup_position_attack_count
-        / standard_batch.matches
+        activity_batch.top_followup_position_attack_count
+        / activity_batch.matches
     )
     top_followup_completed_setup_builds_per_match = (
-        standard_batch.top_followup_completed_setup_build_count
-        / standard_batch.matches
+        activity_batch.top_followup_completed_setup_build_count
+        / activity_batch.matches
+    )
+    top_followup_submission_attempts_per_match = (
+        activity_batch.top_submission_attempt_count / activity_batch.matches
+        if submission_finish_present
+        else 0.0
     )
     top_followup_meaningful_per_match = (
         top_followup_position_attacks_per_match
         + top_followup_completed_setup_builds_per_match
+        + top_followup_submission_attempts_per_match
     )
     top_followup_threshold = 1.0
     top_followup_margin = (
@@ -858,11 +923,12 @@ def measure_v02_definition_of_done(
                 "standard batch Top follow-up meaningful initiations/match="
                 f"{top_followup_meaningful_per_match:.3f} "
                 f"(position:{top_followup_position_attacks_per_match:.3f},"
-                f"completed-setup-builds:{top_followup_completed_setup_builds_per_match:.3f}); "
+                f"completed-setup-builds:{top_followup_completed_setup_builds_per_match:.3f},"
+                f"submission-attempts:{top_followup_submission_attempts_per_match:.3f}); "
                 f"threshold={top_followup_threshold:.3f}; "
                 f"margin={top_followup_margin:+.3f}"
             ),
-            evidence="opening attack excluded; setup builders count only when their Ready target is later consumed; margin is measured against the unchanged >1.000 threshold",
+            evidence="opening attack excluded; setup builders count only when their Ready target is later consumed; v0.3 submission attempts count as terminal follow-up work; margin is measured against the unchanged >1.000 threshold",
         ),
         V02GateMeasurement(
             number=6,
@@ -919,6 +985,804 @@ def measure_v02_definition_of_done(
             ),
         ),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class V03GateMeasurement:
+    letter: str
+    name: str
+    status: V02GateStatus
+    metric: str
+    evidence: str
+
+    def render(self) -> str:
+        return (
+            f"V0.3a DOD GATE {self.letter} [{self.status.value}]: "
+            f"{self.name} — {self.metric}; {self.evidence}"
+        )
+
+
+@lru_cache(maxsize=1)
+def _v03_locked_submission_probe() -> tuple[float, bool]:
+    """Return (submission progress probability, policy selected submission)."""
+    from ..engine.match import MountMatch
+    from ..interfaces.batch import EscapeFirstInitiatorPolicy
+
+    match = MountMatch(
+        starting_axis=3.50,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+    match.submission_state.stage = SubmissionStage.THREAT
+    match.initiator = Side.TOP
+    match.set_behaviors(
+        top=TopBehavior.PRESSURE,
+        bottom=BottomBehavior.ESCAPE,
+    )
+    decision = EscapeFirstInitiatorPolicy().choose(match)
+    return (
+        decision.submission_progress_probability,
+        decision.reason == "submission"
+        and decision.action_id == TOP_AMERICANA_SUBMISSION_FINISH,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class V03DefenseStageEvidence:
+    reachable_states: int
+    best_contested_states: int
+    best_defender_win_states: int
+    guaranteed_advance_states: int
+
+
+@lru_cache(maxsize=1)
+def _v03_best_defense_evidence() -> dict[SubmissionStage, V03DefenseStageEvidence]:
+    """Reachable fresh baseline stages must have exactly Contested best defense."""
+    from ..engine.match import MountMatch
+
+    evidence: dict[SubmissionStage, V03DefenseStageEvidence] = {}
+    reachable_anchors = {
+        Band.STRONG: _V02_BAND_ANCHORS[Band.STRONG],
+        Band.LOCKED: _V02_BAND_ANCHORS[Band.LOCKED],
+    }
+    for stage in SubmissionStage:
+        reachable = 0
+        best_contested = 0
+        defender_wins = 0
+        guaranteed = 0
+        for band, axis in reachable_anchors.items():
+            match = MountMatch(
+                starting_axis=axis,
+                enable_v02_setup=True,
+                enable_v03_submissions=True,
+            )
+            match.submission_state.stage = stage
+            match.initiator = Side.TOP
+            match.set_behaviors(
+                top=TopBehavior.PRESSURE,
+                bottom=BottomBehavior.ESCAPE,
+            )
+            if match.band is not band:
+                raise AssertionError(
+                    f"v0.3a band anchor mismatch: expected {band}, got {match.band}"
+                )
+            legal = match.legal_response_ids(TOP_AMERICANA_SUBMISSION_FINISH)
+            finals = [
+                match.preview_submission_stage(
+                    response_id=response_id
+                ).final_grade
+                for response_id in legal
+            ]
+            if not finals:
+                raise RuntimeError(
+                    f"v0.3a {stage.value} has no legal fresh defense"
+                )
+            best = min(finals)
+            reachable += 1
+            if best is Grade.CONTESTED:
+                best_contested += 1
+            if best.failed:
+                defender_wins += 1
+            if all(grade.successful for grade in finals):
+                guaranteed += 1
+        evidence[stage] = V03DefenseStageEvidence(
+            reachable_states=reachable,
+            best_contested_states=best_contested,
+            best_defender_win_states=defender_wins,
+            guaranteed_advance_states=guaranteed,
+        )
+    return evidence
+
+
+def _v03_stage_signature(stage: SubmissionStage, result) -> tuple:
+    if result.final_grade.successful:
+        disposition = "tap" if stage is SubmissionStage.FINISH else "advance"
+        tapped = stage is SubmissionStage.FINISH
+        if stage is SubmissionStage.THREAT:
+            after_stage = SubmissionStage.CONTROL
+        elif stage is SubmissionStage.CONTROL:
+            after_stage = SubmissionStage.FINISH
+        else:
+            after_stage = SubmissionStage.FINISH
+    elif result.final_grade.failed:
+        disposition = "break"
+        tapped = False
+        after_stage = None
+    else:
+        disposition = "hold"
+        tapped = False
+        after_stage = stage
+    return (
+        disposition,
+        tapped,
+        after_stage,
+        round(result.axis_after, 8),
+        result.band_after,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03_exhaustion_differentials() -> tuple[int, int, int, int]:
+    """Return attacker changes, defender changes, cancellation mismatches, cases."""
+    from ..engine.match import MountMatch
+
+    attacker_changes = 0
+    defender_changes = 0
+    cancellation_mismatches = 0
+    cases = 0
+    for stage in SubmissionStage:
+        for _band, axis in _V02_BAND_ANCHORS.items():
+            for bottom_behavior in BottomBehavior:
+                match = MountMatch(
+                    starting_axis=axis,
+                    enable_v02_setup=True,
+                    enable_v03_submissions=True,
+                )
+                match.submission_state.stage = stage
+                match.initiator = Side.TOP
+                match.set_behaviors(
+                    top=TopBehavior.PRESSURE,
+                    bottom=bottom_behavior,
+                )
+                modifiers = {
+                    "fresh": match.exhaustion_policy.exchange_grade_modifier(
+                        initiator_band=StaminaBand.FRESH,
+                        responder_band=StaminaBand.FRESH,
+                    ),
+                    "attacker": match.exhaustion_policy.exchange_grade_modifier(
+                        initiator_band=StaminaBand.EXHAUSTED,
+                        responder_band=StaminaBand.FRESH,
+                    ),
+                    "defender": match.exhaustion_policy.exchange_grade_modifier(
+                        initiator_band=StaminaBand.FRESH,
+                        responder_band=StaminaBand.EXHAUSTED,
+                    ),
+                    "both": match.exhaustion_policy.exchange_grade_modifier(
+                        initiator_band=StaminaBand.EXHAUSTED,
+                        responder_band=StaminaBand.EXHAUSTED,
+                    ),
+                }
+                for response_id in match.legal_response_ids(
+                    TOP_AMERICANA_SUBMISSION_FINISH
+                ):
+                    results = {
+                        key: match.preview_submission_stage(
+                            response_id=response_id,
+                            external_grade_modifier=modifier,
+                        )
+                        for key, modifier in modifiers.items()
+                    }
+                    fresh_sig = _v03_stage_signature(stage, results["fresh"])
+                    if _v03_stage_signature(stage, results["attacker"]) != fresh_sig:
+                        attacker_changes += 1
+                    if _v03_stage_signature(stage, results["defender"]) != fresh_sig:
+                        defender_changes += 1
+                    if _v03_stage_signature(stage, results["both"]) != fresh_sig:
+                        cancellation_mismatches += 1
+                    cases += 1
+    return attacker_changes, defender_changes, cancellation_mismatches, cases
+
+
+@dataclass(frozen=True, slots=True)
+class V03InformedExhaustedEvidence:
+    tapped: bool
+    selected_responses: tuple[str, ...]
+    final_grades: tuple[Grade, ...]
+
+
+@lru_cache(maxsize=1)
+def _v03_informed_exhausted_defender_probe() -> V03InformedExhaustedEvidence:
+    """Best legal exhausted defense must not recreate a perfect-response lock."""
+    from ..engine.match import MountMatch
+
+    match = MountMatch(
+        starting_axis=3.50,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+    match.submission_state.stage = SubmissionStage.THREAT
+    match.top.stamina.set_current(100)
+    match.bottom.stamina.set_current(25)
+    match.set_behaviors(
+        top=TopBehavior.PRESSURE,
+        bottom=BottomBehavior.ESCAPE,
+    )
+
+    selected: list[str] = []
+    grades: list[Grade] = []
+    for _stage in SubmissionStage:
+        match.initiator = Side.TOP
+        legal = match.legal_response_ids(TOP_AMERICANA_SUBMISSION_FINISH)
+        candidates = [
+            (
+                match.preview_submission_stage(response_id=response_id).final_grade,
+                response_id,
+            )
+            for response_id in legal
+        ]
+        if not candidates:
+            break
+        best_grade, best_response = min(candidates)
+        selected.append(best_response)
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=best_response,
+            commitment=Commitment.LOW,
+        )
+        grades.append(result.resolution.final_grade)
+        if match.submission_tapped:
+            break
+        if not match.submission_state.active:
+            break
+
+    return V03InformedExhaustedEvidence(
+        tapped=match.submission_tapped,
+        selected_responses=tuple(selected),
+        final_grades=tuple(grades),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class V03InformedMatchRow:
+    label: str
+    taps: int
+    reached_threat: int
+    escapes: int
+    timeouts: int
+    top_stamina_median: float
+    bottom_stamina_median: float
+    top_resets: int
+    bottom_resets: int
+    setup_builds: int
+
+
+@lru_cache(maxsize=1)
+def _v03_informed_defender_sweep() -> tuple[V03InformedMatchRow, ...]:
+    """Non-gating full-match probe with informed Bottom defense."""
+    from ..interfaces.batch import (
+        BatchBehaviorMode,
+        BatchResponderMode,
+        run_escape_first_batch,
+    )
+
+    specs = (
+        (
+            "PRESSURE/ESCAPE fixed",
+            TopBehavior.PRESSURE,
+            BottomBehavior.ESCAPE,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "PRESSURE/ESCAPE recover",
+            TopBehavior.PRESSURE,
+            BottomBehavior.ESCAPE,
+            BatchBehaviorMode.RECOVER,
+        ),
+        (
+            "PRESSURE/PROTECT",
+            TopBehavior.PRESSURE,
+            BottomBehavior.PROTECT,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "PRESSURE/CONSERVE",
+            TopBehavior.PRESSURE,
+            BottomBehavior.CONSERVE,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "HOLD/ESCAPE",
+            TopBehavior.HOLD,
+            BottomBehavior.ESCAPE,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "CONSERVE/ESCAPE",
+            TopBehavior.CONSERVE,
+            BottomBehavior.ESCAPE,
+            BatchBehaviorMode.FIXED,
+        ),
+        (
+            "CONSERVE/PROTECT",
+            TopBehavior.CONSERVE,
+            BottomBehavior.PROTECT,
+            BatchBehaviorMode.FIXED,
+        ),
+    )
+
+    rows: list[V03InformedMatchRow] = []
+    for label, top_behavior, bottom_behavior, bottom_mode in specs:
+        summary = run_escape_first_batch(
+            matches=100,
+            base_seed=42,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
+            bottom_behavior_mode=bottom_mode,
+            bottom_responder_mode=BatchResponderMode.INFORMED,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+        )
+        escapes = sum(
+            summary.outcome_counts.get(destination.value, 0)
+            for destination in ExitDestination
+        )
+        rows.append(
+            V03InformedMatchRow(
+                label=label,
+                taps=summary.outcome_counts.get("TAP — Americana", 0),
+                reached_threat=summary.matches_reached_submission_threat,
+                escapes=escapes,
+                timeouts=summary.outcome_counts.get("TIMEOUT — Mount retained", 0),
+                top_stamina_median=summary.top_final_stamina_median,
+                bottom_stamina_median=summary.bottom_final_stamina_median,
+                top_resets=summary.top_reset_count,
+                bottom_resets=summary.bottom_reset_count,
+                setup_builds=summary.top_completed_setup_build_count,
+            )
+        )
+    return tuple(rows)
+
+
+def render_v03a_informed_defender_probe() -> str:
+    random_batch = _v03_standard_batch()
+    rows = _v03_informed_defender_sweep()
+    random_taps = random_batch.outcome_counts.get("TAP — Americana", 0)
+    return (
+        "V0.3a INFORMED DEFENDER PROBE — 100 matched seeds: "
+        + "; ".join(
+            f"{row.label} taps={row.taps},Threat={row.reached_threat},"
+            f"escapes={row.escapes},timeouts={row.timeouts},"
+            f"stamina={row.top_stamina_median:.0f}/{row.bottom_stamina_median:.0f},"
+            f"RESETs={row.top_resets}/{row.bottom_resets},"
+            f"setup-builds={row.setup_builds}"
+            for row in rows
+        )
+        + f"; random PRESSURE/ESCAPE taps={random_taps}. "
+        "Only the informed standard row feeds Gate B."
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class V03RecoveryPredictionRow:
+    label: str
+    taps: int
+    escapes: int
+    timeouts: int
+    submission_attempts: int
+
+
+@lru_cache(maxsize=1)
+def _v03_bottom_recovery_prediction_probe() -> tuple[V03RecoveryPredictionRow, ...]:
+    """Non-gating prediction probe for exhausted Bottom under Top PRESSURE.
+
+    All three rows use the same 100 seeds and v0.3a mechanics. The only
+    intended differences are Bottom's starting stamina and whether the existing
+    adaptive recovery policy may switch an Exhausted Bottom to CONSERVE until
+    the 35-point latch clears.
+    """
+    from ..interfaces.batch import BatchBehaviorMode, run_escape_first_batch
+
+    specs = (
+        ("fresh-fixed", 100, BatchBehaviorMode.FIXED),
+        ("exhausted-fixed", 25, BatchBehaviorMode.FIXED),
+        ("exhausted-recover", 25, BatchBehaviorMode.RECOVER),
+    )
+    rows: list[V03RecoveryPredictionRow] = []
+    for label, bottom_stamina, bottom_mode in specs:
+        summary = run_escape_first_batch(
+            matches=100,
+            base_seed=42,
+            top_behavior=TopBehavior.PRESSURE,
+            bottom_behavior=BottomBehavior.ESCAPE,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=bottom_stamina,
+            bottom_behavior_mode=bottom_mode,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+        )
+        escapes = sum(
+            summary.outcome_counts.get(destination.value, 0)
+            for destination in ExitDestination
+        )
+        rows.append(
+            V03RecoveryPredictionRow(
+                label=label,
+                taps=summary.outcome_counts.get("TAP — Americana", 0),
+                escapes=escapes,
+                timeouts=summary.outcome_counts.get("TIMEOUT — Mount retained", 0),
+                submission_attempts=summary.top_submission_attempt_count,
+            )
+        )
+    return tuple(rows)
+
+
+def render_v03a_recovery_prediction_probe() -> str:
+    rows = _v03_bottom_recovery_prediction_probe()
+    return (
+        "V0.3a PREDICTION PROBE — Top PRESSURE / Bottom ESCAPE, 100 matched seeds: "
+        + "; ".join(
+            f"{row.label} taps={row.taps},escapes={row.escapes},"
+            f"timeouts={row.timeouts},submission-attempts={row.submission_attempts}"
+            for row in rows
+        )
+        + ". Observational only; no gate or threshold."
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class V03BehaviorSweepRow:
+    bottom_behavior: BottomBehavior
+    taps: int
+    escapes: int
+    timeouts: int
+    completed_setup_builds: int
+    submission_attempts: int
+
+
+@lru_cache(maxsize=1)
+def _v03_defender_behavior_sweep() -> tuple[V03BehaviorSweepRow, ...]:
+    """Non-gating matched-seed sweep of Bottom strategic behavior."""
+    from ..interfaces.batch import run_escape_first_batch
+
+    rows: list[V03BehaviorSweepRow] = []
+    for bottom_behavior in BottomBehavior:
+        summary = run_escape_first_batch(
+            matches=100,
+            base_seed=42,
+            top_behavior=TopBehavior.PRESSURE,
+            bottom_behavior=bottom_behavior,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+        )
+        escapes = sum(
+            summary.outcome_counts.get(destination.value, 0)
+            for destination in ExitDestination
+        )
+        rows.append(
+            V03BehaviorSweepRow(
+                bottom_behavior=bottom_behavior,
+                taps=summary.outcome_counts.get("TAP — Americana", 0),
+                escapes=escapes,
+                timeouts=summary.outcome_counts.get("TIMEOUT — Mount retained", 0),
+                completed_setup_builds=summary.top_completed_setup_build_count,
+                submission_attempts=summary.top_submission_attempt_count,
+            )
+        )
+    return tuple(rows)
+
+
+@dataclass(frozen=True, slots=True)
+class V03ReacquisitionRow:
+    band: Band
+    bottom_behavior: BottomBehavior
+    probability: float
+
+
+@lru_cache(maxsize=1)
+def _v03_reacquisition_probability_sweep() -> tuple[V03ReacquisitionRow, ...]:
+    """Exact probability High Mount Climb advances Americana setup from None.
+
+    This measures the existing generic v0.2 setup rule as-is; it does not alter
+    setup semantics or the v0.3a gates.
+    """
+    from ..engine.match import MountMatch
+    from ..interfaces.batch import EscapeFirstInitiatorPolicy
+    from ..positions.mount.catalog import TOP_HIGH_MOUNT_CLIMB
+
+    rows: list[V03ReacquisitionRow] = []
+    policy = EscapeFirstInitiatorPolicy()
+    for band, axis in _V02_BAND_ANCHORS.items():
+        for bottom_behavior in BottomBehavior:
+            match = MountMatch(
+                starting_axis=axis,
+                enable_v02_setup=True,
+                enable_v03_submissions=True,
+            )
+            match.initiator = Side.TOP
+            match.set_behaviors(
+                top=TopBehavior.PRESSURE,
+                bottom=bottom_behavior,
+            )
+            modifier = match.exhaustion_policy.exchange_grade_modifier(
+                initiator_band=StaminaBand.FRESH,
+                responder_band=StaminaBand.FRESH,
+            )
+            probability = policy._setup_advance_probability(
+                match,
+                action_id=TOP_HIGH_MOUNT_CLIMB,
+                external_grade_modifier=modifier,
+            )
+            rows.append(
+                V03ReacquisitionRow(
+                    band=band,
+                    bottom_behavior=bottom_behavior,
+                    probability=probability,
+                )
+            )
+    return tuple(rows)
+
+
+def render_v03a_stamina_saturation_observation() -> str:
+    batch = _v03_standard_batch()
+    return (
+        "V0.3a STAMINA SATURATION — standard batch: "
+        f"Top median={batch.top_final_stamina_median:.1f},"
+        f"Bottom median={batch.bottom_final_stamina_median:.1f},"
+        f"Top RESETs={batch.top_reset_count},Bottom RESETs={batch.bottom_reset_count}. "
+        "Observational only; no stamina tuning in v0.3a."
+    )
+
+
+def render_v03a_behavior_and_reacquisition_probe() -> tuple[str, str]:
+    behavior_rows = _v03_defender_behavior_sweep()
+    reacquisition_rows = _v03_reacquisition_probability_sweep()
+    behavior = (
+        "V0.3a BEHAVIOR SWEEP — Top PRESSURE, 100 matched seeds: "
+        + "; ".join(
+            f"Bottom {row.bottom_behavior.value} taps={row.taps},escapes={row.escapes},"
+            f"timeouts={row.timeouts},setup-builds={row.completed_setup_builds},"
+            f"submission-attempts={row.submission_attempts}"
+            for row in behavior_rows
+        )
+        + ". Observational only."
+    )
+    reacquisition = (
+        "V0.3a REACQUISITION SWEEP — exact High Mount Climb setup-advance probability: "
+        + "; ".join(
+            f"{row.band.value}/{row.bottom_behavior.value}={row.probability:.3f}"
+            for row in reacquisition_rows
+        )
+        + ". Observational only."
+    )
+    return behavior, reacquisition
+
+
+def _v03_response_commitment_present() -> bool:
+    """Auto-expiry signal: any real response carries commitment state."""
+    attribute_names = (
+        "response_commitment",
+        "commitment",
+        "commitment_level",
+        "commitment_policy",
+    )
+    for side in (Side.TOP, Side.BOTTOM):
+        for response in responses_for(side):
+            for name in attribute_names:
+                if getattr(response, name, None) is not None:
+                    return True
+    return False
+
+
+def _v03_recognition_mechanic_present() -> bool:
+    """Auto-expiry signal: match/competitor exposes real information state."""
+    from ..engine.match import MountMatch
+
+    probe = MountMatch(
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+    )
+    attribute_names = (
+        "recognition",
+        "recognition_state",
+        "information",
+        "information_state",
+        "information_policy",
+    )
+    for owner in (probe, probe.top, probe.bottom):
+        for name in attribute_names:
+            if getattr(owner, name, None) is not None:
+                return True
+    return False
+
+
+def _v03_gate_b_status(
+    *,
+    tap_rate: float,
+    response_commitment_present: bool,
+    recognition_present: bool,
+) -> V02GateStatus:
+    """Gate B self-expires from DEFERRED when either future capability exists."""
+    if not response_commitment_present and not recognition_present:
+        return V02GateStatus.DEFERRED
+    return (
+        V02GateStatus.PASS
+        if 0 < tap_rate < 0.50
+        else V02GateStatus.OPEN
+    )
+
+
+def render_v03a_setup_policy_debt() -> str:
+    """Keep the informed setup-churn problem visible in --check."""
+    protect = next(
+        row
+        for row in _v03_informed_defender_sweep()
+        if row.label == "PRESSURE/PROTECT"
+    )
+    return (
+        "V0.3a SETUP-POLICY DEBT: builder progress is ranked above axis loss; "
+        f"informed PROTECT builds={protect.setup_builds}, "
+        f"Threat entries={protect.reached_threat}."
+    )
+
+
+def render_v03a_hold_cost_status() -> str:
+    informed = _v03_informed_standard_batch()
+    return (
+        "V0.3a SUBMISSION-HOLD COST: PROVISIONAL — Ready/active Contested "
+        "Americana holds cost the responder LOW=3 after resolution; "
+        "recorded pre-cost informed Threat=0/100, "
+        f"current informed Threat={informed.matches_reached_submission_threat}/100; "
+        "this rule is retained as measured access evidence, not as a closed "
+        "Gate-B tuning value."
+    )
+
+
+def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
+    locked_probability, policy_selected = _v03_locked_submission_probe()
+    random_batch = _v03_standard_batch()
+    informed_batch = _v03_informed_standard_batch()
+    tap_count = informed_batch.outcome_counts.get("TAP — Americana", 0)
+    tap_rate = tap_count / informed_batch.matches
+    random_tap_count = random_batch.outcome_counts.get("TAP — Americana", 0)
+    random_tap_rate = random_tap_count / random_batch.matches
+    response_commitment_present = _v03_response_commitment_present()
+    recognition_present = _v03_recognition_mechanic_present()
+    gate_b_status = _v03_gate_b_status(
+        tap_rate=tap_rate,
+        response_commitment_present=response_commitment_present,
+        recognition_present=recognition_present,
+    )
+    defense = _v03_best_defense_evidence()
+    defense_pass = all(
+        item.reachable_states > 0
+        and item.best_contested_states == item.reachable_states
+        and item.best_defender_win_states == 0
+        and item.guaranteed_advance_states == 0
+        for item in defense.values()
+    )
+    attacker_changes, defender_changes, cancellation_mismatches, cases = (
+        _v03_exhaustion_differentials()
+    )
+    informed = _v03_informed_exhausted_defender_probe()
+
+    defense_metric = ",".join(
+        f"{stage.value}:{item.reachable_states}/"
+        f"best-contested:{item.best_contested_states}/"
+        f"defender-wins:{item.best_defender_win_states}/"
+        f"guaranteed:{item.guaranteed_advance_states}"
+        for stage, item in defense.items()
+    )
+
+    return (
+        V03GateMeasurement(
+            letter="A",
+            name="Locked submission purpose",
+            status=(
+                V02GateStatus.PASS
+                if locked_probability > 0 and policy_selected
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                f"Locked submission-progress probability={locked_probability:.3f}; "
+                f"policy_selected={policy_selected}"
+            ),
+            evidence=(
+                "submission progress is ranked before setup/position/RESET with no axis conversion"
+            ),
+        ),
+        V03GateMeasurement(
+            letter="B",
+            name="competent-defender submission finish rate",
+            status=gate_b_status,
+            metric=(
+                f"response_commitment_present={response_commitment_present}; "
+                f"recognition_present={recognition_present}; "
+                f"informed Tap={tap_count}/{informed_batch.matches} ({tap_rate:.1%}); "
+                f"Threat={informed_batch.matches_reached_submission_threat}; "
+                f"Control={informed_batch.matches_reached_submission_control}; "
+                f"Finish={informed_batch.matches_reached_submission_finish}; "
+                f"stage-attempts={informed_batch.top_submission_attempt_count}; "
+                f"random contrast Tap={random_tap_count}/{random_batch.matches} "
+                f"({random_tap_rate:.1%})"
+            ),
+            evidence=(
+                "DEFERRED while response commitment and Recognition/information are both absent; "
+                "the deferral auto-expires when either capability becomes present. "
+                "LOW=3 moved informed Threat reachability from 0 to 78/100, but full-match "
+                "conversion remains blocked because sustained PRESSURE exhausts both fighters: "
+                "Exhausted initiator -1 plus Exhausted responder +1 cancels to 0. "
+                "The future defender-effort slice must create a real asymmetry either through "
+                "uneven attacker/defender costs or through submission-specific mutual-exhaustion "
+                "effects that no longer cancel. When the deferral expires, the unchanged "
+                "0% < informed Tap < 50% criterion resumes; random response remains contrast only."
+            ),
+        ),
+        V03GateMeasurement(
+            letter="C",
+            name="fresh best defense holds stage",
+            status=V02GateStatus.PASS if defense_pass else V02GateStatus.OPEN,
+            metric=defense_metric,
+            evidence=(
+                "at every reachable PRESSURE/ESCAPE fresh stage state, "
+                "informed best defense is exactly Contested: no advance and no defender win"
+            ),
+        ),
+        V03GateMeasurement(
+            letter="D",
+            name="submission exhaustion sensitivity",
+            status=(
+                V02GateStatus.PASS
+                if attacker_changes > 0
+                and defender_changes > 0
+                and cancellation_mismatches == 0
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                f"attacker-only changes={attacker_changes}; "
+                f"defender-only changes={defender_changes}; "
+                f"both-Exhausted cancellation mismatches={cancellation_mismatches}/{cases}"
+            ),
+            evidence="one-sided exhaustion must matter in both directions and both Exhausted must cancel",
+        ),
+        V03GateMeasurement(
+            letter="E",
+            name="informed exhausted defender is not a perfect lock",
+            status=(
+                V02GateStatus.PASS
+                if informed.tapped
+                else V02GateStatus.OPEN
+            ),
+            metric=(
+                f"tapped={informed.tapped}; "
+                f"best-responses={','.join(informed.selected_responses) or 'none'}; "
+                f"final-grades={','.join(grade.display for grade in informed.final_grades) or 'none'}"
+            ),
+            evidence=(
+                "Top Fresh vs Bottom Exhausted at active Threat must reach Tap "
+                "even when Bottom chooses the lowest-grade legal response at every stage"
+            ),
+        ),
+    )
+
+
+def render_v03a_definition_of_done() -> tuple[str, ...]:
+    return tuple(gate.render() for gate in measure_v03a_definition_of_done())
 
 
 def render_v02_definition_of_done(
