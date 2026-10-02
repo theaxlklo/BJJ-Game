@@ -587,6 +587,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.3a DOD GATE E [", text)
         self.assertIn("V0.3a PREDICTION PROBE", text)
         self.assertIn("V0.3a STAMINA SATURATION", text)
+        self.assertIn("V0.3a INFORMED DEFENDER PROBE", text)
         self.assertIn("Observational only; no gate or threshold.", text)
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
@@ -612,6 +613,7 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("V0.3a DOD GATE", text)
         self.assertNotIn("V0.3a PREDICTION PROBE", text)
         self.assertNotIn("V0.3a STAMINA SATURATION", text)
+        self.assertNotIn("V0.3a INFORMED DEFENDER PROBE", text)
 
 
 
