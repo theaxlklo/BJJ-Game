@@ -1208,6 +1208,129 @@ def render_v03a_recovery_prediction_probe() -> str:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class V03BehaviorSweepRow:
+    bottom_behavior: BottomBehavior
+    taps: int
+    escapes: int
+    timeouts: int
+    completed_setup_builds: int
+    submission_attempts: int
+
+
+@lru_cache(maxsize=1)
+def _v03_defender_behavior_sweep() -> tuple[V03BehaviorSweepRow, ...]:
+    """Non-gating matched-seed sweep of Bottom strategic behavior."""
+    from ..interfaces.batch import run_escape_first_batch
+
+    rows: list[V03BehaviorSweepRow] = []
+    for bottom_behavior in BottomBehavior:
+        summary = run_escape_first_batch(
+            matches=100,
+            base_seed=42,
+            top_behavior=TopBehavior.PRESSURE,
+            bottom_behavior=bottom_behavior,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+        )
+        escapes = sum(
+            summary.outcome_counts.get(destination.value, 0)
+            for destination in ExitDestination
+        )
+        rows.append(
+            V03BehaviorSweepRow(
+                bottom_behavior=bottom_behavior,
+                taps=summary.outcome_counts.get("TAP — Americana", 0),
+                escapes=escapes,
+                timeouts=summary.outcome_counts.get("TIMEOUT — Mount retained", 0),
+                completed_setup_builds=summary.top_completed_setup_build_count,
+                submission_attempts=summary.top_submission_attempt_count,
+            )
+        )
+    return tuple(rows)
+
+
+@dataclass(frozen=True, slots=True)
+class V03ReacquisitionRow:
+    band: Band
+    bottom_behavior: BottomBehavior
+    probability: float
+
+
+@lru_cache(maxsize=1)
+def _v03_reacquisition_probability_sweep() -> tuple[V03ReacquisitionRow, ...]:
+    """Exact probability High Mount Climb advances Americana setup from None.
+
+    This measures the existing generic v0.2 setup rule as-is; it does not alter
+    setup semantics or the v0.3a gates.
+    """
+    from ..engine.match import MountMatch
+    from ..interfaces.batch import EscapeFirstInitiatorPolicy
+    from ..positions.mount.catalog import TOP_HIGH_MOUNT_CLIMB
+
+    rows: list[V03ReacquisitionRow] = []
+    policy = EscapeFirstInitiatorPolicy()
+    for band, axis in _V02_BAND_ANCHORS.items():
+        for bottom_behavior in BottomBehavior:
+            match = MountMatch(
+                starting_axis=axis,
+                enable_v02_setup=True,
+                enable_v03_submissions=True,
+            )
+            match.initiator = Side.TOP
+            match.set_behaviors(
+                top=TopBehavior.PRESSURE,
+                bottom=bottom_behavior,
+            )
+            modifier = match.exhaustion_policy.exchange_grade_modifier(
+                initiator_band=StaminaBand.FRESH,
+                responder_band=StaminaBand.FRESH,
+            )
+            probability = policy._setup_advance_probability(
+                match,
+                action_id=TOP_HIGH_MOUNT_CLIMB,
+                external_grade_modifier=modifier,
+            )
+            rows.append(
+                V03ReacquisitionRow(
+                    band=band,
+                    bottom_behavior=bottom_behavior,
+                    probability=probability,
+                )
+            )
+    return tuple(rows)
+
+
+def render_v03a_behavior_and_reacquisition_probe() -> tuple[str, str]:
+    behavior_rows = _v03_defender_behavior_sweep()
+    reacquisition_rows = _v03_reacquisition_probability_sweep()
+    behavior = (
+        "V0.3a BEHAVIOR SWEEP — Top PRESSURE, 100 matched seeds: "
+        + "; ".join(
+            f"Bottom {row.bottom_behavior.value} taps={row.taps},escapes={row.escapes},"
+            f"timeouts={row.timeouts},setup-builds={row.completed_setup_builds},"
+            f"submission-attempts={row.submission_attempts}"
+            for row in behavior_rows
+        )
+        + ". Observational only."
+    )
+    reacquisition = (
+        "V0.3a REACQUISITION SWEEP — exact High Mount Climb setup-advance probability: "
+        + "; ".join(
+            f"{row.band.value}/{row.bottom_behavior.value}={row.probability:.3f}"
+            for row in reacquisition_rows
+        )
+        + ". Observational only."
+    )
+    return behavior, reacquisition
+
+
 def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     locked_probability, policy_selected = _v03_locked_submission_probe()
     batch = _v03_standard_batch()
