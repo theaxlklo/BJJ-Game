@@ -155,7 +155,6 @@ class MountMatch:
             duration_seconds=self.interval_seconds,
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
-            external_grade_modifier=external_grade_modifier,
         )
         self.position.apply_control(result.end_axis, result.end_band)
         self.clock_seconds = result.end_clock
@@ -215,6 +214,7 @@ class MountMatch:
             response_id=response_id,
             top_behavior=top_behavior,
             bottom_behavior=bottom_behavior,
+            external_grade_modifier=external_grade_modifier,
         )
 
     def _apply_resolution(self, result) -> None:
