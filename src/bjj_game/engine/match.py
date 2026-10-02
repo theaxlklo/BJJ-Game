@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from ..domain.action import ActionAttempt, AttemptResult, Commitment, ResetWindowResult
 from ..domain.competitor import Competitor
@@ -14,6 +14,12 @@ from ..domain.model import (
     TopBehavior,
 )
 from ..domain.setup import SetupState, SetupTier
+from ..domain.submission import SubmissionStage, SubmissionState
+from ..positions.mount.catalog import (
+    MODERN_ENTITY_BY_ID,
+    TOP_AMERICANA_ARM_ISOLATION,
+    TOP_AMERICANA_SUBMISSION_FINISH,
+)
 from ..positions.mount.position import MountPosition
 from ..positions.mount.rules import (
     DEFAULT_AXIS,
@@ -59,6 +65,7 @@ class MountMatch:
         default_factory=lambda: DEFAULT_EXHAUSTION_POLICY, repr=False
     )
     enable_v02_setup: bool = False
+    enable_v03_submissions: bool = False
     setup_policy: MountSetupPolicy = field(
         default_factory=lambda: DEFAULT_MOUNT_SETUP_POLICY, repr=False
     )
@@ -74,12 +81,16 @@ class MountMatch:
     top_behavior_stamina_meter: BehaviorStaminaMeter = field(init=False)
     bottom_behavior_stamina_meter: BehaviorStaminaMeter = field(init=False)
     setup_state: SetupState = field(init=False)
+    submission_state: SubmissionState = field(init=False)
+    submission_tapped: bool = field(init=False, default=False)
 
     def __post_init__(self) -> None:
         if self.initial_clock <= 0:
             raise ValueError("clock must be > 0")
         if self.interval_seconds <= 0:
             raise ValueError("interval must be > 0")
+        if self.enable_v03_submissions and not self.enable_v02_setup:
+            raise ValueError("v0.3a submissions require v0.2 setup/Ready")
         self.clock_seconds = self.initial_clock
         self.position = MountPosition.from_axis(self.starting_axis)
         self.initial_band = self.position.control.band
@@ -94,6 +105,7 @@ class MountMatch:
         self.top_behavior_stamina_meter = BehaviorStaminaMeter()
         self.bottom_behavior_stamina_meter = BehaviorStaminaMeter()
         self.setup_state = SetupState.for_targets(self.setup_policy.target_action_ids)
+        self.submission_state = SubmissionState()
 
     @property
     def axis(self) -> float:
@@ -105,7 +117,7 @@ class MountMatch:
 
     @property
     def ended(self) -> bool:
-        return self.clock_seconds <= 0 or self.position.broken
+        return self.clock_seconds <= 0 or self.position.broken or self.submission_tapped
 
     @property
     def elapsed_simulated_time(self) -> int:
@@ -125,27 +137,41 @@ class MountMatch:
         acting_side = self.initiator if side is None else side
         all_actions = self.engine.catalog.actions_for(acting_side)
         if not self.enable_v02_setup:
-            return tuple(action.id for action in all_actions)
+            legal = [action.id for action in all_actions]
+        else:
+            legal = []
+            for action in all_actions:
+                setup_rule = self.setup_policy.rule_for_target(action.id)
+                if setup_rule is None or self.setup_state.is_ready(action.id):
+                    legal.append(action.id)
 
-        legal: list[str] = []
-        for action in all_actions:
-            setup_rule = self.setup_policy.rule_for_target(action.id)
-            if setup_rule is None or self.setup_state.is_ready(action.id):
-                legal.append(action.id)
+        if (
+            self.enable_v03_submissions
+            and acting_side is Side.TOP
+            and self.submission_state.active
+        ):
+            legal.append(TOP_AMERICANA_SUBMISSION_FINISH)
         return tuple(legal)
 
     def _validate_action_legality(self, action_id: str) -> None:
-        if not self.enable_v02_setup:
-            return
         if action_id not in self.legal_action_ids():
+            if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
+                detail = f"submission stage {self.submission_state.stage}"
+            elif self.enable_v02_setup and action_id in self.setup_policy.target_action_ids:
+                detail = f"setup tier {self.setup_tier(action_id).display}"
+            else:
+                detail = "current match state"
             raise ValueError(
-                f"Action {action_id!r} is not legal at setup tier "
-                f"{self.setup_tier(action_id).display}; "
+                f"Action {action_id!r} is not legal at {detail}; "
                 f"legal actions: {self.legal_action_ids()}"
             )
 
     def legal_response_ids(self, action_id: str) -> tuple[str, ...]:
-        action = self.engine.catalog.get(action_id)
+        action = (
+            MODERN_ENTITY_BY_ID[action_id]
+            if action_id == TOP_AMERICANA_SUBMISSION_FINISH
+            else self.engine.catalog.get(action_id)
+        )
         if action.side is not self.initiator:
             raise ValueError(
                 f"{action.canonical_name} belongs to {action.side.value}, "
@@ -156,6 +182,8 @@ class MountMatch:
             response.id
             for response in self.engine.catalog.responses_for(action.side.opponent)
         )
+        if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
+            return all_ids
         if not self.enable_v02_setup or not self.setup_state.is_ready(action_id):
             return all_ids
 
@@ -170,14 +198,19 @@ class MountMatch:
         return legal
 
     def _validate_response_legality(self, action_id: str, response_id: str) -> None:
-        if not self.enable_v02_setup:
-            return
         legal = self.legal_response_ids(action_id)
         if response_id not in legal:
+            detail = (
+                f"submission stage {self.submission_state.stage.value}"
+                if action_id == TOP_AMERICANA_SUBMISSION_FINISH
+                and self.submission_state.stage is not None
+                else f"setup tier {self.setup_tier(action_id).display}"
+                if self.enable_v02_setup and action_id in self.setup_policy.target_action_ids
+                else "current match state"
+            )
             raise ValueError(
                 f"Response {response_id!r} is not legal against {action_id!r} "
-                f"at setup tier {self.setup_tier(action_id).display}; "
-                f"legal responses: {legal}"
+                f"at {detail}; legal responses: {legal}"
             )
 
     def _apply_setup_after_attempt(
@@ -317,6 +350,103 @@ class MountMatch:
             post_positional_grade_override=post_positional_grade_override,
         )
 
+    def _resolve_submission_stage(
+        self,
+        *,
+        response_id: str,
+        top_behavior: TopBehavior,
+        bottom_behavior: BottomBehavior,
+        external_grade_modifier: int = 0,
+    ):
+        if not self.enable_v03_submissions or not self.submission_state.active:
+            raise RuntimeError("Americana submission stage is not active")
+        if self.initiator is not Side.TOP:
+            raise RuntimeError("Only Top can advance the v0.3a Americana track")
+
+        # Grade authority is still the frozen Americana row. v0.3a does not add
+        # matchup-table entries; it interprets that grade on a submission track.
+        proxy = self.engine.resolve_action(
+            axis=self.position.control.value,
+            band=self.band,
+            initiator=Side.TOP,
+            action_id=TOP_AMERICANA_ARM_ISOLATION,
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            external_grade_modifier=external_grade_modifier,
+        )
+        defended = not proxy.final_grade.successful
+        proposed_axis = (
+            round(self.axis - 1.0, 10)
+            if defended
+            else self.axis
+        )
+        axis_after = self.engine.rules.clamp_axis(proposed_axis)
+        band_after, changes = self.engine.rules.update_band(axis_after, self.band)
+        return replace(
+            proxy,
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            axis_delta=round(axis_after - self.axis, 10),
+            proposed_axis=proposed_axis,
+            axis_after=axis_after,
+            band_after=band_after,
+            band_changes=changes,
+            failure_clamp_used=False,
+            floor_clamp_used=False,
+            escape_threshold_reached=False,
+            exit_capable_action=False,
+            exit_destination=None,
+        )
+
+    def _apply_submission_after_attempt(
+        self,
+        *,
+        action_id: str,
+        resolution,
+        target_was_ready: bool,
+        stage_before: SubmissionStage | None,
+    ) -> None:
+        if not self.enable_v03_submissions:
+            return
+
+        if (
+            action_id == TOP_AMERICANA_ARM_ISOLATION
+            and target_was_ready
+            and resolution.initiator is Side.TOP
+            and resolution.band_before in {Band.STRONG, Band.LOCKED}
+            and resolution.final_grade.successful
+        ):
+            change = self.submission_state.start()
+            self.history.submission_change_history.append(
+                f"entry:{change.before}->{change.after.value}"
+            )
+            return
+
+        if action_id != TOP_AMERICANA_SUBMISSION_FINISH:
+            return
+        if stage_before is None:
+            raise RuntimeError("Submission-stage attempt missing active stage")
+
+        self.history.submission_attempt_history.append(stage_before.value)
+        if resolution.final_grade.successful:
+            change = self.submission_state.advance()
+            if change.tapped:
+                self.history.submission_change_history.append(
+                    f"{stage_before.value}->Tap"
+                )
+                self.history.submission_tap_count += 1
+                self.submission_tapped = True
+                self.exit_reason = "TAP — Americana"
+            else:
+                self.history.submission_change_history.append(
+                    f"{stage_before.value}->{change.after.value}"
+                )
+        else:
+            self.history.submission_defense_history.append(
+                f"{stage_before.value}:{resolution.final_grade.display}:"
+                f"{resolution.axis_before:+.2f}->{resolution.axis_after:+.2f}"
+            )
+
     def _apply_resolution(self, result) -> None:
         self.history.initiated_action_history.append(result.action_id)
         self.history.response_history.append(result.response_id)
@@ -413,7 +543,14 @@ class MountMatch:
         self._validate_action_legality(action_id)
         self._validate_response_legality(action_id, response_id)
         target_was_ready = (
-            self.enable_v02_setup and self.setup_state.is_ready(action_id)
+            self.enable_v02_setup
+            and action_id in self.setup_policy.target_action_ids
+            and self.setup_state.is_ready(action_id)
+        )
+        submission_stage_before = (
+            self.submission_state.stage
+            if action_id == TOP_AMERICANA_SUBMISSION_FINISH
+            else None
         )
         ready_grade_override = (
             self.setup_policy.ready_final_grade_override(
@@ -442,25 +579,42 @@ class MountMatch:
             + responder_exhaustion_modifier
         )
 
-        base_resolution = self._resolve(
-            action_id=action_id,
-            response_id=response_id,
-            top_behavior=top_behavior,
-            bottom_behavior=bottom_behavior,
-            post_positional_grade_override=ready_grade_override,
-        )
-        result = (
-            base_resolution
-            if exhaustion_modifier == 0
-            else self._resolve(
+        if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
+            base_resolution = self._resolve_submission_stage(
+                response_id=response_id,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+            )
+            result = (
+                base_resolution
+                if exhaustion_modifier == 0
+                else self._resolve_submission_stage(
+                    response_id=response_id,
+                    top_behavior=top_behavior,
+                    bottom_behavior=bottom_behavior,
+                    external_grade_modifier=exhaustion_modifier,
+                )
+            )
+        else:
+            base_resolution = self._resolve(
                 action_id=action_id,
                 response_id=response_id,
                 top_behavior=top_behavior,
                 bottom_behavior=bottom_behavior,
-                external_grade_modifier=exhaustion_modifier,
                 post_positional_grade_override=ready_grade_override,
             )
-        )
+            result = (
+                base_resolution
+                if exhaustion_modifier == 0
+                else self._resolve(
+                    action_id=action_id,
+                    response_id=response_id,
+                    top_behavior=top_behavior,
+                    bottom_behavior=bottom_behavior,
+                    external_grade_modifier=exhaustion_modifier,
+                    post_positional_grade_override=ready_grade_override,
+                )
+            )
 
         requested_cost = self.stamina_cost_policy.cost(commitment)
         effective_commitment = self.stamina_cost_policy.effective_commitment(
@@ -509,6 +663,12 @@ class MountMatch:
             action_id=action_id,
             resolution=result,
             target_was_ready=target_was_ready,
+        )
+        self._apply_submission_after_attempt(
+            action_id=action_id,
+            resolution=result,
+            target_was_ready=target_was_ready,
+            stage_before=submission_stage_before,
         )
         return AttemptResult(
             attempt=attempt,
