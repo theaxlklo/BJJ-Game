@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from ..positions.mount.catalog import ENTITY_BY_ID
 from ..domain.action import AttemptResult
+from ..engine.stamina import AdvanceResult, BehaviorStaminaResult
 from ..domain.model import DriftResult, ResolutionResult
 
 
@@ -76,14 +77,55 @@ def format_attempt_result(
     spend = result.stamina
     lines = [
         "COMMITMENT / STAMINA",
-        f"Commitment: {result.attempt.commitment.value}",
+        f"Requested commitment: {result.attempt.requested_commitment.value}",
+        f"Effective commitment: {result.attempt.effective_commitment.value if result.attempt.effective_commitment else 'UNFUNDED'}",
         f"Stamina before: {spend.before}",
-        f"Requested cost: {spend.requested}",
+        f"Requested cost: {result.requested_cost}",
+        f"Effective cost: {result.effective_cost}",
+        f"Funding gap: {result.funding_gap}",
         f"Charged: {spend.charged}",
-        f"Shortfall: {spend.shortfall}",
+        f"Shortfall after downgrade: {spend.shortfall}",
         f"Stamina after: {spend.after}",
         "Commitment resolution effect: None (v0.1b)",
         "",
         format_resolution(result.resolution, clock_seconds, top_behavior, bottom_behavior),
     ]
     return "\n".join(lines)
+
+
+def _format_behavior_stamina(label: str, result: BehaviorStaminaResult) -> str:
+    if result.net_change > 0:
+        change = f"+{result.net_change}"
+    else:
+        change = str(result.net_change)
+    parts = [
+        f"{label}: {result.before} → {result.after} ({change})",
+        f"behavior={result.behavior.value}",
+    ]
+    if result.spent:
+        parts.append(f"spent={result.spent}")
+    if result.spend_shortfall:
+        parts.append(f"shortfall={result.spend_shortfall}")
+    if result.recovered:
+        parts.append(f"recovered={result.recovered}")
+    if result.recovery_overflow:
+        parts.append(f"overflow={result.recovery_overflow}")
+    if result.remainder_after:
+        parts.append(f"carry={result.remainder_after}")
+    return " | ".join(parts)
+
+
+def format_advance_result(
+    result: AdvanceResult,
+    top_behavior: str,
+    bottom_behavior: str,
+) -> str:
+    return "\n".join(
+        [
+            format_drift(result.drift, top_behavior, bottom_behavior),
+            "",
+            "BEHAVIOR STAMINA",
+            _format_behavior_stamina("Top", result.top_stamina),
+            _format_behavior_stamina("Bottom", result.bottom_stamina),
+        ]
+    )
