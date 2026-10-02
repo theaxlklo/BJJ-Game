@@ -121,6 +121,23 @@ The exact frozen v0 `--enumerate` output is protected by SHA-256 regression test
 
 See `docs/MOUNT_V0_1A_STAMINA.md`.
 
+## Mount v0.1b — commitment + stamina costs
+
+The primary `bjj_game` flow now wraps each initiated action in an `ActionAttempt` with explicit commitment:
+
+```text
+LOW       3 stamina requested
+MEDIUM    7 stamina requested
+HIGH     12 stamina requested
+```
+
+These are prototype cost values. Commitment changes stamina cost only in v0.1b; LOW/MEDIUM/HIGH do **not** change the frozen Mount grade or axis resolution yet.
+
+`MountMatch.attempt()` charges the initiator and records `before / requested / charged / shortfall / after`. If the fighter cannot fully pay, the remaining stamina is charged, shortfall is logged, and the action still resolves normally. Recovery and exhaustion consequences come later.
+
+The legacy `mount_v0` CLI keeps the old prompt sequence and calls cost-free `decide()`.
+
+See `docs/MOUNT_V0_1B_COMMITMENT.md`.
 ## Known v0 limitation
 
 The responder sees the exact initiated action and has unrestricted access to every response. Every action therefore has a Failure-or-worse best counter. `--enumerate` reports:
