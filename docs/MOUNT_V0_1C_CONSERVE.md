@@ -188,4 +188,4 @@ The implementation order was deliberately changed after review.
 
 See `MOUNT_V0_1E_EXHAUSTION.md`.
 
-v0.1d remains reserved for STABILIZE after exhaustion/CONSERVE playtests.
+The former standalone v0.1d STABILIZE step is retired; STABILIZE is reconsidered inside v0.2 alongside setup/Ready/initiative legality.
