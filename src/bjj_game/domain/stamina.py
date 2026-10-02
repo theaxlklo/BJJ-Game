@@ -5,7 +5,7 @@ from enum import Enum
 
 
 class StaminaBand(str, Enum):
-    """Observational stamina bands for Mount v0.1a.
+    """Stamina bands introduced in Mount v0.1a.
 
     These bands do not modify resolution in v0.1a. They exist only so stamina
     state has a stable, readable representation before costs/effects are added.
