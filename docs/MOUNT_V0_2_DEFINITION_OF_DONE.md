@@ -66,7 +66,9 @@ No specific mechanic is mandated: response cost, response legality, setup loss, 
 
 ### Measurement
 
-Run paired seeded batches with identical state except responder exhaustion and report the changed outcome/legality/response distribution.
+The automatic checker first runs an exhaustive one-exchange differential with the initiator held fresh and only responder stamina changed from Fresh to Exhausted. This isolates responder-side effects from the existing initiator exhaustion rule.
+
+When responder-side v0.2 mechanics exist, paired seeded batch confirmation should also be added for outcome/legality/response distributions.
 
 ## Gate 4 — Bridge has a setup role
 
@@ -142,8 +144,10 @@ Requested commitment may never grant an effect the effective commitment cannot f
 
 The current commitment-dominance checker must either:
 
-- stop reporting strict LOW dominance because a tested effect exists; or
+- measure that LOW no longer strictly dominates because MEDIUM/HIGH has a strictly better outcome in at least one fully funded state (or LOW loses its strict cost advantage); or
 - report an explicit versioned deferral.
+
+The automatic probe currently compares final grade, terminal exit, and realized initiator-favorable axis movement. If v0.2 adds setup/readiness/recognition state, that outcome comparison must be extended to include it rather than manually flipping the gate.
 
 ## Standard verification discipline
 
@@ -175,7 +179,7 @@ Gate 3  exhaustive fresh-vs-Exhausted responder exchange differential
 Gate 4  Bridge selections in the standard batch
 Gate 5  Top position attacks / match in the standard batch
 Gate 6  positive-weight Exhausted-Bottom escape reachability
-Gate 7  exhaustive funded LOW/MEDIUM/HIGH outcome differential
+Gate 7  exhaustive funded LOW strict-dominance probe
 ```
 
 The shared standard batch for Gates 4 and 5 is pinned to:
