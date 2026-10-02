@@ -9,6 +9,8 @@ from bjj_game.diagnostics.checker import (
     _v03_reacquisition_probability_sweep,
     _v03_exhaustion_differentials,
     _v03_informed_exhausted_defender_probe,
+    _v03_informed_defender_sweep,
+    _v03_informed_standard_batch,
     _v03_locked_submission_probe,
     _v03_standard_batch,
     measure_v02_definition_of_done,
@@ -47,27 +49,36 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             self.gates["A"].metric,
         )
 
-    def test_gate_b_uses_frozen_nonzero_below_half_tap_range(self):
-        batch = _v03_standard_batch()
-        taps = batch.outcome_counts.get("TAP — Americana", 0)
-        rate = taps / batch.matches
+    def test_gate_b_uses_informed_nonzero_below_half_tap_range(self):
+        informed = _v03_informed_standard_batch()
+        random = _v03_standard_batch()
+        taps = informed.outcome_counts.get("TAP — Americana", 0)
+        rate = taps / informed.matches
+        random_taps = random.outcome_counts.get("TAP — Americana", 0)
         expected = (
             V02GateStatus.PASS
             if 0 < rate < 0.50
             else V02GateStatus.OPEN
         )
         self.assertIs(self.gates["B"].status, expected)
-        self.assertIn(f"Tap={taps}/{batch.matches}", self.gates["B"].metric)
         self.assertIn(
-            f"Threat={batch.matches_reached_submission_threat}",
+            f"informed Tap={taps}/{informed.matches}",
             self.gates["B"].metric,
         )
         self.assertIn(
-            f"Control={batch.matches_reached_submission_control}",
+            f"Threat={informed.matches_reached_submission_threat}",
             self.gates["B"].metric,
         )
         self.assertIn(
-            f"Finish={batch.matches_reached_submission_finish}",
+            f"Control={informed.matches_reached_submission_control}",
+            self.gates["B"].metric,
+        )
+        self.assertIn(
+            f"Finish={informed.matches_reached_submission_finish}",
+            self.gates["B"].metric,
+        )
+        self.assertIn(
+            f"random contrast Tap={random_taps}/{random.matches}",
             self.gates["B"].metric,
         )
 
@@ -101,6 +112,21 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
                 f"guaranteed:{item.guaranteed_advance_states}",
                 self.gates["C"].metric,
             )
+
+    def test_informed_defender_sweep_is_deterministic_and_nonempty(self):
+        rows = _v03_informed_defender_sweep()
+        self.assertGreaterEqual(len(rows), 7)
+        labels = {row.label for row in rows}
+        self.assertIn("PRESSURE/ESCAPE fixed", labels)
+        self.assertIn("PRESSURE/ESCAPE recover", labels)
+        for row in rows:
+            self.assertGreaterEqual(row.taps, 0)
+            self.assertGreaterEqual(row.reached_threat, 0)
+            self.assertGreaterEqual(row.escapes, 0)
+            self.assertGreaterEqual(row.timeouts, 0)
+            self.assertGreaterEqual(row.top_stamina_median, 0)
+            self.assertGreaterEqual(row.bottom_stamina_median, 0)
+            self.assertGreaterEqual(row.setup_builds, 0)
 
     def test_behavior_and_reacquisition_probes_are_observational(self):
         behavior_rows = _v03_defender_behavior_sweep()
