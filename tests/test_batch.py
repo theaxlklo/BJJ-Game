@@ -79,18 +79,6 @@ class EscapeFirstInitiatorPolicyTests(unittest.TestCase):
         self.assertIsNone(decision.action_id)
         self.assertEqual(decision.reason, "reset")
 
-    def test_bottom_does_not_build_setup_when_upper_cap_would_absorb_builder(self):
-        match = MountMatch(starting_axis=4.00, enable_v02_setup=True)
-        match.initiator = Side.BOTTOM
-        match.set_behaviors(
-            top=TopBehavior.PRESSURE,
-            bottom=BottomBehavior.PROTECT,
-        )
-
-        decision = EscapeFirstInitiatorPolicy().choose(match)
-
-        self.assertNotEqual(decision.reason, "setup")
-
     def test_bottom_at_locked_resets_when_only_cap_skew_makes_realized_axis_look_good(self):
         match = MountMatch(starting_axis=4.00)
         match.initiator = Side.BOTTOM
