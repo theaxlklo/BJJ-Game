@@ -246,7 +246,29 @@ Keeping this object in `interfaces/` prevents the temporary playtest policy from
 
 Fixed behavior flags are also interface-only experiment controls. They initialize and retain the existing `Competitor.behavior`; they do not add a new behavior type or bypass `MountMatch.set_behaviors()`.
 
-The per-band random-mix report lives beside the temporary blind responder policy and reads the existing engine. It reports axis and escape signals separately rather than adding a utility model to the domain.
+The per-band random-mix report lives beside the temporary blind responder policy and reads the existing engine. It reports raw grade-axis, realized post-clamp axis range, and escape probability separately rather than adding a utility model to the domain.
+
+### Batch experiment boundary
+
+`interfaces.batch.GreedyInitiatorPolicy` and `BatchSummary` are experiment-harness objects.
+
+They consume:
+
+```text
+MountMatch state
+RandomBlindResponder policy
+existing MountResolutionEngine
+```
+
+They do not modify:
+
+- TechniqueCatalog
+- MatchupTable
+- MountRuleSet
+- frozen `decide()`
+- frozen enumeration
+
+The greedy policy selects only on expected realized attacker-axis movement at the exact current state. Outcome distributions are observations from that fixed rule, not a new game rule or learned opponent.
 
 ## Refactor proof
 
