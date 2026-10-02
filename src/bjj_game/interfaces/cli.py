@@ -443,6 +443,23 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
         print(f"Initiator exhaustion modifier history: {h.initiator_exhaustion_modifier_history}")
         print(f"Responder exhaustion modifier history: {h.responder_exhaustion_modifier_history}")
         print(f"Exhaustion modifier history (combined): {h.exhaustion_modifier_history}")
+    if h.submission_hold_responder_side_history:
+        print(
+            "Submission-hold responder side history: "
+            f"{h.submission_hold_responder_side_history}"
+        )
+        print(
+            "Submission-hold stamina requested history: "
+            f"{h.submission_hold_stamina_requested_history}"
+        )
+        print(
+            "Submission-hold stamina charged history: "
+            f"{h.submission_hold_stamina_charged_history}"
+        )
+        print(
+            "Submission-hold stamina shortfall history: "
+            f"{h.submission_hold_stamina_shortfall_history}"
+        )
     print(f"Clamp count: {h.clamp_count}")
     print(f"Escape threshold reached?: {'Yes' if h.escape_threshold_reached else 'No'}")
     print(f"Exit reason: {run.exit_reason or 'None'}")
@@ -662,8 +679,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             print(
                 "INFO: V0.2 RESPONDER-STAMINA VALIDATION: an Exhausted responder now shifts the "
                 "initiated action +1 grade for the initiator; an Exhausted initiator remains -1, "
-                "so both Exhausted cancel. The 25/35 latch and pre-cost timing are shared, and "
-                "responding still has no direct stamina cost."
+                "so both Exhausted cancel. The 25/35 latch and pre-cost timing are shared. "
+                "Ordinary responses still have no direct stamina cost; v0.3a active-Americana "
+                "Contested holds pay the existing LOW cost of 3 after resolution."
             )
             print(
                 "INFO: RESET/STALLING DEBT: RESET solves forced-action recovery but repeated no-action "
