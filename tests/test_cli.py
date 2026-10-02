@@ -365,6 +365,31 @@ class CliTests(unittest.TestCase):
         self.assertIn("behavior-policy", output.getvalue())
 
 
+
+    def test_v02_setup_batch_flag_enables_setup_actions(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--batch", "20",
+                "--seed", "42",
+                "--v02-setup",
+                "--top-behavior", "PRESSURE",
+                "--bottom-behavior", "ESCAPE",
+            ])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Top setup-building actions:", text)
+        self.assertIn("Bottom setup-building actions:", text)
+        self.assertNotIn("Bottom setup-building actions: 0", text)
+
+    def test_v02_setup_requires_batch(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--v02-setup"])
+        self.assertEqual(code, 2)
+        self.assertIn("--v02-setup is currently available only with --batch", output.getvalue())
+
+
     def test_batch_rejects_interactive_blind_flags(self):
         output = io.StringIO()
         with redirect_stdout(output):
@@ -433,6 +458,15 @@ class CliTests(unittest.TestCase):
         output = io.StringIO()
         with redirect_stdout(output):
             code = main(["--batch", "2"])
+        self.assertEqual(code, 2)
+        self.assertIn("modern playtest flags", output.getvalue())
+
+
+
+    def test_legacy_cli_rejects_v02_setup_flag(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["--v02-setup"])
         self.assertEqual(code, 2)
         self.assertIn("modern playtest flags", output.getvalue())
 
