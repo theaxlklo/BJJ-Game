@@ -101,18 +101,25 @@ class MountSetupPolicy:
         return Grade.CONTESTED
 
     def setup_advances_from(self, result: ResolutionResult) -> bool:
-        """A designated builder creates setup pressure even when answered.
+        """A designated builder creates setup pressure when it produces a real exchange.
 
-        v0.2a originally advanced only on Success+, which let a perfect
-        responder deny Ready forever by repeating the builder's best counter.
-        For the minimal setup chains, the builder itself represents forcing a
-        reaction: Bridge makes Top commit base/posture, and High Mount Climb
-        makes Bottom commit defensive structure. The local exchange grade still
-        controls axis movement; setup pressure is a separate state signal.
+        The builder can advance even when the responder wins locally: forcing
+        the base/posture/structure reaction is the setup signal. But an action
+        that is already at the upper Mount cap and whose positional result is
+        fully absorbed by that cap does not create free setup progress.
 
-        Correct-response disruption/decay is intentionally a later v0.2 rule.
+        Partial cap absorption still counts when the exchange actually moves
+        the persisted axis (for example +3.50 -> +4.00). Correct-response
+        disruption/decay remains a later v0.2 rule.
         """
-        return self.rule_for_builder(result.action_id) is not None
+        if self.rule_for_builder(result.action_id) is None:
+            return False
+
+        upper_cap_fully_absorbed = (
+            result.proposed_axis > result.axis_after + 1e-12
+            and abs(result.axis_after - result.axis_before) <= 1e-12
+        )
+        return not upper_cap_fully_absorbed
 
 
 DEFAULT_MOUNT_SETUP_POLICY = MountSetupPolicy.default()
