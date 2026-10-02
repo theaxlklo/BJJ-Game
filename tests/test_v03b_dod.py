@@ -23,24 +23,16 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v03b_definition_of_done()
         }
 
-    def test_gate_a_status_follows_full_match_stalling_evidence(self):
+    def test_gate_a_full_match_position_reset_escalation_closes_locked_timeout(self):
         evidence = _v03b_top_stall_probe()
-        expected = (
-            V02GateStatus.PASS
-            if (
-                evidence.warnings == 1
-                and evidence.penalties >= 1
-                and evidence.position_resets >= 1
-                and evidence.final_band is not Band.LOCKED
-                and not evidence.locked_timeout
-            )
-            else V02GateStatus.OPEN
-        )
         self.assertEqual(evidence.warnings, 1)
-        self.assertGreaterEqual(evidence.penalties, 1)
+        self.assertEqual(evidence.penalties, 1)
         self.assertGreaterEqual(evidence.position_resets, 1)
+        self.assertIs(evidence.final_band, Band.STRONG)
+        self.assertFalse(evidence.locked_timeout)
         self.assertGreater(evidence.locked_windows, 0)
-        self.assertIs(self.gates["A"].status, expected)
+        self.assertLess(evidence.locked_windows, evidence.decision_windows)
+        self.assertIs(self.gates["A"].status, V02GateStatus.PASS)
 
     def test_normal_play_guard_keeps_stronger_escalation_out_of_engaged_batches(self):
         self.assertIn(
