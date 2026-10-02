@@ -648,11 +648,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 "is a stress projection, not expected-play pacing."
             )
             print(
-                "INFO: V0.2 RESPONSE-STAMINA DEBT: exhaustion currently weighs mainly on initiated "
-                "actions/Bottom escape attempts, while exhausted responders defend at full strength "
-                "and Top can often avoid spending. Do not retune 3/7/12 or CONSERVE recovery to "
-                "compensate in v0.1; revisit responder-side/setup pressure in v0.2 and Top spending "
-                "incentives with submissions in v0.3."
+                "INFO: V0.2 RESPONDER EXHAUSTION: Exhausted responders defend one grade worse "
+                "(+1 to the initiator); if both fighters are Exhausted, the initiator -1 and "
+                "responder +1 cancel. Responses still have no direct stamina cost."
             )
             print(
                 "INFO: RESET/STALLING DEBT: RESET solves forced-action recovery but repeated no-action "
