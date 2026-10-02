@@ -256,6 +256,8 @@ v0.3 submissions
 
 The former standalone v0.1d STABILIZE step is retired; STABILIZE will be reconsidered inside v0.2 alongside initiative/setup behavior.
 
+v0.2 completion is defined by seven measurable debt gates in `docs/MOUNT_V0_2_DEFINITION_OF_DONE.md`. Modern `bjj_game --check` prints the current status of all seven gates so completion is measured against the original debts rather than code volume.
+
 ## Known v0 limitation
 
 The responder sees the exact initiated action and has unrestricted access to every response. Every action therefore has a Failure-or-worse best counter. `--enumerate` reports:
