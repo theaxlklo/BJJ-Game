@@ -11,7 +11,7 @@ from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import project_active_stamina_pacing
-from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_resolution
+from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_reset_window, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
 from ..domain.model import BottomBehavior, EntityKind, Side, TopBehavior
 from ..positions.mount.names import RESOLVER
@@ -94,6 +94,39 @@ def _choose_entity(prompt: str, side: Side, kind: EntityKind):
             print(exc)
 
 
+
+def _choose_modern_initiation(side: Side):
+    entities = actions_for(side)
+    while True:
+        print(f"\n{side.value.upper()} INITIATES")
+        for i, entity in enumerate(entities, 1):
+            print(f"  {i}. {entity.canonical_name}")
+        print(f"  {len(entities) + 1}. RESET / NO ACTION — yield this decision window")
+        value = _read_input("> ").strip()
+        if not value:
+            continue
+        if value.isdigit():
+            index = int(value)
+            if 1 <= index <= len(entities):
+                return entities[index - 1]
+            if index == len(entities) + 1:
+                return None
+        if value.upper() in {
+            "RESET",
+            "NO ACTION",
+            "NO-ACTION",
+            "REST",
+            "YIELD",
+            "HAND FIGHT",
+            "HAND-FIGHT",
+        }:
+            return None
+        try:
+            return RESOLVER.resolve(value, kind=EntityKind.ACTION, side=side)
+        except ValueError as exc:
+            print(exc)
+
+
 def _choose_behavior(side: Side, current=None, *, conserve_enabled: bool = True):
     enum_cls = TopBehavior if side is Side.TOP else BottomBehavior
     choices = [
@@ -164,26 +197,44 @@ def _run_interactive(args: argparse.Namespace, *, commitment_enabled: bool = Tru
                 break
 
             initiator = run.initiator
-            action = _choose_entity(f"{initiator.value.upper()} INITIATES", initiator, EntityKind.ACTION)
-            commitment = args.commitment if commitment_enabled else None
-            responder = initiator.opponent
-            response = _choose_entity(f"{responder.value.upper()} RESPONSE", responder, EntityKind.RESPONSE)
             if commitment_enabled:
-                attempt_result = run.attempt(
-                    action_id=action.id,
-                    response_id=response.id,
-                    commitment=commitment,
-                )
-                print(
-                    "\n"
-                    + format_attempt_result(
-                        attempt_result,
-                        run.clock_seconds,
-                        top_behavior.value,
-                        bottom_behavior.value,
+                action = _choose_modern_initiation(initiator)
+                if action is None:
+                    reset_result = run.reset_window()
+                    print("\n" + format_reset_window(reset_result))
+                else:
+                    responder = initiator.opponent
+                    response = _choose_entity(
+                        f"{responder.value.upper()} RESPONSE",
+                        responder,
+                        EntityKind.RESPONSE,
                     )
-                )
+                    attempt_result = run.attempt(
+                        action_id=action.id,
+                        response_id=response.id,
+                        commitment=args.commitment,
+                    )
+                    print(
+                        "\n"
+                        + format_attempt_result(
+                            attempt_result,
+                            run.clock_seconds,
+                            top_behavior.value,
+                            bottom_behavior.value,
+                        )
+                    )
             else:
+                action = _choose_entity(
+                    f"{initiator.value.upper()} INITIATES",
+                    initiator,
+                    EntityKind.ACTION,
+                )
+                responder = initiator.opponent
+                response = _choose_entity(
+                    f"{responder.value.upper()} RESPONSE",
+                    responder,
+                    EntityKind.RESPONSE,
+                )
                 result = run.decide(
                     action_id=action.id,
                     response_id=response.id,
@@ -237,6 +288,8 @@ def _print_summary(run: MountRun, *, status: str | None = None) -> None:
         print(f"Bottom behavior-stamina history: {h.bottom_behavior_stamina_history}")
     print(f"Top initiation count: {h.top_initiation_count}")
     print(f"Bottom initiation count: {h.bottom_initiation_count}")
+    if h.reset_window_history:
+        print(f"Reset / no-action history: {h.reset_window_history}")
     action_history = [ENTITY_BY_ID[action_id].short_name for action_id in h.initiated_action_history]
     response_history = [ENTITY_BY_ID[response_id].short_name for response_id in h.response_history]
     print(f"Initiated-action history: {action_history}")
