@@ -1,7 +1,7 @@
 import unittest
 
-from bjj_game.domain.model import Band, Side
-from bjj_game.interfaces.blind import RandomBlindResponder, random_mix_band_metrics, render_random_mix_band_metrics
+from bjj_game.domain.model import Band, ExitDestination, Side
+from bjj_game.interfaces.blind import RandomBlindResponder, random_mix_band_metrics, random_mix_reachable_exits, render_random_mix_band_metrics, render_random_mix_exit_limit
 
 
 class RandomBlindResponderTests(unittest.TestCase):
@@ -146,6 +146,17 @@ class RandomBlindResponderTests(unittest.TestCase):
             "via Elbow-Knee Escape; negative-vs-RESET-axis=Bridge, "
             "Elbow-Knee Escape, Trap-and-Roll",
             lines,
+        )
+
+    def test_open_guard_is_unreachable_under_exact_batch_mix(self):
+        reachable = random_mix_reachable_exits()
+        self.assertIn(ExitDestination.HALF_GUARD, reachable)
+        self.assertIn(ExitDestination.REVERSAL, reachable)
+        self.assertNotIn(ExitDestination.OPEN_GUARD, reachable)
+        self.assertEqual(
+            render_random_mix_exit_limit(),
+            "BATCH RESPONSE MIX LIMIT: unreachable under the fixed positive-weight "
+            "response mix: Open Guard",
         )
 
     def test_zero_weight_responses_never_exist_in_policy(self):
