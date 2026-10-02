@@ -16,6 +16,7 @@ from ...domain.model import (
 TOP_HIGH_MOUNT_CLIMB = "mount.top.high_mount_climb"
 TOP_CROSSFACE_PRESSURE = "mount.top.crossface_pressure"
 TOP_AMERICANA_ARM_ISOLATION = "mount.top.americana_arm_isolation"
+TOP_AMERICANA_SUBMISSION_FINISH = "mount.top.americana_submission_finish"
 
 BOTTOM_BRIDGE = "mount.bottom.bridge"
 BOTTOM_ELBOW_KNEE_ESCAPE = "mount.bottom.elbow_knee_escape"
@@ -204,6 +205,29 @@ ENTITIES: tuple[TechniqueEntity, ...] = (
 MOUNT_CATALOG = TechniqueCatalog.build(ENTITIES)
 ENTITY_BY_ID = MOUNT_CATALOG.by_id
 
+# v0.3+ modern-only actions must not enter the frozen Mount-v0 catalog or
+# the authoritative 18-entry enumerate surface. They are exposed through a
+# separate modern catalog used only when the matching feature flag is enabled.
+MODERN_ONLY_ENTITIES: tuple[TechniqueEntity, ...] = (
+    TechniqueEntity(
+        id=TOP_AMERICANA_SUBMISSION_FINISH,
+        kind=EntityKind.ACTION,
+        side=Side.TOP,
+        canonical_name="Americana Submission Finish",
+        short_name="Americana Finish",
+        legacy_name="Americana Finish",
+        aliases=("Americana Finish", "Americana Submission", "Keylock Finish"),
+        category="SUBMISSION_FINISH",
+        description=(
+            "Advance the active Americana submission track from Threat through "
+            "Control and Finish; a successful Finish-stage exchange produces a tap."
+        ),
+        behavior_modifiers={BottomBehavior.PROTECT: -1},
+    ),
+)
+MODERN_MOUNT_CATALOG = TechniqueCatalog.build((*ENTITIES, *MODERN_ONLY_ENTITIES))
+MODERN_ENTITY_BY_ID = MODERN_MOUNT_CATALOG.by_id
+
 TOP_ACTIONS = MOUNT_CATALOG.actions_for(Side.TOP)
 BOTTOM_ACTIONS = MOUNT_CATALOG.actions_for(Side.BOTTOM)
 TOP_RESPONSES = MOUNT_CATALOG.responses_for(Side.TOP)
@@ -212,6 +236,10 @@ BOTTOM_RESPONSES = MOUNT_CATALOG.responses_for(Side.BOTTOM)
 
 def actions_for(side: Side) -> tuple[TechniqueEntity, ...]:
     return MOUNT_CATALOG.actions_for(side)
+
+
+def modern_actions_for(side: Side) -> tuple[TechniqueEntity, ...]:
+    return MODERN_MOUNT_CATALOG.actions_for(side)
 
 
 def responses_for(side: Side) -> tuple[TechniqueEntity, ...]:
