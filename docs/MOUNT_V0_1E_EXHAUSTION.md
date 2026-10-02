@@ -385,6 +385,48 @@ The legacy `mount_v0` entry point rejects `--blind`.
 
 The eventual v0.2 recognition/feint/setup layer remains responsible for the actual information model.
 
+### Seeded solo responder
+
+A single tester cannot be blind to a response they personally typed. Solo sessions therefore use:
+
+```bash
+PYTHONPATH=src python -m bjj_game \
+  --blind \
+  --blind-responder random \
+  --seed N \
+  --log docs/playtest/<session>.txt
+```
+
+The responder policy is deterministic:
+
+```text
+Bottom response to Top:
+Forearm Frame 4/7
+Tight-Elbow Arm Defense 3/7
+Turn-In Recovery 0/7
+
+Top response to Bottom:
+Wide Mount Base 2/3
+Hip Follow and Knee Re-Pummel 1/3
+Hand Post and Base 0/3
+```
+
+The implementation uses integer weighted draws rather than rounded floating-point percentages.
+
+The seed is printed at run start. Each random response records its ordinal, canonical response name, and raw draw only after the initiator has selected an action or RESET. A RESET records the locked response as unused.
+
+That makes a saved log replayable without leaking the hidden choice during the decision.
+
+### Pre-session predictions
+
+Before tuning numbers, the first solo blind sessions should test these predictions:
+
+- Top should prefer attacking over RESET under the seeded response mix.
+- Bottom should RESET more often while Mount is Strong/Locked and attack more near Loose.
+- Bridge should see little or no voluntary use because Trap-and-Roll dominates it in the current no-setup v0 matrix.
+- PROTECT vs CONSERVE should favor CONSERVE unless Top repeatedly threatens Americana.
+- HOLD vs CONSERVE should be a closer choice because HOLD affects two Bottom escapes.
+
 ## Frozen-v0 identity gate
 
 The frozen enumerate digest remains:
