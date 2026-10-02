@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..domain.model import ResolutionResult
+from ..domain.model import Grade, ResolutionResult
 from ..positions.mount.catalog import (
     BOTTOM_BRIDGE,
     BOTTOM_RESPONSE_FOREARM_FRAME,
@@ -11,6 +11,7 @@ from ..positions.mount.catalog import (
     TOP_AMERICANA_ARM_ISOLATION,
     TOP_HIGH_MOUNT_CLIMB,
     TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,
+    TOP_RESPONSE_WIDE_MOUNT_BASE,
 )
 
 
@@ -19,6 +20,14 @@ class SetupRule:
     builder_action_id: str
     target_action_id: str
     ready_response_ids: tuple[str, ...]
+    stalemate_response_id: str
+
+    def __post_init__(self) -> None:
+        if self.stalemate_response_id not in self.ready_response_ids:
+            raise ValueError(
+                "Ready stalemate response must remain legal: "
+                f"{self.stalemate_response_id!r}"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,7 +41,11 @@ class MountSetupPolicy:
                 SetupRule(
                     builder_action_id=BOTTOM_BRIDGE,
                     target_action_id=BOTTOM_TRAP_AND_ROLL_ESCAPE,
-                    ready_response_ids=(TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,),
+                    ready_response_ids=(
+                        TOP_RESPONSE_WIDE_MOUNT_BASE,
+                        TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,
+                    ),
+                    stalemate_response_id=TOP_RESPONSE_WIDE_MOUNT_BASE,
                 ),
                 SetupRule(
                     builder_action_id=TOP_HIGH_MOUNT_CLIMB,
@@ -41,6 +54,7 @@ class MountSetupPolicy:
                         BOTTOM_RESPONSE_FOREARM_FRAME,
                         BOTTOM_RESPONSE_TURN_IN_RECOVERY,
                     ),
+                    stalemate_response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
                 ),
             )
         )
@@ -68,6 +82,23 @@ class MountSetupPolicy:
     def ready_response_ids(self, action_id: str) -> tuple[str, ...] | None:
         rule = self.rule_for_target(action_id)
         return rule.ready_response_ids if rule is not None else None
+
+    def ready_final_grade_override(
+        self,
+        action_id: str,
+        response_id: str,
+    ) -> Grade | None:
+        """Ready's designated best defense becomes a stalemate.
+
+        This is v0.2 setup data, separate from the frozen 18-entry matchup
+        table. The override is post-behavior/post-positional and pre-external,
+        so ordinary Ready defense is exactly Contested while exhaustion can
+        still weaken the initiator afterward.
+        """
+        rule = self.rule_for_target(action_id)
+        if rule is None or response_id != rule.stalemate_response_id:
+            return None
+        return Grade.CONTESTED
 
     def setup_advances_from(self, result: ResolutionResult) -> bool:
         """A designated builder creates setup pressure even when answered.
