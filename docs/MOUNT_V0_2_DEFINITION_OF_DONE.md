@@ -83,6 +83,8 @@ The automatic checker first runs an exhaustive one-exchange differential with th
 
 When responder-side v0.2 mechanics exist, paired seeded batch confirmation should also be added for outcome/legality/response distributions.
 
+The setup-enabled 25-stamina matrix confirms that stamina is now binding in realistic v0.2 action volume, but it does **not** close Gate 3: the responder-only one-exchange differential remains zero. Recovery-policy outcome differences are therefore not evidence of responder weakness.
+
 ## Gate 4 — Bridge has a setup role
 
 ### Current debt
@@ -154,6 +156,8 @@ Top CONSERVE
 ```
 
 The PASS path requires every behavior count to be greater than zero. When Ready/setup state exists, extend the same per-behavior probe rather than collapsing the conditions.
+
+The post-Ready 25-stamina rerun still produces 100% timeout for fixed HOLD-vs-ESCAPE, while Bottom-only recovery restores almost all escapes. That supports keeping Gate 6 OPEN until the no-recovery Exhausted route question is explicitly resolved.
 
 ## Gate 7 — Commitment meaning
 
