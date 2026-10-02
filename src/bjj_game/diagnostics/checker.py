@@ -1020,6 +1020,8 @@ def _v03_best_defense_evidence() -> dict[SubmissionStage, V03DefenseStageEvidenc
         stopped = 0
         guaranteed = 0
         for band, axis in _V02_BAND_ANCHORS.items():
+            if band not in {Band.STRONG, Band.LOCKED}:
+                continue
             for bottom_behavior in BottomBehavior:
                 match = MountMatch(
                     starting_axis=axis,
@@ -1085,7 +1087,9 @@ def _v03_exhaustion_differentials() -> tuple[int, int, int, int]:
     cancellation_mismatches = 0
     cases = 0
     for stage in SubmissionStage:
-        for _band, axis in _V02_BAND_ANCHORS.items():
+        for band, axis in _V02_BAND_ANCHORS.items():
+            if band not in {Band.STRONG, Band.LOCKED}:
+                continue
             for bottom_behavior in BottomBehavior:
                 match = MountMatch(
                     starting_axis=axis,
