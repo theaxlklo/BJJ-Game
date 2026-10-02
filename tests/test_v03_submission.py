@@ -119,7 +119,7 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
             match.legal_action_ids(Side.TOP),
         )
 
-    def test_defended_control_regresses_to_threat(self):
+    def test_defended_control_breaks_submission_track(self):
         match = self._active_stage(
             axis=4.00,
             stage=SubmissionStage.CONTROL,
@@ -130,9 +130,9 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
             commitment=Commitment.LOW,
         )
         self.assertEqual(match.axis, 3.00)
-        self.assertIs(match.submission_state.stage, SubmissionStage.THREAT)
+        self.assertIsNone(match.submission_state.stage)
 
-    def test_defended_finish_regresses_to_control(self):
+    def test_defended_finish_breaks_submission_track(self):
         match = self._active_stage(
             axis=4.00,
             stage=SubmissionStage.FINISH,
@@ -143,7 +143,7 @@ class V03AmericanaSubmissionTests(unittest.TestCase):
             commitment=Commitment.LOW,
         )
         self.assertEqual(match.axis, 3.00)
-        self.assertIs(match.submission_state.stage, SubmissionStage.CONTROL)
+        self.assertIsNone(match.submission_state.stage)
 
     def test_success_from_finish_taps_and_ends_match(self):
         match = self._active_stage(stage=SubmissionStage.FINISH)
