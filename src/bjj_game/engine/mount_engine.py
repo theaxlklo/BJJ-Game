@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from ..domain.catalog import TechniqueCatalog
 from ..domain.matchup import MatchupTable
-from ..domain.model import Band, BandChange, BottomBehavior, DriftResult, ResolutionResult, Side, TopBehavior
+from ..domain.model import Band, BandChange, BottomBehavior, DriftResult, Grade, ResolutionResult, Side, TopBehavior
 from ..positions.mount.catalog import MOUNT_CATALOG
 from ..positions.mount.matchups import MOUNT_MATCHUPS
 from ..positions.mount.rules import MOUNT_RULES, MountRuleSet
@@ -74,6 +74,7 @@ class MountResolutionEngine:
         top_behavior: TopBehavior = TopBehavior.PRESSURE,
         bottom_behavior: BottomBehavior = BottomBehavior.ESCAPE,
         external_grade_modifier: int = 0,
+        post_positional_grade_override: Grade | None = None,
     ) -> ResolutionResult:
         action = self.catalog.get(action_id)
         response = self.catalog.get(response_id)
@@ -88,7 +89,12 @@ class MountResolutionEngine:
         behavior_grade = raw.shift(bmod)
         pmod = self.rules.positional_modifier(initiator=initiator, band=band)
         positional_grade = behavior_grade.shift(pmod)
-        final = positional_grade.shift(external_grade_modifier)
+        pre_external = (
+            post_positional_grade_override
+            if post_positional_grade_override is not None
+            else positional_grade
+        )
+        final = pre_external.shift(external_grade_modifier)
         value = int(final)
         delta = float(value if initiator is Side.TOP else -value)
         proposed = round(axis + delta, 10)
