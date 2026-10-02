@@ -1,5 +1,7 @@
 # Mount v0.3b — Stalling Cadence Amendment
 
+> **ESCALATION NOTE:** The 20-second cadence, per-player clocks, persistent Warning, and offense-2 one-band/free-initiative consequence remain authoritative. The original statement that *every* later offense repeats the one-band consequence was superseded after the corrected full-match probe proved that 13 one-band penalties still ended at `+4.00 Locked`. Offense 3+ now uses the Position Reset rule frozen in `MOUNT_V0_3B_POSITION_RESET_ESCALATION.md`.
+
 ## Status
 
 FROZEN BEFORE v0.3b MECHANICS IMPLEMENTATION.
@@ -400,14 +402,22 @@ This cadence amendment does not:
 - change the generic mutual-exhaustion cancellation;
 - tune Gate B;
 - create points-mode penalties;
-- implement repeated-offense Position Reset from Section 33.
+- tune Position Reset away from the canonical +1.50 Stable rule frozen by the later escalation amendment.
 
-The only v0.3b ladder is:
+The original pre-measurement ladder below is historical and was superseded after full-match failure evidence:
 
 ```text
 first offense -> persistent Warning
 later offense -> one-step axis penalty
 boundary later offense -> free initiative window
+```
+
+Current escalation is:
+
+```text
+offense 1 -> persistent Warning
+offense 2 -> one-step axis penalty / boundary free initiative
+offense 3+ -> Position Reset to +1.50 Stable
 ```
 
 ## Implementation authorization
