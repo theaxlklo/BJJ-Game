@@ -486,13 +486,15 @@ V0.3a SETUP-POLICY DEBT: builder progress is ranked above axis loss; informed PR
 
 This is observed debt, not tuned in v0.3a.
 
-The v0.2 Gate-2 deferral remains intentionally expired:
+At the v0.3a closure point, the v0.2 Gate-2 deferral had intentionally expired to:
 
 ```text
 Gate 2 OPEN
 ```
 
-because a real submission-finish route exists while repeated RESET still times out at Locked.
+because a real submission-finish route existed while the historical repeated-RESET probe still timed out at Locked.
+
+v0.3b now closes that debt with executable one-sided stalling evidence; see the next section.
 
 The setup/policy debt also remains explicit: Top can repeatedly rebuild Americana setup even when informed defense prevents conversion. This is observed, not tuned in v0.3a.
 
@@ -506,6 +508,109 @@ See:
 - `docs/MOUNT_V0_3A_READY_HOLD_STAMINA_AMENDMENT.md`
 - `docs/MOUNT_V0_3A_LOW3_HOLD_COST_MEASUREMENT.md`
 - `docs/MOUNT_V0_3A_GATE_B_DEFERRAL.md`
+
+## Mount v0.3b — stalling / progress enforcement
+
+v0.3b distinguishes **engagement** from successful advancement.
+
+A legal attempt through a progress-capable route counts as engagement even when the opponent stops it. A legal defensive response to that attempt also counts as engagement.
+
+Therefore:
+
+```text
+Americana attempt -> informed Turn-In -> Contested hold
+```
+
+means both players are active, not stalling.
+
+Each player owns an independent advancement clock:
+
+```text
+20 simulated seconds
+```
+
+RESET remains legal. It becomes a stalling offense only when:
+
+```text
+progress-capable route exists
++ player chooses RESET
++ advancement clock >= 20s
+```
+
+The first offense is a persistent Warning. Later offenses move Mount one visible band step toward the non-stalling player:
+
+```text
+Locked -> Strong -> Stable -> Loose
+```
+
+A stalling penalty never crosses Neutral. At the Loose/boundary case, the non-stalling player receives a **zero-time free initiative window** instead.
+
+The cadence is simulated-time based rather than window-count based, so changing `--interval` does not change the 20-second threshold.
+
+Current executable result:
+
+```text
+v0.2 Gate 2 PASS
+
+v0.3b Gate A PASS
+v0.3b Gate B PASS
+v0.3b Gate C PASS
+v0.3b Gate D PASS
+v0.3b Gate E PASS
+```
+
+Key evidence:
+
+```text
+one-sided Top stall:
+  Warning=1
+  penalty=1
+  +4.00 Locked -> +2.80 Strong
+
+fresh informed Americana stalemate:
+  attempts=3
+  Top penalties=0
+  Bottom penalties=0
+  stage remains Threat
+  clocks=0/0
+
+symmetry:
+  Top warnings/penalties=1/1
+  Bottom warnings/penalties=1/1
+
+Loose boundary:
+  axis +0.50 -> +0.50
+  free initiative windows=1
+  simulated clock unchanged
+```
+
+The normal matched PRESSURE / ESCAPE batch is intentionally almost untouched:
+
+```text
+Top RESETs 0 -> 0
+random taps 99 -> 99
+informed taps 0 -> 0
+stalling warnings/penalties 0/0
+```
+
+So v0.3b penalizes deliberate inactivity without perturbing already-engaged play.
+
+The v0.3a competent-defender Gate B remains **DEFERRED**:
+
+```text
+response_commitment_present=False
+recognition_present=False
+```
+
+v0.3b does not add either expiry capability.
+
+See:
+
+- `docs/MOUNT_V0_3B_DEFINITION_OF_DONE.md`
+- `docs/MOUNT_V0_3B_STALLING_CADENCE.md`
+- `docs/MOUNT_V0_3B_CADENCE_TIMING_CLARIFICATION.md`
+- `docs/MOUNT_V0_3B_GATE_A_PROBE_CLARIFICATION.md`
+- `docs/MOUNT_V0_3B_FIRST_MEASUREMENT.md`
 
 ## Known v0 limitation
 
