@@ -106,7 +106,7 @@ class CliTests(unittest.TestCase):
             code = bjj_main(["--clock", "0:10", "--interval", "5"])
         self.assertEqual(code, 130)
         text = output.getvalue()
-        self.assertIn("MOUNT v0.1c — HOT-SEAT PROTOTYPE", text)
+        self.assertIn("MOUNT v0.1e — HOT-SEAT PROTOTYPE", text)
         self.assertIn("Standard commitment: MEDIUM", text)
         self.assertNotIn("\nCommitment\n", text)
         self.assertIn("Requested commitment: MEDIUM", text)
@@ -141,7 +141,13 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         text = output.getvalue()
         self.assertIn("COMMITMENT DOMINANCE: LOW strictly dominates", text)
-        self.assertIn("COMMITMENT VISIBILITY: public in v0.1c", text)
+        self.assertIn("COMMITMENT VISIBILITY: public in v0.1e", text)
+        self.assertIn("STAMINA PACING LOW", text)
+        self.assertIn("Exhausted Top 2:30, Bottom 2:30", text)
+        self.assertIn("STAMINA PACING MEDIUM", text)
+        self.assertIn("Exhausted Top 1:25, Bottom 1:30", text)
+        self.assertIn("STAMINA PACING HIGH", text)
+        self.assertIn("Exhausted Top 0:55, Bottom 1:00", text)
 
     def test_legacy_check_does_not_report_v01_commitment_diagnostics(self):
         output = io.StringIO()
