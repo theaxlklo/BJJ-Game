@@ -239,8 +239,9 @@ Mount v0.1 stamina is **validated and closed for Mount v0**.
 
 Batch and low-stamina stress tests show two important limits of the current scaffold:
 
-- rational escape-first play from 100 stamina rarely spends enough for exhaustion to become binding;
-- when exhaustion does matter, it weighs primarily on initiated attacks/Bottom escape attempts, while Top can often avoid spending and responders defend for free.
+- rational v0.1 escape-first play from 100 stamina rarely spent enough for exhaustion to become binding;
+- v0.2 setup chains create enough paid action volume for stamina to matter;
+- v0.2b now makes responder exhaustion mechanical as well: an Exhausted responder defends one grade worse.
 
 The forced-attack pacing projection is therefore a **stress case**, not expected rational-play pacing. Do not retune the prototype 3/7/12 action costs or CONSERVE's +2/5s recovery merely to make v0 consume more stamina.
 
@@ -307,17 +308,46 @@ The checker currently measures:
 ```text
 Gate 1  PASS      every reachable Ready state's best legal defense is Contested
 Gate 2  DEFERRED  to v0.3 while Locked has no submission-finish action
+Gate 3  PASS      258 isolated exchanges change when only responder stamina changes
 Gate 4  PASS      Bridge contributes to completed Trap-and-Roll chains
-Gate 5  OPEN      0.630 meaningful Top follow-ups/match
-                  threshold 1.000; margin -0.370
-Gate 3  OPEN
-Gate 6  OPEN
+Gate 5  OPEN      0.610 meaningful Top follow-ups/match
+                  threshold 1.000; margin -0.390
+Gate 6  ACCEPTED  fresh HOLD lockout retained, but fixed no-recovery probe escapes 76/100
 Gate 7  OPEN
 ```
 
 No setup decay, setup disruption, commitment acceleration, exhaustion/setup interaction, RESET progress cost, STABILIZE, or submission finish is added in v0.2a.
 
 See `docs/MOUNT_V0_2A_SETUP_READY.md`.
+
+## Mount v0.2b — responder exhaustion
+
+Responder stamina now matters mechanically:
+
+```text
+Exhausted initiator  → -1 grade
+Exhausted responder  → +1 grade for initiator
+both Exhausted       → modifiers cancel
+```
+
+Both stamina bands use the existing 25/35 exhaustion latch and are read before the initiator's action cost is paid. Responding still has no direct stamina cost.
+
+The scripted batch policy uses the same net modifier as actual resolution.
+
+Measured v0.2 evidence:
+
+```text
+Gate 3  PASS
+fresh-vs-Exhausted responder outcome differences: 258
+
+Gate 6  ACCEPTED
+static routes: PRESSURE:1 / HOLD:0 / CONSERVE:1
+dynamic no-recovery escapes/100: PRESSURE:0 / HOLD:76 / CONSERVE:35
+```
+
+A fresh HOLD Top may still completely shut down an already-Exhausted Bottom. That behavior is retained under Gate 6 path B because actual setup-driven play gives Bottom a measured route out once Top becomes Exhausted too.
+
+See `docs/MOUNT_V0_2B_RESPONDER_EXHAUSTION.md`.
 
 ## Known v0 limitation
 
