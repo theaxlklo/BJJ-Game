@@ -41,6 +41,27 @@ class SetupStateTests(unittest.TestCase):
 
 
 class MountSetupReadyTests(unittest.TestCase):
+    def test_setup_dependent_targets_are_illegal_before_ready(self):
+        match = MountMatch(starting_axis=1.50, enable_v02_setup=True)
+
+        match.initiator = Side.BOTTOM
+        self.assertNotIn(
+            BOTTOM_TRAP_AND_ROLL_ESCAPE,
+            match.legal_action_ids(),
+        )
+        with self.assertRaises(ValueError):
+            match.attempt(
+                action_id=BOTTOM_TRAP_AND_ROLL_ESCAPE,
+                response_id=TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,
+                commitment=Commitment.MEDIUM,
+            )
+
+        match.initiator = Side.TOP
+        self.assertNotIn(
+            TOP_AMERICANA_ARM_ISOLATION,
+            match.legal_action_ids(),
+        )
+
     def test_bridge_successes_build_trap_and_roll_to_ready(self):
         match = MountMatch(starting_axis=1.50, enable_v02_setup=True)
 
