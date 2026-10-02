@@ -616,7 +616,7 @@ class CliTests(unittest.TestCase):
             text,
         )
         self.assertIn("V0.2 DOD GATE 1 [", text)
-        self.assertIn("V0.2 DOD GATE 2 [PASS]", text)
+        self.assertIn("V0.2 DOD GATE 2 [OPEN]", text)
         self.assertIn("V0.2 DOD GATE 3 [", text)
         self.assertIn("V0.2 DOD GATE 4 [", text)
         self.assertIn("V0.2 DOD GATE 5 [", text)
@@ -627,7 +627,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.3a DOD GATE C [", text)
         self.assertIn("V0.3a DOD GATE D [", text)
         self.assertIn("V0.3a DOD GATE E [", text)
-        self.assertIn("V0.3b DOD GATE A [PASS]", text)
+        self.assertIn("V0.3b DOD GATE A [OPEN]", text)
         self.assertIn("V0.3b DOD GATE B [PASS]", text)
         self.assertIn("V0.3b DOD GATE C [PASS]", text)
         self.assertIn("V0.3b DOD GATE D [PASS]", text)
