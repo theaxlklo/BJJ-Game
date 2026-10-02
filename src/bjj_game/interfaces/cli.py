@@ -12,7 +12,7 @@ from ..positions.mount.catalog import ENTITY_BY_ID, actions_for, responses_for
 from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
-from .blind import BlindResponseChoice, RandomBlindResponder
+from .blind import BlindResponseChoice, RandomBlindResponder, render_random_mix_band_metrics
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_reset_window, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
 from ..domain.model import BottomBehavior, EntityKind, Side, TopBehavior
@@ -602,6 +602,8 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 + RandomBlindResponder.mix_description(Side.TOP)
                 + ". Use --blind --blind-responder random --seed N for solo replayable sessions."
             )
+            for line in render_random_mix_band_metrics():
+                print(f"INFO: {line}")
         report = run_checks()
         for message in report.info:
             print(f"INFO: {message}")
