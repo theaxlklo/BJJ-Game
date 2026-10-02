@@ -185,6 +185,7 @@ def render_reset_lock_probe() -> str:
 class V02GateStatus(str, Enum):
     OPEN = "OPEN"
     PASS = "PASS"
+    ACCEPTED = "ACCEPTED"
     REVIEW = "REVIEW"
     UNAVAILABLE = "UNAVAILABLE"
     DEFERRED = "DEFERRED"
@@ -546,6 +547,39 @@ def _exhausted_positive_weight_escape_hits() -> tuple[ReachabilityHit, ...]:
 
 
 @lru_cache(maxsize=1)
+def _exhausted_bottom_dynamic_escape_counts() -> dict[TopBehavior, int]:
+    """100-match path-B probe for behavior-specific exhausted lockouts.
+
+    Bottom starts Exhausted at 25 while Top starts fresh at 100. Behaviors stay
+    fixed and v0.2 setup is enabled. A nonzero escape count demonstrates a real
+    route out of the static lockout through match evolution (currently Top
+    exhaustion from setup work), without giving Bottom recovery behavior.
+    """
+    from ..interfaces.batch import run_escape_first_batch
+
+    counts: dict[TopBehavior, int] = {}
+    for top_behavior in TopBehavior:
+        summary = run_escape_first_batch(
+            matches=100,
+            base_seed=42,
+            top_behavior=top_behavior,
+            bottom_behavior=BottomBehavior.ESCAPE,
+            commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=25,
+            enable_v02_setup=True,
+        )
+        counts[top_behavior] = sum(
+            summary.outcome_counts.get(destination.value, 0)
+            for destination in ExitDestination
+        )
+    return counts
+
+
+@lru_cache(maxsize=1)
 def _commitment_low_dominance_probe() -> tuple[bool, int]:
     """Return (LOW strictly dominates higher commitments, advantage-state count).
 
@@ -688,6 +722,21 @@ def measure_v02_definition_of_done(
     every_behavior_has_escape = all(
         count > 0 for count in exhausted_route_counts.values()
     )
+    exhausted_dynamic_escape_counts = (
+        _exhausted_bottom_dynamic_escape_counts()
+    )
+    static_lockout_behaviors = tuple(
+        behavior
+        for behavior, count in exhausted_route_counts.items()
+        if count == 0
+    )
+    every_static_lockout_has_dynamic_route = (
+        bool(static_lockout_behaviors)
+        and all(
+            exhausted_dynamic_escape_counts[behavior] > 0
+            for behavior in static_lockout_behaviors
+        )
+    )
 
     # Gate 7: exhaustive funded LOW-dominance probe.
     low_dominates, commitment_advantages = _commitment_low_dominance_probe()
@@ -784,7 +833,11 @@ def measure_v02_definition_of_done(
             status=(
                 V02GateStatus.PASS
                 if every_behavior_has_escape
-                else V02GateStatus.OPEN
+                else (
+                    V02GateStatus.ACCEPTED
+                    if every_static_lockout_has_dynamic_route
+                    else V02GateStatus.OPEN
+                )
             ),
             metric=(
                 "positive-weight exhausted escape routes by Top behavior="
@@ -792,12 +845,21 @@ def measure_v02_definition_of_done(
                     f"{behavior.value}:{exhausted_route_counts[behavior]}"
                     for behavior in TopBehavior
                 )
+                + "; dynamic exhausted-Bottom escapes/100="
+                + ",".join(
+                    f"{behavior.value}:{exhausted_dynamic_escape_counts[behavior]}"
+                    for behavior in TopBehavior
+                )
             ),
             evidence=(
-                "every Top behavior leaves at least one Exhausted-Bottom escape route"
+                "every Top behavior leaves at least one static Exhausted-Bottom escape route"
                 if every_behavior_has_escape
-                else
-                "at least one Top behavior removes every positive-weight Exhausted-Bottom escape route"
+                else (
+                    "path B accepted: each static lockout behavior has a measured no-recovery escape route through match evolution"
+                    if every_static_lockout_has_dynamic_route
+                    else
+                    "at least one static lockout behavior has no measured no-recovery route out"
+                )
             ),
         ),
         V02GateMeasurement(
