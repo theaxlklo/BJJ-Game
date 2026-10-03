@@ -3827,22 +3827,32 @@ def render_v04a_definition_of_done() -> tuple[str, ...]:
 
 def render_v04a_feint_funding_probe() -> str:
     fixed = _v04_fixed_medium_standard_batch()
-    taps = fixed.outcome_counts.get("TAP — Americana", 0)
+    random = _v04_random_standard_batch()
+
+    def render_one(label: str, summary) -> str:
+        taps = summary.outcome_counts.get("TAP — Americana", 0)
+        return (
+            f"{label}: taps={taps}; "
+            f"reached Finish={summary.matches_reached_submission_finish}; "
+            f"median stamina Top={summary.top_final_stamina_median:.1f}/"
+            f"Bottom={summary.bottom_final_stamina_median:.1f}; "
+            f"feint caps={summary.submission_feint_cap_count}; "
+            f"requested-LOW caps={summary.requested_low_feint_cap_count}; "
+            f"MEDIUM/HIGH funding-downgrade successful active-stage attempts="
+            f"{summary.funding_downgrade_success_count}; "
+            f"MEDIUM/HIGH funding-downgrade feint caps="
+            f"{summary.funding_downgrade_feint_cap_count}"
+        )
+
     return (
         "V0.4a FEINT/FUNDING PROBE — 100 seeds, random response choice, "
-        "initiator MEDIUM, response FIXED_MEDIUM: "
-        f"taps={taps}; "
-        f"reached Finish={fixed.matches_reached_submission_finish}; "
-        f"median stamina Top={fixed.top_final_stamina_median:.1f}/"
-        f"Bottom={fixed.bottom_final_stamina_median:.1f}; "
-        f"feint caps={fixed.submission_feint_cap_count}; "
-        f"requested-LOW caps={fixed.requested_low_feint_cap_count}; "
-        f"MEDIUM/HIGH funding-downgrade successful active-stage attempts="
-        f"{fixed.funding_downgrade_success_count}; "
-        f"MEDIUM/HIGH funding-downgrade feint caps="
-        f"{fixed.funding_downgrade_feint_cap_count}. "
-        "Tap/Finish/stamina counts are observational; cap-cause counts are "
-        "the amendment diagnostics."
+        "initiator MEDIUM. "
+        + render_one("response FIXED_MEDIUM", fixed)
+        + ". "
+        + render_one("response RANDOM", random)
+        + ". Tap/Finish/stamina counts are observational; RANDOM uses the "
+        "diagnostic equal commitment weighting; cap-cause counts are the "
+        "amendment diagnostics."
     )
 
 
