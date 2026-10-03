@@ -706,8 +706,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 "INFO: V0.2 RESPONDER-STAMINA VALIDATION: an Exhausted responder now shifts the "
                 "initiated action +1 grade for the initiator; an Exhausted initiator remains -1, "
                 "so both Exhausted cancel. The 25/35 latch and pre-cost timing are shared. "
-                "Ordinary responses still have no direct stamina cost; v0.3a Ready-Americana "
-                "and active-Americana Contested holds pay the existing LOW cost of 3 after resolution."
+                "Without v0.4a, ordinary responses still have no direct stamina cost; with v0.4a enabled, "
+                "response commitment uses the same 3/7/12 effective-funding policy. v0.3a Ready-Americana "
+                "and active-Americana Contested holds retain the separate LOW cost of 3 after resolution."
             )
             print(
                 "INFO: RESET/STALLING DEBT: RESET solves forced-action recovery but repeated no-action "
