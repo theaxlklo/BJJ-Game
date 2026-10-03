@@ -316,17 +316,22 @@ class V04BDefinitionOfDoneMeasurementTests(unittest.TestCase):
     def test_frozen_gate_surface_exists(self):
         self.assertEqual(tuple(self.gates), tuple("ABCDEFGH"))
 
-    def test_non_outcome_gates_pass_before_gate_f_is_pinned(self):
-        for letter in "ABCDEGH":
+    def test_all_frozen_v04b_gates_pass(self):
+        for letter in "ABCDEFGH":
             self.assertIs(
                 self.gates[letter].status,
                 V02GateStatus.PASS,
                 self.gates[letter].render(),
             )
 
-    def test_gate_f_reports_the_unchanged_gate_b_measurement(self):
-        self.assertIn("informed Tap=", self.gates["F"].metric)
-        self.assertIn("v0.3a Gate B=", self.gates["F"].metric)
+    def test_gate_f_pins_first_untuned_gate_b_measurement(self):
+        self.assertIn("informed Tap=6/100", self.gates["F"].metric)
+        self.assertIn("v0.3a Gate B=PASS", self.gates["F"].metric)
+
+    def test_mapping_and_replay_invariants_are_explicit(self):
+        self.assertIn("cases=432", self.gates["B"].metric)
+        self.assertIn("mismatches=0", self.gates["B"].metric)
+        self.assertIn("replay_equal=True", self.gates["G"].metric)
 
 
 if __name__ == "__main__":
