@@ -2736,6 +2736,28 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
         response_commitment_present=response_commitment_present,
         recognition_present=recognition_present,
     )
+    gate_b_evidence = (
+        (
+            "Response commitment is now a live runtime capability, so the "
+            "self-expiring deferral has ended and the unchanged "
+            "0% < informed Tap < 50% criterion is active. Public MATCH "
+            "commitment still lets the informed defender hold conversion at "
+            "0 taps; this is evidence for the later Recognition/information "
+            "slice, not a reason to retune the Gate-B range. Random response "
+            "remains contrast only."
+        )
+        if response_commitment_present
+        else (
+            "DEFERRED while response commitment and Recognition/information "
+            "are both absent; the deferral auto-expires when either capability "
+            "becomes present. LOW=3 moved informed Threat reachability from "
+            "0 to 78/100, but full-match conversion remains blocked because "
+            "sustained PRESSURE exhausts both fighters: Exhausted initiator -1 "
+            "plus Exhausted responder +1 cancels to 0. When the deferral "
+            "expires, the unchanged 0% < informed Tap < 50% criterion resumes; "
+            "random response remains contrast only."
+        )
+    )
     defense = _v03_best_defense_evidence()
     defense_pass = all(
         item.reachable_states > 0
@@ -2789,17 +2811,7 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
                 f"random contrast Tap={random_tap_count}/{random_batch.matches} "
                 f"({random_tap_rate:.1%})"
             ),
-            evidence=(
-                "DEFERRED while response commitment and Recognition/information are both absent; "
-                "the deferral auto-expires when either capability becomes present. "
-                "LOW=3 moved informed Threat reachability from 0 to 78/100, but full-match "
-                "conversion remains blocked because sustained PRESSURE exhausts both fighters: "
-                "Exhausted initiator -1 plus Exhausted responder +1 cancels to 0. "
-                "The future defender-effort slice must create a real asymmetry either through "
-                "uneven attacker/defender costs or through submission-specific mutual-exhaustion "
-                "effects that no longer cancel. When the deferral expires, the unchanged "
-                "0% < informed Tap < 50% criterion resumes; random response remains contrast only."
-            ),
+            evidence=gate_b_evidence,
         ),
         V03GateMeasurement(
             letter="C",
