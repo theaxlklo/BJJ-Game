@@ -12,7 +12,9 @@ from ..positions.mount.catalog import (
     BOTTOM_ACTIONS,
     TOP_RESPONSES,
     BOTTOM_RESPONSES,
+    TOP_AMERICANA_ARM_ISOLATION,
     TOP_AMERICANA_SUBMISSION_FINISH,
+    BOTTOM_RESPONSE_FOREARM_FRAME,
     BOTTOM_RESPONSE_TURN_IN_RECOVERY,
     actions_for,
     modern_actions_for,
@@ -2849,6 +2851,811 @@ def render_v02_definition_of_done(
 def render_v02_definition_of_done_baseline() -> tuple[str, ...]:
     """Compatibility alias for the original fixed-string renderer."""
     return render_v02_definition_of_done()
+
+
+@dataclass(frozen=True, slots=True)
+class V04GateMeasurement:
+    letter: str
+    name: str
+    status: V02GateStatus
+    metric: str
+    evidence: str
+
+    def render(self) -> str:
+        return (
+            f"V0.4a DOD GATE {self.letter} [{self.status.value}]: "
+            f"{self.name} — {self.metric}; {self.evidence}"
+        )
+
+
+def _v04_axis_value(result) -> float:
+    world = result.axis_after - result.axis_before
+    return world if result.initiator is Side.TOP else -world
+
+
+def _v04_outcome_no_worse(candidate, reference) -> bool:
+    return (
+        candidate.final_grade >= reference.final_grade
+        and (
+            reference.exit_destination is None
+            or candidate.exit_destination is not None
+        )
+        and _v04_axis_value(candidate) + 1e-12
+        >= _v04_axis_value(reference)
+    )
+
+
+def _v04_outcome_strictly_better(candidate, reference) -> bool:
+    return (
+        candidate.final_grade > reference.final_grade
+        or (
+            candidate.exit_destination is not None
+            and reference.exit_destination is None
+        )
+        or _v04_axis_value(candidate)
+        > _v04_axis_value(reference) + 1e-12
+    )
+
+
+@lru_cache(maxsize=1)
+def _v04_medium_identity_probe() -> tuple[int, int, int]:
+    """Return cases, enabled MEDIUM mismatches, disabled response-param mismatches."""
+    from ..engine.match import MountMatch
+
+    cases = 0
+    enabled_mismatches = 0
+    disabled_param_mismatches = 0
+    stamina_pairs = ((100, 100), (25, 100), (100, 25), (25, 25))
+
+    for side in (Side.TOP, Side.BOTTOM):
+        for band, axis in _V02_BAND_ANCHORS.items():
+            for top_behavior in V0_TOP_BEHAVIORS:
+                for bottom_behavior in (
+                    BottomBehavior.ESCAPE,
+                    BottomBehavior.PROTECT,
+                ):
+                    for action in actions_for(side):
+                        for response in responses_for(side.opponent):
+                            for initiator_stamina, responder_stamina in stamina_pairs:
+                                cases += 1
+                                disabled = MountMatch(
+                                    starting_axis=axis,
+                                    enable_v04_commitment_semantics=False,
+                                )
+                                disabled.initiator = side
+                                disabled.set_behaviors(
+                                    top=top_behavior,
+                                    bottom=bottom_behavior,
+                                )
+                                disabled.competitor(side).stamina.set_current(
+                                    initiator_stamina
+                                )
+                                disabled.competitor(side.opponent).stamina.set_current(
+                                    responder_stamina
+                                )
+                                baseline = disabled.attempt(
+                                    action_id=action.id,
+                                    response_id=response.id,
+                                    commitment=Commitment.MEDIUM,
+                                ).resolution
+
+                                ignored = MountMatch(
+                                    starting_axis=axis,
+                                    enable_v04_commitment_semantics=False,
+                                )
+                                ignored.initiator = side
+                                ignored.set_behaviors(
+                                    top=top_behavior,
+                                    bottom=bottom_behavior,
+                                )
+                                ignored.competitor(side).stamina.set_current(
+                                    initiator_stamina
+                                )
+                                ignored.competitor(side.opponent).stamina.set_current(
+                                    responder_stamina
+                                )
+                                disabled_with_response = ignored.attempt(
+                                    action_id=action.id,
+                                    response_id=response.id,
+                                    commitment=Commitment.MEDIUM,
+                                    response_commitment=Commitment.HIGH,
+                                ).resolution
+
+                                enabled = MountMatch(
+                                    starting_axis=axis,
+                                    enable_v04_commitment_semantics=True,
+                                )
+                                enabled.initiator = side
+                                enabled.set_behaviors(
+                                    top=top_behavior,
+                                    bottom=bottom_behavior,
+                                )
+                                enabled.competitor(side).stamina.set_current(
+                                    initiator_stamina
+                                )
+                                enabled.competitor(side.opponent).stamina.set_current(
+                                    responder_stamina
+                                )
+                                medium = enabled.attempt(
+                                    action_id=action.id,
+                                    response_id=response.id,
+                                    commitment=Commitment.MEDIUM,
+                                    response_commitment=Commitment.MEDIUM,
+                                ).resolution
+
+                                if medium != baseline:
+                                    enabled_mismatches += 1
+                                if disabled_with_response != baseline:
+                                    disabled_param_mismatches += 1
+
+    return cases, enabled_mismatches, disabled_param_mismatches
+
+
+@lru_cache(maxsize=1)
+def _v04_commitment_dominance_probe() -> tuple[int, tuple[str, ...]]:
+    """Pairwise global dominance across the fully-funded frozen exchange surface."""
+    from ..engine.match import MountMatch
+
+    pairs = {
+        (left, right): {
+            "all_no_worse": True,
+            "any_strict": (
+                DEFAULT_STAMINA_COST_POLICY.cost(left)
+                < DEFAULT_STAMINA_COST_POLICY.cost(right)
+            ),
+        }
+        for left in Commitment
+        for right in Commitment
+        if left is not right
+        and DEFAULT_STAMINA_COST_POLICY.cost(left)
+        <= DEFAULT_STAMINA_COST_POLICY.cost(right)
+    }
+    cases = 0
+
+    for side in (Side.TOP, Side.BOTTOM):
+        for _band, axis in _V02_BAND_ANCHORS.items():
+            for top_behavior in V0_TOP_BEHAVIORS:
+                for bottom_behavior in (
+                    BottomBehavior.ESCAPE,
+                    BottomBehavior.PROTECT,
+                ):
+                    for action in actions_for(side):
+                        for response in responses_for(side.opponent):
+                            cases += 1
+                            results = {}
+                            for commitment in Commitment:
+                                match = MountMatch(
+                                    starting_axis=axis,
+                                    enable_v04_commitment_semantics=True,
+                                )
+                                match.initiator = side
+                                match.set_behaviors(
+                                    top=top_behavior,
+                                    bottom=bottom_behavior,
+                                )
+                                results[commitment] = match.preview_attempt_resolution(
+                                    action_id=action.id,
+                                    response_id=response.id,
+                                    commitment=commitment,
+                                    response_commitment=Commitment.MEDIUM,
+                                )
+                            for pair, state in pairs.items():
+                                left, right = pair
+                                if not _v04_outcome_no_worse(
+                                    results[left],
+                                    results[right],
+                                ):
+                                    state["all_no_worse"] = False
+                                if _v04_outcome_strictly_better(
+                                    results[left],
+                                    results[right],
+                                ):
+                                    state["any_strict"] = True
+
+    dominating = tuple(
+        f"{left.value}>{right.value}"
+        for (left, right), state in pairs.items()
+        if state["all_no_worse"] and state["any_strict"]
+    )
+    return cases, dominating
+
+
+@lru_cache(maxsize=1)
+def _v04_stalemate_probe() -> tuple[int, int, int]:
+    """Return all Contested matched/overmatch cases, breaks, submission cases."""
+    from ..engine.match import MountMatch
+
+    cases = 0
+    breaks = 0
+    submission_cases = 0
+    levels = tuple(Commitment)
+
+    # Broad ordinary-exchange surface.
+    for side in (Side.TOP, Side.BOTTOM):
+        for _band, axis in _V02_BAND_ANCHORS.items():
+            for top_behavior in V0_TOP_BEHAVIORS:
+                for bottom_behavior in (
+                    BottomBehavior.ESCAPE,
+                    BottomBehavior.PROTECT,
+                ):
+                    for action in actions_for(side):
+                        for response in responses_for(side.opponent):
+                            baseline = MountMatch(starting_axis=axis)
+                            baseline.initiator = side
+                            baseline.set_behaviors(
+                                top=top_behavior,
+                                bottom=bottom_behavior,
+                            )
+                            base_result = baseline.preview_attempt_resolution(
+                                action_id=action.id,
+                                response_id=response.id,
+                                commitment=Commitment.MEDIUM,
+                            )
+                            if base_result.final_grade is not Grade.CONTESTED:
+                                continue
+                            for attacker in levels:
+                                for defender in levels:
+                                    if (
+                                        MountMatch._commitment_rank(defender)
+                                        < MountMatch._commitment_rank(attacker)
+                                    ):
+                                        continue
+                                    match = MountMatch(
+                                        starting_axis=axis,
+                                        enable_v04_commitment_semantics=True,
+                                    )
+                                    match.initiator = side
+                                    match.set_behaviors(
+                                        top=top_behavior,
+                                        bottom=bottom_behavior,
+                                    )
+                                    result = match.preview_attempt_resolution(
+                                        action_id=action.id,
+                                        response_id=response.id,
+                                        commitment=attacker,
+                                        response_commitment=defender,
+                                    )
+                                    cases += 1
+                                    if result.final_grade is not Grade.CONTESTED:
+                                        breaks += 1
+
+    # Explicit active Americana stages.
+    for stage in SubmissionStage:
+        for axis in (2.50, 3.50):
+            for bottom_behavior in BottomBehavior:
+                for attacker in levels:
+                    for defender in levels:
+                        if (
+                            MountMatch._commitment_rank(defender)
+                            < MountMatch._commitment_rank(attacker)
+                        ):
+                            continue
+                        match = MountMatch(
+                            starting_axis=axis,
+                            enable_v02_setup=True,
+                            enable_v03_submissions=True,
+                            enable_v04_commitment_semantics=True,
+                        )
+                        match.submission_state.stage = stage
+                        match.initiator = Side.TOP
+                        match.set_behaviors(
+                            top=TopBehavior.PRESSURE,
+                            bottom=bottom_behavior,
+                        )
+                        result = match.preview_attempt_resolution(
+                            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+                            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+                            commitment=attacker,
+                            response_commitment=defender,
+                        )
+                        cases += 1
+                        submission_cases += 1
+                        if result.final_grade is not Grade.CONTESTED:
+                            breaks += 1
+
+    return cases, breaks, submission_cases
+
+
+@lru_cache(maxsize=1)
+def _v04_feint_probe() -> tuple[bool, int, int, int]:
+    """Return Ready entry, LOW/UNFUNDED violations, ordinary advances, cases."""
+    from ..engine.match import MountMatch
+
+    ready = MountMatch(
+        starting_axis=2.50,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v04_commitment_semantics=True,
+    )
+    ready.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+    ready.setup_state.advance(TOP_AMERICANA_ARM_ISOLATION)
+    ready.initiator = Side.TOP
+    ready.attempt(
+        action_id=TOP_AMERICANA_ARM_ISOLATION,
+        response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+        commitment=Commitment.LOW,
+        response_commitment=Commitment.LOW,
+    )
+    ready_entry = ready.submission_state.stage is SubmissionStage.THREAT
+
+    violations = 0
+    cases = 0
+    for stage in SubmissionStage:
+        for funded in (True, False):
+            match = MountMatch(
+                starting_axis=2.50,
+                enable_v02_setup=True,
+                enable_v03_submissions=True,
+                enable_v04_commitment_semantics=True,
+            )
+            match.submission_state.stage = stage
+            match.initiator = Side.TOP
+            requested = Commitment.LOW if funded else Commitment.HIGH
+            if not funded:
+                match.top.stamina.set_current(2)
+            match.attempt(
+                action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+                response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+                commitment=requested,
+                response_commitment=Commitment.LOW,
+            )
+            cases += 1
+            if match.submission_tapped or match.submission_state.stage is not stage:
+                violations += 1
+
+    ordinary_advances = 0
+    for commitment in (Commitment.MEDIUM, Commitment.HIGH):
+        match = MountMatch(
+            starting_axis=2.50,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v04_commitment_semantics=True,
+        )
+        match.submission_state.stage = SubmissionStage.THREAT
+        match.initiator = Side.TOP
+        match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=commitment,
+            response_commitment=commitment,
+        )
+        if match.submission_state.stage is SubmissionStage.CONTROL:
+            ordinary_advances += 1
+
+    return ready_entry, violations, ordinary_advances, cases
+
+
+@lru_cache(maxsize=1)
+def _v04_undercommitment_probe() -> tuple[int, int, int]:
+    """Return compared states, regressions, strict attacker improvements."""
+    from ..engine.match import MountMatch
+
+    comparisons = 0
+    regressions = 0
+    improvements = 0
+    lower = {
+        Commitment.MEDIUM: (Commitment.LOW,),
+        Commitment.HIGH: (Commitment.LOW, Commitment.MEDIUM),
+    }
+
+    for side in (Side.TOP, Side.BOTTOM):
+        for _band, axis in _V02_BAND_ANCHORS.items():
+            for top_behavior in V0_TOP_BEHAVIORS:
+                for bottom_behavior in (
+                    BottomBehavior.ESCAPE,
+                    BottomBehavior.PROTECT,
+                ):
+                    for action in actions_for(side):
+                        for response in responses_for(side.opponent):
+                            for attack_commitment, lower_levels in lower.items():
+                                matched_match = MountMatch(
+                                    starting_axis=axis,
+                                    enable_v04_commitment_semantics=True,
+                                )
+                                matched_match.initiator = side
+                                matched_match.set_behaviors(
+                                    top=top_behavior,
+                                    bottom=bottom_behavior,
+                                )
+                                matched = matched_match.preview_attempt_resolution(
+                                    action_id=action.id,
+                                    response_id=response.id,
+                                    commitment=attack_commitment,
+                                    response_commitment=attack_commitment,
+                                )
+                                for defense_commitment in lower_levels:
+                                    under_match = MountMatch(
+                                        starting_axis=axis,
+                                        enable_v04_commitment_semantics=True,
+                                    )
+                                    under_match.initiator = side
+                                    under_match.set_behaviors(
+                                        top=top_behavior,
+                                        bottom=bottom_behavior,
+                                    )
+                                    under = under_match.preview_attempt_resolution(
+                                        action_id=action.id,
+                                        response_id=response.id,
+                                        commitment=attack_commitment,
+                                        response_commitment=defense_commitment,
+                                    )
+                                    comparisons += 1
+                                    if not _v04_outcome_no_worse(under, matched):
+                                        regressions += 1
+                                    if _v04_outcome_strictly_better(under, matched):
+                                        improvements += 1
+
+    return comparisons, regressions, improvements
+
+
+@lru_cache(maxsize=1)
+def _v04_stalling_feint_probe() -> tuple[int, int, int, int]:
+    """Return initiator before/after and defender before/after clocks."""
+    from ..engine.match import MountMatch
+
+    match = MountMatch(
+        starting_axis=2.50,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v03b_stalling=True,
+        enable_v04_commitment_semantics=True,
+    )
+    match.submission_state.stage = SubmissionStage.THREAT
+    match.initiator = Side.TOP
+    match.stalling_tracker.advance(20)
+    top_before = match.advancement_clock(Side.TOP)
+    bottom_before = match.advancement_clock(Side.BOTTOM)
+    match.attempt(
+        action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+        response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+        commitment=Commitment.LOW,
+        response_commitment=Commitment.LOW,
+    )
+    return (
+        top_before,
+        match.advancement_clock(Side.TOP),
+        bottom_before,
+        match.advancement_clock(Side.BOTTOM),
+    )
+
+
+@lru_cache(maxsize=1)
+def _v04_affordability_probe() -> tuple[int, int, int, int, int, int]:
+    """Funding evidence for HIGH response requested at 5 and 2 stamina."""
+    from ..engine.match import MountMatch
+
+    low_funded = MountMatch(
+        starting_axis=1.50,
+        enable_v04_commitment_semantics=True,
+    )
+    low_funded.bottom.stamina.set_current(5)
+    low_result = low_funded.attempt(
+        action_id=actions_for(Side.TOP)[0].id,
+        response_id=responses_for(Side.BOTTOM)[0].id,
+        commitment=Commitment.HIGH,
+        response_commitment=Commitment.HIGH,
+    )
+
+    unfunded = MountMatch(
+        starting_axis=1.50,
+        enable_v04_commitment_semantics=True,
+    )
+    unfunded.bottom.stamina.set_current(2)
+    unfunded_result = unfunded.attempt(
+        action_id=actions_for(Side.TOP)[0].id,
+        response_id=responses_for(Side.BOTTOM)[0].id,
+        commitment=Commitment.HIGH,
+        response_commitment=Commitment.HIGH,
+    )
+
+    same_low = MountMatch(
+        starting_axis=1.50,
+        enable_v04_commitment_semantics=True,
+    )
+    same_low.bottom.stamina.set_current(5)
+    same_low_result = same_low.attempt(
+        action_id=actions_for(Side.TOP)[0].id,
+        response_id=responses_for(Side.BOTTOM)[0].id,
+        commitment=Commitment.HIGH,
+        response_commitment=Commitment.LOW,
+    )
+
+    same_unfunded = MountMatch(
+        starting_axis=1.50,
+        enable_v04_commitment_semantics=True,
+    )
+    same_unfunded.bottom.stamina.set_current(2)
+    same_unfunded_result = same_unfunded.attempt(
+        action_id=actions_for(Side.TOP)[0].id,
+        response_id=responses_for(Side.BOTTOM)[0].id,
+        commitment=Commitment.HIGH,
+        response_commitment=Commitment.LOW,
+    )
+
+    equivalence_mismatches = int(
+        low_result.resolution != same_low_result.resolution
+    ) + int(
+        unfunded_result.resolution != same_unfunded_result.resolution
+    )
+
+    return (
+        low_result.response_effective_cost,
+        low_result.response_funding_gap,
+        low_result.response_undercommitment_modifier,
+        unfunded_result.response_effective_cost,
+        unfunded_result.response_funding_gap,
+        equivalence_mismatches,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v04_double_cost_probe() -> tuple[int, int, int]:
+    from ..engine.match import MountMatch
+
+    match = MountMatch(
+        starting_axis=2.50,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v04_commitment_semantics=True,
+    )
+    match.submission_state.stage = SubmissionStage.THREAT
+    match.initiator = Side.TOP
+    result = match.attempt(
+        action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+        response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+        commitment=Commitment.MEDIUM,
+        response_commitment=Commitment.MEDIUM,
+    )
+    hold = (
+        match.history.submission_hold_stamina_charged_history[-1]
+        if match.history.submission_hold_stamina_charged_history
+        else 0
+    )
+    response = (
+        result.response_stamina.charged
+        if result.response_stamina is not None
+        else 0
+    )
+    return response, hold, match.bottom.stamina.current
+
+
+@lru_cache(maxsize=1)
+def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
+    identity_cases, identity_mismatches, disabled_mismatches = (
+        _v04_medium_identity_probe()
+    )
+    v02_gate7 = next(
+        gate for gate in measure_v02_definition_of_done()
+        if gate.number == 7
+    )
+    _, advantage_states = _commitment_low_dominance_probe()
+    dominance_cases, dominating = _v04_commitment_dominance_probe()
+    stalemate_cases, stalemate_breaks, submission_stalemates = (
+        _v04_stalemate_probe()
+    )
+    ready_entry, feint_violations, ordinary_advances, feint_cases = (
+        _v04_feint_probe()
+    )
+    under_cases, under_regressions, under_improvements = (
+        _v04_undercommitment_probe()
+    )
+
+    from ..engine.match import MountMatch
+
+    disabled_capability = MountMatch(
+        enable_v04_commitment_semantics=False
+    ).response_commitment_enabled
+    enabled_capability = MountMatch(
+        enable_v04_commitment_semantics=True
+    ).response_commitment_enabled
+    v03_gate_b = next(
+        gate for gate in measure_v03a_definition_of_done()
+        if gate.letter == "B"
+    )
+    informed_mode = _v04_informed_standard_batch().response_commitment_mode.value
+
+    top_before, top_after, bottom_before, bottom_after = (
+        _v04_stalling_feint_probe()
+    )
+    (
+        funded_cost,
+        funded_gap,
+        funded_mismatch,
+        unfunded_cost,
+        unfunded_gap,
+        affordability_equivalence_mismatches,
+    ) = _v04_affordability_probe()
+
+    gate_a = (
+        identity_cases > 0
+        and identity_mismatches == 0
+        and disabled_mismatches == 0
+    )
+    gate_b = (
+        v02_gate7.status is V02GateStatus.PASS
+        and advantage_states > 0
+    )
+    gate_c = dominance_cases > 0 and not dominating
+    gate_d = stalemate_cases > 0 and stalemate_breaks == 0
+    gate_e = (
+        ready_entry
+        and feint_cases == 6
+        and feint_violations == 0
+        and ordinary_advances == 2
+    )
+    gate_f = (
+        under_cases > 0
+        and under_regressions == 0
+        and under_improvements > 0
+    )
+    gate_g = (
+        not disabled_capability
+        and enabled_capability
+        and _v03_response_commitment_present()
+        and v03_gate_b.status is not V02GateStatus.DEFERRED
+        and informed_mode == "match"
+    )
+    gate_h = (
+        top_before == 20
+        and top_after == 20
+        and bottom_before == 20
+        and bottom_after == 0
+    )
+    gate_i = (
+        funded_cost == 3
+        and funded_gap == 9
+        and funded_mismatch == 1
+        and unfunded_cost == 0
+        and unfunded_gap == 12
+        and affordability_equivalence_mismatches == 0
+    )
+
+    return (
+        V04GateMeasurement(
+            letter="A",
+            name="feature-off compatibility and MEDIUM identity",
+            status=V02GateStatus.PASS if gate_a else V02GateStatus.OPEN,
+            metric=(
+                f"cases={identity_cases}; enabled_MEDIUM_mismatches={identity_mismatches}; "
+                f"disabled_response-param_mismatches={disabled_mismatches}"
+            ),
+            evidence=(
+                "response commitment is inert when disabled and effective MEDIUM/MEDIUM "
+                "preserves the current exchange ResolutionResult"
+            ),
+        ),
+        V04GateMeasurement(
+            letter="B",
+            name="v0.2 Gate 7 closes from real commitment meaning",
+            status=V02GateStatus.PASS if gate_b else V02GateStatus.OPEN,
+            metric=(
+                f"v0.2 Gate 7={v02_gate7.status.value}; "
+                f"higher-commitment advantage states={advantage_states}"
+            ),
+            evidence="existing Gate-7 dominance probe runs on v0.4a-enabled exchanges",
+        ),
+        V04GateMeasurement(
+            letter="C",
+            name="no selectable commitment globally dominates",
+            status=V02GateStatus.PASS if gate_c else V02GateStatus.OPEN,
+            metric=(
+                f"states={dominance_cases}; "
+                f"dominating_pairs={','.join(dominating) if dominating else 'none'}"
+            ),
+            evidence=(
+                "dominance requires no-worse grade/exit/realized-axis in every state "
+                "plus no-greater cost and at least one strict advantage"
+            ),
+        ),
+        V04GateMeasurement(
+            letter="D",
+            name="matched commitment preserves Contested stalemates",
+            status=V02GateStatus.PASS if gate_d else V02GateStatus.OPEN,
+            metric=(
+                f"cases={stalemate_cases}; breaks={stalemate_breaks}; "
+                f"active-Americana cases={submission_stalemates}"
+            ),
+            evidence=(
+                "fresh Contested exchanges remain Contested whenever defender "
+                "effective commitment matches or exceeds attacker commitment"
+            ),
+        ),
+        V04GateMeasurement(
+            letter="E",
+            name="LOW/UNFUNDED feints cannot advance beyond Threat",
+            status=V02GateStatus.PASS if gate_e else V02GateStatus.OPEN,
+            metric=(
+                f"LOW Ready entry={ready_entry}; capped_cases={feint_cases}; "
+                f"violations={feint_violations}; MEDIUM/HIGH advances={ordinary_advances}/2"
+            ),
+            evidence=(
+                "LOW may create Threat, but LOW/UNFUNDED active-stage success "
+                "cannot reach Control, Finish, or Tap"
+            ),
+        ),
+        V04GateMeasurement(
+            letter="F",
+            name="response under-commitment only helps attacker",
+            status=V02GateStatus.PASS if gate_f else V02GateStatus.OPEN,
+            metric=(
+                f"comparisons={under_cases}; regressions={under_regressions}; "
+                f"strict improvements={under_improvements}"
+            ),
+            evidence=(
+                "lower response commitment is compared with matched commitment "
+                "on identical fully-funded exchange states"
+            ),
+        ),
+        V04GateMeasurement(
+            letter="G",
+            name="Gate-B deferral expires from real runtime capability",
+            status=V02GateStatus.PASS if gate_g else V02GateStatus.OPEN,
+            metric=(
+                f"disabled={disabled_capability}; enabled={enabled_capability}; "
+                f"v0.3a Gate B={v03_gate_b.status.value}; informed response commitment={informed_mode}"
+            ),
+            evidence=(
+                "capability is a match runtime feature and Gate-B informed batch "
+                "actually runs MATCH response commitment"
+            ),
+        ),
+        V04GateMeasurement(
+            letter="H",
+            name="feints cannot dodge stalling clock",
+            status=V02GateStatus.PASS if gate_h else V02GateStatus.OPEN,
+            metric=(
+                f"Top clock {top_before}->{top_after}; "
+                f"Bottom clock {bottom_before}->{bottom_after}"
+            ),
+            evidence=(
+                "feint-capped initiator gets no progress-clock reset while the "
+                "legal defender receives defensive-engagement credit"
+            ),
+        ),
+        V04GateMeasurement(
+            letter="I",
+            name="response affordability controls tactical credit",
+            status=V02GateStatus.PASS if gate_i else V02GateStatus.OPEN,
+            metric=(
+                f"5-stamina HIGH request: cost={funded_cost},gap={funded_gap},"
+                f"mismatch={funded_mismatch}; 2-stamina HIGH request: "
+                f"cost={unfunded_cost},gap={unfunded_gap}; "
+                f"effective-equivalence mismatches={affordability_equivalence_mismatches}"
+            ),
+            evidence=(
+                "requested HIGH downgrades to payable LOW or UNFUNDED and cannot "
+                "leak unaffordable tactical benefit"
+            ),
+        ),
+    )
+
+
+def render_v04a_definition_of_done() -> tuple[str, ...]:
+    return tuple(gate.render() for gate in measure_v04a_definition_of_done())
+
+
+def render_v04a_prediction_probe() -> str:
+    baseline_random = _v03_standard_batch()
+    baseline_informed = _v03_informed_standard_batch()
+    random = _v04_random_standard_batch()
+    informed = _v04_informed_standard_batch()
+    response_cost, hold_cost, bottom_after = _v04_double_cost_probe()
+
+    def taps(summary) -> int:
+        return summary.outcome_counts.get("TAP — Americana", 0)
+
+    return (
+        "V0.4a PREDICTION PROBE — 100 matched PRESSURE/ESCAPE seeds: "
+        f"random taps {taps(baseline_random)}->{taps(random)}; "
+        f"informed taps {taps(baseline_informed)}->{taps(informed)}; "
+        f"Bottom median stamina random {baseline_random.bottom_final_stamina_median:.1f}"
+        f"->{random.bottom_final_stamina_median:.1f}; "
+        f"informed {baseline_informed.bottom_final_stamina_median:.1f}"
+        f"->{informed.bottom_final_stamina_median:.1f}; "
+        f"isolated Contested hold responder cost={response_cost}+{hold_cost}, "
+        f"Bottom stamina after={bottom_after}. Observational only."
+    )
+
 
 def run_checks() -> CheckReport:
     report = CheckReport()
