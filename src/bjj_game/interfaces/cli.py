@@ -9,7 +9,7 @@ from typing import TextIO
 
 from ..domain.action import Commitment
 from ..positions.mount.catalog import MODERN_ENTITY_BY_ID, actions_for, responses_for
-from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_behavior_and_reacquisition_probe, render_v03a_definition_of_done, render_v03a_hold_cost_status, render_v03a_informed_defender_probe, render_v03a_recovery_prediction_probe, render_v03a_setup_policy_debt, render_v03a_stamina_saturation_observation, render_v03b_definition_of_done, render_v03b_normal_play_guard, render_v03b_prediction_probe, render_v03b_stall_vs_active_bottom_observation, render_v04a_definition_of_done, render_v04a_prediction_probe, run_checks
+from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_behavior_and_reacquisition_probe, render_v03a_definition_of_done, render_v03a_hold_cost_status, render_v03a_informed_defender_probe, render_v03a_recovery_prediction_probe, render_v03a_setup_policy_debt, render_v03a_stamina_saturation_observation, render_v03b_definition_of_done, render_v03b_normal_play_guard, render_v03b_prediction_probe, render_v03b_stall_vs_active_bottom_observation, render_v04a_definition_of_done, render_v04a_feint_funding_probe, render_v04a_prediction_probe, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
 from .batch import BatchBehaviorMode, BatchResponseCommitmentMode, run_escape_first_batch
@@ -737,6 +737,7 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 print(f"INFO: {line}")
             for line in render_v04a_definition_of_done():
                 print(f"INFO: {line}")
+            print("INFO: " + render_v04a_feint_funding_probe())
             print("INFO: " + render_v04a_prediction_probe())
             print("INFO: " + render_v03b_prediction_probe())
             print("INFO: " + render_v03b_normal_play_guard())
