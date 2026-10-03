@@ -40,6 +40,8 @@ class BatchResponseCommitmentMode(str, Enum):
     MATCH = "match"
     RANDOM = "random"
     RECOGNITION = "recognition"
+    RECOGNITION_HEDGE_ONE = "recognition-hedge-one"
+    RECOGNITION_ALWAYS_HIGH = "recognition-always-high"
 
 
 @dataclass(frozen=True, slots=True)
@@ -603,6 +605,10 @@ class BatchSummary:
     recognition_intent_direction_counts: dict[str, int]
     recognition_capability_direction_counts: dict[str, int]
     recognition_signal_disagreement_count: int
+    undercommitment_events_before_mutual_exhaustion: int
+    undercommitment_events_after_mutual_exhaustion: int
+    undercommitment_caused_taps_before_mutual_exhaustion: int
+    undercommitment_caused_taps_after_mutual_exhaustion: int
     final_axis_mean: float
     top_reset_count: int
     bottom_reset_count: int
@@ -702,6 +708,10 @@ class BatchSummary:
             "Recognition intent directions: " + _render_counts(self.recognition_intent_direction_counts),
             "Recognition capability directions: " + _render_counts(self.recognition_capability_direction_counts),
             f"Recognition signal disagreements: {self.recognition_signal_disagreement_count}",
+            f"Under-commitment events before mutual exhaustion: {self.undercommitment_events_before_mutual_exhaustion}",
+            f"Under-commitment events after mutual exhaustion: {self.undercommitment_events_after_mutual_exhaustion}",
+            f"Under-commitment-caused taps before mutual exhaustion: {self.undercommitment_caused_taps_before_mutual_exhaustion}",
+            f"Under-commitment-caused taps after mutual exhaustion: {self.undercommitment_caused_taps_after_mutual_exhaustion}",
             f"Final axis mean: {self.final_axis_mean:+.3f}",
             "",
             "DECISIONS",
@@ -773,16 +783,32 @@ def _response_commitment_for_exchange(
             available_stamina=initiator_pool.current,
         )
         return Commitment.LOW if effective is None else effective
-    if mode is BatchResponseCommitmentMode.RECOGNITION:
+    if mode in {
+        BatchResponseCommitmentMode.RECOGNITION,
+        BatchResponseCommitmentMode.RECOGNITION_HEDGE_ONE,
+        BatchResponseCommitmentMode.RECOGNITION_ALWAYS_HIGH,
+    }:
         if recognition_read is None:
             raise ValueError("recognition response policy requires a Recognition read")
-        if recognition_read.perceived_requested is Commitment.LOW:
-            return Commitment.LOW
-        return (
+        if mode is BatchResponseCommitmentMode.RECOGNITION_ALWAYS_HIGH:
+            return Commitment.HIGH
+
+        trust_commitment = (
             Commitment.LOW
-            if recognition_read.perceived_effective is None
-            else recognition_read.perceived_effective
+            if recognition_read.perceived_requested is Commitment.LOW
+            else (
+                Commitment.LOW
+                if recognition_read.perceived_effective is None
+                else recognition_read.perceived_effective
+            )
         )
+        if mode is BatchResponseCommitmentMode.RECOGNITION:
+            return trust_commitment
+        return {
+            Commitment.LOW: Commitment.MEDIUM,
+            Commitment.MEDIUM: Commitment.HIGH,
+            Commitment.HIGH: Commitment.HIGH,
+        }[trust_commitment]
     return rng.choice(tuple(Commitment))
 
 
@@ -858,7 +884,11 @@ def run_escape_first_batch(
     if enable_v04b_recognition and not enable_v04_commitment_semantics:
         raise ValueError("v0.4b Recognition requires v0.4a commitment semantics")
     if (
-        response_commitment_mode is BatchResponseCommitmentMode.RECOGNITION
+        response_commitment_mode in {
+            BatchResponseCommitmentMode.RECOGNITION,
+            BatchResponseCommitmentMode.RECOGNITION_HEDGE_ONE,
+            BatchResponseCommitmentMode.RECOGNITION_ALWAYS_HIGH,
+        }
         and not enable_v04b_recognition
     ):
         raise ValueError("recognition response policy requires v0.4b Recognition")
@@ -877,6 +907,10 @@ def run_escape_first_batch(
     recognition_intent_directions: Counter[str] = Counter()
     recognition_capability_directions: Counter[str] = Counter()
     recognition_signal_disagreements = 0
+    undercommitment_before_mutual_exhaustion = 0
+    undercommitment_after_mutual_exhaustion = 0
+    undercommitment_taps_before_mutual_exhaustion = 0
+    undercommitment_taps_after_mutual_exhaustion = 0
     final_axes: list[float] = []
     top_resets = 0
     bottom_resets = 0
@@ -1198,6 +1232,15 @@ def run_escape_first_batch(
             feint_caps_before = len(
                 match.history.submission_feint_cap_history
             )
+            submission_stage_before = (
+                match.submission_state.stage
+                if action.id == TOP_AMERICANA_SUBMISSION_FINISH
+                else None
+            )
+            mutually_exhausted_before_exchange = (
+                match.top.stamina.band is StaminaBand.EXHAUSTED
+                and match.bottom.stamina.band is StaminaBand.EXHAUSTED
+            )
             attempt_result = match.attempt(
                 action_id=decision.action_id,
                 response_id=response_id,
@@ -1206,6 +1249,29 @@ def run_escape_first_batch(
                 recognition_read=recognition_read,
             )
             record_exhaustion()
+
+            undercommitted = (
+                attempt_result.response_undercommitment_modifier > 0
+            )
+            if undercommitted:
+                if mutually_exhausted_before_exchange:
+                    undercommitment_after_mutual_exhaustion += 1
+                else:
+                    undercommitment_before_mutual_exhaustion += 1
+
+            undercommitment_caused_tap = (
+                undercommitted
+                and submission_stage_before is SubmissionStage.FINISH
+                and match.submission_tapped
+                and attempt_result.resolution.final_grade.successful
+                and not attempt_result.resolution.final_grade.shift(-1).successful
+            )
+            if undercommitment_caused_tap:
+                if mutually_exhausted_before_exchange:
+                    undercommitment_taps_after_mutual_exhaustion += 1
+                else:
+                    undercommitment_taps_before_mutual_exhaustion += 1
+
             if attempt_result.response_stamina is not None:
                 total_response_commitment_stamina_charged += (
                     attempt_result.response_stamina.charged
@@ -1359,6 +1425,18 @@ def run_escape_first_batch(
             recognition_capability_directions
         ),
         recognition_signal_disagreement_count=recognition_signal_disagreements,
+        undercommitment_events_before_mutual_exhaustion=(
+            undercommitment_before_mutual_exhaustion
+        ),
+        undercommitment_events_after_mutual_exhaustion=(
+            undercommitment_after_mutual_exhaustion
+        ),
+        undercommitment_caused_taps_before_mutual_exhaustion=(
+            undercommitment_taps_before_mutual_exhaustion
+        ),
+        undercommitment_caused_taps_after_mutual_exhaustion=(
+            undercommitment_taps_after_mutual_exhaustion
+        ),
         final_axis_mean=mean(final_axes),
         top_reset_count=top_resets,
         bottom_reset_count=bottom_resets,
