@@ -1,5 +1,7 @@
 # Mount v0.3b — Post-Reset Steady-State Sweep Measurement
 
+> **SUPERSEDED FOR GATE-A / GATE-2 CLOSURE.** This measurement correctly exposed that decision-window occupancy reached exactly 0.500 at three 7-second cases, but later review showed that window counting was the only non-time-based measurement in Gate A. The unchanged strict `<0.50` threshold is now applied to simulated-time occupancy. Authoritative current evidence is in `MOUNT_V0_3B_DIRECTIONAL_TIME_SHARE_FINAL_MEASUREMENT.md`.
+
 ## Status
 
 AUTHORITATIVE CURRENT GATE-A MEASUREMENT.
