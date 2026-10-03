@@ -916,16 +916,6 @@ def run_escape_first_batch(
                 free_initiative_windows += 1
 
             side = match.initiator
-            selected_response_commitment = (
-                _response_commitment_for_exchange(
-                    match,
-                    initiator_commitment=commitment,
-                    mode=response_commitment_mode,
-                    rng=response_commitment_rng,
-                )
-                if enable_v04_commitment_semantics
-                else None
-            )
             if enable_v02_setup:
                 # v0.2 restores established-position ordering:
                 # initiator locks action before responder chooses among legal responses.
@@ -961,6 +951,16 @@ def run_escape_first_batch(
                         ):
                             bottom_stalling_penalties += 1
                     continue
+                selected_response_commitment = (
+                    _response_commitment_for_exchange(
+                        match,
+                        initiator_commitment=commitment,
+                        mode=response_commitment_mode,
+                        rng=response_commitment_rng,
+                    )
+                    if enable_v04_commitment_semantics
+                    else None
+                )
                 if (
                     side is Side.TOP
                     and bottom_responder_mode is BatchResponderMode.INFORMED
@@ -1021,6 +1021,16 @@ def run_escape_first_batch(
                         ):
                             bottom_stalling_penalties += 1
                     continue
+                selected_response_commitment = (
+                    _response_commitment_for_exchange(
+                        match,
+                        initiator_commitment=commitment,
+                        mode=response_commitment_mode,
+                        rng=response_commitment_rng,
+                    )
+                    if enable_v04_commitment_semantics
+                    else None
+                )
 
             action = MODERN_ENTITY_BY_ID[decision.action_id]
             setup_target = (
