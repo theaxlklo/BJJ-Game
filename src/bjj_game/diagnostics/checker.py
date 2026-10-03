@@ -1509,8 +1509,9 @@ def render_v03a_informed_defender_probe() -> str:
             for row in rows
         )
         + f"; random PRESSURE/ESCAPE taps={random_taps}. "
-        "Historical v0.3a observation only; after v0.4a capability exists, "
-        "Gate B uses the v0.4a informed MATCH-commitment batch."
+        "Historical v0.3a observation only; the current Gate B uses v0.4b "
+        "Recognition when that runtime capability is present, otherwise the "
+        "latest available informed commitment surface."
     )
 
 
