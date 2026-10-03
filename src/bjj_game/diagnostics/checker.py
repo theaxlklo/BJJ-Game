@@ -458,6 +458,7 @@ def _responder_exhaustion_differential_count() -> int:
                                     initial_clock=300,
                                     starting_axis=axis,
                                     interval_seconds=5,
+                                    enable_v04_commitment_semantics=True,
                                 )
                                 match.initiator = side
                                 match.set_behaviors(
@@ -645,7 +646,7 @@ def _commitment_low_dominance_probe() -> tuple[bool, int]:
     from ..engine.match import MountMatch
 
     advantage_states = 0
-    probe_match = MountMatch()
+    probe_match = MountMatch(enable_v04_commitment_semantics=True)
     low_cost = probe_match.stamina_cost_policy.cost(Commitment.LOW)
     higher_costs = [
         probe_match.stamina_cost_policy.cost(Commitment.MEDIUM),
@@ -678,6 +679,7 @@ def _commitment_low_dominance_probe() -> tuple[bool, int]:
                                     action_id=action.id,
                                     response_id=response.id,
                                     commitment=commitment,
+                                    response_commitment=Commitment.MEDIUM,
                                 )
                                 results[commitment] = attempt.resolution
 
