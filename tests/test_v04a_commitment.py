@@ -10,6 +10,11 @@ from bjj_game.domain.model import Grade, Side
 from bjj_game.domain.stamina import StaminaBand
 from bjj_game.domain.submission import SubmissionStage
 from bjj_game.engine.match import MountMatch
+from bjj_game.interfaces.batch import (
+    BatchResponderMode,
+    BatchResponseCommitmentMode,
+    run_escape_first_batch,
+)
 from bjj_game.positions.mount.catalog import (
     BOTTOM_RESPONSE_FOREARM_FRAME,
     BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
@@ -293,6 +298,19 @@ class V04ACommitmentSemanticsTests(unittest.TestCase):
 
         self.assertEqual(match.advancement_clock(Side.TOP), 20)
         self.assertEqual(match.advancement_clock(Side.BOTTOM), 0)
+
+    def test_random_response_commitment_batch_is_replayable(self):
+        kwargs = dict(
+            matches=10,
+            base_seed=42,
+            commitment=Commitment.MEDIUM,
+            bottom_responder_mode=BatchResponderMode.RANDOM,
+            response_commitment_mode=BatchResponseCommitmentMode.RANDOM,
+            enable_v04_commitment_semantics=True,
+        )
+        first = run_escape_first_batch(**kwargs)
+        second = run_escape_first_batch(**kwargs)
+        self.assertEqual(first, second)
 
     def test_response_commitment_and_hold_cost_are_separate_spends(self):
         response_cost, hold_cost, bottom_after = _v04_double_cost_probe()
