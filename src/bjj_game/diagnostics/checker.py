@@ -1452,7 +1452,8 @@ def render_v03a_informed_defender_probe() -> str:
             for row in rows
         )
         + f"; random PRESSURE/ESCAPE taps={random_taps}. "
-        "Only the informed standard row feeds Gate B."
+        "Historical v0.3a observation only; after v0.4a capability exists, "
+        "Gate B uses the v0.4a informed MATCH-commitment batch."
     )
 
 
