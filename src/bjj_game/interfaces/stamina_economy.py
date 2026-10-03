@@ -598,9 +598,12 @@ class StaminaEconomyCollector:
                     else 0
                 ),
                 response_commitment_shortfall=(
-                    result.response_stamina.shortfall
-                    if result.response_stamina is not None
-                    else 0
+                    snapshot.responder_requested_cost
+                    - (
+                        result.response_stamina.charged
+                        if result.response_stamina is not None
+                        else 0
+                    )
                 ),
                 hold_requested=hold_requested,
                 hold_charged=hold_charged,
