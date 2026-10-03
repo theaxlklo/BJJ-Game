@@ -456,6 +456,35 @@ def _v04_informed_standard_batch():
 
 
 @lru_cache(maxsize=1)
+def _v04b_informed_standard_batch():
+    """v0.4b Gate-B batch: informed response choice through imperfect Recognition."""
+    from ..interfaces.batch import (
+        BatchResponderMode,
+        BatchResponseCommitmentMode,
+        run_escape_first_batch,
+    )
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        bottom_responder_mode=BatchResponderMode.INFORMED,
+        response_commitment_mode=BatchResponseCommitmentMode.RECOGNITION,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v04_commitment_semantics=True,
+        enable_v04b_recognition=True,
+    )
+
+
+@lru_cache(maxsize=1)
 def _v04_random_standard_batch():
     """v0.4a random-response/commitment contrast with independent commitment RNG."""
     from ..interfaces.batch import (
