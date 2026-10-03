@@ -3133,10 +3133,31 @@ def _v04_stalemate_probe() -> tuple[int, int, int]:
                                     if result.final_grade is not Grade.CONTESTED:
                                         breaks += 1
 
-    # Explicit active Americana stages.
+    # Explicit active Americana stages, restricted to the fresh states
+    # that are actually Contested before v0.4a commitment semantics.
     for stage in SubmissionStage:
         for axis in (2.50, 3.50):
             for bottom_behavior in BottomBehavior:
+                baseline = MountMatch(
+                    starting_axis=axis,
+                    enable_v02_setup=True,
+                    enable_v03_submissions=True,
+                    enable_v04_commitment_semantics=False,
+                )
+                baseline.submission_state.stage = stage
+                baseline.initiator = Side.TOP
+                baseline.set_behaviors(
+                    top=TopBehavior.PRESSURE,
+                    bottom=bottom_behavior,
+                )
+                baseline_result = baseline.preview_attempt_resolution(
+                    action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+                    response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+                    commitment=Commitment.MEDIUM,
+                )
+                if baseline_result.final_grade is not Grade.CONTESTED:
+                    continue
+
                 for attacker in levels:
                     for defender in levels:
                         if (
