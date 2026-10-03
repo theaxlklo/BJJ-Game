@@ -1,5 +1,9 @@
 import unittest
 
+from bjj_game.diagnostics.checker import (
+    V02GateStatus,
+    measure_v04b_definition_of_done,
+)
 from bjj_game.domain.action import Commitment
 from bjj_game.domain.recognition import (
     CommitmentRecognitionRead,
@@ -298,6 +302,31 @@ class V04BRecognitionPolicyTests(unittest.TestCase):
             sum(first.response_requested_commitment_counts.values()),
             0,
         )
+
+
+
+class V04BDefinitionOfDoneMeasurementTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.gates = {
+            gate.letter: gate
+            for gate in measure_v04b_definition_of_done()
+        }
+
+    def test_frozen_gate_surface_exists(self):
+        self.assertEqual(tuple(self.gates), tuple("ABCDEFGH"))
+
+    def test_non_outcome_gates_pass_before_gate_f_is_pinned(self):
+        for letter in "ABCDEGH":
+            self.assertIs(
+                self.gates[letter].status,
+                V02GateStatus.PASS,
+                self.gates[letter].render(),
+            )
+
+    def test_gate_f_reports_the_unchanged_gate_b_measurement(self):
+        self.assertIn("informed Tap=", self.gates["F"].metric)
+        self.assertIn("v0.3a Gate B=", self.gates["F"].metric)
 
 
 if __name__ == "__main__":
