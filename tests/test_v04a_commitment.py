@@ -310,7 +310,55 @@ class V04ACommitmentSemanticsTests(unittest.TestCase):
         self.assertIs(match.submission_state.stage, SubmissionStage.THREAT)
         self.assertEqual(len(match.history.submission_feint_cap_history), 1)
 
-    def test_unfunded_active_submission_success_is_feint_capped(self):
+    def test_requested_low_remains_feint_capped_when_unfunded(self):
+        match = MountMatch(
+            starting_axis=2.50,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v04_commitment_semantics=True,
+        )
+        match.submission_state.stage = SubmissionStage.THREAT
+        match.top.stamina.set_current(2)
+        match.bottom.stamina.set_current(2)
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=Commitment.LOW,
+            response_commitment=Commitment.LOW,
+        )
+
+        self.assertIsNone(result.attempt.effective_commitment)
+        self.assertTrue(result.resolution.final_grade.successful)
+        self.assertIs(match.submission_state.stage, SubmissionStage.THREAT)
+        self.assertEqual(len(match.history.submission_feint_cap_history), 1)
+        self.assertIn(
+            "requested=LOW:effective=UNFUNDED",
+            match.history.submission_feint_cap_history[0],
+        )
+
+    def test_requested_medium_downgraded_to_low_is_not_feint_capped(self):
+        match = MountMatch(
+            starting_axis=2.50,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v04_commitment_semantics=True,
+        )
+        match.submission_state.stage = SubmissionStage.THREAT
+        match.top.stamina.set_current(5)
+        match.bottom.stamina.set_current(2)
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=Commitment.MEDIUM,
+            response_commitment=Commitment.MEDIUM,
+        )
+
+        self.assertIs(result.attempt.effective_commitment, Commitment.LOW)
+        self.assertTrue(result.resolution.final_grade.successful)
+        self.assertIs(match.submission_state.stage, SubmissionStage.CONTROL)
+        self.assertEqual(len(match.history.submission_feint_cap_history), 0)
+
+    def test_requested_high_downgraded_to_unfunded_is_not_feint_capped(self):
         match = MountMatch(
             starting_axis=2.50,
             enable_v02_setup=True,
@@ -329,8 +377,8 @@ class V04ACommitmentSemanticsTests(unittest.TestCase):
 
         self.assertIsNone(result.attempt.effective_commitment)
         self.assertTrue(result.resolution.final_grade.successful)
-        self.assertIs(match.submission_state.stage, SubmissionStage.THREAT)
-        self.assertEqual(len(match.history.submission_feint_cap_history), 1)
+        self.assertIs(match.submission_state.stage, SubmissionStage.CONTROL)
+        self.assertEqual(len(match.history.submission_feint_cap_history), 0)
 
     def test_medium_active_submission_can_advance(self):
         match = MountMatch(
@@ -368,6 +416,29 @@ class V04ACommitmentSemanticsTests(unittest.TestCase):
         self.assertEqual(match.advancement_clock(Side.TOP), 20)
         self.assertEqual(match.advancement_clock(Side.BOTTOM), 0)
 
+    def test_funding_downgrade_does_not_inherit_feint_stalling_classification(self):
+        match = MountMatch(
+            starting_axis=2.50,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v03b_stalling=True,
+            enable_v04_commitment_semantics=True,
+        )
+        match.submission_state.stage = SubmissionStage.THREAT
+        match.top.stamina.set_current(5)
+        match.bottom.stamina.set_current(2)
+        match.stalling_tracker.advance(20)
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=Commitment.MEDIUM,
+            response_commitment=Commitment.MEDIUM,
+        )
+
+        self.assertIs(result.attempt.effective_commitment, Commitment.LOW)
+        self.assertEqual(match.advancement_clock(Side.TOP), 0)
+        self.assertEqual(match.advancement_clock(Side.BOTTOM), 0)
+
     def test_random_response_commitment_batch_is_replayable(self):
         kwargs = dict(
             matches=10,
@@ -390,19 +461,12 @@ class V04ACommitmentSemanticsTests(unittest.TestCase):
         second = run_escape_first_batch(**kwargs)
         self.assertEqual(first, second)
 
-    def test_pre_amendment_fixed_medium_funding_feint_evidence(self):
+    def test_fixed_medium_batch_has_no_intent_or_funding_downgrade_caps(self):
         summary = _v04_fixed_medium_standard_batch()
-        self.assertEqual(
-            summary.outcome_counts.get("TAP — Americana", 0),
-            15,
-        )
-        self.assertEqual(summary.matches_reached_submission_finish, 42)
-        self.assertEqual(summary.top_final_stamina_median, 0)
-        self.assertEqual(summary.bottom_final_stamina_median, 0)
-        self.assertEqual(summary.submission_feint_cap_count, 1009)
         self.assertEqual(summary.requested_low_feint_cap_count, 0)
-        self.assertEqual(summary.funding_downgrade_success_count, 1009)
-        self.assertEqual(summary.funding_downgrade_feint_cap_count, 1009)
+        self.assertGreater(summary.funding_downgrade_success_count, 0)
+        self.assertEqual(summary.funding_downgrade_feint_cap_count, 0)
+        self.assertEqual(summary.submission_feint_cap_count, 0)
 
     def test_response_commitment_and_hold_cost_are_separate_spends(self):
         response_cost, hold_cost, bottom_after = _v04_double_cost_probe()
