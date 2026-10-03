@@ -29,16 +29,20 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v03b_definition_of_done()
         }
 
-    def test_gate_a_status_follows_time_based_steady_state_sweep(self):
+    def test_gate_a_time_based_steady_state_sweep_passes_all_cases(self):
         sweep = _v03b_top_stall_sweep()
         self.assertEqual(len(sweep), 26)
-        expected = (
-            V02GateStatus.PASS
-            if all(_v03b_gate_a_case_passes(item) for item in sweep)
-            else V02GateStatus.OPEN
-        )
+        self.assertTrue(all(_v03b_gate_a_case_passes(item) for item in sweep))
         self.assertTrue(all(item.steady_state_elapsed_seconds > 0 for item in sweep))
-        self.assertIs(self.gates["A"].status, expected)
+        self.assertLess(
+            max(item.steady_state_locked_time_share for item in sweep),
+            V03B_GATE_A_LOCKED_SHARE_LIMIT,
+        )
+        self.assertLess(
+            max(item.steady_state_longest_locked_dwell_seconds for item in sweep),
+            V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS,
+        )
+        self.assertIs(self.gates["A"].status, V02GateStatus.PASS)
 
 
     def test_stall_vs_active_bottom_observation_reproduces_timeout_surface(self):
