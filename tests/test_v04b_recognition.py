@@ -466,6 +466,7 @@ class V04BDefenderPolicyObservationTests(unittest.TestCase):
         self.assertIn("one level above", rendered)
         self.assertIn("always HIGH", rendered)
         self.assertIn("Gate F applies only to the frozen trusts-reads policy", rendered)
+        self.assertIn("STAMINA-ECONOMY DEBT", rendered)
 
 
 class V04BDefinitionOfDoneMeasurementTests(unittest.TestCase):
