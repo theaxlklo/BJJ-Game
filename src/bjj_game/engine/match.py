@@ -411,17 +411,12 @@ class MountMatch:
             )
 
         base_resolution = resolve(0)
-        exhausted_grade = base_resolution.final_grade.shift(
-            exhaustion_modifier
-        )
-        exhausted_delta = (
-            int(exhausted_grade) - int(base_resolution.final_grade)
-        )
         exhausted_resolution = (
             base_resolution
-            if exhausted_delta == 0
-            else resolve(exhausted_delta)
+            if exhaustion_modifier == 0
+            else resolve(exhaustion_modifier)
         )
+        exhausted_grade = exhausted_resolution.final_grade
         if not self.enable_v04_commitment_semantics:
             return base_resolution, exhausted_resolution, 0, 0
 
@@ -435,18 +430,17 @@ class MountMatch:
             responder_commitment=response_effective_commitment,
         )
 
-        # Preserve the frozen sequential grade order exactly. Summing the
-        # individual modifiers and applying them once is not equivalent when
-        # an earlier step clamps at Strong Failure / Strong Success and a later
-        # step moves back toward Contested.
-        final_delta_from_base = (
-            int(final_grade) - int(base_resolution.final_grade)
-        )
-        result = (
-            base_resolution
-            if final_delta_from_base == 0
-            else resolve(final_delta_from_base)
-        )
+        # Preserve the historical exhaustion ResolutionResult exactly whenever
+        # v0.4a adds no tactical grade change. When commitment does change the
+        # grade, derive the resolver delta from the actual sequential target
+        # grade rather than summing modifiers across intermediate clamps.
+        if commitment_modifier == 0 and response_modifier == 0:
+            result = exhausted_resolution
+        else:
+            final_delta_from_base = (
+                int(final_grade) - int(base_resolution.final_grade)
+            )
+            result = resolve(final_delta_from_base)
         return (
             base_resolution,
             result,
