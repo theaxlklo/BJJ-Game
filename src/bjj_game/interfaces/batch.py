@@ -749,8 +749,8 @@ def _informed_bottom_response_id(
     match: MountMatch,
     *,
     action_id: str,
-    commitment: Commitment,
-    response_commitment: Commitment,
+    commitment: Commitment = Commitment.MEDIUM,
+    response_commitment: Commitment = Commitment.MEDIUM,
 ) -> str:
     """Choose Bottom's legal response using the real current exchange semantics."""
     if match.initiator is not Side.TOP:
