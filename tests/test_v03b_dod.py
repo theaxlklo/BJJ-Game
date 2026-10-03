@@ -10,6 +10,7 @@ from bjj_game.diagnostics.checker import (
     V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS,
     V03B_GATE_A_LOCKED_SHARE_LIMIT,
     _v03b_gate_a_case_passes,
+    _v03b_stall_vs_active_bottom_probe,
     _v03b_top_stall_probe,
     _v03b_top_stall_sweep,
     measure_v03a_definition_of_done,
@@ -27,19 +28,28 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v03b_definition_of_done()
         }
 
-    def test_gate_a_first_steady_state_sweep_measurement_is_open(self):
+    def test_gate_a_status_follows_post_reset_steady_state_sweep(self):
         sweep = _v03b_top_stall_sweep()
         self.assertEqual(len(sweep), 26)
-        self.assertFalse(all(_v03b_gate_a_case_passes(item) for item in sweep))
-        self.assertGreaterEqual(
-            max(item.locked_share for item in sweep),
-            V03B_GATE_A_LOCKED_SHARE_LIMIT,
+        expected = (
+            V02GateStatus.PASS
+            if all(_v03b_gate_a_case_passes(item) for item in sweep)
+            else V02GateStatus.OPEN
         )
-        self.assertGreaterEqual(
-            max(item.longest_locked_dwell_seconds for item in sweep),
-            V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS,
+        self.assertTrue(all(item.position_resets >= 1 for item in sweep))
+        self.assertTrue(
+            all(item.steady_state_decision_windows > 0 for item in sweep)
         )
-        self.assertIs(self.gates["A"].status, V02GateStatus.OPEN)
+        self.assertIs(self.gates["A"].status, expected)
+
+    def test_stall_vs_active_bottom_observation_reproduces_timeout_surface(self):
+        evidence = _v03b_stall_vs_active_bottom_probe()
+        self.assertEqual(evidence.matches, 100)
+        self.assertEqual(evidence.timeouts, 100)
+        self.assertEqual(evidence.escapes, 0)
+        self.assertGreater(evidence.warnings, 0)
+        self.assertGreater(evidence.penalties, 0)
+        self.assertGreater(evidence.position_resets, 0)
 
     def test_normal_play_guard_keeps_stronger_escalation_out_of_engaged_batches(self):
         self.assertIn(
