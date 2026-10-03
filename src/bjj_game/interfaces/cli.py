@@ -473,7 +473,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--interval", type=positive_int, default=DEFAULT_INTERVAL_SECONDS, help="decision interval in simulated seconds")
     parser.add_argument("--top-stamina", type=stamina_value, default=100, help="starting Top stamina telemetry, 0..100")
     parser.add_argument("--bottom-stamina", type=stamina_value, default=100, help="starting Bottom stamina telemetry, 0..100")
-    parser.add_argument("--commitment", type=commitment_value, default=Commitment.MEDIUM, help="fixed v0.1c action commitment; defaults to MEDIUM")
+    parser.add_argument("--commitment", type=commitment_value, default=Commitment.MEDIUM, help="fixed initiated-action commitment; defaults to MEDIUM")
     parser.add_argument("--blind", action="store_true", help="testing mode: responder locks a hidden response before the action/RESET choice")
     parser.add_argument("--blind-responder", choices=("human", "random"), default="human", help="blind responder source; random requires --blind and --seed")
     parser.add_argument("--seed", type=int, help="deterministic seed for --blind-responder random")
