@@ -399,7 +399,7 @@ The numerical criterion is unchanged:
 0% < informed Tap rate < 50%
 ```
 
-Gate B is currently **DEFERRED** rather than OPEN because the model has neither response-side commitment nor a Recognition/information mechanic.
+At the v0.3a closure point, Gate B was **DEFERRED** because the model had neither response-side commitment nor a Recognition/information mechanic.
 
 The checker carries two live expiry signals:
 
@@ -408,13 +408,16 @@ response_commitment_present
 recognition_present
 ```
 
-Current state:
+v0.4a now supplies real response commitment, so the automatic deferral has expired:
 
 ```text
-False / False -> Gate B DEFERRED
+response_commitment_present=True
+recognition_present=False
+informed Tap=0/100
+-> Gate B OPEN
 ```
 
-As soon as either capability becomes present, the deferral automatically expires and Gate B resumes PASS/OPEN evaluation against the unchanged range.
+The numerical criterion remains unchanged at `0% < informed Tap < 50%`. v0.4a closes the deferral mechanism, not Gate B itself.
 
 ### Provisional submission-hold stamina rule
 
@@ -466,11 +469,21 @@ The future defender-effort/information slice must create a principled asymmetry 
 
 The project will not increase the cost post-hoc merely until Gate B passes.
 
-Current v0.3a closure state:
+Original v0.3a closure state:
 
 ```text
 Gate A PASS
 Gate B DEFERRED
+Gate C PASS
+Gate D PASS
+Gate E PASS
+```
+
+Current state after v0.4a capability expiry:
+
+```text
+Gate A PASS
+Gate B OPEN
 Gate C PASS
 Gate D PASS
 Gate E PASS
@@ -636,12 +649,18 @@ Position Resets=800
 
 v0 still does not define whether `TIMEOUT — Mount retained` is a win, draw, or loss. That belongs to the later scoring/points ruleset layer.
 
-The v0.3a competent-defender Gate B remains **DEFERRED**:
+At the v0.3b closure point, v0.3a Gate B remained **DEFERRED** because v0.3b itself added neither expiry capability.
+
+v0.4a now legitimately supplies response commitment:
 
 ```text
-response_commitment_present=False
+v03b_response_commitment_present=False
+global response_commitment_present=True
 recognition_present=False
+v0.3a Gate B=OPEN
 ```
+
+The historical v0.3b guard remains PASS because v0.3b itself still does not introduce commitment or Recognition.
 
 See:
 
@@ -657,6 +676,138 @@ See:
 - `docs/MOUNT_V0_3B_DIRECTIONAL_ESCALATION_INVARIANT.md`
 - `docs/MOUNT_V0_3B_GATE_A_TIME_SHARE_CORRECTION.md`
 - `docs/MOUNT_V0_3B_DIRECTIONAL_TIME_SHARE_FINAL_MEASUREMENT.md`
+
+## Mount v0.4a — commitment semantics
+
+v0.4a gives LOW / MEDIUM / HIGH tactical meaning for both initiated actions and responses while preserving the frozen raw Mount matrix.
+
+Costs remain:
+
+```text
+LOW     3
+MEDIUM  7
+HIGH   12
+```
+
+Effective commitment still follows affordability downgrade:
+
+```text
+requested
+-> highest fully payable requested-or-lower level
+-> UNFUNDED below LOW
+```
+
+Current exchange semantics:
+
+```text
+MEDIUM:
+  identity
+
+HIGH:
+  Failure -> Strong Failure
+  Success -> Strong Success
+
+LOW / UNFUNDED:
+  Strong Failure -> Failure
+  Strong Success -> Success
+
+under-committed responder:
+  initiator +1 grade
+```
+
+HIGH is not pure upside: it amplifies both success and failure.
+
+Response commitment is public in v0.4a. Hidden/imperfect commitment recognition is deliberately deferred.
+
+LOW/UNFUNDED submission attempts obey the frozen feint rule:
+
+```text
+Ready Americana -> Threat is allowed
+
+Threat -> Control
+Control -> Finish
+Finish -> Tap
+
+are prohibited at LOW / UNFUNDED
+```
+
+A feint-capped active submission attempt does not reset the attacker's stalling clock, while the legal defender still receives defensive-engagement credit.
+
+### v0.4a gates
+
+```text
+A PASS — feature-off compatibility / MEDIUM identity
+B PASS — v0.2 Gate 7 closes
+C PASS — no selectable commitment globally dominates
+D PASS — matched commitment preserves fresh Contested stalemates
+E PASS — LOW/UNFUNDED feint cap
+F PASS — response under-commitment only helps attacker
+G PASS — genuine automatic Gate-B expiry
+H PASS — feints cannot dodge stalling clock
+I PASS — affordability controls tactical credit
+```
+
+Key evidence:
+
+```text
+MEDIUM identity cases=1152
+mismatches=0
+
+higher-commitment advantage states=172
+v0.2 Gate 7 PASS
+
+dominance states=288
+dominating pairs=none
+
+matched-stalemate cases=360
+breaks=0
+active-Americana cases=72
+
+under-commitment comparisons=864
+regressions=0
+strict attacker improvements=646
+```
+
+The v0.3a Gate-B deferral automatically expires:
+
+```text
+response_commitment_present=True
+recognition_present=False
+
+informed MATCH defender:
+  Tap=0/100
+  Threat=78
+  Control=0
+  Finish=0
+
+v0.3a Gate B OPEN
+```
+
+The random response/RANDOM-commitment contrast is:
+
+```text
+Tap=25/100
+Bottom median final stamina=0
+```
+
+compared with the historical pre-v0.4a random contrast of 99/100 taps and Bottom median stamina 12.5.
+
+These are observations, not tuning targets.
+
+The existing provisional Americana hold cost remains separate from response commitment. An isolated MEDIUM/MEDIUM Contested hold charges:
+
+```text
+response commitment=7
+provisional hold=3
+Bottom 100 -> 90
+```
+
+SETUP-POLICY DEBT remains unchanged.
+
+See:
+
+- `docs/MOUNT_V0_4A_COMMITMENT_SEMANTICS_DEFINITION_OF_DONE.md`
+- `docs/MOUNT_V0_4A_FIRST_MEASUREMENT.md`
 
 ## Known v0 limitation
 
