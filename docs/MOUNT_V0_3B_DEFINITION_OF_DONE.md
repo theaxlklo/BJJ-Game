@@ -1,5 +1,7 @@
 # Mount v0.3b — Stalling / Progress Definition of Done
 
+> **CURRENT GATE-A / ESCALATION AMENDMENTS:** The original timeout-band Gate A and unconditional +1.50 Position Reset text below are preserved as historical design text. Current authoritative rules are the simulated-time Gate-A occupancy correction in `MOUNT_V0_3B_GATE_A_TIME_SHARE_CORRECTION.md` and the directional offense-3+ invariant in `MOUNT_V0_3B_DIRECTIONAL_ESCALATION_INVARIANT.md`.
+
 > **GATE-A CRITERION SUPERSEDED:** The original timeout-band Gate A below is preserved as historical design text. The current authoritative Gate-A criterion is the fixed post-first-Position-Reset steady-state sweep defined by `MOUNT_V0_3B_GATE_A_STEADY_STATE_AMENDMENT.md` and `MOUNT_V0_3B_GATE_A_STEADY_STATE_WINDOW_CLARIFICATION.md`.
 
 ## Status
