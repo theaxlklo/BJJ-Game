@@ -483,6 +483,34 @@ def _v04_random_standard_batch():
     )
 
 
+@lru_cache(maxsize=1)
+def _v04_fixed_medium_standard_batch():
+    """Amendment diagnostic: random response choice, both sides request MEDIUM."""
+    from ..interfaces.batch import (
+        BatchResponderMode,
+        BatchResponseCommitmentMode,
+        run_escape_first_batch,
+    )
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        bottom_responder_mode=BatchResponderMode.RANDOM,
+        response_commitment_mode=BatchResponseCommitmentMode.FIXED_MEDIUM,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v04_commitment_semantics=True,
+    )
+
+
 def _resolution_signature(result) -> tuple:
     return (
         result.final_grade,
@@ -3691,6 +3719,27 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
 
 def render_v04a_definition_of_done() -> tuple[str, ...]:
     return tuple(gate.render() for gate in measure_v04a_definition_of_done())
+
+
+def render_v04a_feint_funding_probe() -> str:
+    fixed = _v04_fixed_medium_standard_batch()
+    taps = fixed.outcome_counts.get("TAP — Americana", 0)
+    return (
+        "V0.4a FEINT/FUNDING PROBE — 100 seeds, random response choice, "
+        "initiator MEDIUM, response FIXED_MEDIUM: "
+        f"taps={taps}; "
+        f"reached Finish={fixed.matches_reached_submission_finish}; "
+        f"median stamina Top={fixed.top_final_stamina_median:.1f}/"
+        f"Bottom={fixed.bottom_final_stamina_median:.1f}; "
+        f"feint caps={fixed.submission_feint_cap_count}; "
+        f"requested-LOW caps={fixed.requested_low_feint_cap_count}; "
+        f"MEDIUM/HIGH funding-downgrade successful active-stage attempts="
+        f"{fixed.funding_downgrade_success_count}; "
+        f"MEDIUM/HIGH funding-downgrade feint caps="
+        f"{fixed.funding_downgrade_feint_cap_count}. "
+        "Tap/Finish/stamina counts are observational; cap-cause counts are "
+        "the amendment diagnostics."
+    )
 
 
 def render_v04a_prediction_probe() -> str:
