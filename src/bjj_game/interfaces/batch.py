@@ -8,7 +8,9 @@ from statistics import mean, median
 
 from ..domain.action import Commitment
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
+from ..domain.recognition import CommitmentRecognitionRead
 from ..domain.stamina import StaminaBand
+from ..domain.submission import SubmissionStage
 from ..engine.match import MountMatch
 from ..positions.mount.catalog import (
     MODERN_ENTITY_BY_ID,
@@ -38,6 +40,9 @@ class BatchResponseCommitmentMode(str, Enum):
     FIXED_MEDIUM = "fixed-medium"
     MATCH = "match"
     RANDOM = "random"
+    RECOGNITION = "recognition"
+    RECOGNITION_HEDGE_ONE = "recognition-hedge-one"
+    RECOGNITION_ALWAYS_HIGH = "recognition-always-high"
 
 
 @dataclass(frozen=True, slots=True)
@@ -591,6 +596,20 @@ class BatchSummary:
     top_final_stamina_median: float
     bottom_final_stamina_mean: float
     bottom_final_stamina_median: float
+    top_first_exhausted_time_median: float | None
+    bottom_first_exhausted_time_median: float | None
+    matches_top_ever_exhausted: int
+    matches_bottom_ever_exhausted: int
+    matches_both_ever_exhausted: int
+    total_response_commitment_stamina_charged: int
+    response_requested_commitment_counts: dict[str, int]
+    recognition_intent_direction_counts: dict[str, int]
+    recognition_capability_direction_counts: dict[str, int]
+    recognition_signal_disagreement_count: int
+    undercommitment_events_before_mutual_exhaustion: int
+    undercommitment_events_after_mutual_exhaustion: int
+    undercommitment_caused_taps_before_mutual_exhaustion: int
+    undercommitment_caused_taps_after_mutual_exhaustion: int
     final_axis_mean: float
     top_reset_count: int
     bottom_reset_count: int
@@ -680,6 +699,20 @@ class BatchSummary:
             f"Top median: {self.top_final_stamina_median:.2f}",
             f"Bottom mean: {self.bottom_final_stamina_mean:.2f}",
             f"Bottom median: {self.bottom_final_stamina_median:.2f}",
+            f"Top first Exhausted median time: {self.top_first_exhausted_time_median if self.top_first_exhausted_time_median is not None else 'never'}",
+            f"Bottom first Exhausted median time: {self.bottom_first_exhausted_time_median if self.bottom_first_exhausted_time_median is not None else 'never'}",
+            f"Matches Top ever Exhausted: {self.matches_top_ever_exhausted}",
+            f"Matches Bottom ever Exhausted: {self.matches_bottom_ever_exhausted}",
+            f"Matches both ever Exhausted: {self.matches_both_ever_exhausted}",
+            f"Responder commitment stamina charged: {self.total_response_commitment_stamina_charged}",
+            "Response requested commitments: " + _render_counts(self.response_requested_commitment_counts),
+            "Recognition intent directions: " + _render_counts(self.recognition_intent_direction_counts),
+            "Recognition capability directions: " + _render_counts(self.recognition_capability_direction_counts),
+            f"Recognition signal disagreements: {self.recognition_signal_disagreement_count}",
+            f"Under-commitment events before mutual exhaustion: {self.undercommitment_events_before_mutual_exhaustion}",
+            f"Under-commitment events after mutual exhaustion: {self.undercommitment_events_after_mutual_exhaustion}",
+            f"Under-commitment-caused taps before mutual exhaustion: {self.undercommitment_caused_taps_before_mutual_exhaustion}",
+            f"Under-commitment-caused taps after mutual exhaustion: {self.undercommitment_caused_taps_after_mutual_exhaustion}",
             f"Final axis mean: {self.final_axis_mean:+.3f}",
             "",
             "DECISIONS",
@@ -740,6 +773,7 @@ def _response_commitment_for_exchange(
     initiator_commitment: Commitment,
     mode: BatchResponseCommitmentMode,
     rng: random.Random,
+    recognition_read: CommitmentRecognitionRead | None = None,
 ) -> Commitment:
     if mode is BatchResponseCommitmentMode.FIXED_MEDIUM:
         return Commitment.MEDIUM
@@ -750,6 +784,32 @@ def _response_commitment_for_exchange(
             available_stamina=initiator_pool.current,
         )
         return Commitment.LOW if effective is None else effective
+    if mode in {
+        BatchResponseCommitmentMode.RECOGNITION,
+        BatchResponseCommitmentMode.RECOGNITION_HEDGE_ONE,
+        BatchResponseCommitmentMode.RECOGNITION_ALWAYS_HIGH,
+    }:
+        if recognition_read is None:
+            raise ValueError("recognition response policy requires a Recognition read")
+        if mode is BatchResponseCommitmentMode.RECOGNITION_ALWAYS_HIGH:
+            return Commitment.HIGH
+
+        trust_commitment = (
+            Commitment.LOW
+            if recognition_read.perceived_requested is Commitment.LOW
+            else (
+                Commitment.LOW
+                if recognition_read.perceived_effective is None
+                else recognition_read.perceived_effective
+            )
+        )
+        if mode is BatchResponseCommitmentMode.RECOGNITION:
+            return trust_commitment
+        return {
+            Commitment.LOW: Commitment.MEDIUM,
+            Commitment.MEDIUM: Commitment.HIGH,
+            Commitment.HIGH: Commitment.HIGH,
+        }[trust_commitment]
     return rng.choice(tuple(Commitment))
 
 
@@ -759,8 +819,10 @@ def _informed_bottom_response_id(
     action_id: str,
     commitment: Commitment = Commitment.MEDIUM,
     response_commitment: Commitment = Commitment.MEDIUM,
+    use_recognition: bool = False,
+    perceived_effective_commitment: Commitment | None = None,
 ) -> str:
-    """Choose Bottom's legal response using the real current exchange semantics."""
+    """Choose Bottom's legal response from truth or a frozen perceived state."""
     if match.initiator is not Side.TOP:
         raise ValueError("informed Bottom response requires Top as initiator")
 
@@ -770,11 +832,20 @@ def _informed_bottom_response_id(
 
     candidates: list[tuple[Grade, int, str]] = []
     for order, response_id in enumerate(legal):
-        result = match.preview_attempt_resolution(
-            action_id=action_id,
-            response_id=response_id,
-            commitment=commitment,
-            response_commitment=response_commitment,
+        result = (
+            match.preview_attempt_resolution_from_effective(
+                action_id=action_id,
+                response_id=response_id,
+                initiator_effective_commitment=perceived_effective_commitment,
+                response_commitment=response_commitment,
+            )
+            if use_recognition
+            else match.preview_attempt_resolution(
+                action_id=action_id,
+                response_id=response_id,
+                commitment=commitment,
+                response_commitment=response_commitment,
+            )
         )
         candidates.append((result.final_grade, order, response_id))
 
@@ -803,6 +874,7 @@ def run_escape_first_batch(
     enable_v03_submissions: bool = False,
     enable_v03b_stalling: bool = False,
     enable_v04_commitment_semantics: bool = False,
+    enable_v04b_recognition: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
         raise ValueError("matches must be > 0")
@@ -810,11 +882,36 @@ def run_escape_first_batch(
         raise ValueError("v0.3a submissions require v0.2 setup/Ready")
     if enable_v03b_stalling and not enable_v03_submissions:
         raise ValueError("v0.3b stalling requires v0.3a submissions")
+    if enable_v04b_recognition and not enable_v04_commitment_semantics:
+        raise ValueError("v0.4b Recognition requires v0.4a commitment semantics")
+    if (
+        response_commitment_mode in {
+            BatchResponseCommitmentMode.RECOGNITION,
+            BatchResponseCommitmentMode.RECOGNITION_HEDGE_ONE,
+            BatchResponseCommitmentMode.RECOGNITION_ALWAYS_HIGH,
+        }
+        and not enable_v04b_recognition
+    ):
+        raise ValueError("recognition response policy requires v0.4b Recognition")
 
     policy = EscapeFirstInitiatorPolicy()
     outcomes: Counter[str] = Counter()
     top_final: list[int] = []
     bottom_final: list[int] = []
+    top_first_exhausted_times: list[int] = []
+    bottom_first_exhausted_times: list[int] = []
+    matches_top_ever_exhausted = 0
+    matches_bottom_ever_exhausted = 0
+    matches_both_ever_exhausted = 0
+    total_response_commitment_stamina_charged = 0
+    response_requested_commitments: Counter[str] = Counter()
+    recognition_intent_directions: Counter[str] = Counter()
+    recognition_capability_directions: Counter[str] = Counter()
+    recognition_signal_disagreements = 0
+    undercommitment_before_mutual_exhaustion = 0
+    undercommitment_after_mutual_exhaustion = 0
+    undercommitment_taps_before_mutual_exhaustion = 0
+    undercommitment_taps_after_mutual_exhaustion = 0
     final_axes: list[float] = []
     top_resets = 0
     bottom_resets = 0
@@ -865,6 +962,7 @@ def run_escape_first_batch(
             enable_v03_submissions=enable_v03_submissions,
             enable_v03b_stalling=enable_v03b_stalling,
             enable_v04_commitment_semantics=enable_v04_commitment_semantics,
+            enable_v04b_recognition=enable_v04b_recognition,
         )
         match.top.stamina.set_current(top_stamina)
         match.bottom.stamina.set_current(bottom_stamina)
@@ -885,6 +983,29 @@ def run_escape_first_batch(
         response_commitment_rng = random.Random(
             base_seed + match_index + 1_000_003
         )
+        recognition_intent_rng = random.Random(
+            base_seed + match_index + 2_000_003
+        )
+        recognition_capability_rng = random.Random(
+            base_seed + match_index + 3_000_003
+        )
+        top_first_exhausted: int | None = None
+        bottom_first_exhausted: int | None = None
+
+        def record_exhaustion() -> None:
+            nonlocal top_first_exhausted, bottom_first_exhausted
+            if (
+                top_first_exhausted is None
+                and match.top.stamina.band is StaminaBand.EXHAUSTED
+            ):
+                top_first_exhausted = match.elapsed_simulated_time
+            if (
+                bottom_first_exhausted is None
+                and match.bottom.stamina.band is StaminaBand.EXHAUSTED
+            ):
+                bottom_first_exhausted = match.elapsed_simulated_time
+
+        record_exhaustion()
         top_has_initiated_action = False
         pending_setup_builds: Counter[tuple[Side, str]] = Counter()
         pending_top_followup_setup_builds: Counter[str] = Counter()
@@ -910,6 +1031,7 @@ def run_escape_first_batch(
                 bottom_behavior_windows[current_bottom.value] += 1
 
                 match.advance()
+                record_exhaustion()
                 if match.ended:
                     break
 
@@ -928,6 +1050,7 @@ def run_escape_first_batch(
                 free_initiative_windows += 1
 
             side = match.initiator
+            recognition_read: CommitmentRecognitionRead | None = None
             if enable_v02_setup:
                 # v0.2 restores established-position ordering:
                 # initiator locks action before responder chooses among legal responses.
@@ -963,12 +1086,19 @@ def run_escape_first_batch(
                         ):
                             bottom_stalling_penalties += 1
                     continue
+                if enable_v04b_recognition:
+                    recognition_read = match.recognize_commitment(
+                        requested=commitment,
+                        intent_roll=recognition_intent_rng.randint(1, 6),
+                        capability_roll=recognition_capability_rng.randint(1, 6),
+                    )
                 selected_response_commitment = (
                     _response_commitment_for_exchange(
                         match,
                         initiator_commitment=commitment,
                         mode=response_commitment_mode,
                         rng=response_commitment_rng,
+                        recognition_read=recognition_read,
                     )
                     if enable_v04_commitment_semantics
                     else None
@@ -982,6 +1112,12 @@ def run_escape_first_batch(
                         action_id=decision.action_id,
                         commitment=commitment,
                         response_commitment=selected_response_commitment,
+                        use_recognition=recognition_read is not None,
+                        perceived_effective_commitment=(
+                            recognition_read.perceived_effective
+                            if recognition_read is not None
+                            else None
+                        ),
                     )
                 else:
                     hidden = responder.choose(
@@ -1033,12 +1169,19 @@ def run_escape_first_batch(
                         ):
                             bottom_stalling_penalties += 1
                     continue
+                if enable_v04b_recognition:
+                    recognition_read = match.recognize_commitment(
+                        requested=commitment,
+                        intent_roll=recognition_intent_rng.randint(1, 6),
+                        capability_roll=recognition_capability_rng.randint(1, 6),
+                    )
                 selected_response_commitment = (
                     _response_commitment_for_exchange(
                         match,
                         initiator_commitment=commitment,
                         mode=response_commitment_mode,
                         rng=response_commitment_rng,
+                        recognition_read=recognition_read,
                     )
                     if enable_v04_commitment_semantics
                     else None
@@ -1090,12 +1233,98 @@ def run_escape_first_batch(
             feint_caps_before = len(
                 match.history.submission_feint_cap_history
             )
+            submission_stage_before = (
+                match.submission_state.stage
+                if action.id == TOP_AMERICANA_SUBMISSION_FINISH
+                else None
+            )
+            mutually_exhausted_before_exchange = (
+                match.top.stamina.band is StaminaBand.EXHAUSTED
+                and match.bottom.stamina.band is StaminaBand.EXHAUSTED
+            )
             attempt_result = match.attempt(
                 action_id=decision.action_id,
                 response_id=response_id,
                 commitment=commitment,
                 response_commitment=selected_response_commitment,
+                recognition_read=recognition_read,
             )
+            record_exhaustion()
+
+            undercommitted = (
+                attempt_result.response_undercommitment_modifier > 0
+            )
+            if undercommitted:
+                if mutually_exhausted_before_exchange:
+                    undercommitment_after_mutual_exhaustion += 1
+                else:
+                    undercommitment_before_mutual_exhaustion += 1
+
+            undercommitment_caused_tap = (
+                undercommitted
+                and submission_stage_before is SubmissionStage.FINISH
+                and match.submission_tapped
+                and attempt_result.resolution.final_grade.successful
+                and not attempt_result.resolution.final_grade.shift(-1).successful
+            )
+            if undercommitment_caused_tap:
+                if mutually_exhausted_before_exchange:
+                    undercommitment_taps_after_mutual_exhaustion += 1
+                else:
+                    undercommitment_taps_before_mutual_exhaustion += 1
+
+            if attempt_result.response_stamina is not None:
+                total_response_commitment_stamina_charged += (
+                    attempt_result.response_stamina.charged
+                )
+            if attempt_result.response_requested_commitment is not None:
+                response_requested_commitments[
+                    attempt_result.response_requested_commitment.value
+                ] += 1
+            if recognition_read is not None:
+                requested_levels = (
+                    Commitment.LOW,
+                    Commitment.MEDIUM,
+                    Commitment.HIGH,
+                )
+                effective_levels = (
+                    None,
+                    Commitment.LOW,
+                    Commitment.MEDIUM,
+                    Commitment.HIGH,
+                )
+                true_intent_rank = requested_levels.index(
+                    recognition_read.true_requested
+                )
+                perceived_intent_rank = requested_levels.index(
+                    recognition_read.perceived_requested
+                )
+                true_capability_rank = effective_levels.index(
+                    recognition_read.true_effective
+                )
+                perceived_capability_rank = effective_levels.index(
+                    recognition_read.perceived_effective
+                )
+                recognition_intent_directions[
+                    "exact"
+                    if perceived_intent_rank == true_intent_rank
+                    else (
+                        "lower"
+                        if perceived_intent_rank < true_intent_rank
+                        else "higher"
+                    )
+                ] += 1
+                recognition_capability_directions[
+                    "exact"
+                    if perceived_capability_rank == true_capability_rank
+                    else (
+                        "lower"
+                        if perceived_capability_rank < true_capability_rank
+                        else "higher"
+                    )
+                ] += 1
+                if perceived_intent_rank + 1 != perceived_capability_rank:
+                    recognition_signal_disagreements += 1
             feint_caps_after = len(
                 match.history.submission_feint_cap_history
             )
@@ -1152,6 +1381,14 @@ def run_escape_first_batch(
         outcomes[outcome] += 1
         top_final.append(match.top.stamina.current)
         bottom_final.append(match.bottom.stamina.current)
+        if top_first_exhausted is not None:
+            top_first_exhausted_times.append(top_first_exhausted)
+            matches_top_ever_exhausted += 1
+        if bottom_first_exhausted is not None:
+            bottom_first_exhausted_times.append(bottom_first_exhausted)
+            matches_bottom_ever_exhausted += 1
+        if top_first_exhausted is not None and bottom_first_exhausted is not None:
+            matches_both_ever_exhausted += 1
         final_axes.append(match.axis)
 
     return BatchSummary(
@@ -1167,6 +1404,40 @@ def run_escape_first_batch(
         top_final_stamina_median=median(top_final),
         bottom_final_stamina_mean=mean(bottom_final),
         bottom_final_stamina_median=median(bottom_final),
+        top_first_exhausted_time_median=(
+            median(top_first_exhausted_times)
+            if top_first_exhausted_times
+            else None
+        ),
+        bottom_first_exhausted_time_median=(
+            median(bottom_first_exhausted_times)
+            if bottom_first_exhausted_times
+            else None
+        ),
+        matches_top_ever_exhausted=matches_top_ever_exhausted,
+        matches_bottom_ever_exhausted=matches_bottom_ever_exhausted,
+        matches_both_ever_exhausted=matches_both_ever_exhausted,
+        total_response_commitment_stamina_charged=(
+            total_response_commitment_stamina_charged
+        ),
+        response_requested_commitment_counts=dict(response_requested_commitments),
+        recognition_intent_direction_counts=dict(recognition_intent_directions),
+        recognition_capability_direction_counts=dict(
+            recognition_capability_directions
+        ),
+        recognition_signal_disagreement_count=recognition_signal_disagreements,
+        undercommitment_events_before_mutual_exhaustion=(
+            undercommitment_before_mutual_exhaustion
+        ),
+        undercommitment_events_after_mutual_exhaustion=(
+            undercommitment_after_mutual_exhaustion
+        ),
+        undercommitment_caused_taps_before_mutual_exhaustion=(
+            undercommitment_taps_before_mutual_exhaustion
+        ),
+        undercommitment_caused_taps_after_mutual_exhaustion=(
+            undercommitment_taps_after_mutual_exhaustion
+        ),
         final_axis_mean=mean(final_axes),
         top_reset_count=top_resets,
         bottom_reset_count=bottom_resets,

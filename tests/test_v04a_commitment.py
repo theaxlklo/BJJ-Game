@@ -513,7 +513,7 @@ class V04ADefinitionOfDoneTests(unittest.TestCase):
         self.assertIn("comparisons=864", self.gates["F"].metric)
         self.assertIn("regressions=0", self.gates["F"].metric)
         self.assertIn("strict improvements=646", self.gates["F"].metric)
-        self.assertIn("v0.3a Gate B=OPEN", self.gates["G"].metric)
+        self.assertIn("v0.4a public-MATCH Gate B=OPEN", self.gates["G"].metric)
         self.assertIn("Top clock 20->20", self.gates["H"].metric)
         self.assertIn("Bottom clock 20->0", self.gates["H"].metric)
         self.assertIn("downgraded MEDIUM effective-LOW=True", self.gates["H"].metric)
