@@ -2699,14 +2699,22 @@ def render_v03b_stall_vs_active_bottom_observation() -> str:
 
 def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     locked_probability, policy_selected = _v03_locked_submission_probe()
-    random_batch = _v03_standard_batch()
-    informed_batch = _v03_informed_standard_batch()
+    response_commitment_present = _v03_response_commitment_present()
+    recognition_present = _v03_recognition_mechanic_present()
+    random_batch = (
+        _v04_random_standard_batch()
+        if response_commitment_present
+        else _v03_standard_batch()
+    )
+    informed_batch = (
+        _v04_informed_standard_batch()
+        if response_commitment_present
+        else _v03_informed_standard_batch()
+    )
     tap_count = informed_batch.outcome_counts.get("TAP — Americana", 0)
     tap_rate = tap_count / informed_batch.matches
     random_tap_count = random_batch.outcome_counts.get("TAP — Americana", 0)
     random_tap_rate = random_tap_count / random_batch.matches
-    response_commitment_present = _v03_response_commitment_present()
-    recognition_present = _v03_recognition_mechanic_present()
     gate_b_status = _v03_gate_b_status(
         tap_rate=tap_rate,
         response_commitment_present=response_commitment_present,
