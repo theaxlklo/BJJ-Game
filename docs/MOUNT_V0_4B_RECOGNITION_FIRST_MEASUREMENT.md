@@ -279,7 +279,11 @@ That is an observation, not a failed v0.4b gate and not a tuning target.
 
 Do not alter Recognition probabilities merely to improve stamina outcomes.
 
-The result says imperfect information is sufficient to break the competent-defender submission lock under the frozen Gate-B criterion, while stamina-pacing remains separate design debt for later work.
+The historical result says imperfect information is sufficient to break the submission lock for the **frozen trust-the-read defender policy** under the frozen Gate-B criterion.
+
+Later review added two fixed hedge-policy contrasts without changing this historical measurement. Both restore 0 taps. See `MOUNT_V0_4B_DEFENDER_POLICY_HEDGE_OBSERVATION.md`.
+
+Therefore the 6/100 result must not be generalized to every reasonable defender policy. Stamina-pacing / stamina-economy remains separate design debt for later work.
 
 ## First-CI expectation failures
 
@@ -302,3 +306,21 @@ The expected digest remains:
 ```
 
 Final exact-head verification must still confirm this digest before PR review.
+
+## Later review qualification
+
+The original 6/100 value remains authoritative for the frozen trust-read policy.
+
+A later checker-owned review observation uses the same seeds and Recognition reads with:
+
+```text
+trusts reads
+one level above
+always HIGH
+```
+
+The hedge policies produce 0 taps. This does not amend Gate F; it narrows the interpretation of its PASS and establishes stamina-economy debt.
+
+See:
+
+`docs/MOUNT_V0_4B_DEFENDER_POLICY_HEDGE_OBSERVATION.md`
