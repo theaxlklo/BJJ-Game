@@ -128,6 +128,11 @@ class StaminaEconomyMeasurementTests(unittest.TestCase):
             self.assertIn(row.hold_payment_status, {"FULL", "PARTIAL", "NONE"})
             self.assertEqual(row.hold_requested, 3)
             self.assertEqual(
+                row.response_commitment_charged
+                + row.response_commitment_shortfall,
+                row.response_commitment_requested_cost,
+            )
+            self.assertEqual(
                 row.hold_charged + row.hold_shortfall,
                 row.hold_requested,
             )
@@ -158,6 +163,7 @@ class StaminaEconomyMeasurementTests(unittest.TestCase):
         self.assertTrue(
             all(
                 row.initiator_effective_commitment == "UNFUNDED"
+                and row.initiator_effective_cost == 0
                 for row in zero_rows
             )
         )
