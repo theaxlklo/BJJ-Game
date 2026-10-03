@@ -9,7 +9,7 @@ from typing import TextIO
 
 from ..domain.action import Commitment
 from ..positions.mount.catalog import MODERN_ENTITY_BY_ID, actions_for, responses_for
-from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_behavior_and_reacquisition_probe, render_v03a_definition_of_done, render_v03a_hold_cost_status, render_v03a_informed_defender_probe, render_v03a_recovery_prediction_probe, render_v03a_setup_policy_debt, render_v03a_stamina_saturation_observation, render_v03b_definition_of_done, render_v03b_normal_play_guard, render_v03b_prediction_probe, render_v03b_stall_vs_active_bottom_observation, render_v04a_definition_of_done, render_v04a_feint_funding_probe, render_v04a_prediction_probe, run_checks
+from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_behavior_and_reacquisition_probe, render_v03a_definition_of_done, render_v03a_hold_cost_status, render_v03a_informed_defender_probe, render_v03a_recovery_prediction_probe, render_v03a_setup_policy_debt, render_v03a_stamina_saturation_observation, render_v03b_definition_of_done, render_v03b_normal_play_guard, render_v03b_prediction_probe, render_v03b_stall_vs_active_bottom_observation, render_v04a_definition_of_done, render_v04a_feint_funding_probe, render_v04a_prediction_probe, render_v04b_definition_of_done, render_v04b_stamina_pacing_observation, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
 from .batch import BatchBehaviorMode, BatchResponseCommitmentMode, run_escape_first_batch
@@ -487,7 +487,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--v03-submissions", action="store_true", help="batch-only: enable v0.3a Americana submission track; requires --v02-setup")
     parser.add_argument("--v03-stalling", action="store_true", help="batch-only: enable v0.3b 20-second stalling clocks; requires --v03-submissions")
     parser.add_argument("--v04-commitment", action="store_true", help="batch-only: enable v0.4a tactical initiator/response commitment semantics")
-    parser.add_argument("--response-commitment-policy", choices=("fixed-medium", "match", "random"), help="batch-only v0.4a response commitment policy; requires --v04-commitment")
+    parser.add_argument("--v04b-recognition", action="store_true", help="batch-only: enable v0.4b imperfect commitment Recognition; requires --v04-commitment")
+    parser.add_argument("--response-commitment-policy", choices=("fixed-medium", "match", "random", "recognition"), help="batch-only response commitment policy; recognition requires --v04b-recognition")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -572,11 +573,12 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         or args.v03_submissions
         or args.v03_stalling
         or args.v04_commitment
+        or args.v04b_recognition
         or args.response_commitment_policy is not None
     ):
         print(
             "ERROR: modern playtest flags (--blind/--blind-responder/--seed/"
-            "--top-behavior/--bottom-behavior/--batch/--initiator-policy/--v02-setup/--v03-submissions/--v03-stalling/--v04-commitment/--response-commitment-policy) "
+            "--top-behavior/--bottom-behavior/--batch/--initiator-policy/--v02-setup/--v03-submissions/--v03-stalling/--v04-commitment/--v04b-recognition/--response-commitment-policy) "
             "are available only on bjj_game."
         )
         return 2
@@ -597,8 +599,17 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         if args.v03_stalling and not args.v03_submissions:
             print("ERROR: --v03-stalling requires --v03-submissions.")
             return 2
+        if args.v04b_recognition and not args.v04_commitment:
+            print("ERROR: --v04b-recognition requires --v04-commitment.")
+            return 2
         if args.response_commitment_policy is not None and not args.v04_commitment:
             print("ERROR: --response-commitment-policy requires --v04-commitment.")
+            return 2
+        if (
+            args.response_commitment_policy == "recognition"
+            and not args.v04b_recognition
+        ):
+            print("ERROR: recognition response policy requires --v04b-recognition.")
             return 2
         policy = args.initiator_policy or "escape-first"
         if policy == "greedy":
@@ -629,6 +640,7 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             enable_v03_submissions=args.v03_submissions,
             enable_v03b_stalling=args.v03_stalling,
             enable_v04_commitment_semantics=args.v04_commitment,
+            enable_v04b_recognition=args.v04b_recognition,
         )
         print(summary.render())
         return 0
@@ -647,6 +659,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         return 2
     if args.v04_commitment:
         print("ERROR: --v04-commitment is currently available only with --batch.")
+        return 2
+    if args.v04b_recognition:
+        print("ERROR: --v04b-recognition is currently available only with --batch.")
         return 2
     if args.response_commitment_policy is not None:
         print("ERROR: --response-commitment-policy is currently available only with --batch.")
@@ -737,6 +752,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 print(f"INFO: {line}")
             for line in render_v04a_definition_of_done():
                 print(f"INFO: {line}")
+            for line in render_v04b_definition_of_done():
+                print(f"INFO: {line}")
+            print("INFO: " + render_v04b_stamina_pacing_observation())
             print("INFO: " + render_v04a_feint_funding_probe())
             print("INFO: " + render_v04a_prediction_probe())
             print("INFO: " + render_v03b_prediction_probe())
