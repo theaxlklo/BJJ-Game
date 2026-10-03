@@ -956,7 +956,7 @@ Therefore the current global Gate B is:
 PASS — 6/100 informed taps
 ```
 
-No Recognition probability or Gate-B threshold was changed after seeing the result.
+This PASS is scoped to the **frozen trust-the-read defender policy** from the v0.4b DoD. No Recognition probability or Gate-B threshold was changed after seeing the result. Later hedge-policy observations do not rewrite the historical 6/100 result.
 
 ### v0.4b gates
 
@@ -968,7 +968,7 @@ B PASS — recognition mapping is frozen and bounded
 C PASS — intent and capability reads stay separate
 D PASS — informed policy consumes perception, not hidden truth
 E PASS — true resolution remains authoritative
-F PASS — competent-defender Gate B uses Recognition
+F PASS — frozen trust-the-read defender satisfies Gate B
 G PASS — stamina-pacing measurement is replayable
 H PASS — existing scope remains frozen
 ```
@@ -987,9 +987,53 @@ v0.3a informed Gate B:
   PASS
 ```
 
+### defender-policy hedge observation
+
+The same Recognition reads and 100 Gate-B seeds were replayed with three named response-commitment policies:
+
+```text
+trusts reads:
+  Tap=6
+  Escapes=11
+  response spend=7352
+  median final stamina=0 / 0
+
+one level above:
+  Tap=0
+  Escapes=22
+  response spend=8843
+  median final stamina=0 / 0
+
+always HIGH:
+  Tap=0
+  Escapes=22
+  response spend=9480
+  median final stamina=0 / 0
+```
+
+Under-commitment is split by the **pre-cost** stamina bands at exchange initiation:
+
+```text
+trusts reads:
+  events before/after mutual Exhausted=311 / 108
+  under-commitment-caused taps before/after=1 / 4
+
+one level above:
+  events before/after mutual Exhausted=1 / 45
+  under-commitment-caused taps before/after=0 / 0
+
+always HIGH:
+  events before/after mutual Exhausted=0 / 78
+  under-commitment-caused taps before/after=0 / 0
+```
+
+“Mutual Exhausted” means both are already in the Exhausted band; it does not mean both are at zero stamina.
+
+Gate F still applies only to the frozen trust-read policy. The two hedge policies are observational contrasts. They show that a defender accounting for its own possible misread can restore the 0-tap lock without paying a final-stamina penalty on this standard surface.
+
 ### stamina-pacing observation
 
-Recognition closes Gate B, but it does not solve mutual exhaustion.
+The frozen trust-read policy closes Gate B, but it does not solve mutual exhaustion.
 
 Public v0.4a MATCH control:
 
@@ -1018,10 +1062,14 @@ response requests:
 
 The continued `0 / 0` final median and the higher frequency of mutual exhaustion are **observations, not tuning failures**. v0.4b does not require stamina to increase, and Recognition must not be retuned merely to improve these values.
 
+This is now tracked as **STAMINA-ECONOMY DEBT**: defensive over-commitment can spend substantially more, eliminate taps, and double escapes while still arriving at the same final median stamina. The next phase must measure the stamina economy before proposing a rule.
+
 See:
 
 - `docs/MOUNT_V0_4B_RECOGNITION_DEFINITION_OF_DONE.md`
 - `docs/MOUNT_V0_4B_RECOGNITION_FIRST_MEASUREMENT.md`
+- `docs/MOUNT_V0_4B_DEFENDER_POLICY_HEDGE_OBSERVATION.md`
+- `docs/STAMINA_ECONOMY_MEASUREMENT_PHASE_SCOPE.md`
 - `docs/V0_4B_RECOGNITION_COMMITMENT_QUESTION.md` — historical design question resolved by the frozen DoD
 
 ## Known v0 limitation
