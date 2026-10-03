@@ -689,7 +689,7 @@ MEDIUM  7
 HIGH   12
 ```
 
-Effective commitment still follows affordability downgrade:
+Effective commitment remains governed by affordability:
 
 ```text
 requested
@@ -715,11 +715,20 @@ under-committed responder:
   initiator +1 grade
 ```
 
-HIGH is not pure upside: it amplifies both success and failure.
+The grade order is explicitly sequential:
 
-Response commitment is public in v0.4a. Hidden/imperfect commitment recognition is deliberately deferred.
+```text
+pre-cost exhaustion
+-> initiator commitment magnitude
+-> response under-commitment
+-> final resolution
+```
 
-LOW/UNFUNDED submission attempts obey the frozen feint rule:
+Intermediate Strong Failure / Strong Success clamps are preserved. An independent audit found and fixed a bug where the first implementation summed modifiers and could lose those intermediate clamps. Regression coverage now includes the real clamp case plus exhaustive Grade × exhaustion × initiator-effective-commitment × responder-effective-commitment order checks.
+
+Response commitment is public in v0.4a. Hidden/imperfect commitment recognition remains deferred.
+
+LOW/UNFUNDED submission attempts follow the frozen feint rule:
 
 ```text
 Ready Americana -> Threat is allowed
@@ -731,7 +740,7 @@ Finish -> Tap
 are prohibited at LOW / UNFUNDED
 ```
 
-A feint-capped active submission attempt does not reset the attacker's stalling clock, while the legal defender still receives defensive-engagement credit.
+A feint-capped active submission attempt does not reset the attacker's stalling clock, while the defender still receives defensive-engagement credit.
 
 ### v0.4a gates
 
@@ -747,7 +756,7 @@ H PASS — feints cannot dodge stalling clock
 I PASS — affordability controls tactical credit
 ```
 
-Key evidence:
+Audited key evidence:
 
 ```text
 MEDIUM identity cases=1152
@@ -756,7 +765,8 @@ mismatches=0
 higher-commitment advantage states=172
 v0.2 Gate 7 PASS
 
-dominance states=288
+dominance states=864
+responder commitment LOW/MEDIUM/HIGH included
 dominating pairs=none
 
 matched-stalemate cases=360
@@ -768,7 +778,7 @@ regressions=0
 strict attacker improvements=646
 ```
 
-The v0.3a Gate-B deferral automatically expires:
+The v0.3a Gate-B deferral now auto-expires from a real runtime capability:
 
 ```text
 response_commitment_present=True
@@ -779,20 +789,26 @@ informed MATCH defender:
   Threat=78
   Control=0
   Finish=0
+  stage attempts=2028
 
 v0.3a Gate B OPEN
 ```
 
-The random response/RANDOM-commitment contrast is:
+The unchanged Gate-B range is active:
+
+```text
+0% < informed Tap < 50%
+```
+
+Public perfect commitment matching does not solve the competent-defender lock; Recognition/information remains later work.
+
+Random response/RANDOM-commitment contrast:
 
 ```text
 Tap=25/100
-Bottom median final stamina=0
 ```
 
-compared with the historical pre-v0.4a random contrast of 99/100 taps and Bottom median stamina 12.5.
-
-These are observations, not tuning targets.
+These batch results are observations, not tuning targets.
 
 The existing provisional Americana hold cost remains separate from response commitment. An isolated MEDIUM/MEDIUM Contested hold charges:
 
@@ -804,10 +820,23 @@ Bottom 100 -> 90
 
 SETUP-POLICY DEBT remains unchanged.
 
+Audited verification:
+
+```text
+266 tests PASS on Python 3.11 and 3.13
+modern semantic checker PASS
+legacy checker PASS
+
+frozen digest:
+3ee55429434f8f95c592183317292d3e824768135d7834c44bae82a6c1a59ff2
+```
+
 See:
 
 - `docs/MOUNT_V0_4A_COMMITMENT_SEMANTICS_DEFINITION_OF_DONE.md`
-- `docs/MOUNT_V0_4A_FIRST_MEASUREMENT.md`
+- `docs/MOUNT_V0_4A_FIRST_MEASUREMENT.md` — historical/superseded for closure
+- `docs/MOUNT_V0_4A_INDEPENDENT_AUDIT_AMENDMENT.md`
+- `docs/MOUNT_V0_4A_AUDITED_FINAL_MEASUREMENT.md`
 
 ## Known v0 limitation
 
