@@ -683,6 +683,10 @@ class CliTests(unittest.TestCase):
             self.assertIn(f"V0.4a DOD GATE {letter} [", text)
         for letter in "ABCDEFGH":
             self.assertIn(f"V0.4b DOD GATE {letter} [PASS]", text)
+        self.assertIn("V0.4b DEFENDER-POLICY HEDGE OBSERVATION", text)
+        self.assertIn("trusts reads", text)
+        self.assertIn("one level above", text)
+        self.assertIn("always HIGH", text)
         self.assertIn("V0.4b STAMINA-PACING OBSERVATION", text)
         self.assertIn("V0.4a PREDICTION PROBE", text)
         self.assertIn("V0.3b PREDICTION PROBE", text)
