@@ -188,6 +188,7 @@ class RunHistory:
     response_stamina_funding_gap_history: list[int] = field(default_factory=list)
     initiator_commitment_modifier_history: list[int] = field(default_factory=list)
     response_undercommitment_modifier_history: list[int] = field(default_factory=list)
+    recognition_history: list[str] = field(default_factory=list)
     submission_feint_cap_history: list[str] = field(default_factory=list)
     stamina_band_at_initiation_history: list[str] = field(default_factory=list)
     responder_stamina_band_history: list[str] = field(default_factory=list)
