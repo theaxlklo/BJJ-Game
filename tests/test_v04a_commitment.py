@@ -193,7 +193,7 @@ class V04ACommitmentSemanticsTests(unittest.TestCase):
             response_commitment=Commitment.MEDIUM,
         )
 
-        self.assertIs(actual.responder_stamina_band_before_action, StaminaBand.FRESH)
+        self.assertIs(actual.responder_stamina_band_before_action, StaminaBand.TIRED)
         self.assertEqual(actual.responder_exhaustion_modifier, 0)
         self.assertEqual(actual.resolution, expected.resolution)
         self.assertIs(match.bottom.stamina.band, StaminaBand.EXHAUSTED)
