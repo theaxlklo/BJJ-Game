@@ -3227,7 +3227,11 @@ def _v04_feint_probe() -> tuple[bool, int, int, int]:
             match.initiator = Side.TOP
             requested = Commitment.LOW if funded else Commitment.HIGH
             if not funded:
+                # Both Exhausted cancels the existing exhaustion modifier so
+                # the UNFUNDED case proves the feint cap itself, not a merely
+                # Contested exchange caused by one-sided exhaustion.
                 match.top.stamina.set_current(2)
+                match.bottom.stamina.set_current(2)
             match.attempt(
                 action_id=TOP_AMERICANA_SUBMISSION_FINISH,
                 response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
