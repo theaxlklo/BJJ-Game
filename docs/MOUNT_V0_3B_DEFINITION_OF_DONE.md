@@ -1,5 +1,7 @@
 # Mount v0.3b — Stalling / Progress Definition of Done
 
+> **GATE-A CRITERION SUPERSEDED:** The original timeout-band Gate A below is preserved as historical design text. The current authoritative Gate-A criterion is the fixed post-first-Position-Reset steady-state sweep defined by `MOUNT_V0_3B_GATE_A_STEADY_STATE_AMENDMENT.md` and `MOUNT_V0_3B_GATE_A_STEADY_STATE_WINDOW_CLARIFICATION.md`.
+
 ## Status
 
 FROZEN BEFORE IMPLEMENTATION.
