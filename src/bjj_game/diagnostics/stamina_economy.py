@@ -202,8 +202,15 @@ def _surface_duration_line(surface: StaminaEconomySurface) -> str:
     reentries = sum(x.state2_reentries_after_state1 > 0 for x in matches)
     clears = sum(x.bottom_exhausted_latch_clears > 0 for x in matches)
     return (
-        f"{surface.label}: State2 entered={len(state2)}, exited-to-State1={exits}, "
+        f"{surface.label}: entries State1/2/3="
+        f"{sum(x.state1_entries for x in matches)}/"
+        f"{sum(x.state2_entries for x in matches)}/"
+        f"{sum(x.state3_entries for x in matches)}, "
+        f"State2 entered={len(state2)}, exited-to-State1={exits}, "
         f"reentered={reentries}, State3 entered={len(state3)}, "
+        f"Top/Bottom first Exhausted median="
+        f"{_median_or_none([x.top_first_exhausted_time for x in matches if x.top_first_exhausted_time is not None])}/"
+        f"{_median_or_none([x.bottom_first_exhausted_time for x in matches if x.bottom_first_exhausted_time is not None])}, "
         f"State2 first median={_median_or_none([x.first_state2_time for x in state2])}, "
         f"State3 first median={_median_or_none([x.first_state3_time for x in state3])}, "
         f"State2 seconds median={median([x.state2_seconds for x in matches]):.1f}, "
@@ -265,11 +272,18 @@ def _surface_affordability_line(surface: StaminaEconomySurface) -> str:
     hedge_possible = sum(
         row.hedge_one_level_fundable is True for row in hedge_eligible
     )
+    initiator_request_fundable = sum(row.initiator_requested_fundable for row in rows)
     response_request_fundable = sum(row.responder_requested_fundable for row in rows)
     holds = [row for row in rows if row.submission_hold]
     hold_status = Counter(row.hold_payment_status for row in holds)
     hold_gap = sum(
         row.commitment_only_fundable_but_requested_plus_hold_not for row in holds
+    )
+    requested_plus_hold = sum(
+        row.requested_plus_hold_fundable is True for row in holds
+    )
+    effective_plus_hold = sum(
+        row.effective_plus_hold_fundable is True for row in holds
     )
     return (
         f"{surface.label}: State2 exchanges={len(rows)}, "
@@ -278,10 +292,13 @@ def _surface_affordability_line(surface: StaminaEconomySurface) -> str:
         f"can-fund responder={_fundability_counts(rows, 'responder_affordability')}, "
         f"ceiling relation={relation}, hedge-one possible={hedge_possible}/"
         f"{len(hedge_eligible)}, HIGH-attacker/no-higher={high_attackers}, "
+        f"initiator request fundable={initiator_request_fundable}/{len(rows)}, "
         f"responder request fundable={response_request_fundable}/{len(rows)}, "
         f"initiator transitions={dict(transitions_i)}, "
         f"responder transitions={dict(transitions_r)}, cross={dict(cross)}, "
         f"State2 holds={len(holds)}, hold payment={dict(hold_status)}, "
+        f"requested+hold fundable={requested_plus_hold}/{len(holds)}, "
+        f"effective+hold fundable={effective_plus_hold}/{len(holds)}, "
         f"commitment-fundable but requested+hold-not={hold_gap}"
     )
 
@@ -358,6 +375,18 @@ def _aggregate_sources(surface: StaminaEconomySurface) -> str:
         and row.responder_stamina_after_all_costs == 0
         for row in holds
     )
+    pre_values = [row.responder_stamina for row in holds]
+    after_response_values = [
+        row.responder_stamina_after_response for row in holds
+    ]
+    pre_q = _percentiles([float(v) for v in pre_values])
+    after_q = _percentiles([float(v) for v in after_response_values])
+    requested_plus_hold = sum(
+        row.requested_plus_hold_fundable is True for row in holds
+    )
+    effective_plus_hold = sum(
+        row.effective_plus_hold_fundable is True for row in holds
+    )
     return (
         f"{surface.label}: Top={side_totals('top_sources')}, "
         f"Bottom={side_totals('bottom_sources')}, holds={len(holds)}, "
@@ -371,8 +400,14 @@ def _aggregate_sources(surface: StaminaEconomySurface) -> str:
         f"{sum(r.hold_shortfall for r in holds)}, "
         f"combined requested/charged/shortfall="
         f"{combined_requested}/{combined_charged}/{combined_requested-combined_charged}, "
-        f"hold payment={dict(hold_status)}, moved-to-Exhausted={exhausted_moves}, "
-        f"moved-to-zero={zero_moves}"
+        f"hold payment={dict(hold_status)}, "
+        f"pre-charge stamina median/p25/p75="
+        f"{_median_or_none(pre_values)}/{pre_q[0]}/{pre_q[1]}, "
+        f"post-response stamina median/p25/p75="
+        f"{_median_or_none(after_response_values)}/{after_q[0]}/{after_q[1]}, "
+        f"requested+hold fundable={requested_plus_hold}/{len(holds)}, "
+        f"effective+hold fundable={effective_plus_hold}/{len(holds)}, "
+        f"moved-to-Exhausted={exhausted_moves}, moved-to-zero={zero_moves}"
     )
 
 
@@ -434,9 +469,18 @@ def _surface_zero_attack_line(surface: StaminaEconomySurface) -> str:
         for row in rows
     )
     responder_ceiling = Counter(row.responder_affordability for row in rows)
+    effective_costs = Counter(row.initiator_effective_cost for row in rows)
+    response_requested = Counter(
+        row.responder_requested_commitment for row in rows
+    )
+    response_effective = Counter(
+        row.responder_effective_commitment for row in rows
+    )
     return (
         f"{surface.label}: zero-stamina attacks={len(rows)}, actions={dict(actions)}, "
         f"requested={dict(requested)}, effective={dict(effective)}, "
+        f"effective costs={dict(effective_costs)}, "
+        f"response requested/effective={dict(response_requested)}/{dict(response_effective)}, "
         f"grades={dict(grades)}, positional successes={positional_successes}, "
         f"submission attempts/advances/taps={submission_attempts}/{advances}/{taps}, "
         f"escapes={escapes}, responder ceilings={dict(responder_ceiling)}"
@@ -526,6 +570,14 @@ def measure_stamina_economy_definition_of_done() -> tuple[StaminaMeasurementGate
             if (
                 row.initiator_effective_commitment in valid_ceiling
                 and row.responder_effective_commitment in valid_ceiling
+            )
+        )
+        and all(
+            row.response_undercommitment_modifier == 0
+            for row in m.exchanges
+            if (
+                row.initiator_effective_commitment == "UNFUNDED"
+                and row.responder_effective_commitment == "UNFUNDED"
             )
         )
         for m in measurements
