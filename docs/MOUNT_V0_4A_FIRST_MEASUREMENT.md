@@ -1,5 +1,7 @@
 # Mount v0.4a — Commitment Semantics First Measurement
 
+> **SUPERSEDED FOR FINAL CLOSURE.** Preserve this file as historical evidence of the first green implementation. Independent audit later found (1) a sequential grade-clamp ordering bug in the resolver path and (2) an incomplete Gate-C state surface that fixed responder commitment at MEDIUM. Both were corrected without changing the frozen v0.4a semantics or thresholds. The authoritative closure measurement is `MOUNT_V0_4A_AUDITED_FINAL_MEASUREMENT.md`.
+
 ## Status
 
 AUTHORITATIVE v0.4a IMPLEMENTATION MEASUREMENT.
