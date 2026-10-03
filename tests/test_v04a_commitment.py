@@ -3,6 +3,7 @@ import unittest
 from bjj_game.diagnostics.checker import (
     V02GateStatus,
     _v04_double_cost_probe,
+    _v04_fixed_medium_standard_batch,
     measure_v04a_definition_of_done,
 )
 from bjj_game.domain.action import Commitment
@@ -388,6 +389,20 @@ class V04ACommitmentSemanticsTests(unittest.TestCase):
         first = run_escape_first_batch(**kwargs)
         second = run_escape_first_batch(**kwargs)
         self.assertEqual(first, second)
+
+    def test_pre_amendment_fixed_medium_funding_feint_evidence(self):
+        summary = _v04_fixed_medium_standard_batch()
+        self.assertEqual(
+            summary.outcome_counts.get("TAP — Americana", 0),
+            15,
+        )
+        self.assertEqual(summary.matches_reached_submission_finish, 42)
+        self.assertEqual(summary.top_final_stamina_median, 0)
+        self.assertEqual(summary.bottom_final_stamina_median, 0)
+        self.assertEqual(summary.submission_feint_cap_count, 1009)
+        self.assertEqual(summary.requested_low_feint_cap_count, 0)
+        self.assertEqual(summary.funding_downgrade_success_count, 1009)
+        self.assertEqual(summary.funding_downgrade_feint_cap_count, 1009)
 
     def test_response_commitment_and_hold_cost_are_separate_spends(self):
         response_cost, hold_cost, bottom_after = _v04_double_cost_probe()
