@@ -3240,8 +3240,8 @@ def _v04_stalemate_probe() -> tuple[int, int, int]:
 
 
 @lru_cache(maxsize=1)
-def _v04_feint_probe() -> tuple[bool, int, int, int]:
-    """Return Ready entry, LOW/UNFUNDED violations, ordinary advances, cases."""
+def _v04_feint_probe() -> tuple[bool, int, int, int, int, int]:
+    """Requested-LOW caps plus funded-downgrade non-cap probes."""
     from ..engine.match import MountMatch
 
     ready = MountMatch(
@@ -3261,10 +3261,10 @@ def _v04_feint_probe() -> tuple[bool, int, int, int]:
     )
     ready_entry = ready.submission_state.stage is SubmissionStage.THREAT
 
-    violations = 0
-    cases = 0
+    requested_low_violations = 0
+    requested_low_cases = 0
     for stage in SubmissionStage:
-        for funded in (True, False):
+        for stamina in (100, 2):
             match = MountMatch(
                 starting_axis=2.50,
                 enable_v02_setup=True,
@@ -3273,22 +3273,25 @@ def _v04_feint_probe() -> tuple[bool, int, int, int]:
             )
             match.submission_state.stage = stage
             match.initiator = Side.TOP
-            requested = Commitment.LOW if funded else Commitment.HIGH
-            if not funded:
+            if stamina == 2:
                 # Both Exhausted cancels the existing exhaustion modifier so
-                # the UNFUNDED case proves the feint cap itself, not a merely
-                # Contested exchange caused by one-sided exhaustion.
+                # this proves requested LOW stays a feint even when UNFUNDED.
                 match.top.stamina.set_current(2)
                 match.bottom.stamina.set_current(2)
-            match.attempt(
+            result = match.attempt(
                 action_id=TOP_AMERICANA_SUBMISSION_FINISH,
                 response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
-                commitment=requested,
+                commitment=Commitment.LOW,
                 response_commitment=Commitment.LOW,
             )
-            cases += 1
-            if match.submission_tapped or match.submission_state.stage is not stage:
-                violations += 1
+            requested_low_cases += 1
+            if not result.resolution.final_grade.successful:
+                requested_low_violations += 1
+            elif (
+                match.submission_tapped
+                or match.submission_state.stage is not stage
+            ):
+                requested_low_violations += 1
 
     ordinary_advances = 0
     for commitment in (Commitment.MEDIUM, Commitment.HIGH):
@@ -3309,7 +3312,45 @@ def _v04_feint_probe() -> tuple[bool, int, int, int]:
         if match.submission_state.stage is SubmissionStage.CONTROL:
             ordinary_advances += 1
 
-    return ready_entry, violations, ordinary_advances, cases
+    downgrade_advances = 0
+    downgrade_caps = 0
+    downgrade_cases = (
+        (Commitment.MEDIUM, 5, Commitment.LOW),
+        (Commitment.HIGH, 2, None),
+    )
+    for requested, stamina, expected_effective in downgrade_cases:
+        match = MountMatch(
+            starting_axis=2.50,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v04_commitment_semantics=True,
+        )
+        match.submission_state.stage = SubmissionStage.THREAT
+        match.initiator = Side.TOP
+        match.top.stamina.set_current(stamina)
+        match.bottom.stamina.set_current(2)
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=requested,
+            response_commitment=requested,
+        )
+        if (
+            result.attempt.effective_commitment is expected_effective
+            and result.resolution.final_grade.successful
+            and match.submission_state.stage is SubmissionStage.CONTROL
+        ):
+            downgrade_advances += 1
+        downgrade_caps += len(match.history.submission_feint_cap_history)
+
+    return (
+        ready_entry,
+        requested_low_cases,
+        requested_low_violations,
+        ordinary_advances,
+        downgrade_advances,
+        downgrade_caps,
+    )
 
 
 @lru_cache(maxsize=1)
@@ -3376,33 +3417,60 @@ def _v04_undercommitment_probe() -> tuple[int, int, int]:
 
 
 @lru_cache(maxsize=1)
-def _v04_stalling_feint_probe() -> tuple[int, int, int, int]:
-    """Return initiator before/after and defender before/after clocks."""
+def _v04_stalling_feint_probe() -> tuple[int, int, int, int, bool, int, int, int, int]:
+    """Requested-LOW feint and funding-downgrade stalling probes."""
     from ..engine.match import MountMatch
 
-    match = MountMatch(
+    feint = MountMatch(
         starting_axis=2.50,
         enable_v02_setup=True,
         enable_v03_submissions=True,
         enable_v03b_stalling=True,
         enable_v04_commitment_semantics=True,
     )
-    match.submission_state.stage = SubmissionStage.THREAT
-    match.initiator = Side.TOP
-    match.stalling_tracker.advance(20)
-    top_before = match.advancement_clock(Side.TOP)
-    bottom_before = match.advancement_clock(Side.BOTTOM)
-    match.attempt(
+    feint.submission_state.stage = SubmissionStage.THREAT
+    feint.initiator = Side.TOP
+    feint.stalling_tracker.advance(20)
+    feint_top_before = feint.advancement_clock(Side.TOP)
+    feint_bottom_before = feint.advancement_clock(Side.BOTTOM)
+    feint.attempt(
         action_id=TOP_AMERICANA_SUBMISSION_FINISH,
         response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
         commitment=Commitment.LOW,
         response_commitment=Commitment.LOW,
     )
+
+    downgrade = MountMatch(
+        starting_axis=2.50,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v03b_stalling=True,
+        enable_v04_commitment_semantics=True,
+    )
+    downgrade.submission_state.stage = SubmissionStage.THREAT
+    downgrade.initiator = Side.TOP
+    downgrade.top.stamina.set_current(5)
+    downgrade.bottom.stamina.set_current(2)
+    downgrade.stalling_tracker.advance(20)
+    downgrade_top_before = downgrade.advancement_clock(Side.TOP)
+    downgrade_bottom_before = downgrade.advancement_clock(Side.BOTTOM)
+    downgrade_result = downgrade.attempt(
+        action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+        response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+        commitment=Commitment.MEDIUM,
+        response_commitment=Commitment.MEDIUM,
+    )
+
     return (
-        top_before,
-        match.advancement_clock(Side.TOP),
-        bottom_before,
-        match.advancement_clock(Side.BOTTOM),
+        feint_top_before,
+        feint.advancement_clock(Side.TOP),
+        feint_bottom_before,
+        feint.advancement_clock(Side.BOTTOM),
+        downgrade_result.attempt.effective_commitment is Commitment.LOW,
+        downgrade_top_before,
+        downgrade.advancement_clock(Side.TOP),
+        downgrade_bottom_before,
+        downgrade.advancement_clock(Side.BOTTOM),
     )
 
 
@@ -3520,9 +3588,15 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
     stalemate_cases, stalemate_breaks, submission_stalemates = (
         _v04_stalemate_probe()
     )
-    ready_entry, feint_violations, ordinary_advances, feint_cases = (
-        _v04_feint_probe()
-    )
+    (
+        ready_entry,
+        requested_low_cases,
+        feint_violations,
+        ordinary_advances,
+        downgrade_advances,
+        isolated_downgrade_caps,
+    ) = _v04_feint_probe()
+    fixed_medium_batch = _v04_fixed_medium_standard_batch()
     under_cases, under_regressions, under_improvements = (
         _v04_undercommitment_probe()
     )
@@ -3541,9 +3615,17 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
     )
     informed_mode = _v04_informed_standard_batch().response_commitment_mode.value
 
-    top_before, top_after, bottom_before, bottom_after = (
-        _v04_stalling_feint_probe()
-    )
+    (
+        top_before,
+        top_after,
+        bottom_before,
+        bottom_after,
+        downgrade_effective_low,
+        downgrade_top_before,
+        downgrade_top_after,
+        downgrade_bottom_before,
+        downgrade_bottom_after,
+    ) = _v04_stalling_feint_probe()
     (
         funded_cost,
         funded_gap,
@@ -3566,9 +3648,14 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
     gate_d = stalemate_cases > 0 and stalemate_breaks == 0
     gate_e = (
         ready_entry
-        and feint_cases == 6
+        and requested_low_cases == 6
         and feint_violations == 0
         and ordinary_advances == 2
+        and downgrade_advances == 2
+        and isolated_downgrade_caps == 0
+        and fixed_medium_batch.requested_low_feint_cap_count == 0
+        and fixed_medium_batch.funding_downgrade_success_count > 0
+        and fixed_medium_batch.funding_downgrade_feint_cap_count == 0
     )
     gate_f = (
         under_cases > 0
@@ -3587,6 +3674,11 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
         and top_after == 20
         and bottom_before == 20
         and bottom_after == 0
+        and downgrade_effective_low
+        and downgrade_top_before == 20
+        and downgrade_top_after == 0
+        and downgrade_bottom_before == 20
+        and downgrade_bottom_after == 0
     )
     gate_i = (
         funded_cost == 3
@@ -3649,15 +3741,23 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
         ),
         V04GateMeasurement(
             letter="E",
-            name="LOW/UNFUNDED feints cannot advance beyond Threat",
+            name="requested-LOW feint intent controls the submission cap",
             status=V02GateStatus.PASS if gate_e else V02GateStatus.OPEN,
             metric=(
-                f"LOW Ready entry={ready_entry}; capped_cases={feint_cases}; "
-                f"violations={feint_violations}; MEDIUM/HIGH advances={ordinary_advances}/2"
+                f"LOW Ready entry={ready_entry}; requested-LOW cases={requested_low_cases}; "
+                f"violations={feint_violations}; fully-funded MEDIUM/HIGH advances="
+                f"{ordinary_advances}/2; downgrade advances={downgrade_advances}/2; "
+                f"isolated downgrade caps={isolated_downgrade_caps}; "
+                f"fixed-medium requested-LOW caps="
+                f"{fixed_medium_batch.requested_low_feint_cap_count}; "
+                f"fixed-medium downgrade successes="
+                f"{fixed_medium_batch.funding_downgrade_success_count}; "
+                f"fixed-medium downgrade caps="
+                f"{fixed_medium_batch.funding_downgrade_feint_cap_count}"
             ),
             evidence=(
-                "LOW may create Threat, but LOW/UNFUNDED active-stage success "
-                "cannot reach Control, Finish, or Tap"
+                "requested LOW remains the feint signal, including when UNFUNDED; "
+                "MEDIUM/HIGH funding downgrade alone cannot activate the cap"
             ),
         ),
         V04GateMeasurement(
@@ -3688,15 +3788,19 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
         ),
         V04GateMeasurement(
             letter="H",
-            name="feints cannot dodge stalling clock",
+            name="requested-intent feints cannot dodge stalling clock",
             status=V02GateStatus.PASS if gate_h else V02GateStatus.OPEN,
             metric=(
-                f"Top clock {top_before}->{top_after}; "
-                f"Bottom clock {bottom_before}->{bottom_after}"
+                f"requested LOW Top clock {top_before}->{top_after}; "
+                f"Bottom clock {bottom_before}->{bottom_after}; "
+                f"downgraded MEDIUM effective-LOW={downgrade_effective_low}; "
+                f"Top clock {downgrade_top_before}->{downgrade_top_after}; "
+                f"Bottom clock {downgrade_bottom_before}->{downgrade_bottom_after}"
             ),
             evidence=(
-                "feint-capped initiator gets no progress-clock reset while the "
-                "legal defender receives defensive-engagement credit"
+                "requested LOW gets no initiator progress reset while legal defense "
+                "still engages; a funding-downgraded MEDIUM attack uses normal "
+                "progress-capable-route engagement"
             ),
         ),
         V04GateMeasurement(
