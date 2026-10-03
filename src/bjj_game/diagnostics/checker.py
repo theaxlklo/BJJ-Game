@@ -873,10 +873,10 @@ def measure_v02_definition_of_done(
                 f"v03b_sweep_cases={len(v03b_top_stall_sweep)}; "
                 f"v03b_sweep_failing="
                 f"{sum(not _v03b_gate_a_case_passes(item) for item in v03b_top_stall_sweep)}; "
-                f"v03b_max_locked_share="
-                f"{max(item.locked_share for item in v03b_top_stall_sweep):.3f}; "
-                f"v03b_max_locked_dwell="
-                f"{max(item.longest_locked_dwell_seconds for item in v03b_top_stall_sweep)}s; "
+                f"v03b_max_post_reset_locked_share="
+                f"{max(item.steady_state_locked_share for item in v03b_top_stall_sweep):.3f}; "
+                f"v03b_max_post_reset_locked_dwell="
+                f"{max(item.steady_state_longest_locked_dwell_seconds for item in v03b_top_stall_sweep)}s; "
                 f"v03b_locked_timeout_cases="
                 f"{sum(item.locked_timeout for item in v03b_top_stall_sweep)}"
             ),
@@ -1696,12 +1696,24 @@ class V03BTopStallEvidence:
     decision_windows: int
     locked_windows: int
     longest_locked_dwell_seconds: int
+    steady_state_decision_windows: int
+    steady_state_locked_windows: int
+    steady_state_longest_locked_dwell_seconds: int
 
     @property
     def locked_share(self) -> float:
         return (
             self.locked_windows / self.decision_windows
             if self.decision_windows
+            else 0.0
+        )
+
+    @property
+    def steady_state_locked_share(self) -> float:
+        return (
+            self.steady_state_locked_windows
+            / self.steady_state_decision_windows
+            if self.steady_state_decision_windows
             else 0.0
         )
 
@@ -1801,6 +1813,12 @@ def _v03b_top_stall_case(
     current_locked_dwell = 0
     longest_locked_dwell = 0
 
+    steady_state_started = False
+    steady_state_decision_windows = 0
+    steady_state_locked_windows = 0
+    steady_state_current_locked_dwell = 0
+    steady_state_longest_locked_dwell = 0
+
     while not match.ended:
         band_before_advance = match.band
         clock_before_advance = match.clock_seconds
@@ -1819,12 +1837,27 @@ def _v03b_top_stall_case(
         else:
             current_locked_dwell = 0
 
+        if steady_state_started:
+            if band_before_advance is Band.LOCKED:
+                steady_state_current_locked_dwell += elapsed
+                steady_state_longest_locked_dwell = max(
+                    steady_state_longest_locked_dwell,
+                    steady_state_current_locked_dwell,
+                )
+            else:
+                steady_state_current_locked_dwell = 0
+
         if match.ended:
             break
 
         decision_windows += 1
         if match.band is Band.LOCKED:
             locked_windows += 1
+
+        if steady_state_started:
+            steady_state_decision_windows += 1
+            if match.band is Band.LOCKED:
+                steady_state_locked_windows += 1
 
         if match.initiator is Side.BOTTOM:
             # Preserve elapsed game time and ordinary alternating cadence, but
@@ -1833,9 +1866,20 @@ def _v03b_top_stall_case(
             match.initiator = Side.TOP
             continue
 
+        resets_before = len(match.history.stalling_position_reset_history)
         match.reset_window()
+        resets_after = len(match.history.stalling_position_reset_history)
+
         if match.band is not Band.LOCKED:
             current_locked_dwell = 0
+            if steady_state_started:
+                steady_state_current_locked_dwell = 0
+
+        if not steady_state_started and resets_after > resets_before:
+            # The first Position Reset marks the transition from the initial
+            # Warning/first-penalty grace into the repeating enforcement regime.
+            steady_state_started = True
+            steady_state_current_locked_dwell = 0
 
     return V03BTopStallEvidence(
         interval_seconds=interval_seconds,
@@ -1852,6 +1896,11 @@ def _v03b_top_stall_case(
         decision_windows=decision_windows,
         locked_windows=locked_windows,
         longest_locked_dwell_seconds=longest_locked_dwell,
+        steady_state_decision_windows=steady_state_decision_windows,
+        steady_state_locked_windows=steady_state_locked_windows,
+        steady_state_longest_locked_dwell_seconds=(
+            steady_state_longest_locked_dwell
+        ),
     )
 
 
@@ -1881,8 +1930,9 @@ def _v03b_gate_a_case_passes(item: V03BTopStallEvidence) -> bool:
         item.warnings >= 1
         and item.penalties >= 1
         and item.position_resets >= 1
-        and item.locked_share < V03B_GATE_A_LOCKED_SHARE_LIMIT
-        and item.longest_locked_dwell_seconds
+        and item.steady_state_decision_windows > 0
+        and item.steady_state_locked_share < V03B_GATE_A_LOCKED_SHARE_LIMIT
+        and item.steady_state_longest_locked_dwell_seconds
         < V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS
     )
 
@@ -2003,9 +2053,16 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
 
     gate_a_pass = _v03b_gate_a_sweep_passes(top_stall_sweep)
     gate_a_max_locked_share = max(
-        item.locked_share for item in top_stall_sweep
+        item.steady_state_locked_share for item in top_stall_sweep
     )
     gate_a_max_locked_dwell = max(
+        item.steady_state_longest_locked_dwell_seconds
+        for item in top_stall_sweep
+    )
+    gate_a_whole_match_max_locked_share = max(
+        item.locked_share for item in top_stall_sweep
+    )
+    gate_a_whole_match_max_locked_dwell = max(
         item.longest_locked_dwell_seconds for item in top_stall_sweep
     )
     gate_a_locked_endings = sum(
@@ -2050,10 +2107,12 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
             metric=(
                 f"sweep_cases={len(top_stall_sweep)}; "
                 f"failing_cases={gate_a_failing_cases}; "
-                f"max_Locked_share={gate_a_max_locked_share:.3f}"
+                f"max_post_reset_Locked_share={gate_a_max_locked_share:.3f}"
                 f"<{V03B_GATE_A_LOCKED_SHARE_LIMIT:.2f}; "
-                f"max_Locked_dwell={gate_a_max_locked_dwell}s"
+                f"max_post_reset_Locked_dwell={gate_a_max_locked_dwell}s"
                 f"<{V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS}s; "
+                f"whole_match_max_share={gate_a_whole_match_max_locked_share:.3f}; "
+                f"whole_match_max_dwell={gate_a_whole_match_max_locked_dwell}s; "
                 f"Locked_timeout_cases={gate_a_locked_endings}/{len(top_stall_sweep)}; "
                 f"default_5m_5s=warnings:{top_stall.warnings},"
                 f"penalties:{top_stall.penalties},"
@@ -2061,10 +2120,10 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
                 f"Locked:{top_stall.locked_windows}/{top_stall.decision_windows}"
             ),
             evidence=(
-                "fixed 26-case interval/length sweep measures whether Locked is "
-                "a steady state: every case must keep Locked below half of "
-                "decision windows and below one full 20s uninterrupted dwell; "
-                "final timeout band is diagnostic only"
+                "fixed 26-case interval/length sweep measures the repeating "
+                "post-first-Position-Reset regime: every case must keep Locked "
+                "below half of decision windows and below one full 20s "
+                "uninterrupted dwell; pre-reset grace and final timeout band are diagnostic only"
             ),
         ),
         V03BGateMeasurement(
