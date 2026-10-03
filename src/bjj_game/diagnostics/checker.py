@@ -22,6 +22,7 @@ from ..positions.mount.catalog import (
 )
 from ..positions.mount.matchups import RAW_GRADES, raw_grade
 from ..engine.mount_engine import MOUNT_ENGINE
+from ..engine.stamina import DEFAULT_STAMINA_COST_POLICY
 from ..positions.mount.rules import MOUNT_RULES
 from ..domain.action import Commitment
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
@@ -726,6 +727,7 @@ def _commitment_low_dominance_probe() -> tuple[bool, int]:
                                     initial_clock=300,
                                     starting_axis=axis,
                                     interval_seconds=5,
+                                    enable_v04_commitment_semantics=True,
                                 )
                                 match.initiator = side
                                 match.set_behaviors(
@@ -2347,10 +2349,20 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
         and boundary.band_after is Band.LOOSE
         and boundary.clock_after == boundary.clock_before
     )
+    from ..engine.match import MountMatch
+
+    v03b_scope = MountMatch(
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v03b_stalling=True,
+        enable_v04_commitment_semantics=False,
+    )
+    v03b_response_commitment_present = (
+        v03b_scope.response_commitment_enabled
+    )
     gate_e_pass = (
-        not response_commitment_present
+        not v03b_response_commitment_present
         and not recognition_present
-        and v03a_gate_b.status is V02GateStatus.DEFERRED
     )
     gate_f_pass = (
         escalation.cases > 0
@@ -2437,13 +2449,14 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
             name="Gate-B deferral guard remains intact",
             status=V02GateStatus.PASS if gate_e_pass else V02GateStatus.OPEN,
             metric=(
-                f"response_commitment_present={response_commitment_present}; "
+                f"v03b_response_commitment_present={v03b_response_commitment_present}; "
                 f"recognition_present={recognition_present}; "
-                f"v0.3a Gate B={v03a_gate_b.status.value}"
+                f"current v0.3a Gate B={v03a_gate_b.status.value}"
             ),
             evidence=(
-                "v0.3b adds no response commitment or Recognition/information "
-                "mechanic and must not auto-expire the v0.3a Gate-B deferral"
+                "v0.3b itself still adds no response commitment or "
+                "Recognition/information mechanic; later v0.4a capability may "
+                "legitimately expire the global v0.3a Gate-B deferral"
             ),
         ),
         V03BGateMeasurement(
