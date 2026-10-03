@@ -947,6 +947,7 @@ class MountMatch:
         resolution,
         target_was_ready: bool,
         stage_before: SubmissionStage | None,
+        requested_commitment: Commitment,
         effective_commitment: Commitment | None,
     ) -> None:
         if not self.enable_v03_submissions:
@@ -973,7 +974,7 @@ class MountMatch:
         self.history.submission_attempt_history.append(stage_before.value)
         feint_capped = (
             self.enable_v04_commitment_semantics
-            and effective_commitment in {None, Commitment.LOW}
+            and requested_commitment is Commitment.LOW
         )
         if resolution.final_grade.successful and feint_capped:
             self.history.submission_change_history.append(
@@ -981,6 +982,7 @@ class MountMatch:
             )
             self.history.submission_feint_cap_history.append(
                 f"{stage_before.value}@{self.elapsed_simulated_time}s:"
+                f"requested={requested_commitment.value}:effective="
                 f"{effective_commitment.value if effective_commitment is not None else 'UNFUNDED'}"
             )
             return
@@ -1287,7 +1289,7 @@ class MountMatch:
             self.enable_v04_commitment_semantics
             and action_id == TOP_AMERICANA_SUBMISSION_FINISH
             and submission_stage_before is not None
-            and effective_commitment in {None, Commitment.LOW}
+            and commitment is Commitment.LOW
         )
         if self.enable_v03b_stalling and action_progress_capable:
             self._record_engagement(
@@ -1308,6 +1310,7 @@ class MountMatch:
             resolution=result,
             target_was_ready=target_was_ready,
             stage_before=submission_stage_before,
+            requested_commitment=commitment,
             effective_commitment=effective_commitment,
         )
 
