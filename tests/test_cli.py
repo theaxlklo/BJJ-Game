@@ -693,6 +693,7 @@ class CliTests(unittest.TestCase):
                 f"STAMINA-ECONOMY MEASUREMENT GATE {letter} [PASS]",
                 text,
             )
+        self.assertIn("STAMINA-ECONOMY SURFACE", text)
         self.assertIn("STAMINA-ECONOMY DURATION", text)
         self.assertIn("STAMINA-ECONOMY RECOVERY", text)
         self.assertIn("STAMINA-ECONOMY AFFORDABILITY", text)
