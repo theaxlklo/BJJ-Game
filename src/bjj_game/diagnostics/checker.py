@@ -3639,11 +3639,16 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
     enabled_capability = MountMatch(
         enable_v04_commitment_semantics=True
     ).response_commitment_enabled
-    v03_gate_b = next(
-        gate for gate in measure_v03a_definition_of_done()
-        if gate.letter == "B"
+    v04_informed_batch = _v04_informed_standard_batch()
+    v04_informed_taps = v04_informed_batch.outcome_counts.get(
+        "TAP — Americana", 0
     )
-    informed_mode = _v04_informed_standard_batch().response_commitment_mode.value
+    v04_gate_b_status = _v03_gate_b_status(
+        tap_rate=v04_informed_taps / v04_informed_batch.matches,
+        response_commitment_present=True,
+        recognition_present=False,
+    )
+    informed_mode = v04_informed_batch.response_commitment_mode.value
 
     (
         top_before,
@@ -3696,7 +3701,7 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
         not disabled_capability
         and enabled_capability
         and _v03_response_commitment_present()
-        and v03_gate_b.status is not V02GateStatus.DEFERRED
+        and v04_gate_b_status is not V02GateStatus.DEFERRED
         and informed_mode == "match"
     )
     gate_h = (
@@ -3809,7 +3814,8 @@ def measure_v04a_definition_of_done() -> tuple[V04GateMeasurement, ...]:
             status=V02GateStatus.PASS if gate_g else V02GateStatus.OPEN,
             metric=(
                 f"disabled={disabled_capability}; enabled={enabled_capability}; "
-                f"v0.3a Gate B={v03_gate_b.status.value}; informed response commitment={informed_mode}"
+                f"v0.4a public-MATCH Gate B={v04_gate_b_status.value}; "
+                f"informed response commitment={informed_mode}"
             ),
             evidence=(
                 "capability is a match runtime feature and Gate-B informed batch "
