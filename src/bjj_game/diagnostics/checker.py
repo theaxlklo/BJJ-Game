@@ -2408,9 +2408,10 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
     v03b_response_commitment_present = (
         v03b_scope.response_commitment_enabled
     )
+    v03b_recognition_present = v03b_scope.recognition_enabled
     gate_e_pass = (
         not v03b_response_commitment_present
-        and not recognition_present
+        and not v03b_recognition_present
     )
     gate_f_pass = (
         escalation.cases > 0
@@ -2498,13 +2499,15 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
             status=V02GateStatus.PASS if gate_e_pass else V02GateStatus.OPEN,
             metric=(
                 f"v03b_response_commitment_present={v03b_response_commitment_present}; "
-                f"recognition_present={recognition_present}; "
+                f"v03b_recognition_present={v03b_recognition_present}; "
+                f"global_recognition_present={recognition_present}; "
                 f"current v0.3a Gate B={v03a_gate_b.status.value}"
             ),
             evidence=(
                 "v0.3b itself still adds no response commitment or "
-                "Recognition/information mechanic; later v0.4a capability may "
-                "legitimately expire the global v0.3a Gate-B deferral"
+                "Recognition/information mechanic; later v0.4a/v0.4b capabilities "
+                "may legitimately affect the global v0.3a Gate-B measurement "
+                "without changing the frozen v0.3b scope"
             ),
         ),
         V03BGateMeasurement(
