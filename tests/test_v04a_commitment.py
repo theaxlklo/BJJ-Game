@@ -422,7 +422,7 @@ class V04ADefinitionOfDoneTests(unittest.TestCase):
         self.assertIn("cases=1152", self.gates["A"].metric)
         self.assertIn("enabled_MEDIUM_mismatches=0", self.gates["A"].metric)
         self.assertIn("higher-commitment advantage states=172", self.gates["B"].metric)
-        self.assertIn("states=288", self.gates["C"].metric)
+        self.assertIn("states=864", self.gates["C"].metric)
         self.assertIn("dominating_pairs=none", self.gates["C"].metric)
         self.assertIn("cases=360", self.gates["D"].metric)
         self.assertIn("breaks=0", self.gates["D"].metric)
