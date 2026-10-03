@@ -515,136 +515,68 @@ v0.3b distinguishes **engagement** from successful advancement.
 
 A legal attempt through a progress-capable route counts as engagement even when the opponent stops it. A legal defensive response to that attempt also counts as engagement.
 
-Therefore:
+Each player owns an independent 20-second simulated-time advancement clock.
 
-```text
-Americana attempt -> informed Turn-In -> Contested hold
-```
-
-means both players are active, not stalling.
-
-Each player owns an independent advancement clock:
-
-```text
-20 simulated seconds
-```
-
-RESET remains legal. It becomes a stalling offense only when:
-
-```text
-progress-capable route exists
-+ player chooses RESET
-+ advancement clock >= 20s
-```
-
-The warning/penalty ladder is:
+The escalation remains:
 
 ```text
 offense 1 -> persistent Warning
-
-offense 2 -> one visible-band penalty
-             or free initiative at the Neutral-side boundary
-
+offense 2 -> one visible-band penalty / boundary free initiative
 offense 3+ -> Position Reset to +1.50 Stable
 ```
 
-The offense-2 positional penalty uses the existing visible-band hysteresis boundaries:
+Position Reset changes only Mount positional control; it does not clear stamina, setup state, Americana submission state, warning history, offense history, or the match clock.
+
+### Gate A is now timing-independent — and currently OPEN
+
+The earlier timeout-band measurement is superseded.
+
+Gate A now uses a fixed 26-case sweep:
 
 ```text
-Locked -> Strong -> Stable -> Loose
+intervals: 5s, 7s
+match lengths: 240..300s in 5s steps
 ```
 
-Its numeric axis size therefore depends on where the player sits inside the band. For example:
+After the first Position Reset, every case must satisfy:
 
 ```text
-+4.00 Locked -> +2.80 Strong = -1.20
-+3.21 Locked -> +2.80 Strong = -0.41
+Locked decision-window share < 0.50
+longest uninterrupted Locked dwell < 20s
 ```
 
-A one-band stalling penalty never crosses Neutral. At the Loose/boundary case, the non-stalling player receives a **zero-time free initiative window** instead.
-
-Repeated offenses after the first positional penalty use the v9 Section-33 Position Reset rung. In Mount-v0 this resets only positional control:
+Current result:
 
 ```text
-axis = +1.50
-band = Stable
+failing cases=3/26
+max post-reset Locked share=0.500
+max post-reset Locked dwell=7s
+
+failures:
+  interval 7s / match 250s: share=0.500, dwell=7s
+  interval 7s / match 275s: share=0.500, dwell=7s
+  interval 7s / match 280s: share=0.500, dwell=7s
 ```
 
-It does not clear stamina, setup state, or the Americana submission stage. Americana is not treated as inherently Mount-exclusive.
+Because the frozen share rule is strictly `<0.50`, the exact ties do not pass.
 
-The cadence is simulated-time based rather than window-count based, so changing `--interval` does not change the 20-second threshold. An offense is adjudicated on the first eligible RESET window at or after the threshold.
-
-### Corrected full-match Gate A
-
-The original early Gate-A probe stopped immediately after the first positional penalty and was insufficient. The authoritative probe now runs the full 5:00 clock.
-
-One-band-only mechanics failed:
+Current gate state:
 
 ```text
-Warning=1
-one-band penalties=13
-Position Resets=0
-final axis=+4.00
-final band=Locked
-locked_timeout=True
-Locked windows=59/59
-```
+v0.2 Gate 2 OPEN
 
-After completing the frozen Position Reset escalation:
-
-```text
-Warning=1
-one-band penalties=1
-Position Resets=12
-final axis=+3.00
-final band=Strong
-locked_timeout=False
-Locked windows=24/59
-```
-
-So Gate 2 now closes from **full-match** evidence rather than a temporary early Strong state.
-
-Current executable result:
-
-```text
-v0.2 Gate 2 PASS
-
-v0.3b Gate A PASS
+v0.3b Gate A OPEN
 v0.3b Gate B PASS
 v0.3b Gate C PASS
 v0.3b Gate D PASS
 v0.3b Gate E PASS
 ```
 
-The Americana stalemate remains protected:
-
-```text
-fresh informed Americana:
-  attempts=3
-  Top penalties=0
-  Bottom penalties=0
-  stage remains Threat
-  clocks=0/0
-```
-
-Symmetric attribution remains:
-
-```text
-Top warnings/penalties=1/1
-Bottom warnings/penalties=1/1
-```
-
-The Neutral-side boundary remains protected:
-
-```text
-axis +0.50 -> +0.50
-free initiative windows=1
-simulated clock unchanged
-```
+The threshold is not changed post-hoc to `<=0.50`.
 
 ### Normal-play guard
 
-The stronger escalation must not leak into already-engaged standard play. The executable guard reports:
+The stronger escalation still stays out of already-engaged standard play:
 
 ```text
 V0.3b NORMAL-PLAY GUARD [PASS]
@@ -660,15 +592,26 @@ informed:
   Position Resets=0/0
 ```
 
-The matched prediction surface remains:
+### Stall versus active Bottom
+
+`--check` also reports the requested non-gating observation:
 
 ```text
-Top RESETs 0 -> 0
-random taps 99 -> 99
-informed taps 0 -> 0
+Top RESETs every Top initiation
+Bottom uses normal escape-first policy
+normal random response mix
+100 matches
+
+timeouts=100
+escapes=0
+warnings=100
+one-band penalties=100
+Position Resets=800
 ```
 
-So v0.3b penalizes deliberate inactivity without perturbing already-engaged standard play.
+The stalling rule changes positional control but does not create a terminal escape in this probe.
+
+This does not yet determine competitive outcome because v0 has no ruleset-level definition of whether `TIMEOUT — Mount retained` is a win, draw, or loss. That belongs to the later scoring/points layer.
 
 The v0.3a competent-defender Gate B remains **DEFERRED**:
 
@@ -677,18 +620,19 @@ response_commitment_present=False
 recognition_present=False
 ```
 
-v0.3b does not add either expiry capability.
-
 See:
 
 - `docs/MOUNT_V0_3B_DEFINITION_OF_DONE.md`
 - `docs/MOUNT_V0_3B_STALLING_CADENCE.md`
 - `docs/MOUNT_V0_3B_CADENCE_TIMING_CLARIFICATION.md`
 - `docs/MOUNT_V0_3B_GATE_A_PROBE_CLARIFICATION.md`
-- `docs/MOUNT_V0_3B_FIRST_MEASUREMENT.md` — historical; Gate-A closure superseded
 - `docs/MOUNT_V0_3B_FULL_MATCH_STALLING_FAILURE.md`
 - `docs/MOUNT_V0_3B_POSITION_RESET_ESCALATION.md`
-- `docs/MOUNT_V0_3B_POSITION_RESET_FINAL_MEASUREMENT.md`
+- `docs/MOUNT_V0_3B_POSITION_RESET_FINAL_MEASUREMENT.md` — timeout-band closure superseded
+- `docs/MOUNT_V0_3B_GATE_A_STEADY_STATE_AMENDMENT.md`
+- `docs/MOUNT_V0_3B_STEADY_STATE_FIRST_MEASUREMENT.md`
+- `docs/MOUNT_V0_3B_GATE_A_STEADY_STATE_WINDOW_CLARIFICATION.md`
+- `docs/MOUNT_V0_3B_POST_RESET_STEADY_STATE_MEASUREMENT.md`
 
 ## Known v0 limitation
 
