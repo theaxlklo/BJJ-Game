@@ -56,7 +56,7 @@ class AttemptResult:
 
 @dataclass(frozen=True, slots=True)
 class ResetWindowResult:
-    """A deliberate no-action decision in the modern v0.1 flow."""
+    """A deliberate no-action decision in the modern v0.1/v0.3b flow."""
 
     initiator: Side
     next_initiator: Side
@@ -64,3 +64,13 @@ class ResetWindowResult:
     axis: float
     band: Band
     stamina: int
+    progress_route_available: bool = False
+    advancement_clock_seconds: int = 0
+    stalling_offense: bool = False
+    stalling_consequence: str | None = None
+    penalty_axis_before: float | None = None
+    penalty_axis_after: float | None = None
+    position_reset: bool = False
+    position_reset_axis_before: float | None = None
+    position_reset_axis_after: float | None = None
+    free_initiative_window: bool = False

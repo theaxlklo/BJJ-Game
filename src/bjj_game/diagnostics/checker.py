@@ -13,6 +13,7 @@ from ..positions.mount.catalog import (
     TOP_RESPONSES,
     BOTTOM_RESPONSES,
     TOP_AMERICANA_SUBMISSION_FINISH,
+    BOTTOM_RESPONSE_TURN_IN_RECOVERY,
     actions_for,
     modern_actions_for,
     responses_for,
@@ -752,6 +753,11 @@ def measure_v02_definition_of_done(
         and "band Locked" in reset_probe
     )
     submission_finish_present = _submission_finish_present()
+    v03b_top_stall = _v03b_top_stall_probe()
+    v03b_top_stall_sweep = _v03b_top_stall_sweep()
+    v03b_stalling_resolves_lock = _v03b_gate_a_sweep_passes(
+        v03b_top_stall_sweep
+    )
 
     # Gate 4 stays pinned to the v0.2 batch that proved Bridge's setup role.
     standard_batch = _v02_standard_batch()
@@ -850,17 +856,31 @@ def measure_v02_definition_of_done(
             number=2,
             name="RESET/stalling",
             status=(
-                V02GateStatus.PASS
-                if not reset_locked_timeout
+                V02GateStatus.DEFERRED
+                if reset_locked_timeout and not submission_finish_present
                 else (
-                    V02GateStatus.DEFERRED
-                    if not submission_finish_present
+                    V02GateStatus.PASS
+                    if (
+                        not reset_locked_timeout
+                        or v03b_stalling_resolves_lock
+                    )
                     else V02GateStatus.OPEN
                 )
             ),
             metric=(
-                f"locked_timeout={reset_locked_timeout}; "
-                f"submission_finish_present={submission_finish_present}"
+                f"legacy_locked_timeout={reset_locked_timeout}; "
+                f"submission_finish_present={submission_finish_present}; "
+                f"v03b_sweep_cases={len(v03b_top_stall_sweep)}; "
+                f"v03b_sweep_failing="
+                f"{sum(not _v03b_gate_a_case_passes(item) for item in v03b_top_stall_sweep)}; "
+                f"v03b_max_post_reset_locked_time_share="
+                f"{max(item.steady_state_locked_time_share for item in v03b_top_stall_sweep):.3f}; "
+                f"v03b_max_post_reset_window_share="
+                f"{max(item.steady_state_locked_share for item in v03b_top_stall_sweep):.3f}; "
+                f"v03b_max_post_reset_locked_dwell="
+                f"{max(item.steady_state_longest_locked_dwell_seconds for item in v03b_top_stall_sweep)}s; "
+                f"v03b_locked_timeout_cases="
+                f"{sum(item.locked_timeout for item in v03b_top_stall_sweep)}"
             ),
             evidence=(
                 reset_probe
@@ -869,7 +889,13 @@ def measure_v02_definition_of_done(
                     "submission-finish/progress action, so a stalling penalty "
                     "would punish a state with no legal way to advance"
                     if reset_locked_timeout and not submission_finish_present
-                    else ""
+                    else (
+                        "; v0.3b fixed interval/length sweep shows deliberate "
+                        "stalling cannot keep Locked as the steady state; "
+                        "timeout band is no longer the gate criterion"
+                        if v03b_stalling_resolves_lock
+                        else "; v0.3b stalling evidence has not resolved the lock"
+                    )
                 )
             ),
         ),
@@ -1650,6 +1676,970 @@ def render_v03a_hold_cost_status() -> str:
         f"current informed Threat={informed.matches_reached_submission_threat}/100; "
         "this rule is retained as measured access evidence, not as a closed "
         "Gate-B tuning value."
+    )
+
+
+V03B_GATE_A_INTERVALS = (5, 7)
+V03B_GATE_A_MATCH_LENGTHS = tuple(range(240, 301, 5))
+V03B_GATE_A_LOCKED_SHARE_LIMIT = 0.50
+V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS = 20
+
+
+@dataclass(frozen=True, slots=True)
+class V03BTopStallEvidence:
+    interval_seconds: int
+    match_length_seconds: int
+    warnings: int
+    penalties: int
+    position_resets: int
+    final_axis: float
+    final_band: Band
+    locked_timeout: bool
+    decision_windows: int
+    locked_windows: int
+    locked_seconds: int
+    elapsed_seconds: int
+    longest_locked_dwell_seconds: int
+    steady_state_decision_windows: int
+    steady_state_locked_windows: int
+    steady_state_locked_seconds: int
+    steady_state_elapsed_seconds: int
+    steady_state_longest_locked_dwell_seconds: int
+
+    @property
+    def locked_share(self) -> float:
+        return (
+            self.locked_windows / self.decision_windows
+            if self.decision_windows
+            else 0.0
+        )
+
+    @property
+    def steady_state_locked_share(self) -> float:
+        """Decision-window share retained as a sampling diagnostic only."""
+        return (
+            self.steady_state_locked_windows
+            / self.steady_state_decision_windows
+            if self.steady_state_decision_windows
+            else 0.0
+        )
+
+    @property
+    def locked_time_share(self) -> float:
+        return (
+            self.locked_seconds / self.elapsed_seconds
+            if self.elapsed_seconds
+            else 0.0
+        )
+
+    @property
+    def steady_state_locked_time_share(self) -> float:
+        return (
+            self.steady_state_locked_seconds
+            / self.steady_state_elapsed_seconds
+            if self.steady_state_elapsed_seconds
+            else 0.0
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class V03BStallActiveBottomEvidence:
+    matches: int
+    timeouts: int
+    escapes: int
+    warnings: int
+    penalties: int
+    position_resets: int
+
+
+@dataclass(frozen=True, slots=True)
+class V03BStalemateEvidence:
+    attempts: int
+    top_penalties: int
+    bottom_penalties: int
+    final_stage: SubmissionStage | None
+    top_clock: int
+    bottom_clock: int
+
+
+@dataclass(frozen=True, slots=True)
+class V03BSymmetryEvidence:
+    top_warnings: int
+    top_penalties: int
+    bottom_warnings: int
+    bottom_penalties: int
+
+
+@dataclass(frozen=True, slots=True)
+class V03BBoundaryEvidence:
+    warnings: int
+    free_windows: int
+    axis_before: float
+    axis_after: float
+    band_after: Band
+    clock_before: int
+    clock_after: int
+
+
+@dataclass(frozen=True, slots=True)
+class V03BEscalationInvariantEvidence:
+    cases: int
+    backward_effects: int
+    weaker_escalations: int
+    boundary_mismatches: int
+    bottom_axis_lowering_cases: int
+    classic_bottom_axis_lowering: int
+
+
+@dataclass(frozen=True, slots=True)
+class V03BGateMeasurement:
+    letter: str
+    name: str
+    status: V02GateStatus
+    metric: str
+    evidence: str
+
+    def render(self) -> str:
+        return (
+            f"V0.3b DOD GATE {self.letter} [{self.status.value}]: "
+            f"{self.name} — {self.metric}; {self.evidence}"
+        )
+
+
+def _v03b_match(
+    *,
+    axis: float,
+    initial_clock: int = 300,
+    interval_seconds: int = 5,
+):
+    from ..engine.match import MountMatch
+
+    match = MountMatch(
+        initial_clock=initial_clock,
+        starting_axis=axis,
+        interval_seconds=interval_seconds,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v03b_stalling=True,
+    )
+    match.set_behaviors(
+        top=TopBehavior.PRESSURE,
+        bottom=BottomBehavior.ESCAPE,
+    )
+    return match
+
+
+def _drift_band_segments(drift) -> tuple[tuple[Band, int], ...]:
+    """Exact persisted-band durations from the engine's per-second drift trace."""
+    total = drift.start_clock - drift.end_clock
+    band = drift.start_band
+    segment_start = 0
+    segments: list[tuple[Band, int]] = []
+
+    for change in drift.band_changes:
+        if change.clock_seconds is None:
+            raise RuntimeError("drift band change is missing clock evidence")
+        elapsed_at_change = drift.start_clock - change.clock_seconds
+        duration = elapsed_at_change - segment_start
+        if duration > 0:
+            segments.append((band, duration))
+        band = change.after
+        segment_start = elapsed_at_change
+
+    remaining = total - segment_start
+    if remaining > 0:
+        segments.append((band, remaining))
+    return tuple(segments)
+
+
+def _v03b_top_stall_case(
+    *,
+    match_length_seconds: int,
+    interval_seconds: int,
+) -> V03BTopStallEvidence:
+    """Measure deliberate Top stalling without opponent-engagement confounding."""
+    match = _v03b_match(
+        axis=4.00,
+        initial_clock=match_length_seconds,
+        interval_seconds=interval_seconds,
+    )
+    match.submission_state.stage = SubmissionStage.THREAT
+
+    decision_windows = 0
+    locked_windows = 0
+    locked_seconds = 0
+    elapsed_seconds = 0
+    current_locked_dwell = 0
+    longest_locked_dwell = 0
+
+    steady_state_started = False
+    steady_state_decision_windows = 0
+    steady_state_locked_windows = 0
+    steady_state_locked_seconds = 0
+    steady_state_elapsed_seconds = 0
+    steady_state_current_locked_dwell = 0
+    steady_state_longest_locked_dwell = 0
+
+    while not match.ended:
+        advance = match.advance()
+        segments = _drift_band_segments(advance.drift)
+
+        for segment_band, duration in segments:
+            elapsed_seconds += duration
+            if segment_band is Band.LOCKED:
+                locked_seconds += duration
+                current_locked_dwell += duration
+                longest_locked_dwell = max(
+                    longest_locked_dwell,
+                    current_locked_dwell,
+                )
+            else:
+                current_locked_dwell = 0
+
+            if steady_state_started:
+                steady_state_elapsed_seconds += duration
+                if segment_band is Band.LOCKED:
+                    steady_state_locked_seconds += duration
+                    steady_state_current_locked_dwell += duration
+                    steady_state_longest_locked_dwell = max(
+                        steady_state_longest_locked_dwell,
+                        steady_state_current_locked_dwell,
+                    )
+                else:
+                    steady_state_current_locked_dwell = 0
+
+        if match.ended:
+            break
+
+        decision_windows += 1
+        if match.band is Band.LOCKED:
+            locked_windows += 1
+
+        if steady_state_started:
+            steady_state_decision_windows += 1
+            if match.band is Band.LOCKED:
+                steady_state_locked_windows += 1
+
+        if match.initiator is Side.BOTTOM:
+            # Preserve elapsed game time and ordinary alternating cadence, but
+            # isolate Top's advancement obligation by suppressing Bottom's
+            # intervening initiation rather than recording fake engagement.
+            match.initiator = Side.TOP
+            continue
+
+        resets_before = len(match.history.stalling_position_reset_history)
+        match.reset_window()
+        resets_after = len(match.history.stalling_position_reset_history)
+
+        if match.band is not Band.LOCKED:
+            current_locked_dwell = 0
+            if steady_state_started:
+                steady_state_current_locked_dwell = 0
+
+        if not steady_state_started and resets_after > resets_before:
+            # The first Position Reset marks the transition from the initial
+            # Warning/first-penalty grace into the repeating enforcement regime.
+            steady_state_started = True
+            steady_state_current_locked_dwell = 0
+
+    return V03BTopStallEvidence(
+        interval_seconds=interval_seconds,
+        match_length_seconds=match_length_seconds,
+        warnings=len(match.history.stalling_warning_history),
+        penalties=len(match.history.stalling_penalty_history),
+        position_resets=len(match.history.stalling_position_reset_history),
+        final_axis=match.axis,
+        final_band=match.band,
+        locked_timeout=(
+            match.exit_reason == "TIMEOUT — Mount retained"
+            and match.band is Band.LOCKED
+        ),
+        decision_windows=decision_windows,
+        locked_windows=locked_windows,
+        locked_seconds=locked_seconds,
+        elapsed_seconds=elapsed_seconds,
+        longest_locked_dwell_seconds=longest_locked_dwell,
+        steady_state_decision_windows=steady_state_decision_windows,
+        steady_state_locked_windows=steady_state_locked_windows,
+        steady_state_locked_seconds=steady_state_locked_seconds,
+        steady_state_elapsed_seconds=steady_state_elapsed_seconds,
+        steady_state_longest_locked_dwell_seconds=(
+            steady_state_longest_locked_dwell
+        ),
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_top_stall_probe() -> V03BTopStallEvidence:
+    """Historical/default 5:00, 5-second case retained for diagnostics."""
+    return _v03b_top_stall_case(
+        match_length_seconds=300,
+        interval_seconds=5,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_top_stall_sweep() -> tuple[V03BTopStallEvidence, ...]:
+    return tuple(
+        _v03b_top_stall_case(
+            match_length_seconds=match_length,
+            interval_seconds=interval,
+        )
+        for interval in V03B_GATE_A_INTERVALS
+        for match_length in V03B_GATE_A_MATCH_LENGTHS
+    )
+
+
+def _v03b_gate_a_case_passes(item: V03BTopStallEvidence) -> bool:
+    return (
+        item.warnings >= 1
+        and item.penalties >= 1
+        and item.position_resets >= 1
+        and item.steady_state_elapsed_seconds > 0
+        and item.steady_state_locked_time_share < V03B_GATE_A_LOCKED_SHARE_LIMIT
+        and item.steady_state_longest_locked_dwell_seconds
+        < V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS
+    )
+
+
+def _v03b_gate_a_sweep_passes(
+    sweep: tuple[V03BTopStallEvidence, ...],
+) -> bool:
+    return len(sweep) == (
+        len(V03B_GATE_A_INTERVALS) * len(V03B_GATE_A_MATCH_LENGTHS)
+    ) and all(_v03b_gate_a_case_passes(item) for item in sweep)
+
+
+@lru_cache(maxsize=1)
+def _v03b_stalemated_attacker_probe() -> V03BStalemateEvidence:
+    """A real submission attempt and legal defense engage both players."""
+    match = _v03b_match(axis=3.50)
+    match.submission_state.stage = SubmissionStage.THREAT
+
+    attempts = 0
+    for _ in range(3):
+        for _tick in range(4):
+            match.advance()
+        match.initiator = Side.TOP
+        match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+        )
+        attempts += 1
+
+    top_penalties = sum(
+        entry.startswith("top@")
+        for entry in match.history.stalling_penalty_history
+    )
+    bottom_penalties = sum(
+        entry.startswith("bottom@")
+        for entry in match.history.stalling_penalty_history
+    )
+    return V03BStalemateEvidence(
+        attempts=attempts,
+        top_penalties=top_penalties,
+        bottom_penalties=bottom_penalties,
+        final_stage=match.submission_state.stage,
+        top_clock=match.advancement_clock(Side.TOP),
+        bottom_clock=match.advancement_clock(Side.BOTTOM),
+    )
+
+
+def _v03b_force_warning_then_penalty(*, side: Side, axis: float):
+    match = _v03b_match(axis=axis)
+    if side is Side.TOP:
+        match.submission_state.stage = SubmissionStage.THREAT
+    match.initiator = side
+    match.stalling_tracker.advance(20)
+    match.reset_window()
+    match.initiator = side
+    match.stalling_tracker.advance(20)
+    second = match.reset_window()
+    return match, second
+
+
+@lru_cache(maxsize=1)
+def _v03b_symmetry_probe() -> V03BSymmetryEvidence:
+    top, _ = _v03b_force_warning_then_penalty(
+        side=Side.TOP,
+        axis=4.00,
+    )
+    bottom, _ = _v03b_force_warning_then_penalty(
+        side=Side.BOTTOM,
+        axis=1.50,
+    )
+    return V03BSymmetryEvidence(
+        top_warnings=len(top.history.stalling_warning_history),
+        top_penalties=len(top.history.stalling_penalty_history),
+        bottom_warnings=len(bottom.history.stalling_warning_history),
+        bottom_penalties=len(bottom.history.stalling_penalty_history),
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_boundary_probe() -> V03BBoundaryEvidence:
+    match = _v03b_match(axis=0.50)
+    match.submission_state.stage = SubmissionStage.THREAT
+
+    match.stalling_tracker.advance(20)
+    match.reset_window()
+    match.initiator = Side.TOP
+    match.stalling_tracker.advance(20)
+    clock_before = match.clock_seconds
+    axis_before = match.axis
+    second = match.reset_window()
+
+    return V03BBoundaryEvidence(
+        warnings=len(match.history.stalling_warning_history),
+        free_windows=len(match.history.stalling_free_initiative_history),
+        axis_before=axis_before,
+        axis_after=match.axis,
+        band_after=match.band,
+        clock_before=clock_before,
+        clock_after=match.clock_seconds,
+    )
+
+
+def _v03b_effect_strength(
+    *,
+    offender: Side,
+    axis_before: float,
+    axis_after: float,
+) -> float:
+    return (
+        axis_before - axis_after
+        if offender is Side.TOP
+        else axis_after - axis_before
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_escalation_invariant_probe() -> V03BEscalationInvariantEvidence:
+    cases = 0
+    backward = 0
+    weaker = 0
+    boundary_mismatches = 0
+    bottom_lowering = 0
+
+    for offender in (Side.TOP, Side.BOTTOM):
+        for step in range(1, 41):
+            axis = round(step / 10, 1)
+            for band in Band:
+                if not MOUNT_RULES.axis_can_have_band(axis, band):
+                    continue
+                cases += 1
+
+                penalty_match = _v03b_match(axis=axis)
+                penalty_match.position.apply_control(axis, band)
+                (
+                    penalty_before,
+                    penalty_after,
+                    penalty_free,
+                ) = penalty_match._apply_stalling_penalty(
+                    offender=offender
+                )
+
+                escalation_match = _v03b_match(axis=axis)
+                escalation_match.position.apply_control(axis, band)
+                (
+                    escalation_effect,
+                    escalation_before,
+                    escalation_after,
+                    escalation_free,
+                ) = escalation_match._apply_stalling_position_reset_rung(
+                    offender=offender
+                )
+
+                penalty_strength = _v03b_effect_strength(
+                    offender=offender,
+                    axis_before=penalty_before,
+                    axis_after=penalty_after,
+                )
+                escalation_strength = _v03b_effect_strength(
+                    offender=offender,
+                    axis_before=escalation_before,
+                    axis_after=escalation_after,
+                )
+
+                escalation_beneficiary = (
+                    escalation_match.free_initiative_beneficiary
+                    if escalation_free
+                    else None
+                )
+                if escalation_free:
+                    if escalation_beneficiary is not offender.opponent:
+                        boundary_mismatches += 1
+                elif escalation_strength <= 0:
+                    backward += 1
+
+                if offender is Side.BOTTOM and escalation_after < escalation_before:
+                    bottom_lowering += 1
+
+                if penalty_free:
+                    if not escalation_free:
+                        weaker += 1
+                elif not escalation_free and escalation_strength + 1e-12 < penalty_strength:
+                    weaker += 1
+
+    classic_bottom_lowering = _v03b_classic_two_sided_bottom_lowering_count()
+    return V03BEscalationInvariantEvidence(
+        cases=cases,
+        backward_effects=backward,
+        weaker_escalations=weaker,
+        boundary_mismatches=boundary_mismatches,
+        bottom_axis_lowering_cases=bottom_lowering,
+        classic_bottom_axis_lowering=classic_bottom_lowering,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_classic_two_sided_bottom_lowering_count() -> int:
+    match = _v03b_match(axis=1.50)
+    lowering = 0
+
+    while not match.ended:
+        free_window = match.consume_free_initiative_window()
+        if free_window is None:
+            match.advance()
+            if match.ended:
+                break
+
+        offender = match.initiator
+        axis_before = match.axis
+        reset = match.reset_window()
+        if (
+            offender is Side.BOTTOM
+            and reset.stalling_offense
+            and match.axis < axis_before - 1e-12
+        ):
+            lowering += 1
+
+    return lowering
+
+
+def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
+    top_stall = _v03b_top_stall_probe()
+    top_stall_sweep = _v03b_top_stall_sweep()
+    stalemate = _v03b_stalemated_attacker_probe()
+    symmetry = _v03b_symmetry_probe()
+    boundary = _v03b_boundary_probe()
+    escalation = _v03b_escalation_invariant_probe()
+
+    response_commitment_present = _v03_response_commitment_present()
+    recognition_present = _v03_recognition_mechanic_present()
+    v03a_gate_b = next(
+        gate
+        for gate in measure_v03a_definition_of_done()
+        if gate.letter == "B"
+    )
+
+    gate_a_pass = _v03b_gate_a_sweep_passes(top_stall_sweep)
+    gate_a_max_locked_time_share = max(
+        item.steady_state_locked_time_share for item in top_stall_sweep
+    )
+    gate_a_max_locked_window_share = max(
+        item.steady_state_locked_share for item in top_stall_sweep
+    )
+    gate_a_max_locked_dwell = max(
+        item.steady_state_longest_locked_dwell_seconds
+        for item in top_stall_sweep
+    )
+    gate_a_whole_match_max_locked_share = max(
+        item.locked_share for item in top_stall_sweep
+    )
+    gate_a_whole_match_max_locked_time_share = max(
+        item.locked_time_share for item in top_stall_sweep
+    )
+    gate_a_whole_match_max_locked_dwell = max(
+        item.longest_locked_dwell_seconds for item in top_stall_sweep
+    )
+    gate_a_locked_endings = sum(
+        item.locked_timeout for item in top_stall_sweep
+    )
+    gate_a_failing_items = tuple(
+        item
+        for item in top_stall_sweep
+        if not _v03b_gate_a_case_passes(item)
+    )
+    gate_a_failing_cases = len(gate_a_failing_items)
+    gate_a_failing_labels = ",".join(
+        f"i{item.interval_seconds}/t{item.match_length_seconds}:"
+        f"time_share={item.steady_state_locked_time_share:.3f},"
+        f"window_share={item.steady_state_locked_share:.3f},"
+        f"dwell={item.steady_state_longest_locked_dwell_seconds}s"
+        for item in gate_a_failing_items
+    ) or "none"
+    gate_b_pass = (
+        stalemate.attempts > 0
+        and stalemate.top_penalties == 0
+        and stalemate.bottom_penalties == 0
+        and stalemate.final_stage is SubmissionStage.THREAT
+        and stalemate.top_clock == 0
+        and stalemate.bottom_clock == 0
+    )
+    gate_c_pass = (
+        symmetry.top_warnings == 1
+        and symmetry.top_penalties >= 1
+        and symmetry.bottom_warnings == 1
+        and symmetry.bottom_penalties >= 1
+    )
+    gate_d_pass = (
+        boundary.warnings == 1
+        and boundary.free_windows == 1
+        and abs(boundary.axis_after - boundary.axis_before) <= 1e-12
+        and boundary.band_after is Band.LOOSE
+        and boundary.clock_after == boundary.clock_before
+    )
+    gate_e_pass = (
+        not response_commitment_present
+        and not recognition_present
+        and v03a_gate_b.status is V02GateStatus.DEFERRED
+    )
+    gate_f_pass = (
+        escalation.cases > 0
+        and escalation.backward_effects == 0
+        and escalation.weaker_escalations == 0
+        and escalation.boundary_mismatches == 0
+        and escalation.bottom_axis_lowering_cases == 0
+        and escalation.classic_bottom_axis_lowering == 0
+    )
+
+    return (
+        V03BGateMeasurement(
+            letter="A",
+            name="one-sided RESET lock is penalized",
+            status=V02GateStatus.PASS if gate_a_pass else V02GateStatus.OPEN,
+            metric=(
+                f"sweep_cases={len(top_stall_sweep)}; "
+                f"failing_cases={gate_a_failing_cases}; "
+                f"max_post_reset_Locked_time_share={gate_a_max_locked_time_share:.3f}"
+                f"<{V03B_GATE_A_LOCKED_SHARE_LIMIT:.2f}; "
+                f"max_post_reset_window_share={gate_a_max_locked_window_share:.3f}; "
+                f"max_post_reset_Locked_dwell={gate_a_max_locked_dwell}s"
+                f"<{V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS}s; "
+                f"whole_match_max_window_share={gate_a_whole_match_max_locked_share:.3f}; "
+                f"whole_match_max_time_share={gate_a_whole_match_max_locked_time_share:.3f}; "
+                f"whole_match_max_dwell={gate_a_whole_match_max_locked_dwell}s; "
+                f"Locked_timeout_cases={gate_a_locked_endings}/{len(top_stall_sweep)}; "
+                f"failing={gate_a_failing_labels}; "
+                f"default_5m_5s=warnings:{top_stall.warnings},"
+                f"penalties:{top_stall.penalties},"
+                f"resets:{top_stall.position_resets},"
+                f"Locked:{top_stall.locked_windows}/{top_stall.decision_windows}"
+            ),
+            evidence=(
+                "fixed 26-case interval/length sweep measures the repeating "
+                "post-first-Position-Reset regime in simulated time: every case "
+                "must keep Locked below half of elapsed time and below one full "
+                "20s uninterrupted dwell; decision-window share is diagnostic only"
+            ),
+        ),
+        V03BGateMeasurement(
+            letter="B",
+            name="stalemated attacker remains engaged",
+            status=V02GateStatus.PASS if gate_b_pass else V02GateStatus.OPEN,
+            metric=(
+                f"attempts={stalemate.attempts}; "
+                f"Top penalties={stalemate.top_penalties}; "
+                f"Bottom penalties={stalemate.bottom_penalties}; "
+                f"stage={stalemate.final_stage.value if stalemate.final_stage else 'None'}; "
+                f"clocks={stalemate.top_clock}/{stalemate.bottom_clock}"
+            ),
+            evidence=(
+                "legal Americana attempts into informed Turn-In Contested holds "
+                "reset both attacker and defender advancement clocks"
+            ),
+        ),
+        V03BGateMeasurement(
+            letter="C",
+            name="stalling attribution is symmetric",
+            status=V02GateStatus.PASS if gate_c_pass else V02GateStatus.OPEN,
+            metric=(
+                f"Top warnings/penalties={symmetry.top_warnings}/{symmetry.top_penalties}; "
+                f"Bottom warnings/penalties={symmetry.bottom_warnings}/{symmetry.bottom_penalties}"
+            ),
+            evidence="the same 20-second persistent-warning ladder can penalize either side",
+        ),
+        V03BGateMeasurement(
+            letter="D",
+            name="penalty stops at Neutral-side boundary",
+            status=V02GateStatus.PASS if gate_d_pass else V02GateStatus.OPEN,
+            metric=(
+                f"warnings={boundary.warnings}; free_windows={boundary.free_windows}; "
+                f"axis={boundary.axis_before:+.2f}->{boundary.axis_after:+.2f}; "
+                f"band={boundary.band_after.value}; "
+                f"clock={boundary.clock_before}->{boundary.clock_after}"
+            ),
+            evidence=(
+                "Top offending at Loose cannot cross Neutral; Bottom receives a "
+                "zero-simulated-time free initiative window instead"
+            ),
+        ),
+        V03BGateMeasurement(
+            letter="E",
+            name="Gate-B deferral guard remains intact",
+            status=V02GateStatus.PASS if gate_e_pass else V02GateStatus.OPEN,
+            metric=(
+                f"response_commitment_present={response_commitment_present}; "
+                f"recognition_present={recognition_present}; "
+                f"v0.3a Gate B={v03a_gate_b.status.value}"
+            ),
+            evidence=(
+                "v0.3b adds no response commitment or Recognition/information "
+                "mechanic and must not auto-expire the v0.3a Gate-B deferral"
+            ),
+        ),
+        V03BGateMeasurement(
+            letter="F",
+            name="stalling consequences are directional and monotonic",
+            status=V02GateStatus.PASS if gate_f_pass else V02GateStatus.OPEN,
+            metric=(
+                f"cases={escalation.cases}; "
+                f"backward={escalation.backward_effects}; "
+                f"weaker_later={escalation.weaker_escalations}; "
+                f"boundary_mismatches={escalation.boundary_mismatches}; "
+                f"Bottom-lowering={escalation.bottom_axis_lowering_cases}; "
+                f"classic Bottom-lowering={escalation.classic_bottom_axis_lowering}"
+            ),
+            evidence=(
+                "for both offender sides across every 0.1-axis state compatible "
+                "with each persisted band, offense 3+ must move toward the "
+                "non-staller (or grant that player free initiative) and may "
+                "not be weaker than offense 2 from the same state"
+            ),
+        ),
+    )
+
+
+def render_v03b_definition_of_done() -> tuple[str, ...]:
+    return tuple(gate.render() for gate in measure_v03b_definition_of_done())
+
+
+@lru_cache(maxsize=1)
+def _v03b_random_standard_batch():
+    from ..interfaces.batch import run_escape_first_batch
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v03b_stalling=True,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_informed_standard_batch():
+    from ..interfaces.batch import (
+        BatchResponderMode,
+        run_escape_first_batch,
+    )
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        bottom_responder_mode=BatchResponderMode.INFORMED,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v03b_stalling=True,
+    )
+
+
+def render_v03b_prediction_probe() -> str:
+    baseline_random = _v03_standard_batch()
+    stalling_random = _v03b_random_standard_batch()
+    baseline_informed = _v03_informed_standard_batch()
+    stalling_informed = _v03b_informed_standard_batch()
+
+    baseline_random_taps = baseline_random.outcome_counts.get(
+        "TAP — Americana",
+        0,
+    )
+    stalling_random_taps = stalling_random.outcome_counts.get(
+        "TAP — Americana",
+        0,
+    )
+    baseline_informed_taps = baseline_informed.outcome_counts.get(
+        "TAP — Americana",
+        0,
+    )
+    stalling_informed_taps = stalling_informed.outcome_counts.get(
+        "TAP — Americana",
+        0,
+    )
+
+    return (
+        "V0.3b PREDICTION PROBE — matched 100-seed PRESSURE/ESCAPE: "
+        f"Top RESETs {baseline_random.top_reset_count}"
+        f"->{stalling_random.top_reset_count}; "
+        f"random taps {baseline_random_taps}->{stalling_random_taps}; "
+        f"informed taps {baseline_informed_taps}->{stalling_informed_taps}; "
+        f"v0.3b warnings Top/Bottom="
+        f"{stalling_random.top_stalling_warning_count}/"
+        f"{stalling_random.bottom_stalling_warning_count}; "
+        f"penalties Top/Bottom="
+        f"{stalling_random.top_stalling_penalty_count}/"
+        f"{stalling_random.bottom_stalling_penalty_count}; "
+        f"Position Resets Top/Bottom="
+        f"{stalling_random.top_stalling_position_reset_count}/"
+        f"{stalling_random.bottom_stalling_position_reset_count}. "
+        "Observational only; no prediction is a tuning gate."
+    )
+
+
+def render_v03b_normal_play_guard() -> str:
+    random = _v03b_random_standard_batch()
+    informed = _v03b_informed_standard_batch()
+
+    random_clear = (
+        random.top_stalling_warning_count == 0
+        and random.bottom_stalling_warning_count == 0
+        and random.top_stalling_penalty_count == 0
+        and random.bottom_stalling_penalty_count == 0
+        and random.top_stalling_position_reset_count == 0
+        and random.bottom_stalling_position_reset_count == 0
+    )
+    informed_clear = (
+        informed.top_stalling_warning_count == 0
+        and informed.bottom_stalling_warning_count == 0
+        and informed.top_stalling_penalty_count == 0
+        and informed.bottom_stalling_penalty_count == 0
+        and informed.top_stalling_position_reset_count == 0
+        and informed.bottom_stalling_position_reset_count == 0
+    )
+    status = "PASS" if random_clear and informed_clear else "OPEN"
+    return (
+        f"V0.3b NORMAL-PLAY GUARD [{status}]: "
+        f"random warnings={random.top_stalling_warning_count}/"
+        f"{random.bottom_stalling_warning_count}, penalties="
+        f"{random.top_stalling_penalty_count}/"
+        f"{random.bottom_stalling_penalty_count}, Position Resets="
+        f"{random.top_stalling_position_reset_count}/"
+        f"{random.bottom_stalling_position_reset_count}; "
+        f"informed warnings={informed.top_stalling_warning_count}/"
+        f"{informed.bottom_stalling_warning_count}, penalties="
+        f"{informed.top_stalling_penalty_count}/"
+        f"{informed.bottom_stalling_penalty_count}, Position Resets="
+        f"{informed.top_stalling_position_reset_count}/"
+        f"{informed.bottom_stalling_position_reset_count}. "
+        "Executable guard; stronger stalling escalation must not punish engaged standard play."
+    )
+
+
+
+@lru_cache(maxsize=1)
+def _v03b_stall_vs_active_bottom_probe() -> V03BStallActiveBottomEvidence:
+    from ..interfaces.batch import EscapeFirstInitiatorPolicy
+    from ..interfaces.blind import RandomBlindResponder
+
+    matches = 100
+    timeouts = 0
+    escapes = 0
+    warnings = 0
+    penalties = 0
+    position_resets = 0
+
+    for match_index in range(matches):
+        match = _v03b_match(
+            axis=1.50,
+            initial_clock=300,
+            interval_seconds=5,
+        )
+        match.top.stamina.set_current(100)
+        match.bottom.stamina.set_current(100)
+        match.set_behaviors(
+            top=TopBehavior.PRESSURE,
+            bottom=BottomBehavior.ESCAPE,
+        )
+        policy = EscapeFirstInitiatorPolicy()
+        responder = RandomBlindResponder(42 + match_index)
+
+        while not match.ended:
+            free_window = match.consume_free_initiative_window()
+            if free_window is None:
+                match.advance()
+                if match.ended:
+                    break
+
+            side = match.initiator
+            if side is Side.TOP:
+                reset = match.reset_window()
+                if reset.stalling_consequence == "WARNING":
+                    warnings += 1
+                elif reset.position_reset:
+                    position_resets += 1
+                elif (
+                    reset.penalty_axis_before is not None
+                    and reset.penalty_axis_after is not None
+                    and reset.penalty_axis_after != reset.penalty_axis_before
+                ):
+                    penalties += 1
+                continue
+
+            decision = policy.choose(match)
+            if decision.action_id is None:
+                match.reset_window()
+                continue
+
+            hidden = responder.choose(
+                Side.TOP,
+                allowed_response_ids=match.legal_response_ids(
+                    decision.action_id
+                ),
+                fallback_response_id=policy._ready_fallback_response_id(
+                    match,
+                    decision.action_id,
+                ),
+            )
+            match.attempt(
+                action_id=decision.action_id,
+                response_id=hidden.response_id,
+                commitment=Commitment.MEDIUM,
+            )
+
+        if match.exit_destination is not None:
+            escapes += 1
+        elif match.exit_reason == "TIMEOUT — Mount retained":
+            timeouts += 1
+
+    return V03BStallActiveBottomEvidence(
+        matches=matches,
+        timeouts=timeouts,
+        escapes=escapes,
+        warnings=warnings,
+        penalties=penalties,
+        position_resets=position_resets,
+    )
+
+
+def render_v03b_stall_vs_active_bottom_observation() -> str:
+    evidence = _v03b_stall_vs_active_bottom_probe()
+    return (
+        "V0.3b STALL-vs-ACTIVE-BOTTOM OBSERVATION: "
+        f"matches={evidence.matches}; "
+        f"timeouts={evidence.timeouts}; escapes={evidence.escapes}; "
+        f"warnings={evidence.warnings}; penalties={evidence.penalties}; "
+        f"Position Resets={evidence.position_resets}. "
+        "Observational only: v0 does not yet define whether a Mount-retained "
+        "timeout is a win, draw, or loss; scoring/points consequences belong "
+        "to the later ruleset layer."
     )
 
 

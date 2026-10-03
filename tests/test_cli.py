@@ -435,6 +435,42 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("--v03-submissions is currently available only with --batch", output.getvalue())
 
+    def test_v03_stalling_requires_v03_submissions(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--batch", "2",
+                "--v02-setup",
+                "--v03-stalling",
+            ])
+        self.assertEqual(code, 2)
+        self.assertIn("--v03-stalling requires --v03-submissions", output.getvalue())
+
+    def test_v03_stalling_batch_reports_stalling_metrics(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--batch", "4",
+                "--seed", "42",
+                "--v02-setup",
+                "--v03-submissions",
+                "--v03-stalling",
+            ])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Top stalling warnings:", text)
+        self.assertIn("Bottom stalling warnings:", text)
+        self.assertIn("Top Position Resets:", text)
+        self.assertIn("Bottom Position Resets:", text)
+        self.assertIn("Free initiative windows:", text)
+
+    def test_v03_stalling_requires_batch(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--v03-stalling"])
+        self.assertEqual(code, 2)
+        self.assertIn("--v03-stalling is currently available only with --batch", output.getvalue())
+
     def test_batch_rejects_interactive_blind_flags(self):
         output = io.StringIO()
         with redirect_stdout(output):
@@ -523,6 +559,13 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("modern playtest flags", output.getvalue())
 
+    def test_legacy_cli_rejects_v03_stalling_flag(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["--v03-stalling"])
+        self.assertEqual(code, 2)
+        self.assertIn("modern playtest flags", output.getvalue())
+
     def test_primary_check_reports_commitment_dominance_and_visibility_debt(self):
         output = io.StringIO()
         with redirect_stdout(output):
@@ -575,7 +618,7 @@ class CliTests(unittest.TestCase):
             text,
         )
         self.assertIn("V0.2 DOD GATE 1 [", text)
-        self.assertIn("V0.2 DOD GATE 2 [", text)
+        self.assertIn("V0.2 DOD GATE 2 [PASS]", text)
         self.assertIn("V0.2 DOD GATE 3 [", text)
         self.assertIn("V0.2 DOD GATE 4 [", text)
         self.assertIn("V0.2 DOD GATE 5 [", text)
@@ -586,6 +629,16 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.3a DOD GATE C [", text)
         self.assertIn("V0.3a DOD GATE D [", text)
         self.assertIn("V0.3a DOD GATE E [", text)
+        self.assertIn("V0.3b DOD GATE A [PASS]", text)
+        self.assertIn("V0.3b DOD GATE B [PASS]", text)
+        self.assertIn("V0.3b DOD GATE C [PASS]", text)
+        self.assertIn("V0.3b DOD GATE D [PASS]", text)
+        self.assertIn("V0.3b DOD GATE E [PASS]", text)
+        self.assertIn("V0.3b DOD GATE F [PASS]", text)
+        self.assertIn("V0.3b PREDICTION PROBE", text)
+        self.assertIn("V0.3b NORMAL-PLAY GUARD [PASS]", text)
+        self.assertIn("V0.3b STALL-vs-ACTIVE-BOTTOM OBSERVATION", text)
+        self.assertIn("timeouts=100; escapes=0", text)
         self.assertIn("V0.3a PREDICTION PROBE", text)
         self.assertIn("V0.3a STAMINA SATURATION", text)
         self.assertIn("V0.3a SUBMISSION-HOLD COST: PROVISIONAL", text)
@@ -616,6 +669,10 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("BATCH RESPONSE MIX REACHABILITY", text)
         self.assertNotIn("V0.2 DOD GATE", text)
         self.assertNotIn("V0.3a DOD GATE", text)
+        self.assertNotIn("V0.3b DOD GATE", text)
+        self.assertNotIn("V0.3b PREDICTION PROBE", text)
+        self.assertNotIn("V0.3b NORMAL-PLAY GUARD", text)
+        self.assertNotIn("V0.3b STALL-vs-ACTIVE-BOTTOM OBSERVATION", text)
         self.assertNotIn("V0.3a PREDICTION PROBE", text)
         self.assertNotIn("V0.3a STAMINA SATURATION", text)
         self.assertNotIn("V0.3a SUBMISSION-HOLD COST", text)

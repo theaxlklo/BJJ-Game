@@ -31,11 +31,18 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v03a_definition_of_done()
         }
 
-    def test_submission_surface_expires_gate_2_deferral(self):
+    def test_submission_surface_gate_2_is_closed_by_full_match_v03b_escalation(self):
         self.assertTrue(_submission_finish_present())
         v02 = {gate.number: gate for gate in measure_v02_definition_of_done()}
-        self.assertIs(v02[2].status, V02GateStatus.OPEN)
+        self.assertIs(v02[2].status, V02GateStatus.PASS)
         self.assertIn("submission_finish_present=True", v02[2].metric)
+        self.assertIn("v03b_sweep_cases=26", v02[2].metric)
+        self.assertIn("v03b_sweep_failing=0", v02[2].metric)
+        self.assertIn("v03b_max_post_reset_locked_time_share=", v02[2].metric)
+        self.assertIn(
+            "fixed interval/length sweep shows deliberate stalling cannot keep Locked",
+            v02[2].evidence,
+        )
 
     def test_gate_a_uses_positive_submission_probability_and_policy_order(self):
         probability, selected = _v03_locked_submission_probe()

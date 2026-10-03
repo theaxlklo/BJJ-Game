@@ -486,13 +486,15 @@ V0.3a SETUP-POLICY DEBT: builder progress is ranked above axis loss; informed PR
 
 This is observed debt, not tuned in v0.3a.
 
-The v0.2 Gate-2 deferral remains intentionally expired:
+At the v0.3a closure point, the v0.2 Gate-2 deferral had intentionally expired to:
 
 ```text
 Gate 2 OPEN
 ```
 
-because a real submission-finish route exists while repeated RESET still times out at Locked.
+because a real submission-finish route existed while the historical repeated-RESET probe still timed out at Locked.
+
+v0.3b now closes that debt with executable one-sided stalling evidence; see the next section.
 
 The setup/policy debt also remains explicit: Top can repeatedly rebuild Americana setup even when informed defense prevents conversion. This is observed, not tuned in v0.3a.
 
@@ -506,6 +508,155 @@ See:
 - `docs/MOUNT_V0_3A_READY_HOLD_STAMINA_AMENDMENT.md`
 - `docs/MOUNT_V0_3A_LOW3_HOLD_COST_MEASUREMENT.md`
 - `docs/MOUNT_V0_3A_GATE_B_DEFERRAL.md`
+
+## Mount v0.3b — stalling / progress enforcement
+
+v0.3b distinguishes **engagement** from successful advancement.
+
+A legal progress-capable attempt counts as engagement even when the opponent stops it. A legal defensive response to that attempt also counts as engagement.
+
+Each player owns an independent 20-second simulated-time advancement clock.
+
+The escalation ladder is:
+
+```text
+offense 1 -> persistent Warning
+offense 2 -> one visible-band penalty / boundary free initiative
+offense 3+ -> directional escalation
+```
+
+For offense 3+:
+
+```text
+Top offender:
+  use min(+1.50, current one-band target)
+  or Bottom free initiative at Loose
+
+Bottom offender:
+  never use canonical +1.50 reset
+  use one-band movement toward Top
+  or Top free initiative at Locked
+```
+
+This preserves the frozen rule that stalling consequences always benefit the non-stalling player and prevents later escalation from becoming weaker than offense 2.
+
+### Gate F — direction and escalation strength
+
+The executable invariant sweeps both offender sides across every 0.1-axis state compatible with each persisted hysteresis band:
+
+```text
+cases=98
+backward effects=0
+weaker later effects=0
+boundary mismatches=0
+Bottom-lowering cases=0
+classic both-RESET Bottom-lowering=0
+```
+
+```text
+v0.3b Gate F PASS
+```
+
+### Gate A — timing-independent simulated-time measurement
+
+The fixed sweep remains:
+
+```text
+intervals: 5s, 7s
+match lengths: 240..300s in 5s increments
+26 cases
+```
+
+After the first canonical Position Reset, every case must satisfy:
+
+```text
+Locked time share < 0.50
+longest uninterrupted Locked dwell < 20s
+```
+
+Decision-window share is diagnostic only.
+
+Current result:
+
+```text
+failing cases=0/26
+
+max post-reset Locked time share=0.393
+max post-reset decision-window share=0.500
+max post-reset Locked dwell=11s
+```
+
+The previous exact `0.500` failures were caused by sampling decision windows at 7-second intervals. The strict `<0.50` threshold was not changed; the occupancy unit was corrected to simulated time so it matches the dwell metric, the stamina remainder model, and the 20-second stalling clock.
+
+Current gate state:
+
+```text
+v0.2 Gate 2 PASS
+
+v0.3b Gate A PASS
+v0.3b Gate B PASS
+v0.3b Gate C PASS
+v0.3b Gate D PASS
+v0.3b Gate E PASS
+v0.3b Gate F PASS
+```
+
+### Normal-play guard
+
+```text
+V0.3b NORMAL-PLAY GUARD [PASS]
+
+random:
+  warnings=0/0
+  penalties=0/0
+  Position Resets=0/0
+
+informed:
+  warnings=0/0
+  penalties=0/0
+  Position Resets=0/0
+```
+
+### Stall versus active Bottom
+
+The non-gating observation remains:
+
+```text
+Top RESETs every Top initiation
+Bottom uses normal escape-first policy
+normal random response mix
+100 matches
+
+timeouts=100
+escapes=0
+warnings=100
+one-band penalties=100
+Position Resets=800
+```
+
+v0 still does not define whether `TIMEOUT — Mount retained` is a win, draw, or loss. That belongs to the later scoring/points ruleset layer.
+
+The v0.3a competent-defender Gate B remains **DEFERRED**:
+
+```text
+response_commitment_present=False
+recognition_present=False
+```
+
+See:
+
+- `docs/MOUNT_V0_3B_DEFINITION_OF_DONE.md`
+- `docs/MOUNT_V0_3B_STALLING_CADENCE.md`
+- `docs/MOUNT_V0_3B_CADENCE_TIMING_CLARIFICATION.md`
+- `docs/MOUNT_V0_3B_GATE_A_PROBE_CLARIFICATION.md`
+- `docs/MOUNT_V0_3B_FULL_MATCH_STALLING_FAILURE.md`
+- `docs/MOUNT_V0_3B_POSITION_RESET_ESCALATION.md`
+- `docs/MOUNT_V0_3B_GATE_A_STEADY_STATE_AMENDMENT.md`
+- `docs/MOUNT_V0_3B_GATE_A_STEADY_STATE_WINDOW_CLARIFICATION.md`
+- `docs/MOUNT_V0_3B_POST_RESET_STEADY_STATE_MEASUREMENT.md` — superseded window-share result
+- `docs/MOUNT_V0_3B_DIRECTIONAL_ESCALATION_INVARIANT.md`
+- `docs/MOUNT_V0_3B_GATE_A_TIME_SHARE_CORRECTION.md`
+- `docs/MOUNT_V0_3B_DIRECTIONAL_TIME_SHARE_FINAL_MEASUREMENT.md`
 
 ## Known v0 limitation
 

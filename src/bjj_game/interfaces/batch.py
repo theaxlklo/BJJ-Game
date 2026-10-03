@@ -586,6 +586,15 @@ class BatchSummary:
     final_axis_mean: float
     top_reset_count: int
     bottom_reset_count: int
+    top_stalling_warning_count: int
+    bottom_stalling_warning_count: int
+    top_stalling_penalty_count: int
+    bottom_stalling_penalty_count: int
+    top_stalling_position_reset_count: int
+    bottom_stalling_position_reset_count: int
+    top_stalling_reset_with_route_count: int
+    bottom_stalling_reset_with_route_count: int
+    free_initiative_window_count: int
     top_action_counts: dict[str, int]
     bottom_action_counts: dict[str, int]
     top_escape_priority_count: int
@@ -663,6 +672,15 @@ class BatchSummary:
             "DECISIONS",
             f"Top RESET count: {self.top_reset_count}",
             f"Bottom RESET count: {self.bottom_reset_count}",
+            f"Top stalling warnings: {self.top_stalling_warning_count}",
+            f"Bottom stalling warnings: {self.bottom_stalling_warning_count}",
+            f"Top stalling penalties: {self.top_stalling_penalty_count}",
+            f"Bottom stalling penalties: {self.bottom_stalling_penalty_count}",
+            f"Top Position Resets: {self.top_stalling_position_reset_count}",
+            f"Bottom Position Resets: {self.bottom_stalling_position_reset_count}",
+            f"Top RESET-with-route count: {self.top_stalling_reset_with_route_count}",
+            f"Bottom RESET-with-route count: {self.bottom_stalling_reset_with_route_count}",
+            f"Free initiative windows: {self.free_initiative_window_count}",
             f"Top escape-priority attacks: {self.top_escape_priority_count}",
             f"Bottom escape-priority attacks: {self.bottom_escape_priority_count}",
             f"Top submission-priority attacks: {self.top_submission_priority_count}",
@@ -776,11 +794,14 @@ def run_escape_first_batch(
     bottom_responder_mode: BatchResponderMode = BatchResponderMode.RANDOM,
     enable_v02_setup: bool = False,
     enable_v03_submissions: bool = False,
+    enable_v03b_stalling: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
         raise ValueError("matches must be > 0")
     if enable_v03_submissions and not enable_v02_setup:
         raise ValueError("v0.3a submissions require v0.2 setup/Ready")
+    if enable_v03b_stalling and not enable_v03_submissions:
+        raise ValueError("v0.3b stalling requires v0.3a submissions")
 
     policy = EscapeFirstInitiatorPolicy()
     outcomes: Counter[str] = Counter()
@@ -789,6 +810,15 @@ def run_escape_first_batch(
     final_axes: list[float] = []
     top_resets = 0
     bottom_resets = 0
+    top_stalling_warnings = 0
+    bottom_stalling_warnings = 0
+    top_stalling_penalties = 0
+    bottom_stalling_penalties = 0
+    top_stalling_position_resets = 0
+    bottom_stalling_position_resets = 0
+    top_stalling_resets_with_route = 0
+    bottom_stalling_resets_with_route = 0
+    free_initiative_windows = 0
     top_actions: Counter[str] = Counter()
     bottom_actions: Counter[str] = Counter()
     top_escape_priority = 0
@@ -821,6 +851,7 @@ def run_escape_first_batch(
             interval_seconds=interval_seconds,
             enable_v02_setup=enable_v02_setup,
             enable_v03_submissions=enable_v03_submissions,
+            enable_v03b_stalling=enable_v03b_stalling,
         )
         match.top.stamina.set_current(top_stamina)
         match.bottom.stamina.set_current(bottom_stamina)
@@ -843,34 +874,42 @@ def run_escape_first_batch(
         pending_top_followup_setup_builds: Counter[str] = Counter()
 
         while not match.ended:
-            # Choose behavior for the upcoming normal-speed interval.
-            next_top = top_policy.choose(match)
-            next_bottom = bottom_policy.choose(match)
-            if next_top is not current_top:
-                top_behavior_switches += 1
-                current_top = next_top
-            if next_bottom is not current_bottom:
-                bottom_behavior_switches += 1
-                current_bottom = next_bottom
-            match.set_behaviors(top=current_top, bottom=current_bottom)
-            top_behavior_windows[current_top.value] += 1
-            bottom_behavior_windows[current_bottom.value] += 1
+            free_window = (
+                match.consume_free_initiative_window()
+                if enable_v03b_stalling
+                else None
+            )
+            if free_window is None:
+                # Choose behavior for the upcoming normal-speed interval.
+                next_top = top_policy.choose(match)
+                next_bottom = bottom_policy.choose(match)
+                if next_top is not current_top:
+                    top_behavior_switches += 1
+                    current_top = next_top
+                if next_bottom is not current_bottom:
+                    bottom_behavior_switches += 1
+                    current_bottom = next_bottom
+                match.set_behaviors(top=current_top, bottom=current_bottom)
+                top_behavior_windows[current_top.value] += 1
+                bottom_behavior_windows[current_bottom.value] += 1
 
-            match.advance()
-            if match.ended:
-                break
+                match.advance()
+                if match.ended:
+                    break
 
-            # If CONSERVE cleared the exhaustion latch during this interval,
-            # restore the baseline before action resolution at the decision window.
-            post_top = top_policy.choose(match)
-            post_bottom = bottom_policy.choose(match)
-            if post_top is not current_top:
-                top_behavior_switches += 1
-                current_top = post_top
-            if post_bottom is not current_bottom:
-                bottom_behavior_switches += 1
-                current_bottom = post_bottom
-            match.set_behaviors(top=current_top, bottom=current_bottom)
+                # If CONSERVE cleared the exhaustion latch during this interval,
+                # restore the baseline before action resolution at the decision window.
+                post_top = top_policy.choose(match)
+                post_bottom = bottom_policy.choose(match)
+                if post_top is not current_top:
+                    top_behavior_switches += 1
+                    current_top = post_top
+                if post_bottom is not current_bottom:
+                    bottom_behavior_switches += 1
+                    current_bottom = post_bottom
+                match.set_behaviors(top=current_top, bottom=current_bottom)
+            else:
+                free_initiative_windows += 1
 
             side = match.initiator
             if enable_v02_setup:
@@ -878,11 +917,35 @@ def run_escape_first_batch(
                 # initiator locks action before responder chooses among legal responses.
                 decision = policy.choose(match)
                 if decision.action_id is None:
-                    match.reset_window()
+                    reset = match.reset_window()
                     if side is Side.TOP:
                         top_resets += 1
+                        if reset.progress_route_available:
+                            top_stalling_resets_with_route += 1
+                        if reset.stalling_consequence == "WARNING":
+                            top_stalling_warnings += 1
+                        elif reset.position_reset:
+                            top_stalling_position_resets += 1
+                        elif (
+                            reset.penalty_axis_before is not None
+                            and reset.penalty_axis_after is not None
+                            and reset.penalty_axis_after != reset.penalty_axis_before
+                        ):
+                            top_stalling_penalties += 1
                     else:
                         bottom_resets += 1
+                        if reset.progress_route_available:
+                            bottom_stalling_resets_with_route += 1
+                        if reset.stalling_consequence == "WARNING":
+                            bottom_stalling_warnings += 1
+                        elif reset.position_reset:
+                            bottom_stalling_position_resets += 1
+                        elif (
+                            reset.penalty_axis_before is not None
+                            and reset.penalty_axis_after is not None
+                            and reset.penalty_axis_after != reset.penalty_axis_before
+                        ):
+                            bottom_stalling_penalties += 1
                     continue
                 if (
                     side is Side.TOP
@@ -912,11 +975,35 @@ def run_escape_first_batch(
                 response_id = hidden.response_id
                 decision = policy.choose(match)
                 if decision.action_id is None:
-                    match.reset_window()
+                    reset = match.reset_window()
                     if side is Side.TOP:
                         top_resets += 1
+                        if reset.progress_route_available:
+                            top_stalling_resets_with_route += 1
+                        if reset.stalling_consequence == "WARNING":
+                            top_stalling_warnings += 1
+                        elif reset.position_reset:
+                            top_stalling_position_resets += 1
+                        elif (
+                            reset.penalty_axis_before is not None
+                            and reset.penalty_axis_after is not None
+                            and reset.penalty_axis_after != reset.penalty_axis_before
+                        ):
+                            top_stalling_penalties += 1
                     else:
                         bottom_resets += 1
+                        if reset.progress_route_available:
+                            bottom_stalling_resets_with_route += 1
+                        if reset.stalling_consequence == "WARNING":
+                            bottom_stalling_warnings += 1
+                        elif reset.position_reset:
+                            bottom_stalling_position_resets += 1
+                        elif (
+                            reset.penalty_axis_before is not None
+                            and reset.penalty_axis_after is not None
+                            and reset.penalty_axis_after != reset.penalty_axis_before
+                        ):
+                            bottom_stalling_penalties += 1
                     continue
 
             action = MODERN_ENTITY_BY_ID[decision.action_id]
@@ -1015,6 +1102,15 @@ def run_escape_first_batch(
         final_axis_mean=mean(final_axes),
         top_reset_count=top_resets,
         bottom_reset_count=bottom_resets,
+        top_stalling_warning_count=top_stalling_warnings,
+        bottom_stalling_warning_count=bottom_stalling_warnings,
+        top_stalling_penalty_count=top_stalling_penalties,
+        bottom_stalling_penalty_count=bottom_stalling_penalties,
+        top_stalling_position_reset_count=top_stalling_position_resets,
+        bottom_stalling_position_reset_count=bottom_stalling_position_resets,
+        top_stalling_reset_with_route_count=top_stalling_resets_with_route,
+        bottom_stalling_reset_with_route_count=bottom_stalling_resets_with_route,
+        free_initiative_window_count=free_initiative_windows,
         top_action_counts=dict(top_actions),
         bottom_action_counts=dict(bottom_actions),
         top_escape_priority_count=top_escape_priority,

@@ -7,6 +7,7 @@ from bjj_game.diagnostics.checker import (
     _exhausted_positive_weight_escape_routes_by_top_behavior,
     _responder_exhaustion_differential_count,
     _submission_finish_present,
+    _v03b_top_stall_probe,
     _v02_ready_gate_evidence,
     _v02_standard_batch,
     _v03_standard_batch,
@@ -46,29 +47,39 @@ class V02DefinitionOfDoneMeasurementTests(unittest.TestCase):
                 self.gates[1].metric,
             )
 
-    def test_gate_2_status_follows_reset_probe_and_submission_surface(self):
+    def test_gate_2_status_follows_v03b_one_sided_stalling_probe(self):
         probe = render_reset_lock_probe()
         locked_timeout = (
             "TIMEOUT — Mount retained" in probe
             and "band Locked" in probe
         )
         submission_finish_present = _submission_finish_present()
+        from bjj_game.diagnostics.checker import (
+            _v03b_gate_a_sweep_passes,
+            _v03b_top_stall_sweep,
+        )
+        stalling = _v03b_top_stall_probe()
+        resolved = _v03b_gate_a_sweep_passes(_v03b_top_stall_sweep())
         expected = (
-            V02GateStatus.PASS
-            if not locked_timeout
+            V02GateStatus.DEFERRED
+            if locked_timeout and not submission_finish_present
             else (
-                V02GateStatus.DEFERRED
-                if not submission_finish_present
+                V02GateStatus.PASS
+                if (not locked_timeout or resolved)
                 else V02GateStatus.OPEN
             )
         )
         self.assertIs(self.gates[2].status, expected)
         self.assertIn(
-            f"locked_timeout={locked_timeout}",
+            f"legacy_locked_timeout={locked_timeout}",
             self.gates[2].metric,
         )
         self.assertIn(
             f"submission_finish_present={submission_finish_present}",
+            self.gates[2].metric,
+        )
+        self.assertIn(
+            "v03b_sweep_cases=26",
             self.gates[2].metric,
         )
 
