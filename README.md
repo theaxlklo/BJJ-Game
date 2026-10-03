@@ -728,19 +728,23 @@ Intermediate Strong Failure / Strong Success clamps are preserved. An independen
 
 Response commitment is public in v0.4a. Hidden/imperfect commitment recognition remains deferred.
 
-LOW/UNFUNDED submission attempts follow the frozen feint rule:
+The approved feint-intent amendment separates requested intent from funded capability:
 
 ```text
-Ready Americana -> Threat is allowed
+requested LOW
+-> feint intent
+-> active-stage cap applies
 
-Threat -> Control
-Control -> Finish
-Finish -> Tap
-
-are prohibited at LOW / UNFUNDED
+requested MEDIUM/HIGH
+-> continuation intent
+-> funding downgrade to effective LOW / UNFUNDED does not create a feint
 ```
 
-A feint-capped active submission attempt does not reset the attacker's stalling clock, while the defender still receives defensive-engagement credit.
+Effective commitment still controls grade magnitude, stamina cost, funding, and response under-commitment comparison.
+
+A requested-LOW Ready Americana may still create Threat. Once the Americana track is active, requested LOW cannot advance Threat -> Control, Control -> Finish, or Finish -> Tap, including when the LOW request itself is UNFUNDED.
+
+A requested-LOW feint-capped active submission attempt does not reset the attacker's stalling clock, while the defender still receives defensive-engagement credit. A requested MEDIUM/HIGH attack uses normal progress-capable-route engagement even if funding downgrades its effective commitment.
 
 ### v0.4a gates
 
@@ -749,10 +753,10 @@ A PASS — feature-off compatibility / MEDIUM identity
 B PASS — v0.2 Gate 7 closes
 C PASS — no selectable commitment globally dominates
 D PASS — matched commitment preserves fresh Contested stalemates
-E PASS — LOW/UNFUNDED feint cap
+E PASS — requested-LOW feint-intent cap
 F PASS — response under-commitment only helps attacker
 G PASS — genuine automatic Gate-B expiry
-H PASS — feints cannot dodge stalling clock
+H PASS — requested-intent feints cannot dodge stalling clock
 I PASS — affordability controls tactical credit
 ```
 
@@ -802,13 +806,27 @@ The unchanged Gate-B range is active:
 
 Public perfect commitment matching does not solve the competent-defender lock; Recognition/information remains later work.
 
-Random response/RANDOM-commitment contrast:
+Post-amendment diagnostics:
 
 ```text
-Tap=25/100
+FIXED_MEDIUM response commitment:
+  Tap=99/100
+  Reached Finish=99/100
+  Top / Bottom median stamina=0.0 / 0.0
+  requested-LOW feint caps=0
+  funding-downgrade successful active-stage attempts=191
+  funding-downgrade feint caps=0
+
+RANDOM response commitment:
+  Tap=94/100
+  Reached Finish=95/100
+  Top / Bottom median stamina=0.0 / 0.0
+  requested-LOW feint caps=0
+  funding-downgrade successful active-stage attempts=156
+  funding-downgrade feint caps=0
 ```
 
-These batch results are observations, not tuning targets.
+The historical pre-amendment RANDOM contrast was `Tap=25/100`. These batch results are observations, not tuning targets. RANDOM response commitment uses equal LOW / MEDIUM / HIGH weighting only as a diagnostic; it is not gameplay policy.
 
 The existing provisional Americana hold cost remains separate from response commitment. An isolated MEDIUM/MEDIUM Contested hold charges:
 
@@ -823,7 +841,7 @@ SETUP-POLICY DEBT remains unchanged.
 Audited verification:
 
 ```text
-266 tests PASS on Python 3.11 and 3.13
+270 tests PASS on Python 3.11 and 3.13
 modern semantic checker PASS
 legacy checker PASS
 
@@ -836,7 +854,11 @@ See:
 - `docs/MOUNT_V0_4A_COMMITMENT_SEMANTICS_DEFINITION_OF_DONE.md`
 - `docs/MOUNT_V0_4A_FIRST_MEASUREMENT.md` — historical/superseded for closure
 - `docs/MOUNT_V0_4A_INDEPENDENT_AUDIT_AMENDMENT.md`
-- `docs/MOUNT_V0_4A_AUDITED_FINAL_MEASUREMENT.md`
+- `docs/MOUNT_V0_4A_AUDITED_FINAL_MEASUREMENT.md` — historical pre-feint-intent amendment closure
+- `docs/MOUNT_V0_4A_FEINT_INTENT_FUNDING_AMENDMENT.md`
+- `docs/MOUNT_V0_4A_FEINT_INTENT_PRECHANGE_MEASUREMENT.md`
+- `docs/MOUNT_V0_4A_FEINT_INTENT_POST_AMENDMENT_MEASUREMENT.md`
+- `docs/V0_4B_RECOGNITION_COMMITMENT_QUESTION.md` — future design note, not a DoD
 
 ## Known v0 limitation
 
