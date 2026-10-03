@@ -161,6 +161,37 @@ class V03BStallingTests(unittest.TestCase):
         self.assertIs(match.band, Band.STABLE)
         self.assertEqual(len(match.history.stalling_position_reset_history), 2)
 
+    def test_top_third_offense_at_stable_uses_stronger_one_band_effect(self):
+        match = self._active_threat(axis=2.00)
+        match.position.apply_control(2.00, Band.STABLE)
+        match.stalling_tracker.warned[Side.TOP] = True
+        match.stalling_tracker.offenses[Side.TOP] = 2
+        match.stalling_tracker.advance(20)
+
+        result = match.reset_window()
+
+        self.assertEqual(result.stalling_consequence, "POSITION_RESET")
+        self.assertFalse(result.position_reset)
+        self.assertAlmostEqual(result.penalty_axis_before, 2.00)
+        self.assertAlmostEqual(result.penalty_axis_after, 0.80)
+        self.assertAlmostEqual(match.axis, 0.80)
+        self.assertIs(match.band, Band.LOOSE)
+
+    def test_bottom_third_offense_at_locked_never_uses_helpful_position_reset(self):
+        match = self._match(axis=4.00)
+        match.initiator = Side.BOTTOM
+        match.stalling_tracker.warned[Side.BOTTOM] = True
+        match.stalling_tracker.offenses[Side.BOTTOM] = 2
+        match.stalling_tracker.advance(20)
+
+        result = match.reset_window()
+
+        self.assertEqual(result.stalling_consequence, "POSITION_RESET")
+        self.assertFalse(result.position_reset)
+        self.assertAlmostEqual(match.axis, 4.00)
+        self.assertTrue(result.free_initiative_window)
+        self.assertIs(match.free_initiative_beneficiary, Side.TOP)
+
     def test_bottom_can_receive_same_penalty_toward_top(self):
         match = self._match(axis=1.50)
         match.initiator = Side.BOTTOM
