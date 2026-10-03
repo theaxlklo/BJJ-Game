@@ -6,7 +6,7 @@ from bjj_game.diagnostics.checker import (
     measure_v04a_definition_of_done,
 )
 from bjj_game.domain.action import Commitment
-from bjj_game.domain.model import Grade, Side
+from bjj_game.domain.model import BottomBehavior, Grade, Side, TopBehavior
 from bjj_game.domain.stamina import StaminaBand
 from bjj_game.domain.submission import SubmissionStage
 from bjj_game.engine.match import MountMatch
@@ -303,9 +303,18 @@ class V04ACommitmentSemanticsTests(unittest.TestCase):
         kwargs = dict(
             matches=10,
             base_seed=42,
+            top_behavior=TopBehavior.PRESSURE,
+            bottom_behavior=BottomBehavior.ESCAPE,
             commitment=Commitment.MEDIUM,
+            initial_clock=300,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
             bottom_responder_mode=BatchResponderMode.RANDOM,
             response_commitment_mode=BatchResponseCommitmentMode.RANDOM,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
             enable_v04_commitment_semantics=True,
         )
         first = run_escape_first_batch(**kwargs)
