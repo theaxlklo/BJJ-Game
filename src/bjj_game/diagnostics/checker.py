@@ -2068,10 +2068,18 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
     gate_a_locked_endings = sum(
         item.locked_timeout for item in top_stall_sweep
     )
-    gate_a_failing_cases = sum(
-        not _v03b_gate_a_case_passes(item)
+    gate_a_failing_items = tuple(
+        item
         for item in top_stall_sweep
+        if not _v03b_gate_a_case_passes(item)
     )
+    gate_a_failing_cases = len(gate_a_failing_items)
+    gate_a_failing_labels = ",".join(
+        f"i{item.interval_seconds}/t{item.match_length_seconds}:"
+        f"share={item.steady_state_locked_share:.3f},"
+        f"dwell={item.steady_state_longest_locked_dwell_seconds}s"
+        for item in gate_a_failing_items
+    ) or "none"
     gate_b_pass = (
         stalemate.attempts > 0
         and stalemate.top_penalties == 0
@@ -2114,6 +2122,7 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
                 f"whole_match_max_share={gate_a_whole_match_max_locked_share:.3f}; "
                 f"whole_match_max_dwell={gate_a_whole_match_max_locked_dwell}s; "
                 f"Locked_timeout_cases={gate_a_locked_endings}/{len(top_stall_sweep)}; "
+                f"failing={gate_a_failing_labels}; "
                 f"default_5m_5s=warnings:{top_stall.warnings},"
                 f"penalties:{top_stall.penalties},"
                 f"resets:{top_stall.position_resets},"
