@@ -52,6 +52,47 @@ E — Recognition, trusts reads + Bottom RECOVER
 
 Shared gameplay configuration remains the frozen DoD configuration.
 
+Observed neutral surface outcomes:
+
+```text
+A public MATCH:
+  taps=0
+  escapes=22
+  timeouts=78
+  final stamina median=0 / 0
+  responder commitment spend=7,168
+
+B trusts reads:
+  taps=6
+  escapes=11
+  timeouts=83
+  final stamina median=0 / 0
+  responder commitment spend=7,352
+
+C one level above:
+  taps=0
+  escapes=22
+  timeouts=78
+  final stamina median=0 / 0
+  responder commitment spend=8,843
+
+D always HIGH:
+  taps=0
+  escapes=22
+  timeouts=78
+  final stamina median=0 / 0
+  responder commitment spend=9,480
+
+E trusts reads + Bottom RECOVER:
+  taps=5
+  escapes=9
+  timeouts=86
+  final stamina median=0 / 2
+  responder commitment spend=12,647
+```
+
+Surface E has no pass/fail outcome target.
+
 ## Measurement gates
 
 First measurement:
@@ -178,6 +219,10 @@ median State-3 duration: 80 s
 median State-3 share: 26.7%
 
 exits State 2 -> State 1: 0
+
+total State-2 entries: 1,750
+total State-3 entries: 1,660
+
 Bottom switches into CONSERVE: 90
 Bottom switches back to ESCAPE: 0
 Bottom Exhausted-latch clears: 0
@@ -352,6 +397,51 @@ The defender does not need infinite stamina for hedging to matter. On the trust-
 
 This is a measured fact, not a decision that the defender *should* hedge.
 
+### Affordability on the decisive State-2 exchanges
+
+Surface B's four State-2 taps:
+
+```text
+all four have responder under-commitment
+responder's actual requested commitment is fundable: 3/4
+responder can fund one selectable level above
+the attacker's true effective commitment: 1/4
+```
+
+Affordability-ceiling pairs on those taps:
+
+```text
+initiator MEDIUM / responder HIGH:      1
+initiator HIGH / responder MEDIUM:      1
+initiator HIGH / responder LOW:         1
+initiator HIGH / responder UNFUNDED:    1
+```
+
+The initiator requests MEDIUM throughout; an initiator affordability ceiling of HIGH therefore does not mean it requested HIGH.
+
+This matters to interpretation: hedge-one's 0-tap result is **not** explained by the defender simply having one-level-above headroom on every would-be finishing exchange. The hedge policy changes the match's earlier commitment spending and subsequent state trajectory.
+
+Surface B State-2 submission advances more broadly:
+
+```text
+32 advances
+32/32 have responder under-commitment
+responder request fundable=12/32
+hedge-one headroom=5/32
+```
+
+Surface E differs on its three State-2 taps:
+
+```text
+all 3 have responder under-commitment
+responder actual request fundable=3/3
+hedge-one headroom=3/3
+```
+
+So the recovery surface creates decisive exchanges where the defender still has direct local affordability to hedge but the frozen trust-read policy does not do so.
+
+These are trajectory/affordability facts, not authorization to change defender policy.
+
 ## Hold-aware affordability
 
 The hold measurement confirms that commitment-only affordability overstates the defender's available room on Contested submission holds.
@@ -366,6 +456,9 @@ FULL=43
 PARTIAL=13
 NONE=29
 
+requested commitment + hold fully fundable=42/85
+true effective commitment + hold fully fundable=43/85
+
 commitment request fundable
 but requested commitment + hold not fully fundable=8
 ```
@@ -377,6 +470,9 @@ hold exchanges=39
 FULL=12
 PARTIAL=20
 NONE=7
+
+requested commitment + hold fully fundable=3/39
+true effective commitment + hold fully fundable=12/39
 
 commitment request fundable
 but requested commitment + hold not fully fundable=5
@@ -390,6 +486,9 @@ FULL=0
 PARTIAL=0
 NONE=78
 
+requested commitment + hold fully fundable=0/78
+true effective commitment + hold fully fundable=0/78
+
 commitment request fundable
 but requested commitment + hold not fully fundable=0
 ```
@@ -401,6 +500,9 @@ hold exchanges=1,490
 FULL=100
 PARTIAL=1,113
 NONE=277
+
+requested commitment + hold fully fundable=100/1,490
+true effective commitment + hold fully fundable=100/1,490
 
 commitment request fundable
 but requested commitment + hold not fully fundable=1,366
@@ -517,6 +619,18 @@ Exhausted-latch clears=0
 ```
 
 The recovered stamina is consumed by the existing action/response/hold economy before the 35-point recovery threshold is reached.
+
+On Surface E hold exchanges specifically:
+
+```text
+median responder stamina before response charge=4
+median stamina after response charge=1
+
+requested response+hold fully fundable=199/1,589
+true-effective response+hold fully fundable=199/1,589
+```
+
+This shows the hold path repeatedly operating at the bottom of the Exhausted range even though CONSERVE is continuously returning stamina to the defender.
 
 ## All hold exchanges — requested vs actually charged
 
@@ -686,7 +800,13 @@ Surface E produces an important distinction:
 ```text
 State-3 time exists
 but State-3 initiated exchanges=0
+
+State-2 entries=1,750
+State-3 entries=1,660
+State-2 -> State-1 exits=0
 ```
+
+It repeatedly cycles between the two depleted states without ever returning to the non-mutually-Exhausted state.
 
 The sequence is:
 
