@@ -28,28 +28,40 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v03b_definition_of_done()
         }
 
-    def test_gate_a_status_follows_post_reset_steady_state_sweep(self):
+    def test_gate_a_post_reset_sweep_is_open_on_three_exact_half_cases(self):
         sweep = _v03b_top_stall_sweep()
         self.assertEqual(len(sweep), 26)
-        expected = (
-            V02GateStatus.PASS
-            if all(_v03b_gate_a_case_passes(item) for item in sweep)
-            else V02GateStatus.OPEN
+        failing = [
+            item for item in sweep if not _v03b_gate_a_case_passes(item)
+        ]
+        self.assertEqual(
+            [(item.interval_seconds, item.match_length_seconds) for item in failing],
+            [(7, 250), (7, 275), (7, 280)],
         )
-        self.assertTrue(all(item.position_resets >= 1 for item in sweep))
         self.assertTrue(
-            all(item.steady_state_decision_windows > 0 for item in sweep)
+            all(item.steady_state_locked_share == 0.50 for item in failing)
         )
-        self.assertIs(self.gates["A"].status, expected)
+        self.assertTrue(
+            all(item.steady_state_longest_locked_dwell_seconds == 7 for item in failing)
+        )
+        self.assertEqual(
+            max(item.steady_state_locked_share for item in sweep),
+            0.50,
+        )
+        self.assertEqual(
+            max(item.steady_state_longest_locked_dwell_seconds for item in sweep),
+            7,
+        )
+        self.assertIs(self.gates["A"].status, V02GateStatus.OPEN)
 
     def test_stall_vs_active_bottom_observation_reproduces_timeout_surface(self):
         evidence = _v03b_stall_vs_active_bottom_probe()
         self.assertEqual(evidence.matches, 100)
         self.assertEqual(evidence.timeouts, 100)
         self.assertEqual(evidence.escapes, 0)
-        self.assertGreater(evidence.warnings, 0)
-        self.assertGreater(evidence.penalties, 0)
-        self.assertGreater(evidence.position_resets, 0)
+        self.assertEqual(evidence.warnings, 100)
+        self.assertEqual(evidence.penalties, 100)
+        self.assertEqual(evidence.position_resets, 800)
 
     def test_normal_play_guard_keeps_stronger_escalation_out_of_engaged_batches(self):
         self.assertIn(
