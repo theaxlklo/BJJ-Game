@@ -455,12 +455,11 @@ def _v04_informed_standard_batch():
     )
 
 
-@lru_cache(maxsize=1)
-def _v04b_informed_standard_batch():
-    """v0.4b Gate-B batch: informed response choice through imperfect Recognition."""
+@lru_cache(maxsize=None)
+def _v04b_informed_policy_batch(response_commitment_mode):
+    """Run one named v0.4b informed defender policy on the frozen Gate-B seeds."""
     from ..interfaces.batch import (
         BatchResponderMode,
-        BatchResponseCommitmentMode,
         run_escape_first_batch,
     )
 
@@ -476,11 +475,41 @@ def _v04b_informed_standard_batch():
         top_stamina=100,
         bottom_stamina=100,
         bottom_responder_mode=BatchResponderMode.INFORMED,
-        response_commitment_mode=BatchResponseCommitmentMode.RECOGNITION,
+        response_commitment_mode=response_commitment_mode,
         enable_v02_setup=True,
         enable_v03_submissions=True,
         enable_v04_commitment_semantics=True,
         enable_v04b_recognition=True,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v04b_informed_standard_batch():
+    """Frozen Gate-F policy: defender trusts its Recognition reads."""
+    from ..interfaces.batch import BatchResponseCommitmentMode
+
+    return _v04b_informed_policy_batch(
+        BatchResponseCommitmentMode.RECOGNITION
+    )
+
+
+@lru_cache(maxsize=1)
+def _v04b_informed_hedge_one_batch():
+    """Observation: defender commits one level above the trust-read choice."""
+    from ..interfaces.batch import BatchResponseCommitmentMode
+
+    return _v04b_informed_policy_batch(
+        BatchResponseCommitmentMode.RECOGNITION_HEDGE_ONE
+    )
+
+
+@lru_cache(maxsize=1)
+def _v04b_informed_always_high_batch():
+    """Observation: defender always requests HIGH after the same Recognition read."""
+    from ..interfaces.batch import BatchResponseCommitmentMode
+
+    return _v04b_informed_policy_batch(
+        BatchResponseCommitmentMode.RECOGNITION_ALWAYS_HIGH
     )
 
 
@@ -4359,7 +4388,7 @@ def measure_v04b_definition_of_done() -> tuple[V04BRecognitionGateMeasurement, .
         ),
         V04BRecognitionGateMeasurement(
             letter="F",
-            name="competent-defender Gate B uses Recognition",
+            name="frozen trust-the-read defender satisfies Gate B",
             status=V02GateStatus.PASS if gate_f else V02GateStatus.OPEN,
             metric=(
                 f"recognition_present={_v03_recognition_mechanic_present()}; "
@@ -4368,7 +4397,8 @@ def measure_v04b_definition_of_done() -> tuple[V04BRecognitionGateMeasurement, .
             ),
             evidence=(
                 "the unchanged 0% < informed Tap < 50% range is measured on "
-                "the frozen v0.4b Recognition batch"
+                "the frozen v0.4b defender policy that takes Recognition reads "
+                "at face value; hedge policies are observational contrasts, not Gate F"
             ),
         ),
         V04BRecognitionGateMeasurement(
@@ -4410,6 +4440,50 @@ def measure_v04b_definition_of_done() -> tuple[V04BRecognitionGateMeasurement, .
 
 def render_v04b_definition_of_done() -> tuple[str, ...]:
     return tuple(gate.render() for gate in measure_v04b_definition_of_done())
+
+
+def render_v04b_defender_policy_hedge_observation() -> str:
+    trust = _v04b_informed_standard_batch()
+    hedge = _v04b_informed_hedge_one_batch()
+    always_high = _v04b_informed_always_high_batch()
+
+    def taps(summary) -> int:
+        return summary.outcome_counts.get("TAP — Americana", 0)
+
+    def escapes(summary) -> int:
+        return sum(
+            summary.outcome_counts.get(destination.value, 0)
+            for destination in ExitDestination
+        )
+
+    def row(label: str, summary) -> str:
+        return (
+            f"{label}: taps={taps(summary)}, escapes={escapes(summary)}, "
+            f"response requests={summary.response_requested_commitment_counts}, "
+            f"response spend={summary.total_response_commitment_stamina_charged}, "
+            f"final stamina={summary.top_final_stamina_median:.1f}/"
+            f"{summary.bottom_final_stamina_median:.1f}, "
+            f"undercommitment pre/post mutual Exhausted="
+            f"{summary.undercommitment_events_before_mutual_exhaustion}/"
+            f"{summary.undercommitment_events_after_mutual_exhaustion}, "
+            f"undercommitment-caused taps pre/post="
+            f"{summary.undercommitment_caused_taps_before_mutual_exhaustion}/"
+            f"{summary.undercommitment_caused_taps_after_mutual_exhaustion}"
+        )
+
+    return (
+        "V0.4b DEFENDER-POLICY HEDGE OBSERVATION — identical 100 Gate-B seeds: "
+        + row("trusts reads", trust)
+        + "; "
+        + row("one level above", hedge)
+        + "; "
+        + row("always HIGH", always_high)
+        + ". Gate F applies only to the frozen trusts-reads policy. "
+        "Mutual-Exhausted timing uses both pre-cost stamina bands; a tap is "
+        "counted as undercommitment-caused only when the finishing exchange "
+        "has the +1 response-undercommitment modifier and removing that +1 "
+        "would drop the final grade below Success. Observational only."
+    )
 
 
 def render_v04b_stamina_pacing_observation() -> str:
