@@ -354,6 +354,46 @@ def _surface_decisive_line(surface: StaminaEconomySurface) -> str:
     return f"{surface.label}: " + " | ".join(parts) + f"; timeout-entered={dict(timeout_state)}"
 
 
+def _surface_state2_decisive_affordability_line(
+    surface: StaminaEconomySurface,
+) -> str:
+    rows = _state_rows(
+        _measurement(surface),
+        StaminaEconomyState.MUTUALLY_EXHAUSTED_NOT_BOTH_ZERO,
+    )
+    tap_rows = [row for row in rows if row.tapped]
+    advance_rows = [row for row in rows if row.submission_advanced]
+    escape_rows = [row for row in rows if row.escape_destination is not None]
+
+    def describe(selected) -> str:
+        pairs = Counter(
+            (row.initiator_affordability, row.responder_affordability)
+            for row in selected
+        )
+        responder_request_fundable = sum(
+            row.responder_requested_fundable for row in selected
+        )
+        hedge_eligible = [row for row in selected if row.hedge_target is not None]
+        hedge_possible = sum(
+            row.hedge_one_level_fundable is True for row in hedge_eligible
+        )
+        undercommit = sum(
+            row.response_undercommitment_modifier > 0 for row in selected
+        )
+        return (
+            f"n={len(selected)}, pairs={dict(pairs)}, "
+            f"responder-request-fundable={responder_request_fundable}/"
+            f"{len(selected)}, hedge-one-possible={hedge_possible}/"
+            f"{len(hedge_eligible)}, undercommit={undercommit}"
+        )
+
+    return (
+        f"{surface.label}: State2 taps[{describe(tap_rows)}], "
+        f"submission advances[{describe(advance_rows)}], "
+        f"escapes[{describe(escape_rows)}]"
+    )
+
+
 def _aggregate_sources(surface: StaminaEconomySurface) -> str:
     m = _measurement(surface)
     def side_totals(attr: str):
@@ -724,6 +764,11 @@ def render_stamina_economy_measurement() -> tuple[str, ...]:
     )
     lines.extend(
         "STAMINA-ECONOMY DECISIVE — " + _surface_decisive_line(s)
+        for s in surfaces
+    )
+    lines.extend(
+        "STAMINA-ECONOMY STATE2 DECISIVE AFFORDABILITY — "
+        + _surface_state2_decisive_affordability_line(s)
         for s in surfaces
     )
     lines.extend(
