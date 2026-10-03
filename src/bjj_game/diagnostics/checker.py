@@ -3007,7 +3007,11 @@ def _v04_medium_identity_probe() -> tuple[int, int, int]:
 
 @lru_cache(maxsize=1)
 def _v04_commitment_dominance_probe() -> tuple[int, tuple[str, ...]]:
-    """Pairwise global dominance across the fully-funded frozen exchange surface."""
+    """Pairwise global dominance across the fully-funded exchange surface.
+
+    Response commitment is itself part of v0.4a state, so every selectable
+    responder commitment is included rather than fixing one convenient level.
+    """
     from ..engine.match import MountMatch
 
     pairs = {
@@ -3035,36 +3039,39 @@ def _v04_commitment_dominance_probe() -> tuple[int, tuple[str, ...]]:
                 ):
                     for action in actions_for(side):
                         for response in responses_for(side.opponent):
-                            cases += 1
-                            results = {}
-                            for commitment in Commitment:
-                                match = MountMatch(
-                                    starting_axis=axis,
-                                    enable_v04_commitment_semantics=True,
-                                )
-                                match.initiator = side
-                                match.set_behaviors(
-                                    top=top_behavior,
-                                    bottom=bottom_behavior,
-                                )
-                                results[commitment] = match.preview_attempt_resolution(
-                                    action_id=action.id,
-                                    response_id=response.id,
-                                    commitment=commitment,
-                                    response_commitment=Commitment.MEDIUM,
-                                )
-                            for pair, state in pairs.items():
-                                left, right = pair
-                                if not _v04_outcome_no_worse(
-                                    results[left],
-                                    results[right],
-                                ):
-                                    state["all_no_worse"] = False
-                                if _v04_outcome_strictly_better(
-                                    results[left],
-                                    results[right],
-                                ):
-                                    state["any_strict"] = True
+                            for responder_commitment in Commitment:
+                                cases += 1
+                                results = {}
+                                for commitment in Commitment:
+                                    match = MountMatch(
+                                        starting_axis=axis,
+                                        enable_v04_commitment_semantics=True,
+                                    )
+                                    match.initiator = side
+                                    match.set_behaviors(
+                                        top=top_behavior,
+                                        bottom=bottom_behavior,
+                                    )
+                                    results[commitment] = (
+                                        match.preview_attempt_resolution(
+                                            action_id=action.id,
+                                            response_id=response.id,
+                                            commitment=commitment,
+                                            response_commitment=responder_commitment,
+                                        )
+                                    )
+                                for pair, state in pairs.items():
+                                    left, right = pair
+                                    if not _v04_outcome_no_worse(
+                                        results[left],
+                                        results[right],
+                                    ):
+                                        state["all_no_worse"] = False
+                                    if _v04_outcome_strictly_better(
+                                        results[left],
+                                        results[right],
+                                    ):
+                                        state["any_strict"] = True
 
     dominating = tuple(
         f"{left.value}>{right.value}"
