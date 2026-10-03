@@ -185,6 +185,20 @@ def _state_rows(measurement: StaminaEconomyMeasurement, state):
     return [row for row in measurement.exchanges if row.state is state]
 
 
+def _surface_overview_line(surface: StaminaEconomySurface) -> str:
+    summary = surface.summary
+    return (
+        f"{surface.label}: taps={_taps(summary)}, escapes={_escapes(summary)}, "
+        f"timeouts={summary.outcome_counts.get('TIMEOUT — Mount retained', 0)}, "
+        f"final stamina median={summary.top_final_stamina_median:.1f}/"
+        f"{summary.bottom_final_stamina_median:.1f}, "
+        f"response commitment spend="
+        f"{summary.total_response_commitment_stamina_charged}, "
+        f"Top/Bottom behavior mode="
+        f"{summary.top_behavior_mode.value}/{summary.bottom_behavior_mode.value}"
+    )
+
+
 def _surface_duration_line(surface: StaminaEconomySurface) -> str:
     m = _measurement(surface)
     matches = list(m.matches)
@@ -697,6 +711,10 @@ def render_stamina_economy_measurement() -> tuple[str, ...]:
     lines.append(
         "STAMINA-ECONOMY MEASUREMENT NOTE: gate PASS means complete, "
         "reconciled, deterministic evidence; it is not a gameplay-health verdict."
+    )
+    lines.extend(
+        "STAMINA-ECONOMY SURFACE — " + _surface_overview_line(s)
+        for s in surfaces
     )
     lines.extend("STAMINA-ECONOMY DURATION — " + _surface_duration_line(s) for s in surfaces)
     lines.append("STAMINA-ECONOMY RECOVERY — " + _surface_e_recovery_line(surfaces[4]))
