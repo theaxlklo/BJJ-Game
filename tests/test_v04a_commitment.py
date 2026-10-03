@@ -319,10 +319,28 @@ class V04ADefinitionOfDoneTests(unittest.TestCase):
             for gate in measure_v04a_definition_of_done()
         }
 
-    def test_all_nine_gates_are_executable(self):
+    def test_all_nine_gates_pass_with_frozen_measurements(self):
         self.assertEqual(tuple(self.gates), tuple("ABCDEFGHI"))
-        for gate in self.gates.values():
-            self.assertIn(gate.status, {V02GateStatus.PASS, V02GateStatus.OPEN})
+        self.assertTrue(
+            all(gate.status is V02GateStatus.PASS for gate in self.gates.values())
+        )
+        self.assertIn("cases=1152", self.gates["A"].metric)
+        self.assertIn("enabled_MEDIUM_mismatches=0", self.gates["A"].metric)
+        self.assertIn("higher-commitment advantage states=172", self.gates["B"].metric)
+        self.assertIn("states=288", self.gates["C"].metric)
+        self.assertIn("dominating_pairs=none", self.gates["C"].metric)
+        self.assertIn("cases=360", self.gates["D"].metric)
+        self.assertIn("breaks=0", self.gates["D"].metric)
+        self.assertIn("active-Americana cases=72", self.gates["D"].metric)
+        self.assertIn("violations=0", self.gates["E"].metric)
+        self.assertIn("comparisons=864", self.gates["F"].metric)
+        self.assertIn("regressions=0", self.gates["F"].metric)
+        self.assertIn("strict improvements=646", self.gates["F"].metric)
+        self.assertIn("v0.3a Gate B=OPEN", self.gates["G"].metric)
+        self.assertIn("Top clock 20->20", self.gates["H"].metric)
+        self.assertIn("Bottom clock 20->0", self.gates["H"].metric)
+        self.assertIn("5-stamina HIGH request: cost=3,gap=9,mismatch=1", self.gates["I"].metric)
+        self.assertIn("2-stamina HIGH request: cost=0,gap=12", self.gates["I"].metric)
 
 
 if __name__ == "__main__":
