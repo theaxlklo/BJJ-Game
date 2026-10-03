@@ -38,18 +38,26 @@ class ActionAttempt:
 
 @dataclass(frozen=True, slots=True)
 class AttemptResult:
-    """Commitment/stamina bookkeeping around unchanged Mount-v0 resolution."""
+    """Commitment/stamina bookkeeping around deterministic exchange resolution."""
 
     attempt: ActionAttempt
     requested_cost: int
     effective_cost: int
     funding_gap: int
     stamina: StaminaSpend
+    response_requested_commitment: Commitment | None
+    response_effective_commitment: Commitment | None
+    response_requested_cost: int
+    response_effective_cost: int
+    response_funding_gap: int
+    response_stamina: StaminaSpend | None
     stamina_band_before_action: StaminaBand
     responder_stamina_band_before_action: StaminaBand
     initiator_exhaustion_modifier: int
     responder_exhaustion_modifier: int
     exhaustion_modifier: int
+    initiator_commitment_modifier: int
+    response_undercommitment_modifier: int
     base_resolution: ResolutionResult
     resolution: ResolutionResult
 
