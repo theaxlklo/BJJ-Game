@@ -1,5 +1,7 @@
 # Mount v0.3b — Position Reset Final Measurement
 
+> **SUPERSEDED FOR GATE-A / GATE-2 CLOSURE.** This document correctly proved that Position Reset escalation fixed the single 5:00 / 5-second timeout sample, but a later timing-independent sweep showed three 7-second cases at an exact post-reset Locked share of 0.500. Under the subsequently frozen strict `<0.50` criterion, Gate A and Gate 2 are OPEN. The authoritative current measurement is `MOUNT_V0_3B_POST_RESET_STEADY_STATE_MEASUREMENT.md`.
+
 ## Status
 
 AUTHORITATIVE v0.3b CLOSURE MEASUREMENT.
