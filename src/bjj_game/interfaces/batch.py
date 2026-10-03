@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+import random
 from enum import Enum
 from statistics import mean, median
 
@@ -31,6 +32,12 @@ class BatchBehaviorMode(str, Enum):
 class BatchResponderMode(str, Enum):
     RANDOM = "random"
     INFORMED = "informed"
+
+
+class BatchResponseCommitmentMode(str, Enum):
+    FIXED_MEDIUM = "fixed-medium"
+    MATCH = "match"
+    RANDOM = "random"
 
 
 @dataclass(frozen=True, slots=True)
@@ -575,6 +582,7 @@ class BatchSummary:
     matches: int
     base_seed: int
     bottom_responder_mode: BatchResponderMode
+    response_commitment_mode: BatchResponseCommitmentMode
     top_behavior: TopBehavior
     bottom_behavior: BottomBehavior
     commitment: Commitment
@@ -645,6 +653,7 @@ class BatchSummary:
             f"Bottom baseline behavior: {self.bottom_behavior.value}",
             f"Bottom behavior policy: {self.bottom_behavior_mode.value}",
             f"Bottom responder policy: {self.bottom_responder_mode.value}",
+            f"Response commitment policy: {self.response_commitment_mode.value}",
             f"Commitment: {self.commitment.value}",
             "",
             "OUTCOMES",
@@ -717,12 +726,33 @@ def _render_counts(counts: dict[str, int]) -> str:
     return ", ".join(f"{name}={counts[name]}" for name in sorted(counts))
 
 
+def _response_commitment_for_exchange(
+    match: MountMatch,
+    *,
+    initiator_commitment: Commitment,
+    mode: BatchResponseCommitmentMode,
+    rng: random.Random,
+) -> Commitment:
+    if mode is BatchResponseCommitmentMode.FIXED_MEDIUM:
+        return Commitment.MEDIUM
+    if mode is BatchResponseCommitmentMode.MATCH:
+        initiator_pool = match.competitor(match.initiator).stamina
+        effective = match.stamina_cost_policy.effective_commitment(
+            requested=initiator_commitment,
+            available_stamina=initiator_pool.current,
+        )
+        return Commitment.LOW if effective is None else effective
+    return rng.choice(tuple(Commitment))
+
+
 def _informed_bottom_response_id(
     match: MountMatch,
     *,
     action_id: str,
+    commitment: Commitment,
+    response_commitment: Commitment,
 ) -> str:
-    """Choose Bottom's legal response that minimizes Top's final grade."""
+    """Choose Bottom's legal response using the real current exchange semantics."""
     if match.initiator is not Side.TOP:
         raise ValueError("informed Bottom response requires Top as initiator")
 
@@ -730,48 +760,14 @@ def _informed_bottom_response_id(
     if not legal:
         raise RuntimeError(f"No legal responses for {action_id!r}")
 
-    initiator_band = match.top.stamina.band
-    responder_band = match.bottom.stamina.band
-    exhaustion_modifier = match.exhaustion_policy.exchange_grade_modifier(
-        initiator_band=initiator_band,
-        responder_band=responder_band,
-    )
-    top_behavior = match.top.behavior
-    bottom_behavior = match.bottom.behavior
-    if not isinstance(top_behavior, TopBehavior):
-        raise TypeError("Top behavior is not a TopBehavior")
-    if not isinstance(bottom_behavior, BottomBehavior):
-        raise TypeError("Bottom behavior is not a BottomBehavior")
-
     candidates: list[tuple[Grade, int, str]] = []
     for order, response_id in enumerate(legal):
-        if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
-            result = match.preview_submission_stage(
-                response_id=response_id,
-                external_grade_modifier=exhaustion_modifier,
-            )
-        else:
-            target_was_ready = (
-                match.enable_v02_setup
-                and action_id in match.setup_policy.target_action_ids
-                and match.setup_state.is_ready(action_id)
-            )
-            ready_override = (
-                match.setup_policy.ready_final_grade_override(
-                    action_id,
-                    response_id,
-                )
-                if target_was_ready
-                else None
-            )
-            result = match._resolve(
-                action_id=action_id,
-                response_id=response_id,
-                top_behavior=top_behavior,
-                bottom_behavior=bottom_behavior,
-                external_grade_modifier=exhaustion_modifier,
-                post_positional_grade_override=ready_override,
-            )
+        result = match.preview_attempt_resolution(
+            action_id=action_id,
+            response_id=response_id,
+            commitment=commitment,
+            response_commitment=response_commitment,
+        )
         candidates.append((result.final_grade, order, response_id))
 
     return min(candidates)[2]
@@ -792,9 +788,13 @@ def run_escape_first_batch(
     top_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
     bottom_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
     bottom_responder_mode: BatchResponderMode = BatchResponderMode.RANDOM,
+    response_commitment_mode: BatchResponseCommitmentMode = (
+        BatchResponseCommitmentMode.FIXED_MEDIUM
+    ),
     enable_v02_setup: bool = False,
     enable_v03_submissions: bool = False,
     enable_v03b_stalling: bool = False,
+    enable_v04_commitment_semantics: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
         raise ValueError("matches must be > 0")
@@ -852,6 +852,7 @@ def run_escape_first_batch(
             enable_v02_setup=enable_v02_setup,
             enable_v03_submissions=enable_v03_submissions,
             enable_v03b_stalling=enable_v03b_stalling,
+            enable_v04_commitment_semantics=enable_v04_commitment_semantics,
         )
         match.top.stamina.set_current(top_stamina)
         match.bottom.stamina.set_current(bottom_stamina)
@@ -869,6 +870,9 @@ def run_escape_first_batch(
         current_bottom = bottom_policy.choose(match)
         match.set_behaviors(top=current_top, bottom=current_bottom)
         responder = RandomBlindResponder(base_seed + match_index)
+        response_commitment_rng = random.Random(
+            base_seed + match_index + 1_000_003
+        )
         top_has_initiated_action = False
         pending_setup_builds: Counter[tuple[Side, str]] = Counter()
         pending_top_followup_setup_builds: Counter[str] = Counter()
@@ -912,6 +916,16 @@ def run_escape_first_batch(
                 free_initiative_windows += 1
 
             side = match.initiator
+            selected_response_commitment = (
+                _response_commitment_for_exchange(
+                    match,
+                    initiator_commitment=commitment,
+                    mode=response_commitment_mode,
+                    rng=response_commitment_rng,
+                )
+                if enable_v04_commitment_semantics
+                else None
+            )
             if enable_v02_setup:
                 # v0.2 restores established-position ordering:
                 # initiator locks action before responder chooses among legal responses.
@@ -954,6 +968,8 @@ def run_escape_first_batch(
                     response_id = _informed_bottom_response_id(
                         match,
                         action_id=decision.action_id,
+                        commitment=commitment,
+                        response_commitment=selected_response_commitment,
                     )
                 else:
                     hidden = responder.choose(
@@ -1053,6 +1069,7 @@ def run_escape_first_batch(
                 action_id=decision.action_id,
                 response_id=response_id,
                 commitment=commitment,
+                response_commitment=selected_response_commitment,
             )
 
             if target_was_ready:
@@ -1091,6 +1108,7 @@ def run_escape_first_batch(
         matches=matches,
         base_seed=base_seed,
         bottom_responder_mode=bottom_responder_mode,
+        response_commitment_mode=response_commitment_mode,
         top_behavior=top_behavior,
         bottom_behavior=bottom_behavior,
         commitment=commitment,
