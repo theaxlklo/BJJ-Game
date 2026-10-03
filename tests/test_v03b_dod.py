@@ -34,9 +34,23 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
         self.assertEqual(len(sweep), 26)
         self.assertTrue(all(_v03b_gate_a_case_passes(item) for item in sweep))
         self.assertTrue(all(item.steady_state_elapsed_seconds > 0 for item in sweep))
+        self.assertAlmostEqual(
+            max(item.steady_state_locked_time_share for item in sweep),
+            0.393,
+            places=3,
+        )
         self.assertLess(
             max(item.steady_state_locked_time_share for item in sweep),
             V03B_GATE_A_LOCKED_SHARE_LIMIT,
+        )
+        self.assertAlmostEqual(
+            max(item.steady_state_locked_share for item in sweep),
+            0.500,
+            places=3,
+        )
+        self.assertEqual(
+            max(item.steady_state_longest_locked_dwell_seconds for item in sweep),
+            11,
         )
         self.assertLess(
             max(item.steady_state_longest_locked_dwell_seconds for item in sweep),
@@ -89,7 +103,7 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
 
     def test_gate_f_stalling_effects_are_directional_and_monotonic(self):
         evidence = _v03b_escalation_invariant_probe()
-        self.assertGreater(evidence.cases, 0)
+        self.assertEqual(evidence.cases, 98)
         self.assertEqual(evidence.backward_effects, 0)
         self.assertEqual(evidence.weaker_escalations, 0)
         self.assertEqual(evidence.boundary_mismatches, 0)
