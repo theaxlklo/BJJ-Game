@@ -612,6 +612,10 @@ class BatchSummary:
     matches_reached_submission_threat: int
     matches_reached_submission_control: int
     matches_reached_submission_finish: int
+    submission_feint_cap_count: int
+    requested_low_feint_cap_count: int
+    funding_downgrade_success_count: int
+    funding_downgrade_feint_cap_count: int
     top_position_attack_count: int
     top_followup_position_attack_count: int
     top_followup_setup_action_count: int
@@ -697,6 +701,10 @@ class BatchSummary:
             f"Matches reaching submission Threat: {self.matches_reached_submission_threat}",
             f"Matches reaching submission Control: {self.matches_reached_submission_control}",
             f"Matches reaching submission Finish: {self.matches_reached_submission_finish}",
+            f"Submission feint caps: {self.submission_feint_cap_count}",
+            f"Requested-LOW feint caps: {self.requested_low_feint_cap_count}",
+            f"MEDIUM/HIGH funding-downgrade successful active-stage attempts: {self.funding_downgrade_success_count}",
+            f"MEDIUM/HIGH funding-downgrade feint caps: {self.funding_downgrade_feint_cap_count}",
             f"Top position attacks: {self.top_position_attack_count}",
             f"Top follow-up position attacks: {self.top_followup_position_attack_count}",
             f"Top follow-up setup actions: {self.top_followup_setup_action_count}",
@@ -828,6 +836,10 @@ def run_escape_first_batch(
     matches_reached_threat = 0
     matches_reached_control = 0
     matches_reached_finish = 0
+    submission_feint_caps = 0
+    requested_low_feint_caps = 0
+    funding_downgrade_successes = 0
+    funding_downgrade_feint_caps = 0
     top_position_attacks = 0
     top_followup_position_attacks = 0
     top_followup_setup_actions = 0
@@ -1075,12 +1087,40 @@ def run_escape_first_batch(
                 else:
                     bottom_position_attacks += 1
 
-            match.attempt(
+            feint_caps_before = len(
+                match.history.submission_feint_cap_history
+            )
+            attempt_result = match.attempt(
                 action_id=decision.action_id,
                 response_id=response_id,
                 commitment=commitment,
                 response_commitment=selected_response_commitment,
             )
+            feint_caps_after = len(
+                match.history.submission_feint_cap_history
+            )
+
+            is_active_submission_success = (
+                enable_v04_commitment_semantics
+                and action.id == TOP_AMERICANA_SUBMISSION_FINISH
+                and attempt_result.resolution.final_grade.successful
+            )
+            is_funding_downgrade = (
+                attempt_result.attempt.requested_commitment
+                in {Commitment.MEDIUM, Commitment.HIGH}
+                and attempt_result.attempt.effective_commitment
+                in {None, Commitment.LOW}
+            )
+            if is_active_submission_success and is_funding_downgrade:
+                funding_downgrade_successes += 1
+
+            added_feint_caps = feint_caps_after - feint_caps_before
+            if added_feint_caps:
+                submission_feint_caps += added_feint_caps
+                if attempt_result.attempt.requested_commitment is Commitment.LOW:
+                    requested_low_feint_caps += added_feint_caps
+                elif is_funding_downgrade:
+                    funding_downgrade_feint_caps += added_feint_caps
 
             if target_was_ready:
                 credited = pending_setup_builds[(side, action.id)]
@@ -1148,6 +1188,10 @@ def run_escape_first_batch(
         matches_reached_submission_threat=matches_reached_threat,
         matches_reached_submission_control=matches_reached_control,
         matches_reached_submission_finish=matches_reached_finish,
+        submission_feint_cap_count=submission_feint_caps,
+        requested_low_feint_cap_count=requested_low_feint_caps,
+        funding_downgrade_success_count=funding_downgrade_successes,
+        funding_downgrade_feint_cap_count=funding_downgrade_feint_caps,
         top_position_attack_count=top_position_attacks,
         top_followup_position_attack_count=top_followup_position_attacks,
         top_followup_setup_action_count=top_followup_setup_actions,
