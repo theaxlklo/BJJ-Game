@@ -873,7 +873,9 @@ def measure_v02_definition_of_done(
                 f"v03b_sweep_cases={len(v03b_top_stall_sweep)}; "
                 f"v03b_sweep_failing="
                 f"{sum(not _v03b_gate_a_case_passes(item) for item in v03b_top_stall_sweep)}; "
-                f"v03b_max_post_reset_locked_share="
+                f"v03b_max_post_reset_locked_time_share="
+                f"{max(item.steady_state_locked_time_share for item in v03b_top_stall_sweep):.3f}; "
+                f"v03b_max_post_reset_window_share="
                 f"{max(item.steady_state_locked_share for item in v03b_top_stall_sweep):.3f}; "
                 f"v03b_max_post_reset_locked_dwell="
                 f"{max(item.steady_state_longest_locked_dwell_seconds for item in v03b_top_stall_sweep)}s; "
@@ -1695,9 +1697,13 @@ class V03BTopStallEvidence:
     locked_timeout: bool
     decision_windows: int
     locked_windows: int
+    locked_seconds: int
+    elapsed_seconds: int
     longest_locked_dwell_seconds: int
     steady_state_decision_windows: int
     steady_state_locked_windows: int
+    steady_state_locked_seconds: int
+    steady_state_elapsed_seconds: int
     steady_state_longest_locked_dwell_seconds: int
 
     @property
@@ -1710,10 +1716,28 @@ class V03BTopStallEvidence:
 
     @property
     def steady_state_locked_share(self) -> float:
+        """Decision-window share retained as a sampling diagnostic only."""
         return (
             self.steady_state_locked_windows
             / self.steady_state_decision_windows
             if self.steady_state_decision_windows
+            else 0.0
+        )
+
+    @property
+    def locked_time_share(self) -> float:
+        return (
+            self.locked_seconds / self.elapsed_seconds
+            if self.elapsed_seconds
+            else 0.0
+        )
+
+    @property
+    def steady_state_locked_time_share(self) -> float:
+        return (
+            self.steady_state_locked_seconds
+            / self.steady_state_elapsed_seconds
+            if self.steady_state_elapsed_seconds
             else 0.0
         )
 
@@ -1758,6 +1782,16 @@ class V03BBoundaryEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class V03BEscalationInvariantEvidence:
+    cases: int
+    backward_effects: int
+    weaker_escalations: int
+    boundary_mismatches: int
+    bottom_axis_lowering_cases: int
+    classic_bottom_axis_lowering: int
+
+
+@dataclass(frozen=True, slots=True)
 class V03BGateMeasurement:
     letter: str
     name: str
@@ -1795,6 +1829,29 @@ def _v03b_match(
     return match
 
 
+def _drift_band_segments(drift) -> tuple[tuple[Band, int], ...]:
+    """Exact persisted-band durations from the engine's per-second drift trace."""
+    total = drift.start_clock - drift.end_clock
+    band = drift.start_band
+    segment_start = 0
+    segments: list[tuple[Band, int]] = []
+
+    for change in drift.band_changes:
+        if change.clock_seconds is None:
+            raise RuntimeError("drift band change is missing clock evidence")
+        elapsed_at_change = drift.start_clock - change.clock_seconds
+        duration = elapsed_at_change - segment_start
+        if duration > 0:
+            segments.append((band, duration))
+        band = change.after
+        segment_start = elapsed_at_change
+
+    remaining = total - segment_start
+    if remaining > 0:
+        segments.append((band, remaining))
+    return tuple(segments)
+
+
 def _v03b_top_stall_case(
     *,
     match_length_seconds: int,
@@ -1810,42 +1867,46 @@ def _v03b_top_stall_case(
 
     decision_windows = 0
     locked_windows = 0
+    locked_seconds = 0
+    elapsed_seconds = 0
     current_locked_dwell = 0
     longest_locked_dwell = 0
 
     steady_state_started = False
     steady_state_decision_windows = 0
     steady_state_locked_windows = 0
+    steady_state_locked_seconds = 0
+    steady_state_elapsed_seconds = 0
     steady_state_current_locked_dwell = 0
     steady_state_longest_locked_dwell = 0
 
     while not match.ended:
-        band_before_advance = match.band
-        clock_before_advance = match.clock_seconds
-        match.advance()
-        elapsed = clock_before_advance - match.clock_seconds
+        advance = match.advance()
+        segments = _drift_band_segments(advance.drift)
 
-        # The visible band is persisted between engine events. If the match
-        # entered this interval Locked, the whole elapsed interval belongs to
-        # the uninterrupted Locked dwell until an event changes the band.
-        if band_before_advance is Band.LOCKED:
-            current_locked_dwell += elapsed
-            longest_locked_dwell = max(
-                longest_locked_dwell,
-                current_locked_dwell,
-            )
-        else:
-            current_locked_dwell = 0
-
-        if steady_state_started:
-            if band_before_advance is Band.LOCKED:
-                steady_state_current_locked_dwell += elapsed
-                steady_state_longest_locked_dwell = max(
-                    steady_state_longest_locked_dwell,
-                    steady_state_current_locked_dwell,
+        for segment_band, duration in segments:
+            elapsed_seconds += duration
+            if segment_band is Band.LOCKED:
+                locked_seconds += duration
+                current_locked_dwell += duration
+                longest_locked_dwell = max(
+                    longest_locked_dwell,
+                    current_locked_dwell,
                 )
             else:
-                steady_state_current_locked_dwell = 0
+                current_locked_dwell = 0
+
+            if steady_state_started:
+                steady_state_elapsed_seconds += duration
+                if segment_band is Band.LOCKED:
+                    steady_state_locked_seconds += duration
+                    steady_state_current_locked_dwell += duration
+                    steady_state_longest_locked_dwell = max(
+                        steady_state_longest_locked_dwell,
+                        steady_state_current_locked_dwell,
+                    )
+                else:
+                    steady_state_current_locked_dwell = 0
 
         if match.ended:
             break
@@ -1895,9 +1956,13 @@ def _v03b_top_stall_case(
         ),
         decision_windows=decision_windows,
         locked_windows=locked_windows,
+        locked_seconds=locked_seconds,
+        elapsed_seconds=elapsed_seconds,
         longest_locked_dwell_seconds=longest_locked_dwell,
         steady_state_decision_windows=steady_state_decision_windows,
         steady_state_locked_windows=steady_state_locked_windows,
+        steady_state_locked_seconds=steady_state_locked_seconds,
+        steady_state_elapsed_seconds=steady_state_elapsed_seconds,
         steady_state_longest_locked_dwell_seconds=(
             steady_state_longest_locked_dwell
         ),
@@ -1930,8 +1995,8 @@ def _v03b_gate_a_case_passes(item: V03BTopStallEvidence) -> bool:
         item.warnings >= 1
         and item.penalties >= 1
         and item.position_resets >= 1
-        and item.steady_state_decision_windows > 0
-        and item.steady_state_locked_share < V03B_GATE_A_LOCKED_SHARE_LIMIT
+        and item.steady_state_elapsed_seconds > 0
+        and item.steady_state_locked_time_share < V03B_GATE_A_LOCKED_SHARE_LIMIT
         and item.steady_state_longest_locked_dwell_seconds
         < V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS
     )
@@ -2036,12 +2101,130 @@ def _v03b_boundary_probe() -> V03BBoundaryEvidence:
     )
 
 
+def _v03b_effect_strength(
+    *,
+    offender: Side,
+    axis_before: float,
+    axis_after: float,
+) -> float:
+    return (
+        axis_before - axis_after
+        if offender is Side.TOP
+        else axis_after - axis_before
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_escalation_invariant_probe() -> V03BEscalationInvariantEvidence:
+    cases = 0
+    backward = 0
+    weaker = 0
+    boundary_mismatches = 0
+    bottom_lowering = 0
+
+    for offender in (Side.TOP, Side.BOTTOM):
+        for step in range(1, 41):
+            axis = round(step / 10, 1)
+            for band in Band:
+                if not MOUNT_RULES.axis_can_have_band(axis, band):
+                    continue
+                cases += 1
+
+                penalty_match = _v03b_match(axis=axis)
+                penalty_match.position.apply_control(axis, band)
+                (
+                    penalty_before,
+                    penalty_after,
+                    penalty_free,
+                ) = penalty_match._apply_stalling_penalty(
+                    offender=offender
+                )
+
+                escalation_match = _v03b_match(axis=axis)
+                escalation_match.position.apply_control(axis, band)
+                (
+                    escalation_effect,
+                    escalation_before,
+                    escalation_after,
+                    escalation_free,
+                ) = escalation_match._apply_stalling_position_reset_rung(
+                    offender=offender
+                )
+
+                penalty_strength = _v03b_effect_strength(
+                    offender=offender,
+                    axis_before=penalty_before,
+                    axis_after=penalty_after,
+                )
+                escalation_strength = _v03b_effect_strength(
+                    offender=offender,
+                    axis_before=escalation_before,
+                    axis_after=escalation_after,
+                )
+
+                escalation_beneficiary = (
+                    escalation_match.free_initiative_beneficiary
+                    if escalation_free
+                    else None
+                )
+                if escalation_free:
+                    if escalation_beneficiary is not offender.opponent:
+                        boundary_mismatches += 1
+                elif escalation_strength <= 0:
+                    backward += 1
+
+                if offender is Side.BOTTOM and escalation_after < escalation_before:
+                    bottom_lowering += 1
+
+                if penalty_free:
+                    if not escalation_free:
+                        weaker += 1
+                elif not escalation_free and escalation_strength + 1e-12 < penalty_strength:
+                    weaker += 1
+
+    classic_bottom_lowering = _v03b_classic_two_sided_bottom_lowering_count()
+    return V03BEscalationInvariantEvidence(
+        cases=cases,
+        backward_effects=backward,
+        weaker_escalations=weaker,
+        boundary_mismatches=boundary_mismatches,
+        bottom_axis_lowering_cases=bottom_lowering,
+        classic_bottom_axis_lowering=classic_bottom_lowering,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v03b_classic_two_sided_bottom_lowering_count() -> int:
+    match = _v03b_match(axis=1.50)
+    lowering = 0
+
+    while not match.ended:
+        free_window = match.consume_free_initiative_window()
+        if free_window is None:
+            match.advance()
+            if match.ended:
+                break
+
+        offender = match.initiator
+        axis_before = match.axis
+        reset = match.reset_window()
+        if (
+            offender is Side.BOTTOM
+            and reset.stalling_offense
+            and match.axis < axis_before - 1e-12
+        ):
+            lowering += 1
+
+    return lowering
+
+
 def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
     top_stall = _v03b_top_stall_probe()
     top_stall_sweep = _v03b_top_stall_sweep()
     stalemate = _v03b_stalemated_attacker_probe()
     symmetry = _v03b_symmetry_probe()
     boundary = _v03b_boundary_probe()
+    escalation = _v03b_escalation_invariant_probe()
 
     response_commitment_present = _v03_response_commitment_present()
     recognition_present = _v03_recognition_mechanic_present()
@@ -2052,7 +2235,10 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
     )
 
     gate_a_pass = _v03b_gate_a_sweep_passes(top_stall_sweep)
-    gate_a_max_locked_share = max(
+    gate_a_max_locked_time_share = max(
+        item.steady_state_locked_time_share for item in top_stall_sweep
+    )
+    gate_a_max_locked_window_share = max(
         item.steady_state_locked_share for item in top_stall_sweep
     )
     gate_a_max_locked_dwell = max(
@@ -2061,6 +2247,9 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
     )
     gate_a_whole_match_max_locked_share = max(
         item.locked_share for item in top_stall_sweep
+    )
+    gate_a_whole_match_max_locked_time_share = max(
+        item.locked_time_share for item in top_stall_sweep
     )
     gate_a_whole_match_max_locked_dwell = max(
         item.longest_locked_dwell_seconds for item in top_stall_sweep
@@ -2076,7 +2265,8 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
     gate_a_failing_cases = len(gate_a_failing_items)
     gate_a_failing_labels = ",".join(
         f"i{item.interval_seconds}/t{item.match_length_seconds}:"
-        f"share={item.steady_state_locked_share:.3f},"
+        f"time_share={item.steady_state_locked_time_share:.3f},"
+        f"window_share={item.steady_state_locked_share:.3f},"
         f"dwell={item.steady_state_longest_locked_dwell_seconds}s"
         for item in gate_a_failing_items
     ) or "none"
@@ -2106,6 +2296,14 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
         and not recognition_present
         and v03a_gate_b.status is V02GateStatus.DEFERRED
     )
+    gate_f_pass = (
+        escalation.cases > 0
+        and escalation.backward_effects == 0
+        and escalation.weaker_escalations == 0
+        and escalation.boundary_mismatches == 0
+        and escalation.bottom_axis_lowering_cases == 0
+        and escalation.classic_bottom_axis_lowering == 0
+    )
 
     return (
         V03BGateMeasurement(
@@ -2115,11 +2313,13 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
             metric=(
                 f"sweep_cases={len(top_stall_sweep)}; "
                 f"failing_cases={gate_a_failing_cases}; "
-                f"max_post_reset_Locked_share={gate_a_max_locked_share:.3f}"
+                f"max_post_reset_Locked_time_share={gate_a_max_locked_time_share:.3f}"
                 f"<{V03B_GATE_A_LOCKED_SHARE_LIMIT:.2f}; "
+                f"max_post_reset_window_share={gate_a_max_locked_window_share:.3f}; "
                 f"max_post_reset_Locked_dwell={gate_a_max_locked_dwell}s"
                 f"<{V03B_GATE_A_LOCKED_DWELL_LIMIT_SECONDS}s; "
-                f"whole_match_max_share={gate_a_whole_match_max_locked_share:.3f}; "
+                f"whole_match_max_window_share={gate_a_whole_match_max_locked_share:.3f}; "
+                f"whole_match_max_time_share={gate_a_whole_match_max_locked_time_share:.3f}; "
                 f"whole_match_max_dwell={gate_a_whole_match_max_locked_dwell}s; "
                 f"Locked_timeout_cases={gate_a_locked_endings}/{len(top_stall_sweep)}; "
                 f"failing={gate_a_failing_labels}; "
@@ -2130,9 +2330,9 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
             ),
             evidence=(
                 "fixed 26-case interval/length sweep measures the repeating "
-                "post-first-Position-Reset regime: every case must keep Locked "
-                "below half of decision windows and below one full 20s "
-                "uninterrupted dwell; pre-reset grace and final timeout band are diagnostic only"
+                "post-first-Position-Reset regime in simulated time: every case "
+                "must keep Locked below half of elapsed time and below one full "
+                "20s uninterrupted dwell; decision-window share is diagnostic only"
             ),
         ),
         V03BGateMeasurement(
@@ -2188,6 +2388,25 @@ def measure_v03b_definition_of_done() -> tuple[V03BGateMeasurement, ...]:
             evidence=(
                 "v0.3b adds no response commitment or Recognition/information "
                 "mechanic and must not auto-expire the v0.3a Gate-B deferral"
+            ),
+        ),
+        V03BGateMeasurement(
+            letter="F",
+            name="stalling consequences are directional and monotonic",
+            status=V02GateStatus.PASS if gate_f_pass else V02GateStatus.OPEN,
+            metric=(
+                f"cases={escalation.cases}; "
+                f"backward={escalation.backward_effects}; "
+                f"weaker_later={escalation.weaker_escalations}; "
+                f"boundary_mismatches={escalation.boundary_mismatches}; "
+                f"Bottom-lowering={escalation.bottom_axis_lowering_cases}; "
+                f"classic Bottom-lowering={escalation.classic_bottom_axis_lowering}"
+            ),
+            evidence=(
+                "for both offender sides across every 0.1-axis state compatible "
+                "with each persisted band, offense 3+ must move toward the "
+                "non-staller (or grant that player free initiative) and may "
+                "not be weaker than offense 2 from the same state"
             ),
         ),
     )
@@ -2364,10 +2583,14 @@ def _v03b_stall_vs_active_bottom_probe() -> V03BStallActiveBottomEvidence:
                 reset = match.reset_window()
                 if reset.stalling_consequence == "WARNING":
                     warnings += 1
-                elif reset.stalling_consequence == "PENALTY":
-                    penalties += 1
-                elif reset.stalling_consequence == "POSITION_RESET":
+                elif reset.position_reset:
                     position_resets += 1
+                elif (
+                    reset.penalty_axis_before is not None
+                    and reset.penalty_axis_after is not None
+                    and reset.penalty_axis_after != reset.penalty_axis_before
+                ):
+                    penalties += 1
                 continue
 
             decision = policy.choose(match)
