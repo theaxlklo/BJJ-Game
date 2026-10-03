@@ -616,7 +616,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         text = output.getvalue()
         self.assertIn("V0.4a COMMITMENT SEMANTICS", text)
-        self.assertIn("COMMITMENT VISIBILITY: public in v0.4a", text)
+        self.assertIn("COMMITMENT VISIBILITY: public-MATCH remains the v0.4a control", text)
         self.assertIn("STAMINA PACING LOW", text)
         self.assertIn("Exhausted Top 2:30, Bottom 2:30", text)
         self.assertIn("STAMINA PACING MEDIUM", text)
@@ -669,7 +669,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.2 DOD GATE 6 [", text)
         self.assertIn("V0.2 DOD GATE 7 [", text)
         self.assertIn("V0.3a DOD GATE A [", text)
-        self.assertIn("V0.3a DOD GATE B [OPEN]", text)
+        self.assertIn("V0.3a DOD GATE B [PASS]", text)
         self.assertIn("V0.3a DOD GATE C [", text)
         self.assertIn("V0.3a DOD GATE D [", text)
         self.assertIn("V0.3a DOD GATE E [", text)
@@ -681,6 +681,9 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.3b DOD GATE F [PASS]", text)
         for letter in "ABCDEFGHI":
             self.assertIn(f"V0.4a DOD GATE {letter} [", text)
+        for letter in "ABCDEFGH":
+            self.assertIn(f"V0.4b DOD GATE {letter} [PASS]", text)
+        self.assertIn("V0.4b STAMINA-PACING OBSERVATION", text)
         self.assertIn("V0.4a PREDICTION PROBE", text)
         self.assertIn("V0.3b PREDICTION PROBE", text)
         self.assertIn("V0.3b NORMAL-PLAY GUARD [PASS]", text)

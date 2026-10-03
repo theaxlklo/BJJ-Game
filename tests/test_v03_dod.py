@@ -12,6 +12,7 @@ from bjj_game.diagnostics.checker import (
     _v03_informed_defender_sweep,
     _v03_informed_standard_batch,
     _v04_informed_standard_batch,
+    _v04b_informed_standard_batch,
     _v04_random_standard_batch,
     _v03_gate_b_status,
     _v03_recognition_mechanic_present,
@@ -61,17 +62,17 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             self.gates["A"].metric,
         )
 
-    def test_gate_b_deferral_expires_on_v04a_response_commitment(self):
-        informed = _v04_informed_standard_batch()
+    def test_gate_b_uses_v04b_recognition_when_capability_is_live(self):
+        informed = _v04b_informed_standard_batch()
         random = _v04_random_standard_batch()
         taps = informed.outcome_counts.get("TAP — Americana", 0)
         random_taps = random.outcome_counts.get("TAP — Americana", 0)
 
         self.assertTrue(_v03_response_commitment_present())
-        self.assertFalse(_v03_recognition_mechanic_present())
-        self.assertIs(self.gates["B"].status, V02GateStatus.OPEN)
+        self.assertTrue(_v03_recognition_mechanic_present())
+        self.assertIs(self.gates["B"].status, V02GateStatus.PASS)
         self.assertIn("response_commitment_present=True", self.gates["B"].metric)
-        self.assertIn("recognition_present=False", self.gates["B"].metric)
+        self.assertIn("recognition_present=True", self.gates["B"].metric)
         self.assertIn(
             f"informed Tap={taps}/{informed.matches}",
             self.gates["B"].metric,
@@ -84,8 +85,8 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             f"random contrast Tap={random_taps}/{random.matches}",
             self.gates["B"].metric,
         )
-        self.assertIn("auto-expires", self.gates["B"].evidence)
-        self.assertEqual(taps, 0)
+        self.assertIn("Recognition is now a live runtime capability", self.gates["B"].evidence)
+        self.assertEqual(taps, 6)
 
     def test_gate_b_deferral_auto_expires_on_either_future_capability(self):
         self.assertIs(
