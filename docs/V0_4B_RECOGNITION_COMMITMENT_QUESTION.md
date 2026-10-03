@@ -2,11 +2,13 @@
 
 ## Status
 
-FUTURE DESIGN NOTE — NOT A DEFINITION OF DONE.
+HISTORICAL DESIGN QUESTION — RESOLVED BY THE FROZEN v0.4b DEFINITION OF DONE.
 
-Do not implement Recognition from this note.
+This note was written before v0.4b began. The question below is now answered by:
 
-When the v0.4b Recognition Definition of Done is drafted, it must explicitly answer the question below before implementation begins.
+`docs/MOUNT_V0_4B_RECOGNITION_DEFINITION_OF_DONE.md`
+
+The frozen decision is **Model C**: the defender receives separate noisy reads of requested intent and effective capability. This file remains as the design trail; it is no longer implementation guidance by itself.
 
 ## Required design question
 
@@ -66,17 +68,15 @@ A defender might plausibly read intent from behavior while also sensing reduced 
 
 Recognition must not silently collapse them back into one field.
 
-## Change-control reminder
+## Resolution
 
-When v0.4b is started:
+The frozen v0.4b DoD chose:
 
 ```text
-draft/freeze v0.4b DoD
--> include this question and chosen semantics
--> commit
--> STOP FOR REVIEW
--> explicit authorization
--> implementation
+requested intent      -> separate noisy d6 read
+effective capability  -> separate noisy d6 read
 ```
 
-No v0.4b mechanic is authorized by this note.
+The reads occur after initiator affordability is known and before defender response-commitment selection / legal-response choice.
+
+The implementation authority comes from the frozen DoD plus the user's explicit authorization to implement v0.4b, not from this historical note.
