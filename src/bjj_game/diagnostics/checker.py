@@ -2739,7 +2739,8 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     gate_b_evidence = (
         (
             "Response commitment is now a live runtime capability, so the "
-            "self-expiring deferral has ended and the unchanged "
+            "Gate-B deferral auto-expires; the self-expiring deferral has ended "
+            "and the unchanged "
             "0% < informed Tap < 50% criterion is active. Public MATCH "
             "commitment still lets the informed defender hold conversion at "
             "0 taps; this is evidence for the later Recognition/information "
