@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+import random
 from enum import Enum
 from statistics import mean, median
 
@@ -31,6 +32,12 @@ class BatchBehaviorMode(str, Enum):
 class BatchResponderMode(str, Enum):
     RANDOM = "random"
     INFORMED = "informed"
+
+
+class BatchResponseCommitmentMode(str, Enum):
+    FIXED_MEDIUM = "fixed-medium"
+    MATCH = "match"
+    RANDOM = "random"
 
 
 @dataclass(frozen=True, slots=True)
@@ -575,6 +582,7 @@ class BatchSummary:
     matches: int
     base_seed: int
     bottom_responder_mode: BatchResponderMode
+    response_commitment_mode: BatchResponseCommitmentMode
     top_behavior: TopBehavior
     bottom_behavior: BottomBehavior
     commitment: Commitment
@@ -604,6 +612,10 @@ class BatchSummary:
     matches_reached_submission_threat: int
     matches_reached_submission_control: int
     matches_reached_submission_finish: int
+    submission_feint_cap_count: int
+    requested_low_feint_cap_count: int
+    funding_downgrade_success_count: int
+    funding_downgrade_feint_cap_count: int
     top_position_attack_count: int
     top_followup_position_attack_count: int
     top_followup_setup_action_count: int
@@ -645,6 +657,7 @@ class BatchSummary:
             f"Bottom baseline behavior: {self.bottom_behavior.value}",
             f"Bottom behavior policy: {self.bottom_behavior_mode.value}",
             f"Bottom responder policy: {self.bottom_responder_mode.value}",
+            f"Response commitment policy: {self.response_commitment_mode.value}",
             f"Commitment: {self.commitment.value}",
             "",
             "OUTCOMES",
@@ -688,6 +701,10 @@ class BatchSummary:
             f"Matches reaching submission Threat: {self.matches_reached_submission_threat}",
             f"Matches reaching submission Control: {self.matches_reached_submission_control}",
             f"Matches reaching submission Finish: {self.matches_reached_submission_finish}",
+            f"Submission feint caps: {self.submission_feint_cap_count}",
+            f"Requested-LOW feint caps: {self.requested_low_feint_cap_count}",
+            f"MEDIUM/HIGH funding-downgrade successful active-stage attempts: {self.funding_downgrade_success_count}",
+            f"MEDIUM/HIGH funding-downgrade feint caps: {self.funding_downgrade_feint_cap_count}",
             f"Top position attacks: {self.top_position_attack_count}",
             f"Top follow-up position attacks: {self.top_followup_position_attack_count}",
             f"Top follow-up setup actions: {self.top_followup_setup_action_count}",
@@ -717,12 +734,33 @@ def _render_counts(counts: dict[str, int]) -> str:
     return ", ".join(f"{name}={counts[name]}" for name in sorted(counts))
 
 
+def _response_commitment_for_exchange(
+    match: MountMatch,
+    *,
+    initiator_commitment: Commitment,
+    mode: BatchResponseCommitmentMode,
+    rng: random.Random,
+) -> Commitment:
+    if mode is BatchResponseCommitmentMode.FIXED_MEDIUM:
+        return Commitment.MEDIUM
+    if mode is BatchResponseCommitmentMode.MATCH:
+        initiator_pool = match.competitor(match.initiator).stamina
+        effective = match.stamina_cost_policy.effective_commitment(
+            requested=initiator_commitment,
+            available_stamina=initiator_pool.current,
+        )
+        return Commitment.LOW if effective is None else effective
+    return rng.choice(tuple(Commitment))
+
+
 def _informed_bottom_response_id(
     match: MountMatch,
     *,
     action_id: str,
+    commitment: Commitment = Commitment.MEDIUM,
+    response_commitment: Commitment = Commitment.MEDIUM,
 ) -> str:
-    """Choose Bottom's legal response that minimizes Top's final grade."""
+    """Choose Bottom's legal response using the real current exchange semantics."""
     if match.initiator is not Side.TOP:
         raise ValueError("informed Bottom response requires Top as initiator")
 
@@ -730,48 +768,14 @@ def _informed_bottom_response_id(
     if not legal:
         raise RuntimeError(f"No legal responses for {action_id!r}")
 
-    initiator_band = match.top.stamina.band
-    responder_band = match.bottom.stamina.band
-    exhaustion_modifier = match.exhaustion_policy.exchange_grade_modifier(
-        initiator_band=initiator_band,
-        responder_band=responder_band,
-    )
-    top_behavior = match.top.behavior
-    bottom_behavior = match.bottom.behavior
-    if not isinstance(top_behavior, TopBehavior):
-        raise TypeError("Top behavior is not a TopBehavior")
-    if not isinstance(bottom_behavior, BottomBehavior):
-        raise TypeError("Bottom behavior is not a BottomBehavior")
-
     candidates: list[tuple[Grade, int, str]] = []
     for order, response_id in enumerate(legal):
-        if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
-            result = match.preview_submission_stage(
-                response_id=response_id,
-                external_grade_modifier=exhaustion_modifier,
-            )
-        else:
-            target_was_ready = (
-                match.enable_v02_setup
-                and action_id in match.setup_policy.target_action_ids
-                and match.setup_state.is_ready(action_id)
-            )
-            ready_override = (
-                match.setup_policy.ready_final_grade_override(
-                    action_id,
-                    response_id,
-                )
-                if target_was_ready
-                else None
-            )
-            result = match._resolve(
-                action_id=action_id,
-                response_id=response_id,
-                top_behavior=top_behavior,
-                bottom_behavior=bottom_behavior,
-                external_grade_modifier=exhaustion_modifier,
-                post_positional_grade_override=ready_override,
-            )
+        result = match.preview_attempt_resolution(
+            action_id=action_id,
+            response_id=response_id,
+            commitment=commitment,
+            response_commitment=response_commitment,
+        )
         candidates.append((result.final_grade, order, response_id))
 
     return min(candidates)[2]
@@ -792,9 +796,13 @@ def run_escape_first_batch(
     top_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
     bottom_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
     bottom_responder_mode: BatchResponderMode = BatchResponderMode.RANDOM,
+    response_commitment_mode: BatchResponseCommitmentMode = (
+        BatchResponseCommitmentMode.FIXED_MEDIUM
+    ),
     enable_v02_setup: bool = False,
     enable_v03_submissions: bool = False,
     enable_v03b_stalling: bool = False,
+    enable_v04_commitment_semantics: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
         raise ValueError("matches must be > 0")
@@ -828,6 +836,10 @@ def run_escape_first_batch(
     matches_reached_threat = 0
     matches_reached_control = 0
     matches_reached_finish = 0
+    submission_feint_caps = 0
+    requested_low_feint_caps = 0
+    funding_downgrade_successes = 0
+    funding_downgrade_feint_caps = 0
     top_position_attacks = 0
     top_followup_position_attacks = 0
     top_followup_setup_actions = 0
@@ -852,6 +864,7 @@ def run_escape_first_batch(
             enable_v02_setup=enable_v02_setup,
             enable_v03_submissions=enable_v03_submissions,
             enable_v03b_stalling=enable_v03b_stalling,
+            enable_v04_commitment_semantics=enable_v04_commitment_semantics,
         )
         match.top.stamina.set_current(top_stamina)
         match.bottom.stamina.set_current(bottom_stamina)
@@ -869,6 +882,9 @@ def run_escape_first_batch(
         current_bottom = bottom_policy.choose(match)
         match.set_behaviors(top=current_top, bottom=current_bottom)
         responder = RandomBlindResponder(base_seed + match_index)
+        response_commitment_rng = random.Random(
+            base_seed + match_index + 1_000_003
+        )
         top_has_initiated_action = False
         pending_setup_builds: Counter[tuple[Side, str]] = Counter()
         pending_top_followup_setup_builds: Counter[str] = Counter()
@@ -947,6 +963,16 @@ def run_escape_first_batch(
                         ):
                             bottom_stalling_penalties += 1
                     continue
+                selected_response_commitment = (
+                    _response_commitment_for_exchange(
+                        match,
+                        initiator_commitment=commitment,
+                        mode=response_commitment_mode,
+                        rng=response_commitment_rng,
+                    )
+                    if enable_v04_commitment_semantics
+                    else None
+                )
                 if (
                     side is Side.TOP
                     and bottom_responder_mode is BatchResponderMode.INFORMED
@@ -954,6 +980,8 @@ def run_escape_first_batch(
                     response_id = _informed_bottom_response_id(
                         match,
                         action_id=decision.action_id,
+                        commitment=commitment,
+                        response_commitment=selected_response_commitment,
                     )
                 else:
                     hidden = responder.choose(
@@ -1005,6 +1033,16 @@ def run_escape_first_batch(
                         ):
                             bottom_stalling_penalties += 1
                     continue
+                selected_response_commitment = (
+                    _response_commitment_for_exchange(
+                        match,
+                        initiator_commitment=commitment,
+                        mode=response_commitment_mode,
+                        rng=response_commitment_rng,
+                    )
+                    if enable_v04_commitment_semantics
+                    else None
+                )
 
             action = MODERN_ENTITY_BY_ID[decision.action_id]
             setup_target = (
@@ -1049,11 +1087,40 @@ def run_escape_first_batch(
                 else:
                     bottom_position_attacks += 1
 
-            match.attempt(
+            feint_caps_before = len(
+                match.history.submission_feint_cap_history
+            )
+            attempt_result = match.attempt(
                 action_id=decision.action_id,
                 response_id=response_id,
                 commitment=commitment,
+                response_commitment=selected_response_commitment,
             )
+            feint_caps_after = len(
+                match.history.submission_feint_cap_history
+            )
+
+            is_active_submission_success = (
+                enable_v04_commitment_semantics
+                and action.id == TOP_AMERICANA_SUBMISSION_FINISH
+                and attempt_result.resolution.final_grade.successful
+            )
+            is_funding_downgrade = (
+                attempt_result.attempt.requested_commitment
+                in {Commitment.MEDIUM, Commitment.HIGH}
+                and attempt_result.attempt.effective_commitment
+                in {None, Commitment.LOW}
+            )
+            if is_active_submission_success and is_funding_downgrade:
+                funding_downgrade_successes += 1
+
+            added_feint_caps = feint_caps_after - feint_caps_before
+            if added_feint_caps:
+                submission_feint_caps += added_feint_caps
+                if attempt_result.attempt.requested_commitment is Commitment.LOW:
+                    requested_low_feint_caps += added_feint_caps
+                elif is_funding_downgrade:
+                    funding_downgrade_feint_caps += added_feint_caps
 
             if target_was_ready:
                 credited = pending_setup_builds[(side, action.id)]
@@ -1091,6 +1158,7 @@ def run_escape_first_batch(
         matches=matches,
         base_seed=base_seed,
         bottom_responder_mode=bottom_responder_mode,
+        response_commitment_mode=response_commitment_mode,
         top_behavior=top_behavior,
         bottom_behavior=bottom_behavior,
         commitment=commitment,
@@ -1120,6 +1188,10 @@ def run_escape_first_batch(
         matches_reached_submission_threat=matches_reached_threat,
         matches_reached_submission_control=matches_reached_control,
         matches_reached_submission_finish=matches_reached_finish,
+        submission_feint_cap_count=submission_feint_caps,
+        requested_low_feint_cap_count=requested_low_feint_caps,
+        funding_downgrade_success_count=funding_downgrade_successes,
+        funding_downgrade_feint_cap_count=funding_downgrade_feint_caps,
         top_position_attack_count=top_position_attacks,
         top_followup_position_attack_count=top_followup_position_attacks,
         top_followup_setup_action_count=top_followup_setup_actions,

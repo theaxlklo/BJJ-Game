@@ -1,5 +1,16 @@
 # v0.3a Gate B Deferral — Automatic Expiry and Provisional Hold Cost
 
+> **v0.4a EXPIRY UPDATE:** This document preserves the original v0.3a deferral decision. v0.4a now provides real per-exchange response commitment, so the automatic expiry signal is live:
+>
+> ```text
+> response_commitment_present=True
+> recognition_present=False
+> informed Tap=0/100
+> -> Gate B OPEN
+> ```
+>
+> The unchanged `0% < informed Tap < 50%` criterion has resumed. The deferral worked as designed; Gate B itself is not solved. See `MOUNT_V0_4A_FIRST_MEASUREMENT.md`.
+
 ## Final v0.3a Gate-B decision
 
 Gate B is **DEFERRED**, not PASS and not OPEN, while the current model lacks both:

@@ -9,10 +9,10 @@ from typing import TextIO
 
 from ..domain.action import Commitment
 from ..positions.mount.catalog import MODERN_ENTITY_BY_ID, actions_for, responses_for
-from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_behavior_and_reacquisition_probe, render_v03a_definition_of_done, render_v03a_hold_cost_status, render_v03a_informed_defender_probe, render_v03a_recovery_prediction_probe, render_v03a_setup_policy_debt, render_v03a_stamina_saturation_observation, render_v03b_definition_of_done, render_v03b_normal_play_guard, render_v03b_prediction_probe, render_v03b_stall_vs_active_bottom_observation, run_checks
+from ..diagnostics.checker import render_enumeration, render_exhausted_reachability_summary, render_reset_lock_probe, render_v02_definition_of_done, render_v03a_behavior_and_reacquisition_probe, render_v03a_definition_of_done, render_v03a_hold_cost_status, render_v03a_informed_defender_probe, render_v03a_recovery_prediction_probe, render_v03a_setup_policy_debt, render_v03a_stamina_saturation_observation, render_v03b_definition_of_done, render_v03b_normal_play_guard, render_v03b_prediction_probe, render_v03b_stall_vs_active_bottom_observation, render_v04a_definition_of_done, render_v04a_feint_funding_probe, render_v04a_prediction_probe, run_checks
 from ..engine.match import MountRun
 from ..engine.stamina import conserve_cycle_net, project_active_stamina_pacing
-from .batch import BatchBehaviorMode, run_escape_first_batch
+from .batch import BatchBehaviorMode, BatchResponseCommitmentMode, run_escape_first_batch
 from .blind import BlindResponseChoice, RandomBlindResponder, render_random_mix_band_metrics, render_random_mix_exit_limit
 from .formatting import format_advance_result, format_attempt_result, format_clock, format_drift, format_reset_window, format_resolution
 from ..positions.mount.rules import DEFAULT_AXIS, DEFAULT_CLOCK_SECONDS, DEFAULT_INTERVAL_SECONDS
@@ -473,7 +473,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--interval", type=positive_int, default=DEFAULT_INTERVAL_SECONDS, help="decision interval in simulated seconds")
     parser.add_argument("--top-stamina", type=stamina_value, default=100, help="starting Top stamina telemetry, 0..100")
     parser.add_argument("--bottom-stamina", type=stamina_value, default=100, help="starting Bottom stamina telemetry, 0..100")
-    parser.add_argument("--commitment", type=commitment_value, default=Commitment.MEDIUM, help="fixed v0.1c action commitment; defaults to MEDIUM")
+    parser.add_argument("--commitment", type=commitment_value, default=Commitment.MEDIUM, help="fixed initiated-action commitment; defaults to MEDIUM")
     parser.add_argument("--blind", action="store_true", help="testing mode: responder locks a hidden response before the action/RESET choice")
     parser.add_argument("--blind-responder", choices=("human", "random"), default="human", help="blind responder source; random requires --blind and --seed")
     parser.add_argument("--seed", type=int, help="deterministic seed for --blind-responder random")
@@ -486,6 +486,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--v02-setup", action="store_true", help="batch-only: enable experimental v0.2 setup/Ready legality")
     parser.add_argument("--v03-submissions", action="store_true", help="batch-only: enable v0.3a Americana submission track; requires --v02-setup")
     parser.add_argument("--v03-stalling", action="store_true", help="batch-only: enable v0.3b 20-second stalling clocks; requires --v03-submissions")
+    parser.add_argument("--v04-commitment", action="store_true", help="batch-only: enable v0.4a tactical initiator/response commitment semantics")
+    parser.add_argument("--response-commitment-policy", choices=("fixed-medium", "match", "random"), help="batch-only v0.4a response commitment policy; requires --v04-commitment")
     parser.add_argument("--enumerate", action="store_true", help="print exhaustive matrix/checker report and exit")
     parser.add_argument("--check", action="store_true", help="run semantic invariant checks without the interactive simulation")
     parser.add_argument("--log", type=Path, help="save all printed output to a text log while still showing it in the terminal")
@@ -569,10 +571,12 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         or args.v02_setup
         or args.v03_submissions
         or args.v03_stalling
+        or args.v04_commitment
+        or args.response_commitment_policy is not None
     ):
         print(
             "ERROR: modern playtest flags (--blind/--blind-responder/--seed/"
-            "--top-behavior/--bottom-behavior/--batch/--initiator-policy/--v02-setup/--v03-submissions/--v03-stalling) "
+            "--top-behavior/--bottom-behavior/--batch/--initiator-policy/--v02-setup/--v03-submissions/--v03-stalling/--v04-commitment/--response-commitment-policy) "
             "are available only on bjj_game."
         )
         return 2
@@ -592,6 +596,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             return 2
         if args.v03_stalling and not args.v03_submissions:
             print("ERROR: --v03-stalling requires --v03-submissions.")
+            return 2
+        if args.response_commitment_policy is not None and not args.v04_commitment:
+            print("ERROR: --response-commitment-policy requires --v04-commitment.")
             return 2
         policy = args.initiator_policy or "escape-first"
         if policy == "greedy":
@@ -615,9 +622,13 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             bottom_behavior_mode=BatchBehaviorMode(
                 args.bottom_behavior_policy or "fixed"
             ),
+            response_commitment_mode=BatchResponseCommitmentMode(
+                args.response_commitment_policy or "fixed-medium"
+            ),
             enable_v02_setup=args.v02_setup,
             enable_v03_submissions=args.v03_submissions,
             enable_v03b_stalling=args.v03_stalling,
+            enable_v04_commitment_semantics=args.v04_commitment,
         )
         print(summary.render())
         return 0
@@ -633,6 +644,12 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         return 2
     if args.v03_stalling:
         print("ERROR: --v03-stalling is currently available only with --batch.")
+        return 2
+    if args.v04_commitment:
+        print("ERROR: --v04-commitment is currently available only with --batch.")
+        return 2
+    if args.response_commitment_policy is not None:
+        print("ERROR: --response-commitment-policy is currently available only with --batch.")
         return 2
     if args.top_behavior_policy is not None or args.bottom_behavior_policy is not None:
         print("ERROR: --top-behavior-policy/--bottom-behavior-policy are only valid with --batch.")
@@ -652,8 +669,8 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
     if args.check:
         report = run_checks()
         if commitment_enabled:
-            print("INFO: COMMITMENT DOMINANCE: LOW strictly dominates MEDIUM/HIGH while commitment effects are OFF; standard play defaults to MEDIUM.")
-            print("INFO: COMMITMENT VISIBILITY: public in v0.1e; hidden/recognized commitment is deferred to the v0.2 information layer.")
+            print("INFO: V0.4a COMMITMENT SEMANTICS: LOW/MEDIUM/HIGH now change exchange magnitude when v0.4a is enabled; response commitment uses the same effective-funding policy.")
+            print("INFO: COMMITMENT VISIBILITY: public in v0.4a; hidden/imperfectly recognized commitment remains deferred to Recognition.")
             for commitment in Commitment:
                 projection = project_active_stamina_pacing(commitment=commitment)
                 print(
@@ -689,8 +706,9 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 "INFO: V0.2 RESPONDER-STAMINA VALIDATION: an Exhausted responder now shifts the "
                 "initiated action +1 grade for the initiator; an Exhausted initiator remains -1, "
                 "so both Exhausted cancel. The 25/35 latch and pre-cost timing are shared. "
-                "Ordinary responses still have no direct stamina cost; v0.3a Ready-Americana "
-                "and active-Americana Contested holds pay the existing LOW cost of 3 after resolution."
+                "Without v0.4a, ordinary responses still have no direct stamina cost; with v0.4a enabled, "
+                "response commitment uses the same 3/7/12 effective-funding policy. v0.3a Ready-Americana "
+                "and active-Americana Contested holds retain the separate LOW cost of 3 after resolution."
             )
             print(
                 "INFO: RESET/STALLING DEBT: RESET solves forced-action recovery but repeated no-action "
@@ -717,6 +735,10 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
                 print(f"INFO: {line}")
             for line in render_v03b_definition_of_done():
                 print(f"INFO: {line}")
+            for line in render_v04a_definition_of_done():
+                print(f"INFO: {line}")
+            print("INFO: " + render_v04a_feint_funding_probe())
+            print("INFO: " + render_v04a_prediction_probe())
             print("INFO: " + render_v03b_prediction_probe())
             print("INFO: " + render_v03b_normal_play_guard())
             print("INFO: " + render_v03b_stall_vs_active_bottom_observation())

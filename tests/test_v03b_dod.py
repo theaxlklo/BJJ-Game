@@ -111,16 +111,20 @@ class V03BDefinitionOfDoneTests(unittest.TestCase):
         self.assertEqual(evidence.classic_bottom_axis_lowering, 0)
         self.assertIs(self.gates["F"].status, V02GateStatus.PASS)
 
-    def test_gate_e_does_not_expire_v03a_gate_b(self):
-        self.assertFalse(_v03_response_commitment_present())
+    def test_gate_e_remains_historically_scoped_after_v04a(self):
+        self.assertTrue(_v03_response_commitment_present())
         self.assertFalse(_v03_recognition_mechanic_present())
         v03a_gate_b = next(
             gate
             for gate in measure_v03a_definition_of_done()
             if gate.letter == "B"
         )
-        self.assertIs(v03a_gate_b.status, V02GateStatus.DEFERRED)
+        self.assertIs(v03a_gate_b.status, V02GateStatus.OPEN)
         self.assertIs(self.gates["E"].status, V02GateStatus.PASS)
+        self.assertIn(
+            "v03b_response_commitment_present=False",
+            self.gates["E"].metric,
+        )
 
 
 if __name__ == "__main__":

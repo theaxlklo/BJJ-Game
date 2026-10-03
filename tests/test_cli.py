@@ -500,6 +500,42 @@ class CliTests(unittest.TestCase):
         self.assertIn("Reset / no-action history: ['top']", text)
 
 
+    def test_v04_commitment_batch_reports_response_commitment_policy(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--batch", "1",
+                "--seed", "42",
+                "--v04-commitment",
+                "--response-commitment-policy", "match",
+            ])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Response commitment policy: match", text)
+
+    def test_response_commitment_policy_requires_v04(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main([
+                "--batch", "1",
+                "--response-commitment-policy", "match",
+            ])
+        self.assertEqual(code, 2)
+        self.assertIn(
+            "--response-commitment-policy requires --v04-commitment",
+            output.getvalue(),
+        )
+
+    def test_v04_commitment_requires_batch(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = bjj_main(["--v04-commitment"])
+        self.assertEqual(code, 2)
+        self.assertIn(
+            "--v04-commitment is currently available only with --batch",
+            output.getvalue(),
+        )
+
     def test_legacy_cli_has_no_commitment_prompt_or_stamina_cost(self):
         output = io.StringIO()
         inputs = ["1", "1", "1", "2", KeyboardInterrupt]
@@ -559,6 +595,13 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("modern playtest flags", output.getvalue())
 
+    def test_legacy_cli_rejects_v04_commitment_flag(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["--v04-commitment"])
+        self.assertEqual(code, 2)
+        self.assertIn("modern playtest flags", output.getvalue())
+
     def test_legacy_cli_rejects_v03_stalling_flag(self):
         output = io.StringIO()
         with redirect_stdout(output):
@@ -566,14 +609,14 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("modern playtest flags", output.getvalue())
 
-    def test_primary_check_reports_commitment_dominance_and_visibility_debt(self):
+    def test_primary_check_reports_v04a_commitment_semantics_and_gates(self):
         output = io.StringIO()
         with redirect_stdout(output):
             code = bjj_main(["--check"])
         self.assertEqual(code, 0)
         text = output.getvalue()
-        self.assertIn("COMMITMENT DOMINANCE: LOW strictly dominates", text)
-        self.assertIn("COMMITMENT VISIBILITY: public in v0.1e", text)
+        self.assertIn("V0.4a COMMITMENT SEMANTICS", text)
+        self.assertIn("COMMITMENT VISIBILITY: public in v0.4a", text)
         self.assertIn("STAMINA PACING LOW", text)
         self.assertIn("Exhausted Top 2:30, Bottom 2:30", text)
         self.assertIn("STAMINA PACING MEDIUM", text)
@@ -594,8 +637,9 @@ class CliTests(unittest.TestCase):
         self.assertIn("forced-attack pacing is a stress projection", text)
         self.assertIn("V0.2 RESPONDER-STAMINA VALIDATION", text)
         self.assertIn("both Exhausted cancel", text)
-        self.assertIn("Ordinary responses still have no direct stamina cost", text)
-        self.assertIn("Contested holds pay the existing LOW cost of 3", text)
+        self.assertIn("Without v0.4a, ordinary responses still have no direct stamina cost", text)
+        self.assertIn("response commitment uses the same 3/7/12 effective-funding policy", text)
+        self.assertIn("Contested holds retain the separate LOW cost of 3", text)
         self.assertIn("RESET/STALLING DEBT", text)
         self.assertIn(
             "RESET LOCK PROBE: Top PRESSURE+RESET vs Bottom ESCAPE+RESET -> TIMEOUT — Mount retained; axis +4.00; band Locked; Top stamina 40; Bottom stamina 40",
@@ -625,7 +669,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.2 DOD GATE 6 [", text)
         self.assertIn("V0.2 DOD GATE 7 [", text)
         self.assertIn("V0.3a DOD GATE A [", text)
-        self.assertIn("V0.3a DOD GATE B [DEFERRED]", text)
+        self.assertIn("V0.3a DOD GATE B [OPEN]", text)
         self.assertIn("V0.3a DOD GATE C [", text)
         self.assertIn("V0.3a DOD GATE D [", text)
         self.assertIn("V0.3a DOD GATE E [", text)
@@ -635,6 +679,9 @@ class CliTests(unittest.TestCase):
         self.assertIn("V0.3b DOD GATE D [PASS]", text)
         self.assertIn("V0.3b DOD GATE E [PASS]", text)
         self.assertIn("V0.3b DOD GATE F [PASS]", text)
+        for letter in "ABCDEFGHI":
+            self.assertIn(f"V0.4a DOD GATE {letter} [", text)
+        self.assertIn("V0.4a PREDICTION PROBE", text)
         self.assertIn("V0.3b PREDICTION PROBE", text)
         self.assertIn("V0.3b NORMAL-PLAY GUARD [PASS]", text)
         self.assertIn("V0.3b STALL-vs-ACTIVE-BOTTOM OBSERVATION", text)
@@ -654,7 +701,7 @@ class CliTests(unittest.TestCase):
             code = main(["--check"])
         self.assertEqual(code, 0)
         text = output.getvalue()
-        self.assertNotIn("COMMITMENT DOMINANCE", text)
+        self.assertNotIn("V0.4a COMMITMENT SEMANTICS", text)
         self.assertNotIn("COMMITMENT VISIBILITY", text)
         self.assertNotIn("CONSERVE CYCLE NET", text)
         self.assertNotIn("EXHAUSTION HYSTERESIS", text)
@@ -673,6 +720,8 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("V0.3b PREDICTION PROBE", text)
         self.assertNotIn("V0.3b NORMAL-PLAY GUARD", text)
         self.assertNotIn("V0.3b STALL-vs-ACTIVE-BOTTOM OBSERVATION", text)
+        self.assertNotIn("V0.4a DOD GATE", text)
+        self.assertNotIn("V0.4a PREDICTION PROBE", text)
         self.assertNotIn("V0.3a PREDICTION PROBE", text)
         self.assertNotIn("V0.3a STAMINA SATURATION", text)
         self.assertNotIn("V0.3a SUBMISSION-HOLD COST", text)

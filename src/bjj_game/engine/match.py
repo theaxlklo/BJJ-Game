@@ -73,6 +73,7 @@ class MountMatch:
     enable_v02_setup: bool = False
     enable_v03_submissions: bool = False
     enable_v03b_stalling: bool = False
+    enable_v04_commitment_semantics: bool = False
     setup_policy: MountSetupPolicy = field(
         default_factory=lambda: DEFAULT_MOUNT_SETUP_POLICY, repr=False
     )
@@ -305,21 +306,231 @@ class MountMatch:
             + (",".join(action_ids) if action_ids else "none")
         )
 
+    @property
+    def response_commitment_enabled(self) -> bool:
+        """Runtime capability used by the v0.3a Gate-B auto-expiry check."""
+        return self.enable_v04_commitment_semantics
+
+    @staticmethod
+    def _commitment_rank(commitment: Commitment | None) -> int:
+        return {
+            None: 0,
+            Commitment.LOW: 1,
+            Commitment.MEDIUM: 2,
+            Commitment.HIGH: 3,
+        }[commitment]
+
+    @staticmethod
+    def _initiator_commitment_modifier(
+        commitment: Commitment | None,
+        grade: Grade,
+    ) -> int:
+        """Magnitude transform applied after exhaustion.
+
+        UNFUNDED deliberately inherits LOW's magnitude ceiling so inability to
+        fund LOW cannot become stronger than LOW.
+        """
+        effective = Commitment.LOW if commitment is None else commitment
+        if effective is Commitment.HIGH:
+            if grade is Grade.SUCCESS:
+                return 1
+            if grade is Grade.FAILURE:
+                return -1
+        elif effective is Commitment.LOW:
+            if grade is Grade.STRONG_SUCCESS:
+                return -1
+            if grade is Grade.STRONG_FAILURE:
+                return 1
+        return 0
+
+    @classmethod
+    def _response_undercommitment_modifier(
+        cls,
+        *,
+        initiator_commitment: Commitment | None,
+        responder_commitment: Commitment | None,
+    ) -> int:
+        return (
+            1
+            if cls._commitment_rank(responder_commitment)
+            < cls._commitment_rank(initiator_commitment)
+            else 0
+        )
+
+    @classmethod
+    def _commitment_grade_transform(
+        cls,
+        *,
+        grade_after_exhaustion: Grade,
+        initiator_commitment: Commitment | None,
+        responder_commitment: Commitment | None,
+    ) -> tuple[Grade, int, int]:
+        """Apply v0.4a commitment steps in the frozen sequential order."""
+        commitment_modifier = cls._initiator_commitment_modifier(
+            initiator_commitment,
+            grade_after_exhaustion,
+        )
+        after_magnitude = grade_after_exhaustion.shift(
+            commitment_modifier
+        )
+        response_modifier = cls._response_undercommitment_modifier(
+            initiator_commitment=initiator_commitment,
+            responder_commitment=responder_commitment,
+        )
+        final_grade = after_magnitude.shift(response_modifier)
+        return final_grade, commitment_modifier, response_modifier
+
+
+    def _resolve_attempt_resolution(
+        self,
+        *,
+        action_id: str,
+        response_id: str,
+        top_behavior: TopBehavior,
+        bottom_behavior: BottomBehavior,
+        ready_grade_override: Grade | None,
+        exhaustion_modifier: int,
+        effective_commitment: Commitment | None,
+        response_effective_commitment: Commitment | None,
+    ):
+        def resolve(external_grade_modifier: int):
+            if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
+                return self._resolve_submission_stage(
+                    response_id=response_id,
+                    top_behavior=top_behavior,
+                    bottom_behavior=bottom_behavior,
+                    external_grade_modifier=external_grade_modifier,
+                )
+            return self._resolve(
+                action_id=action_id,
+                response_id=response_id,
+                top_behavior=top_behavior,
+                bottom_behavior=bottom_behavior,
+                external_grade_modifier=external_grade_modifier,
+                post_positional_grade_override=ready_grade_override,
+            )
+
+        base_resolution = resolve(0)
+        exhausted_resolution = (
+            base_resolution
+            if exhaustion_modifier == 0
+            else resolve(exhaustion_modifier)
+        )
+        exhausted_grade = exhausted_resolution.final_grade
+        if not self.enable_v04_commitment_semantics:
+            return base_resolution, exhausted_resolution, 0, 0
+
+        (
+            final_grade,
+            commitment_modifier,
+            response_modifier,
+        ) = self._commitment_grade_transform(
+            grade_after_exhaustion=exhausted_grade,
+            initiator_commitment=effective_commitment,
+            responder_commitment=response_effective_commitment,
+        )
+
+        # Preserve the historical exhaustion ResolutionResult exactly whenever
+        # v0.4a adds no tactical grade change. When commitment does change the
+        # grade, derive the resolver delta from the actual sequential target
+        # grade rather than summing modifiers across intermediate clamps.
+        if commitment_modifier == 0 and response_modifier == 0:
+            result = exhausted_resolution
+        else:
+            final_delta_from_base = (
+                int(final_grade) - int(base_resolution.final_grade)
+            )
+            result = resolve(final_delta_from_base)
+        return (
+            base_resolution,
+            result,
+            commitment_modifier,
+            response_modifier,
+        )
+
+    def preview_attempt_resolution(
+        self,
+        *,
+        action_id: str,
+        response_id: str,
+        commitment: Commitment,
+        response_commitment: Commitment | None = None,
+    ):
+        """Preview the same current-exchange math as attempt(), without mutation."""
+        top_behavior, bottom_behavior = self._behaviors(None, None)
+        initiator = self.initiator
+        self._validate_action_legality(action_id)
+        self._validate_response_legality(action_id, response_id)
+
+        target_was_ready = (
+            self.enable_v02_setup
+            and action_id in self.setup_policy.target_action_ids
+            and self.setup_state.is_ready(action_id)
+        )
+        ready_grade_override = (
+            self.setup_policy.ready_final_grade_override(
+                action_id,
+                response_id,
+            )
+            if target_was_ready
+            else None
+        )
+
+        pool = self.competitor(initiator).stamina
+        responder_pool = self.competitor(initiator.opponent).stamina
+        exhaustion_modifier = self.exhaustion_policy.exchange_grade_modifier(
+            initiator_band=pool.band,
+            responder_band=responder_pool.band,
+        )
+        effective_commitment = self.stamina_cost_policy.effective_commitment(
+            requested=commitment,
+            available_stamina=pool.current,
+        )
+        response_effective_commitment = None
+        if self.enable_v04_commitment_semantics:
+            requested_response = (
+                Commitment.MEDIUM
+                if response_commitment is None
+                else response_commitment
+            )
+            response_effective_commitment = (
+                self.stamina_cost_policy.effective_commitment(
+                    requested=requested_response,
+                    available_stamina=responder_pool.current,
+                )
+            )
+
+        _, result, _, _ = self._resolve_attempt_resolution(
+            action_id=action_id,
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            ready_grade_override=ready_grade_override,
+            exhaustion_modifier=exhaustion_modifier,
+            effective_commitment=effective_commitment,
+            response_effective_commitment=response_effective_commitment,
+        )
+        return result
+
     def _record_engagement(
         self,
         *,
         initiator: Side,
         action_id: str,
+        initiator_progress: bool = True,
+        defender_engaged: bool = True,
     ) -> None:
-        self.stalling_tracker.engage(initiator)
-        self.stalling_tracker.engage(initiator.opponent)
-        self.history.stalling_progress_engagement_history.append(
-            f"{initiator.value}@{self.elapsed_simulated_time}s:{action_id}"
-        )
-        self.history.stalling_defensive_engagement_history.append(
-            f"{initiator.opponent.value}@{self.elapsed_simulated_time}s:"
-            f"defend:{action_id}"
-        )
+        if initiator_progress:
+            self.stalling_tracker.engage(initiator)
+            self.history.stalling_progress_engagement_history.append(
+                f"{initiator.value}@{self.elapsed_simulated_time}s:{action_id}"
+            )
+        if defender_engaged:
+            self.stalling_tracker.engage(initiator.opponent)
+            self.history.stalling_defensive_engagement_history.append(
+                f"{initiator.opponent.value}@{self.elapsed_simulated_time}s:"
+                f"defend:{action_id}"
+            )
         self.history.stalling_clock_history.append(
             f"engage@{self.elapsed_simulated_time}s:"
             f"top={self.advancement_clock(Side.TOP)},"
@@ -736,6 +947,8 @@ class MountMatch:
         resolution,
         target_was_ready: bool,
         stage_before: SubmissionStage | None,
+        requested_commitment: Commitment,
+        effective_commitment: Commitment | None,
     ) -> None:
         if not self.enable_v03_submissions:
             return
@@ -759,6 +972,21 @@ class MountMatch:
             raise RuntimeError("Submission-stage attempt missing active stage")
 
         self.history.submission_attempt_history.append(stage_before.value)
+        feint_capped = (
+            self.enable_v04_commitment_semantics
+            and requested_commitment is Commitment.LOW
+        )
+        if resolution.final_grade.successful and feint_capped:
+            self.history.submission_change_history.append(
+                f"{stage_before.value}->{stage_before.value}:feint-capped"
+            )
+            self.history.submission_feint_cap_history.append(
+                f"{stage_before.value}@{self.elapsed_simulated_time}s:"
+                f"requested={requested_commitment.value}:effective="
+                f"{effective_commitment.value if effective_commitment is not None else 'UNFUNDED'}"
+            )
+            return
+
         if resolution.final_grade.successful:
             change = self.submission_state.advance()
             if change.tapped:
@@ -936,20 +1164,14 @@ class MountMatch:
         action_id: str,
         response_id: str,
         commitment: Commitment,
+        response_commitment: Commitment | None = None,
     ) -> AttemptResult:
-        """Resolve a v0.1 action with commitment and exhaustion policy.
-
-        Both stamina bands are read before the initiator's action cost is paid.
-        Initiator Exhausted shifts the action down one grade; responder Exhausted
-        shifts it up one grade. If both are Exhausted the modifiers cancel.
-        Ordinary responding still has no direct stamina cost. A Contested hold
-        during an active Americana submission stage pays the existing LOW cost
-        after resolution, so it can affect only later exchanges.
-        """
+        """Resolve an exchange with stamina, exhaustion, and optional v0.4a semantics."""
         top_behavior, bottom_behavior = self._behaviors(None, None)
         initiator = self.initiator
         self._validate_action_legality(action_id)
         self._validate_response_legality(action_id, response_id)
+
         progress_ids: tuple[str, ...] = ()
         action_progress_capable = False
         if self.enable_v03b_stalling:
@@ -959,6 +1181,7 @@ class MountMatch:
                 action_ids=progress_ids,
             )
             action_progress_capable = action_id in progress_ids
+
         target_was_ready = (
             self.enable_v02_setup
             and action_id in self.setup_policy.target_action_ids
@@ -977,10 +1200,12 @@ class MountMatch:
             if target_was_ready
             else None
         )
+
         pool = self.competitor(initiator).stamina
         responder_pool = self.competitor(initiator.opponent).stamina
         stamina_band_before_action = pool.band
         responder_stamina_band_before_action = responder_pool.band
+
         initiator_exhaustion_modifier = (
             self.exhaustion_policy.initiator_grade_modifier(
                 stamina_band_before_action
@@ -996,43 +1221,6 @@ class MountMatch:
             + responder_exhaustion_modifier
         )
 
-        if action_id == TOP_AMERICANA_SUBMISSION_FINISH:
-            base_resolution = self._resolve_submission_stage(
-                response_id=response_id,
-                top_behavior=top_behavior,
-                bottom_behavior=bottom_behavior,
-            )
-            result = (
-                base_resolution
-                if exhaustion_modifier == 0
-                else self._resolve_submission_stage(
-                    response_id=response_id,
-                    top_behavior=top_behavior,
-                    bottom_behavior=bottom_behavior,
-                    external_grade_modifier=exhaustion_modifier,
-                )
-            )
-        else:
-            base_resolution = self._resolve(
-                action_id=action_id,
-                response_id=response_id,
-                top_behavior=top_behavior,
-                bottom_behavior=bottom_behavior,
-                post_positional_grade_override=ready_grade_override,
-            )
-            result = (
-                base_resolution
-                if exhaustion_modifier == 0
-                else self._resolve(
-                    action_id=action_id,
-                    response_id=response_id,
-                    top_behavior=top_behavior,
-                    bottom_behavior=bottom_behavior,
-                    external_grade_modifier=exhaustion_modifier,
-                    post_positional_grade_override=ready_grade_override,
-                )
-            )
-
         requested_cost = self.stamina_cost_policy.cost(commitment)
         effective_commitment = self.stamina_cost_policy.effective_commitment(
             requested=commitment,
@@ -1044,13 +1232,95 @@ class MountMatch:
             else 0
         )
         funding_gap = requested_cost - effective_cost
+
+        response_requested_commitment = None
+        response_effective_commitment = None
+        response_requested_cost = 0
+        response_effective_cost = 0
+        response_funding_gap = 0
+        if self.enable_v04_commitment_semantics:
+            response_requested_commitment = (
+                Commitment.MEDIUM
+                if response_commitment is None
+                else response_commitment
+            )
+            response_requested_cost = self.stamina_cost_policy.cost(
+                response_requested_commitment
+            )
+            response_effective_commitment = (
+                self.stamina_cost_policy.effective_commitment(
+                    requested=response_requested_commitment,
+                    available_stamina=responder_pool.current,
+                )
+            )
+            response_effective_cost = (
+                self.stamina_cost_policy.cost(response_effective_commitment)
+                if response_effective_commitment is not None
+                else 0
+            )
+            response_funding_gap = (
+                response_requested_cost - response_effective_cost
+            )
+
+        (
+            base_resolution,
+            result,
+            commitment_modifier,
+            response_modifier,
+        ) = self._resolve_attempt_resolution(
+            action_id=action_id,
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            ready_grade_override=ready_grade_override,
+            exhaustion_modifier=exhaustion_modifier,
+            effective_commitment=effective_commitment,
+            response_effective_commitment=response_effective_commitment,
+        )
+
         attempt = ActionAttempt(
             initiator=initiator,
             action_id=action_id,
             requested_commitment=commitment,
             effective_commitment=effective_commitment,
         )
+
+        feint_capped_active_submission = (
+            self.enable_v04_commitment_semantics
+            and action_id == TOP_AMERICANA_SUBMISSION_FINISH
+            and submission_stage_before is not None
+            and commitment is Commitment.LOW
+        )
+        if self.enable_v03b_stalling and action_progress_capable:
+            self._record_engagement(
+                initiator=initiator,
+                action_id=action_id,
+                initiator_progress=not feint_capped_active_submission,
+                defender_engaged=True,
+            )
+
+        self._apply_resolution(result)
+        self._apply_setup_after_attempt(
+            action_id=action_id,
+            resolution=result,
+            target_was_ready=target_was_ready,
+        )
+        self._apply_submission_after_attempt(
+            action_id=action_id,
+            resolution=result,
+            target_was_ready=target_was_ready,
+            stage_before=submission_stage_before,
+            requested_commitment=commitment,
+            effective_commitment=effective_commitment,
+        )
+
+        # Current exchange semantics are fixed before costs are charged.
         spend = pool.spend_up_to(effective_cost)
+        response_spend = (
+            responder_pool.spend_up_to(response_effective_cost)
+            if self.enable_v04_commitment_semantics
+            else None
+        )
 
         submission_hold = (
             action_id == TOP_AMERICANA_SUBMISSION_FINISH
@@ -1079,13 +1349,45 @@ class MountMatch:
 
         self.history.commitment_history.append(commitment.value)
         self.history.effective_commitment_history.append(
-            effective_commitment.value if effective_commitment is not None else "UNFUNDED"
+            effective_commitment.value
+            if effective_commitment is not None
+            else "UNFUNDED"
         )
         self.history.commitment_initiator_history.append(initiator.value)
         self.history.stamina_requested_history.append(requested_cost)
         self.history.stamina_charged_history.append(spend.charged)
         self.history.stamina_shortfall_history.append(spend.shortfall)
         self.history.stamina_funding_gap_history.append(funding_gap)
+        if self.enable_v04_commitment_semantics:
+            self.history.response_requested_commitment_history.append(
+                response_requested_commitment.value
+                if response_requested_commitment is not None
+                else "UNFUNDED"
+            )
+            self.history.response_effective_commitment_history.append(
+                response_effective_commitment.value
+                if response_effective_commitment is not None
+                else "UNFUNDED"
+            )
+            self.history.response_stamina_requested_history.append(
+                response_requested_cost
+            )
+            self.history.response_stamina_charged_history.append(
+                response_spend.charged if response_spend is not None else 0
+            )
+            self.history.response_stamina_shortfall_history.append(
+                response_spend.shortfall if response_spend is not None else 0
+            )
+            self.history.response_stamina_funding_gap_history.append(
+                response_funding_gap
+            )
+            self.history.initiator_commitment_modifier_history.append(
+                commitment_modifier
+            )
+            self.history.response_undercommitment_modifier_history.append(
+                response_modifier
+            )
+
         self.history.stamina_band_at_initiation_history.append(
             stamina_band_before_action.value
         )
@@ -1100,30 +1402,18 @@ class MountMatch:
         )
         self.history.exhaustion_modifier_history.append(exhaustion_modifier)
 
-        if self.enable_v03b_stalling and action_progress_capable:
-            self._record_engagement(
-                initiator=initiator,
-                action_id=action_id,
-            )
-
-        self._apply_resolution(result)
-        self._apply_setup_after_attempt(
-            action_id=action_id,
-            resolution=result,
-            target_was_ready=target_was_ready,
-        )
-        self._apply_submission_after_attempt(
-            action_id=action_id,
-            resolution=result,
-            target_was_ready=target_was_ready,
-            stage_before=submission_stage_before,
-        )
         return AttemptResult(
             attempt=attempt,
             requested_cost=requested_cost,
             effective_cost=effective_cost,
             funding_gap=funding_gap,
             stamina=spend,
+            response_requested_commitment=response_requested_commitment,
+            response_effective_commitment=response_effective_commitment,
+            response_requested_cost=response_requested_cost,
+            response_effective_cost=response_effective_cost,
+            response_funding_gap=response_funding_gap,
+            response_stamina=response_spend,
             stamina_band_before_action=stamina_band_before_action,
             responder_stamina_band_before_action=(
                 responder_stamina_band_before_action
@@ -1131,6 +1421,8 @@ class MountMatch:
             initiator_exhaustion_modifier=initiator_exhaustion_modifier,
             responder_exhaustion_modifier=responder_exhaustion_modifier,
             exhaustion_modifier=exhaustion_modifier,
+            initiator_commitment_modifier=commitment_modifier,
+            response_undercommitment_modifier=response_modifier,
             base_resolution=base_resolution,
             resolution=result,
         )
