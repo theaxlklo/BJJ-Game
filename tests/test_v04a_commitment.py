@@ -133,6 +133,74 @@ class V04ACommitmentSemanticsTests(unittest.TestCase):
         self.assertEqual(result.response_undercommitment_modifier, 1)
         self.assertIs(result.resolution.final_grade, Grade.FAILURE)
 
+    def test_modifier_order_handles_clamp_before_later_undercommitment(self):
+        match = self._match(v04=True)
+        match.top.stamina.set_current(20)
+        result = match.attempt(
+            action_id=TOP_AMERICANA_ARM_ISOLATION,
+            response_id=BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+            commitment=Commitment.MEDIUM,
+            response_commitment=Commitment.LOW,
+        )
+
+        # Base Strong Failure; exhausted initiator stays Strong Failure at the
+        # clamp; MEDIUM is identity; under-committed LOW response then moves
+        # one step back to ordinary Failure. A summed-modifier implementation
+        # incorrectly stayed at Strong Failure here.
+        self.assertIs(result.base_resolution.final_grade, Grade.STRONG_FAILURE)
+        self.assertEqual(result.initiator_exhaustion_modifier, -1)
+        self.assertEqual(result.responder_exhaustion_modifier, 0)
+        self.assertEqual(result.initiator_commitment_modifier, 0)
+        self.assertEqual(result.response_undercommitment_modifier, 1)
+        self.assertIs(result.resolution.final_grade, Grade.FAILURE)
+
+    def test_modifier_order_is_exhaustive_over_grade_and_commitment_states(self):
+        commitments = (
+            None,
+            Commitment.LOW,
+            Commitment.MEDIUM,
+            Commitment.HIGH,
+        )
+        for base_grade in Grade:
+            for exhaustion_modifier in (-1, 0, 1):
+                exhausted = base_grade.shift(exhaustion_modifier)
+                for initiator_commitment in commitments:
+                    for responder_commitment in commitments:
+                        magnitude_modifier = (
+                            MountMatch._initiator_commitment_modifier(
+                                initiator_commitment,
+                                exhausted,
+                            )
+                        )
+                        after_magnitude = exhausted.shift(
+                            magnitude_modifier
+                        )
+                        response_modifier = (
+                            MountMatch._response_undercommitment_modifier(
+                                initiator_commitment=initiator_commitment,
+                                responder_commitment=responder_commitment,
+                            )
+                        )
+                        expected = after_magnitude.shift(response_modifier)
+                        (
+                            actual,
+                            actual_magnitude,
+                            actual_response,
+                        ) = MountMatch._commitment_grade_transform(
+                            grade_after_exhaustion=exhausted,
+                            initiator_commitment=initiator_commitment,
+                            responder_commitment=responder_commitment,
+                        )
+                        self.assertIs(actual, expected)
+                        self.assertEqual(
+                            actual_magnitude,
+                            magnitude_modifier,
+                        )
+                        self.assertEqual(
+                            actual_response,
+                            response_modifier,
+                        )
+
     def test_undercommitted_response_can_turn_contested_into_success(self):
         match = self._match(v04=True)
         result = match.attempt(
