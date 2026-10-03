@@ -726,7 +726,7 @@ pre-cost exhaustion
 
 Intermediate Strong Failure / Strong Success clamps are preserved. An independent audit found and fixed a bug where the first implementation summed modifiers and could lose those intermediate clamps. Regression coverage now includes the real clamp case plus exhaustive Grade × exhaustion × initiator-effective-commitment × responder-effective-commitment order checks.
 
-Response commitment is public in v0.4a. Hidden/imperfect commitment recognition remains deferred.
+Response commitment is public in v0.4a. v0.4b now layers imperfect Recognition on top; public MATCH remains the v0.4a control surface.
 
 The approved feint-intent amendment separates requested intent from funded capability:
 
@@ -782,11 +782,11 @@ regressions=0
 strict attacker improvements=646
 ```
 
-The v0.3a Gate-B deferral now auto-expires from a real runtime capability:
+The v0.4a public-MATCH control remains:
 
 ```text
 response_commitment_present=True
-recognition_present=False
+v0.4b Recognition disabled
 
 informed MATCH defender:
   Tap=0/100
@@ -795,16 +795,16 @@ informed MATCH defender:
   Finish=0
   stage attempts=2028
 
-v0.3a Gate B OPEN
+v0.4a public-MATCH Gate B control: OPEN
 ```
 
-The unchanged Gate-B range is active:
+The unchanged Gate-B range is:
 
 ```text
 0% < informed Tap < 50%
 ```
 
-Public perfect commitment matching does not solve the competent-defender lock; Recognition/information remains later work.
+Public perfect commitment matching does not solve the competent-defender lock. v0.4b Recognition is the next information layer and is documented below.
 
 Post-amendment diagnostics:
 
@@ -859,6 +859,170 @@ See:
 - `docs/MOUNT_V0_4A_FEINT_INTENT_PRECHANGE_MEASUREMENT.md`
 - `docs/MOUNT_V0_4A_FEINT_INTENT_POST_AMENDMENT_MEASUREMENT.md`
 - `docs/V0_4B_RECOGNITION_COMMITMENT_QUESTION.md` — future design note, not a DoD
+
+## Mount v0.4b — commitment Recognition
+
+v0.4b adds imperfect information about commitment without changing the frozen Mount matrix or the true exchange math.
+
+The defender receives **two separate noisy reads**:
+
+```text
+requested commitment -> intent read
+effective commitment -> capability read
+```
+
+The signals deliberately remain separate because v0.4a gave them different meanings:
+
+```text
+requested LOW -> feint intent
+
+effective LOW / MEDIUM / HIGH / UNFUNDED
+-> funded tactical capability
+```
+
+Each signal uses an independent deterministic d6 read:
+
+```text
+1   -> one rank lower
+2-5 -> exact
+6   -> one rank higher
+```
+
+with endpoint clamps.
+
+Requested ranks:
+
+```text
+LOW < MEDIUM < HIGH
+```
+
+Capability ranks:
+
+```text
+UNFUNDED < LOW < MEDIUM < HIGH
+```
+
+The defender chooses requested response commitment from the perceived signals:
+
+```text
+perceived requested LOW
+-> request LOW response commitment
+
+otherwise:
+  perceived UNFUNDED -> LOW
+  perceived LOW      -> LOW
+  perceived MEDIUM   -> MEDIUM
+  perceived HIGH     -> HIGH
+```
+
+The informed defender also chooses its legal response using **perceived capability**, not the hidden true initiator commitment.
+
+Recognition changes defender choices only. Final resolution remains authoritative to true state:
+
+```text
+true requested commitment
+-> feint intent
+
+true effective initiator commitment
+-> initiator magnitude
+
+true affordable defender commitment
+-> response mismatch / response cost
+```
+
+### v0.4b first untuned measurement
+
+The Recognition model and probabilities were frozen before measurement.
+
+Standard informed PRESSURE/ESCAPE batch, 100 matches, seed 42:
+
+```text
+Tap=6/100
+Threat=58/100
+Control=38/100
+Finish=21/100
+submission-stage attempts=1622
+```
+
+The unchanged v0.3a Gate-B criterion is:
+
+```text
+0% < informed Tap < 50%
+```
+
+Therefore the current global Gate B is:
+
+```text
+PASS — 6/100 informed taps
+```
+
+No Recognition probability or Gate-B threshold was changed after seeing the result.
+
+### v0.4b gates
+
+First measurement:
+
+```text
+A PASS — feature-off compatibility
+B PASS — recognition mapping is frozen and bounded
+C PASS — intent and capability reads stay separate
+D PASS — informed policy consumes perception, not hidden truth
+E PASS — true resolution remains authoritative
+F PASS — competent-defender Gate B uses Recognition
+G PASS — stamina-pacing measurement is replayable
+H PASS — existing scope remains frozen
+```
+
+Key evidence:
+
+```text
+Recognition mapping cases=432
+mapping mismatches=0
+
+truth-authority cases=2
+Recognition-read resolution mismatches=0
+
+v0.3a informed Gate B:
+  Tap=6/100
+  PASS
+```
+
+### stamina-pacing observation
+
+Recognition closes Gate B, but it does not solve mutual exhaustion.
+
+Public v0.4a MATCH control:
+
+```text
+Tap / Finish=0 / 0
+final stamina median Top / Bottom=0.0 / 0.0
+first Exhausted median Top / Bottom=55.0s / 45.0s
+ever Exhausted Top / Bottom / both=78 / 78 / 78
+responder commitment stamina charged=7168
+```
+
+v0.4b Recognition:
+
+```text
+Tap / Finish=6 / 21
+final stamina median Top / Bottom=0.0 / 0.0
+first Exhausted median Top / Bottom=50s / 50s
+ever Exhausted Top / Bottom / both=91 / 91 / 90
+responder commitment stamina charged=7352
+
+response requests:
+  LOW=4218
+  MEDIUM=650
+  HIGH=155
+```
+
+The continued `0 / 0` final median and the higher frequency of mutual exhaustion are **observations, not tuning failures**. v0.4b does not require stamina to increase, and Recognition must not be retuned merely to improve these values.
+
+See:
+
+- `docs/MOUNT_V0_4B_RECOGNITION_DEFINITION_OF_DONE.md`
+- `docs/MOUNT_V0_4B_RECOGNITION_FIRST_MEASUREMENT.md`
+- `docs/V0_4B_RECOGNITION_COMMITMENT_QUESTION.md` — historical design question resolved by the frozen DoD
 
 ## Known v0 limitation
 
