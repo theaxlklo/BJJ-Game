@@ -3915,6 +3915,541 @@ def render_v04a_prediction_probe() -> str:
     )
 
 
+
+@dataclass(frozen=True, slots=True)
+class V04BRecognitionGateMeasurement:
+    letter: str
+    name: str
+    status: V02GateStatus
+    metric: str
+    evidence: str
+
+    def render(self) -> str:
+        return (
+            f"V0.4b DOD GATE {self.letter} [{self.status.value}]: "
+            f"{self.name} — {self.metric}; {self.evidence}"
+        )
+
+
+@lru_cache(maxsize=1)
+def _v04b_recognition_mapping_probe() -> tuple[int, int]:
+    from ..domain.recognition import DEFAULT_COMMITMENT_RECOGNITION_POLICY
+
+    policy = DEFAULT_COMMITMENT_RECOGNITION_POLICY
+    requested_levels = (
+        Commitment.LOW,
+        Commitment.MEDIUM,
+        Commitment.HIGH,
+    )
+    effective_levels = (
+        None,
+        Commitment.LOW,
+        Commitment.MEDIUM,
+        Commitment.HIGH,
+    )
+
+    def expected(value, levels, roll):
+        index = levels.index(value)
+        if roll == 1:
+            index = max(0, index - 1)
+        elif roll == 6:
+            index = min(len(levels) - 1, index + 1)
+        return levels[index]
+
+    cases = 0
+    mismatches = 0
+    for requested in requested_levels:
+        for effective in effective_levels:
+            for intent_roll in range(1, 7):
+                for capability_roll in range(1, 7):
+                    cases += 1
+                    read = policy.read(
+                        requested=requested,
+                        effective=effective,
+                        intent_roll=intent_roll,
+                        capability_roll=capability_roll,
+                    )
+                    if (
+                        read.perceived_requested
+                        is not expected(
+                            requested,
+                            requested_levels,
+                            intent_roll,
+                        )
+                        or read.perceived_effective
+                        is not expected(
+                            effective,
+                            effective_levels,
+                            capability_roll,
+                        )
+                    ):
+                        mismatches += 1
+    return cases, mismatches
+
+
+@lru_cache(maxsize=1)
+def _v04b_signal_separation_probe() -> tuple[bool, bool, bool, bool]:
+    from ..engine.match import MountMatch
+
+    match = MountMatch(
+        enable_v04_commitment_semantics=True,
+        enable_v04b_recognition=True,
+    )
+    match.top.stamina.set_current(5)
+
+    baseline = match.recognize_commitment(
+        requested=Commitment.HIGH,
+        intent_roll=3,
+        capability_roll=3,
+    )
+    intent_changed = match.recognize_commitment(
+        requested=Commitment.HIGH,
+        intent_roll=1,
+        capability_roll=3,
+    )
+    capability_changed = match.recognize_commitment(
+        requested=Commitment.HIGH,
+        intent_roll=3,
+        capability_roll=6,
+    )
+
+    truth_separate = (
+        baseline.true_requested is Commitment.HIGH
+        and baseline.true_effective is Commitment.LOW
+    )
+    reads_can_differ = (
+        intent_changed.perceived_requested is Commitment.MEDIUM
+        and intent_changed.perceived_effective is Commitment.LOW
+    )
+    intent_independent = (
+        intent_changed.perceived_effective
+        is baseline.perceived_effective
+    )
+    capability_independent = (
+        capability_changed.perceived_requested
+        is baseline.perceived_requested
+        and capability_changed.perceived_effective is Commitment.MEDIUM
+    )
+    return (
+        truth_separate,
+        reads_can_differ,
+        intent_independent,
+        capability_independent,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v04b_perception_only_policy_probe() -> tuple[bool, bool]:
+    import random
+
+    from ..domain.recognition import CommitmentRecognitionRead
+    from ..engine.match import MountMatch
+    from ..interfaces.batch import (
+        BatchResponseCommitmentMode,
+        _informed_bottom_response_id,
+        _response_commitment_for_exchange,
+    )
+    from ..positions.mount.catalog import TOP_HIGH_MOUNT_CLIMB
+
+    match = MountMatch(
+        enable_v04_commitment_semantics=True,
+        enable_v04b_recognition=True,
+    )
+    first_read = CommitmentRecognitionRead(
+        true_requested=Commitment.HIGH,
+        perceived_requested=Commitment.MEDIUM,
+        true_effective=Commitment.HIGH,
+        perceived_effective=Commitment.LOW,
+        intent_roll=1,
+        capability_roll=1,
+    )
+    second_read = CommitmentRecognitionRead(
+        true_requested=Commitment.LOW,
+        perceived_requested=Commitment.MEDIUM,
+        true_effective=None,
+        perceived_effective=Commitment.LOW,
+        intent_roll=6,
+        capability_roll=6,
+    )
+
+    first_commitment = _response_commitment_for_exchange(
+        match,
+        initiator_commitment=Commitment.HIGH,
+        mode=BatchResponseCommitmentMode.RECOGNITION,
+        rng=random.Random(1),
+        recognition_read=first_read,
+    )
+    second_commitment = _response_commitment_for_exchange(
+        match,
+        initiator_commitment=Commitment.LOW,
+        mode=BatchResponseCommitmentMode.RECOGNITION,
+        rng=random.Random(2),
+        recognition_read=second_read,
+    )
+
+    first_response = _informed_bottom_response_id(
+        match,
+        action_id=TOP_HIGH_MOUNT_CLIMB,
+        commitment=Commitment.HIGH,
+        response_commitment=first_commitment,
+        use_recognition=True,
+        perceived_effective_commitment=Commitment.LOW,
+    )
+    second_response = _informed_bottom_response_id(
+        match,
+        action_id=TOP_HIGH_MOUNT_CLIMB,
+        commitment=Commitment.LOW,
+        response_commitment=second_commitment,
+        use_recognition=True,
+        perceived_effective_commitment=Commitment.LOW,
+    )
+    return first_commitment is second_commitment, first_response == second_response
+
+
+@lru_cache(maxsize=1)
+def _v04b_truth_authority_probe() -> tuple[int, int]:
+    from ..engine.match import MountMatch
+    from ..positions.mount.catalog import TOP_HIGH_MOUNT_CLIMB
+
+    mismatches = 0
+    cases = 0
+
+    ordinary_results = []
+    for intent_roll, capability_roll in ((1, 1), (6, 6)):
+        match = MountMatch(
+            starting_axis=1.50,
+            enable_v04_commitment_semantics=True,
+            enable_v04b_recognition=True,
+        )
+        read = match.recognize_commitment(
+            requested=Commitment.MEDIUM,
+            intent_roll=intent_roll,
+            capability_roll=capability_roll,
+        )
+        result = match.attempt(
+            action_id=TOP_HIGH_MOUNT_CLIMB,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=Commitment.MEDIUM,
+            response_commitment=Commitment.MEDIUM,
+            recognition_read=read,
+        )
+        ordinary_results.append(
+            (
+                result.resolution,
+                result.effective_cost,
+                result.response_effective_cost,
+                match.axis,
+            )
+        )
+    cases += 1
+    if ordinary_results[0] != ordinary_results[1]:
+        mismatches += 1
+
+    feint_results = []
+    for intent_roll, capability_roll in ((1, 1), (6, 6)):
+        match = MountMatch(
+            starting_axis=2.50,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v04_commitment_semantics=True,
+            enable_v04b_recognition=True,
+        )
+        match.submission_state.stage = SubmissionStage.THREAT
+        read = match.recognize_commitment(
+            requested=Commitment.LOW,
+            intent_roll=intent_roll,
+            capability_roll=capability_roll,
+        )
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_FOREARM_FRAME,
+            commitment=Commitment.LOW,
+            response_commitment=Commitment.LOW,
+            recognition_read=read,
+        )
+        feint_results.append(
+            (
+                result.resolution,
+                match.submission_state.stage,
+                match.submission_tapped,
+                len(match.history.submission_feint_cap_history),
+                result.effective_cost,
+                result.response_effective_cost,
+            )
+        )
+    cases += 1
+    if feint_results[0] != feint_results[1]:
+        mismatches += 1
+
+    return cases, mismatches
+
+
+@lru_cache(maxsize=1)
+def _v04b_replay_probe() -> tuple[bool, object]:
+    from ..interfaces.batch import (
+        BatchResponderMode,
+        BatchResponseCommitmentMode,
+        run_escape_first_batch,
+    )
+
+    kwargs = dict(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        bottom_responder_mode=BatchResponderMode.INFORMED,
+        response_commitment_mode=BatchResponseCommitmentMode.RECOGNITION,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v04_commitment_semantics=True,
+        enable_v04b_recognition=True,
+    )
+    first = _v04b_informed_standard_batch()
+    second = run_escape_first_batch(**kwargs)
+    return first == second, first
+
+
+@lru_cache(maxsize=1)
+def measure_v04b_definition_of_done() -> tuple[V04BRecognitionGateMeasurement, ...]:
+    from ..engine.match import MountMatch
+
+    invalid_rejected = False
+    try:
+        MountMatch(enable_v04b_recognition=True)
+    except ValueError:
+        invalid_rejected = True
+
+    disabled = MountMatch(enable_v04_commitment_semantics=True)
+    enabled = MountMatch(
+        enable_v04_commitment_semantics=True,
+        enable_v04b_recognition=True,
+    )
+    v04a_gates = measure_v04a_definition_of_done()
+
+    mapping_cases, mapping_mismatches = _v04b_recognition_mapping_probe()
+    (
+        truth_separate,
+        reads_can_differ,
+        intent_independent,
+        capability_independent,
+    ) = _v04b_signal_separation_probe()
+    commitment_same, response_same = _v04b_perception_only_policy_probe()
+    truth_cases, truth_mismatches = _v04b_truth_authority_probe()
+
+    v03_gate_b = next(
+        gate for gate in measure_v03a_definition_of_done()
+        if gate.letter == "B"
+    )
+    recognition_batch = _v04b_informed_standard_batch()
+    recognition_taps = recognition_batch.outcome_counts.get(
+        "TAP — Americana", 0
+    )
+
+    replay_equal, pacing = _v04b_replay_probe()
+    pacing_populated = (
+        pacing.top_first_exhausted_time_median is not None
+        and pacing.bottom_first_exhausted_time_median is not None
+        and pacing.matches_top_ever_exhausted >= 0
+        and pacing.matches_bottom_ever_exhausted >= 0
+        and pacing.matches_both_ever_exhausted >= 0
+        and sum(pacing.response_requested_commitment_counts.values()) > 0
+        and sum(pacing.recognition_intent_direction_counts.values()) > 0
+        and sum(pacing.recognition_capability_direction_counts.values()) > 0
+    )
+
+    v03b_gates = measure_v03b_definition_of_done()
+
+    gate_a = (
+        not disabled.recognition_enabled
+        and enabled.recognition_enabled
+        and invalid_rejected
+        and all(g.status is V02GateStatus.PASS for g in v04a_gates)
+    )
+    gate_b = mapping_cases == 432 and mapping_mismatches == 0
+    gate_c = (
+        truth_separate
+        and reads_can_differ
+        and intent_independent
+        and capability_independent
+    )
+    gate_d = commitment_same and response_same
+    gate_e = truth_cases == 2 and truth_mismatches == 0
+    gate_f = (
+        _v03_recognition_mechanic_present()
+        and v03_gate_b.status is V02GateStatus.PASS
+        and 0 < recognition_taps < recognition_batch.matches / 2
+    )
+    gate_g = replay_equal and pacing_populated
+    gate_h = (
+        len(RAW_GRADES) == 18
+        and all(g.status is V02GateStatus.PASS for g in v04a_gates)
+        and all(g.status is V02GateStatus.PASS for g in v03b_gates)
+    )
+
+    return (
+        V04BRecognitionGateMeasurement(
+            letter="A",
+            name="feature-off compatibility",
+            status=V02GateStatus.PASS if gate_a else V02GateStatus.OPEN,
+            metric=(
+                f"disabled={disabled.recognition_enabled}; "
+                f"enabled={enabled.recognition_enabled}; "
+                f"invalid_without_v04a_rejected={invalid_rejected}; "
+                f"v0.4a_pass={all(g.status is V02GateStatus.PASS for g in v04a_gates)}"
+            ),
+            evidence=(
+                "Recognition is an opt-in v0.4b capability and v0.4a remains "
+                "the authoritative feature-off control"
+            ),
+        ),
+        V04BRecognitionGateMeasurement(
+            letter="B",
+            name="recognition mapping is frozen and bounded",
+            status=V02GateStatus.PASS if gate_b else V02GateStatus.OPEN,
+            metric=f"cases={mapping_cases}; mismatches={mapping_mismatches}",
+            evidence=(
+                "independent d6 reads use one-rank lower on 1, exact on 2-5, "
+                "one-rank higher on 6, with endpoint clamps"
+            ),
+        ),
+        V04BRecognitionGateMeasurement(
+            letter="C",
+            name="intent and capability reads stay separate",
+            status=V02GateStatus.PASS if gate_c else V02GateStatus.OPEN,
+            metric=(
+                f"truth_separate={truth_separate}; "
+                f"reads_can_differ={reads_can_differ}; "
+                f"intent_independent={intent_independent}; "
+                f"capability_independent={capability_independent}"
+            ),
+            evidence=(
+                "requested intent and funded capability have separate truth, "
+                "rolls, and perceived values"
+            ),
+        ),
+        V04BRecognitionGateMeasurement(
+            letter="D",
+            name="informed policy consumes perception not hidden truth",
+            status=V02GateStatus.PASS if gate_d else V02GateStatus.OPEN,
+            metric=(
+                f"same_response_commitment={commitment_same}; "
+                f"same_legal_response={response_same}"
+            ),
+            evidence=(
+                "twin hidden-truth states with identical perceived signals "
+                "produce identical defender choices"
+            ),
+        ),
+        V04BRecognitionGateMeasurement(
+            letter="E",
+            name="true resolution remains authoritative",
+            status=V02GateStatus.PASS if gate_e else V02GateStatus.OPEN,
+            metric=f"cases={truth_cases}; recognition_read_mismatches={truth_mismatches}",
+            evidence=(
+                "different Recognition reads cannot change grade, axis, costs, "
+                "submission transition, or feint behavior after choices are fixed"
+            ),
+        ),
+        V04BRecognitionGateMeasurement(
+            letter="F",
+            name="competent-defender Gate B uses Recognition",
+            status=V02GateStatus.PASS if gate_f else V02GateStatus.OPEN,
+            metric=(
+                f"recognition_present={_v03_recognition_mechanic_present()}; "
+                f"informed Tap={recognition_taps}/{recognition_batch.matches}; "
+                f"v0.3a Gate B={v03_gate_b.status.value}"
+            ),
+            evidence=(
+                "the unchanged 0% < informed Tap < 50% range is measured on "
+                "the frozen v0.4b Recognition batch"
+            ),
+        ),
+        V04BRecognitionGateMeasurement(
+            letter="G",
+            name="stamina-pacing measurement is replayable",
+            status=V02GateStatus.PASS if gate_g else V02GateStatus.OPEN,
+            metric=(
+                f"replay_equal={replay_equal}; "
+                f"Top first Exhausted median={pacing.top_first_exhausted_time_median}; "
+                f"Bottom first Exhausted median={pacing.bottom_first_exhausted_time_median}; "
+                f"ever Exhausted Top/Bottom/both="
+                f"{pacing.matches_top_ever_exhausted}/"
+                f"{pacing.matches_bottom_ever_exhausted}/"
+                f"{pacing.matches_both_ever_exhausted}; "
+                f"response stamina charged="
+                f"{pacing.total_response_commitment_stamina_charged}"
+            ),
+            evidence=(
+                "pacing values are observations only; no directional stamina "
+                "target is required"
+            ),
+        ),
+        V04BRecognitionGateMeasurement(
+            letter="H",
+            name="existing scope remains frozen",
+            status=V02GateStatus.PASS if gate_h else V02GateStatus.OPEN,
+            metric=(
+                f"matrix_entries={len(RAW_GRADES)}; "
+                f"v0.4a_pass={all(g.status is V02GateStatus.PASS for g in v04a_gates)}; "
+                f"v0.3b_pass={all(g.status is V02GateStatus.PASS for g in v03b_gates)}"
+            ),
+            evidence=(
+                "no matchup, commitment-cost, exhaustion, setup, submission, "
+                "feint, hold-cost, or stalling rule is changed by Recognition"
+            ),
+        ),
+    )
+
+
+def render_v04b_definition_of_done() -> tuple[str, ...]:
+    return tuple(gate.render() for gate in measure_v04b_definition_of_done())
+
+
+def render_v04b_stamina_pacing_observation() -> str:
+    public = _v04_informed_standard_batch()
+    recognition = _v04b_informed_standard_batch()
+
+    def taps(summary) -> int:
+        return summary.outcome_counts.get("TAP — Americana", 0)
+
+    return (
+        "V0.4b STAMINA-PACING OBSERVATION — 100 matched informed seeds: "
+        f"public MATCH taps/Finish={taps(public)}/"
+        f"{public.matches_reached_submission_finish}, "
+        f"final stamina={public.top_final_stamina_median:.1f}/"
+        f"{public.bottom_final_stamina_median:.1f}, "
+        f"first Exhausted={public.top_first_exhausted_time_median}/"
+        f"{public.bottom_first_exhausted_time_median}s, "
+        f"ever Exhausted Top/Bottom/both="
+        f"{public.matches_top_ever_exhausted}/"
+        f"{public.matches_bottom_ever_exhausted}/"
+        f"{public.matches_both_ever_exhausted}, "
+        f"response spend={public.total_response_commitment_stamina_charged}; "
+        f"Recognition taps/Finish={taps(recognition)}/"
+        f"{recognition.matches_reached_submission_finish}, "
+        f"final stamina={recognition.top_final_stamina_median:.1f}/"
+        f"{recognition.bottom_final_stamina_median:.1f}, "
+        f"first Exhausted={recognition.top_first_exhausted_time_median}/"
+        f"{recognition.bottom_first_exhausted_time_median}s, "
+        f"ever Exhausted Top/Bottom/both="
+        f"{recognition.matches_top_ever_exhausted}/"
+        f"{recognition.matches_bottom_ever_exhausted}/"
+        f"{recognition.matches_both_ever_exhausted}, "
+        f"response spend={recognition.total_response_commitment_stamina_charged}, "
+        f"response requests={recognition.response_requested_commitment_counts}, "
+        f"intent reads={recognition.recognition_intent_direction_counts}, "
+        f"capability reads={recognition.recognition_capability_direction_counts}, "
+        f"signal disagreements={recognition.recognition_signal_disagreement_count}. "
+        "Observational only."
+    )
+
+
 def run_checks() -> CheckReport:
     report = CheckReport()
 
