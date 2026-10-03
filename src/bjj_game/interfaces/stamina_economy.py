@@ -80,6 +80,10 @@ class StaminaEconomyExchangeRecord:
     action_id: str
     initiator_stamina: int
     responder_stamina: int
+    responder_band_before: str
+    responder_stamina_after_response: int
+    responder_stamina_after_all_costs: int
+    responder_band_after_all_costs: str
     initiator_affordability: str
     responder_affordability: str
     initiator_requested_commitment: str
@@ -104,6 +108,7 @@ class StaminaEconomyExchangeRecord:
     undercommitment_caused_tap: bool
     escape_destination: str | None
     final_grade: str
+    final_grade_successful: bool
     submission_hold: bool
     response_commitment_requested_cost: int
     response_commitment_charged: int
@@ -510,6 +515,23 @@ class StaminaEconomyCollector:
                 action_id=snapshot.action_id,
                 initiator_stamina=snapshot.initiator_stamina,
                 responder_stamina=snapshot.responder_stamina,
+                responder_band_before=(
+                    result.responder_stamina_band_before_action.value
+                ),
+                responder_stamina_after_response=(
+                    snapshot.responder_stamina
+                    - (
+                        result.response_stamina.charged
+                        if result.response_stamina is not None
+                        else 0
+                    )
+                ),
+                responder_stamina_after_all_costs=(
+                    match.competitor(snapshot.initiator.opponent).stamina.current
+                ),
+                responder_band_after_all_costs=(
+                    match.competitor(snapshot.initiator.opponent).stamina.band.value
+                ),
                 initiator_affordability=_label(snapshot.initiator_affordability),
                 responder_affordability=_label(snapshot.responder_affordability),
                 initiator_requested_commitment=snapshot.initiator_requested.value,
@@ -561,6 +583,7 @@ class StaminaEconomyCollector:
                     else None
                 ),
                 final_grade=result.resolution.final_grade.display,
+                final_grade_successful=result.resolution.final_grade.successful,
                 submission_hold=hold_added,
                 response_commitment_requested_cost=(
                     snapshot.responder_requested_cost
