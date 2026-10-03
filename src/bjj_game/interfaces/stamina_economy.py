@@ -88,8 +88,10 @@ class StaminaEconomyExchangeRecord:
     responder_affordability: str
     initiator_requested_commitment: str
     initiator_effective_commitment: str
+    initiator_effective_cost: int
     responder_requested_commitment: str
     responder_effective_commitment: str
+    responder_effective_cost: int
     initiator_requested_fundable: bool
     responder_requested_fundable: bool
     responder_has_higher_ceiling: bool
@@ -538,10 +540,12 @@ class StaminaEconomyCollector:
                 initiator_effective_commitment=_label(
                     snapshot.initiator_effective
                 ),
+                initiator_effective_cost=result.effective_cost,
                 responder_requested_commitment=snapshot.responder_requested.value,
                 responder_effective_commitment=_label(
                     snapshot.responder_effective
                 ),
+                responder_effective_cost=result.response_effective_cost,
                 initiator_requested_fundable=(
                     snapshot.initiator_stamina
                     >= match.stamina_cost_policy.cost(
