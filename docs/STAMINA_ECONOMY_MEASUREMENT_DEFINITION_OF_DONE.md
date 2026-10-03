@@ -98,7 +98,7 @@ v0.3b stalling=disabled
 v0.4a commitment semantics=enabled
 ```
 
-Measure exactly these four matched policy surfaces:
+Measure exactly these five matched policy surfaces:
 
 ### Surface A — public MATCH control
 
@@ -130,9 +130,34 @@ v0.4b Recognition=enabled
 response commitment policy=RECOGNITION_ALWAYS_HIGH
 ```
 
-The three Recognition surfaces must consume the existing deterministic Recognition streams unchanged.
+### Surface E — Recognition trusts reads + Bottom RECOVER
 
-RANDOM response commitment, FIXED_MEDIUM response commitment, alternative seeds, alternative behaviors, and alternative starting stamina are outside this first measurement slice.
+This is the minimum existing-policy recovery probe.
+
+```text
+v0.4b Recognition=enabled
+response commitment policy=RECOGNITION
+Top behavior baseline=PRESSURE
+Top behavior mode=FIXED
+Bottom behavior baseline=ESCAPE
+Bottom behavior mode=RECOVER
+```
+
+The existing Bottom RECOVER behavior is authoritative:
+
+```text
+while Bottom's Exhausted latch is active
+-> Bottom uses CONSERVE
+
+once Bottom recovers enough to clear the latch at >=35 stamina
+-> Bottom returns to baseline ESCAPE
+```
+
+No new recovery mechanic is introduced.
+
+Surfaces B/C/D/E must consume the existing deterministic Recognition streams unchanged.
+
+RANDOM response commitment, FIXED_MEDIUM response commitment, alternative seeds, alternative starting stamina, and any behavior policy other than the five frozen surfaces above are outside this first measurement slice.
 
 ## Measurement clock and state semantics
 
@@ -148,6 +173,32 @@ that exists immediately before that time-advancing interval
 ```
 
 An instantaneous commitment / hold spend may change the state at the same timestamp; that changed state applies to the next interval.
+
+### Why this attribution is exact on the frozen surfaces
+
+The frozen diagnostic interval is:
+
+```text
+interval_seconds = 5
+```
+
+and the existing behavior-stamina quantum is:
+
+```text
+quantum_seconds = 5
+```
+
+Behavior stamina is applied by the engine at the time-advance boundary. With one full behavior quantum per diagnostic interval, there is no unobserved behavior-stamina transition inside a measured interval. Exchange commitment and hold charges are instantaneous at decision timestamps.
+
+Therefore, for these frozen surfaces, assigning the whole 5-second interval to the state present immediately before `advance()` is exact for the engine's discrete stamina model.
+
+Gate A must verify:
+
+```text
+interval_seconds == behavior_stamina_policy.quantum_seconds == 5
+```
+
+If a measured setup uses a different interval or behavior quantum, **Gate A must fail/refuse the measurement rather than approximate duration**. Supporting a differently aligned interval requires a separately reviewed measurement definition.
 
 This convention must make the three state durations sum exactly to elapsed simulated match time.
 
@@ -209,7 +260,13 @@ For every surface and match, measure:
 - total simulated seconds in State 3;
 - each state's share of elapsed match time.
 
-PASS requires for every measured match:
+PASS requires before duration measurement:
+
+```text
+interval_seconds == behavior stamina quantum == 5
+```
+
+and for every measured match:
 
 ```text
 State 1 seconds
@@ -223,12 +280,25 @@ No target is imposed on any duration or share.
 Report at minimum, per surface:
 
 - matches entering State 2;
+- matches exiting State 2 back to State 1;
+- matches re-entering State 2 after such recovery;
 - matches entering State 3;
 - median first-entry time for State 2;
+- median first-exit-back-to-State-1 time, when any;
 - median first-entry time for State 3;
 - median State-2 seconds and share;
 - median State-3 seconds and share;
 - p25 / p75 for State-2 and State-3 share.
+
+For Surface E specifically also report:
+
+- Bottom RECOVER behavior switches into CONSERVE;
+- Bottom RECOVER behavior switches back to ESCAPE;
+- matches in which Bottom clears the Exhausted latch at least once;
+- number of Exhausted -> non-Exhausted recoveries;
+- stamina at each latch-clear event.
+
+This determines whether the middle window is a one-way sink on fixed active behavior only, or whether the game's existing recovery policy can climb back out.
 
 ## Gate B — middle-window affordability
 
@@ -245,7 +315,7 @@ For each side derive the highest commitment level it could fully fund at that mo
 
 This is an affordability ceiling, not the commitment the side requested.
 
-For every Surface B/C/D State-2 exchange, report:
+For every Surface B/C/D/E State-2 exchange, report:
 
 ### Per-side affordability
 
@@ -312,7 +382,66 @@ HIGH-attacker exchanges must be reported separately rather than counted as a fai
 
 Finally, for each defender policy, report whether the defender's **actual requested response commitment** is fully fundable at exchange start.
 
-This is the primary measurement requested by review: how often the attacker and defender can afford what they ask for in the mutually-Exhausted-but-not-both-zero window.
+### Submission-hold-aware defender affordability
+
+The ordinary affordability ceiling above is intentionally commitment-only. On an exchange that actually resolves as a provisional submission hold, that is not the defender's full stamina burden.
+
+Current charge order is:
+
+```text
+1. responder effective commitment cost is charged
+2. if the exchange is a provisional Contested submission hold:
+     request hold cost = 3
+     charge up to the responder's remaining stamina
+```
+
+Therefore, for every submission-stage exchange that actually produces the provisional hold charge, additionally report the responder's **hold-inclusive affordability from pre-exchange stamina**.
+
+Report both:
+
+```text
+requested-policy burden
+= cost(defender requested response commitment) + 3
+
+actual-funded burden
+= cost(defender true effective response commitment) + 3
+```
+
+For each, classify whether pre-exchange responder stamina could fully cover the combined burden.
+
+Also report the actual sequential payment outcome:
+
+- response commitment charged;
+- stamina remaining immediately after response commitment charge;
+- hold requested = 3;
+- hold charged;
+- hold shortfall;
+- hold payment status = FULL / PARTIAL / NONE.
+
+Definitions:
+
+```text
+FULL    -> hold charged == 3
+PARTIAL -> 0 < hold charged < 3
+NONE    -> hold charged == 0
+```
+
+Example that the measurement must distinguish:
+
+```text
+responder starts with 9
+requests/effectively funds MEDIUM (7)
+commitment-only affordability says MEDIUM is fundable
+remaining stamina=2
+hold requests 3
+hold charges 2
+hold shortfall=1
+hold status=PARTIAL
+```
+
+For State 2 specifically, report how often a defender that appears able to fund its requested hedge on commitment cost alone **cannot fully fund commitment + hold**.
+
+This is the primary measurement requested by review: how often the attacker and defender can afford what they ask for in the mutually-Exhausted-but-not-both-zero window, including the extra provisional hold burden on the exchanges where it actually applies.
 
 PASS requires complete, deterministic accounting. There is no required direction.
 
@@ -394,11 +523,18 @@ provisional hold charged
 Report:
 
 - count of double-charge exchanges;
-- total response-commitment stamina charged on them;
-- total provisional-hold stamina charged on them;
+- total response-commitment stamina requested / charged / shortfall on them;
+- total provisional-hold stamina requested / charged / shortfall on them;
+- total combined requested stamina;
 - total combined charged stamina;
+- combined shortfall;
+- FULL / PARTIAL / NONE hold-payment counts;
 - the three-state split of those exchanges;
 - responder pre-charge stamina distribution;
+- responder stamina immediately after response commitment but before hold charge;
+- whether commitment-only affordability said the requested response level was fundable;
+- whether pre-exchange stamina could fully cover requested response commitment + hold;
+- whether pre-exchange stamina could fully cover true effective response commitment + hold;
 - whether the combined charges move the responder into Exhausted or zero.
 
 The provisional LOW=3 hold rule itself remains untouched.
@@ -469,7 +605,7 @@ There is no target for how many such attacks should succeed.
 
 ## Gate G — policy-comparison continuity
 
-The four frozen surfaces must remain mechanically identical to their pre-measurement behavior.
+The five frozen surfaces must remain mechanically identical to their behavior without measurement instrumentation.
 
 Instrumentation must not change:
 
@@ -505,9 +641,11 @@ always HIGH:
   median final stamina=0 / 0
 ```
 
-The historical 6/100 Gate-F result remains scoped to the trust-read policy.
+The historical 6/100 Gate-F result remains scoped to the fixed-behavior trust-read policy (Surface B).
 
 The hedge surfaces remain observations and do not redefine Gate F.
+
+Surface E is a new measurement-only recovery probe using an already-existing behavior policy. It has **no predeclared outcome target**. Before measurement instrumentation is considered valid, its instrumented run must be identical to an otherwise-equivalent uninstrumented run for outcomes, behavior switches, Recognition reads, commitments, grades, stamina mutations, submissions, escapes, and clock.
 
 PASS requires identical deterministic reruns from base seed 42.
 
@@ -543,6 +681,8 @@ During this measurement-only slice, do not change:
 - exhaustion enter threshold;
 - exhaustion recovery threshold / hysteresis;
 - behavior stamina rates;
+- existing FIXED / RECOVER behavior-policy semantics;
+- Exhausted-latch behavior switching;
 - setup mechanics;
 - submission grades or transitions;
 - provisional LOW=3 hold cost;
@@ -563,6 +703,7 @@ This DoD does not decide:
 - whether an Exhausted fighter should be allowed to request HIGH;
 - whether commitment costs should change;
 - whether behavior upkeep should change;
+- whether the existing RECOVER switching policy should change;
 - whether the provisional hold cost should change;
 - whether stamina should regenerate;
 - whether stamina should have a nonzero reserve/floor;
