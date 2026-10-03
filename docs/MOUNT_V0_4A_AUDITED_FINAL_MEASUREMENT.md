@@ -2,9 +2,13 @@
 
 ## Status
 
-AUTHORITATIVE v0.4a CLOSURE MEASUREMENT.
+HISTORICAL PRE-FEINT-INTENT-AMENDMENT CLOSURE MEASUREMENT.
 
-This measurement supersedes `MOUNT_V0_4A_FIRST_MEASUREMENT.md` for closure while preserving that file as historical evidence.
+This document was authoritative before the approved feint-intent/funding amendment. Its measurements remain historical evidence, but current v0.4a closure semantics and observations are recorded in:
+
+`docs/MOUNT_V0_4A_FEINT_INTENT_POST_AMENDMENT_MEASUREMENT.md`
+
+This measurement superseded `MOUNT_V0_4A_FIRST_MEASUREMENT.md` at the time it was recorded while preserving that file as historical evidence.
 
 Independent audit amendment:
 
