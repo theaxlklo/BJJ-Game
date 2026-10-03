@@ -924,20 +924,28 @@ def run_escape_first_batch(
                             top_stalling_resets_with_route += 1
                         if reset.stalling_consequence == "WARNING":
                             top_stalling_warnings += 1
-                        elif reset.stalling_consequence == "PENALTY":
-                            top_stalling_penalties += 1
-                        elif reset.stalling_consequence == "POSITION_RESET":
+                        elif reset.position_reset:
                             top_stalling_position_resets += 1
+                        elif (
+                            reset.penalty_axis_before is not None
+                            and reset.penalty_axis_after is not None
+                            and reset.penalty_axis_after != reset.penalty_axis_before
+                        ):
+                            top_stalling_penalties += 1
                     else:
                         bottom_resets += 1
                         if reset.progress_route_available:
                             bottom_stalling_resets_with_route += 1
                         if reset.stalling_consequence == "WARNING":
                             bottom_stalling_warnings += 1
-                        elif reset.stalling_consequence == "PENALTY":
-                            bottom_stalling_penalties += 1
-                        elif reset.stalling_consequence == "POSITION_RESET":
+                        elif reset.position_reset:
                             bottom_stalling_position_resets += 1
+                        elif (
+                            reset.penalty_axis_before is not None
+                            and reset.penalty_axis_after is not None
+                            and reset.penalty_axis_after != reset.penalty_axis_before
+                        ):
+                            bottom_stalling_penalties += 1
                     continue
                 if (
                     side is Side.TOP
@@ -974,20 +982,28 @@ def run_escape_first_batch(
                             top_stalling_resets_with_route += 1
                         if reset.stalling_consequence == "WARNING":
                             top_stalling_warnings += 1
-                        elif reset.stalling_consequence == "PENALTY":
-                            top_stalling_penalties += 1
-                        elif reset.stalling_consequence == "POSITION_RESET":
+                        elif reset.position_reset:
                             top_stalling_position_resets += 1
+                        elif (
+                            reset.penalty_axis_before is not None
+                            and reset.penalty_axis_after is not None
+                            and reset.penalty_axis_after != reset.penalty_axis_before
+                        ):
+                            top_stalling_penalties += 1
                     else:
                         bottom_resets += 1
                         if reset.progress_route_available:
                             bottom_stalling_resets_with_route += 1
                         if reset.stalling_consequence == "WARNING":
                             bottom_stalling_warnings += 1
-                        elif reset.stalling_consequence == "PENALTY":
-                            bottom_stalling_penalties += 1
-                        elif reset.stalling_consequence == "POSITION_RESET":
+                        elif reset.position_reset:
                             bottom_stalling_position_resets += 1
+                        elif (
+                            reset.penalty_axis_before is not None
+                            and reset.penalty_axis_after is not None
+                            and reset.penalty_axis_after != reset.penalty_axis_before
+                        ):
+                            bottom_stalling_penalties += 1
                     continue
 
             action = MODERN_ENTITY_BY_ID[decision.action_id]
