@@ -4482,7 +4482,10 @@ def render_v04b_defender_policy_hedge_observation() -> str:
         "Mutual-Exhausted timing uses both pre-cost stamina bands; a tap is "
         "counted as undercommitment-caused only when the finishing exchange "
         "has the +1 response-undercommitment modifier and removing that +1 "
-        "would drop the final grade below Success. Observational only."
+        "would drop the final grade below Success. "
+        "STAMINA-ECONOMY DEBT: the higher-spend hedge policies eliminate taps "
+        "and increase escapes while all three policies retain 0/0 median final "
+        "stamina; do not tune Recognition to compensate. Observational only."
     )
 
 
