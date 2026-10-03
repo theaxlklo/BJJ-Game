@@ -616,7 +616,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         text = output.getvalue()
         self.assertIn("V0.4a COMMITMENT SEMANTICS", text)
-        self.assertIn("COMMITMENT VISIBILITY: public in v0.4a", text)
+        self.assertIn("COMMITMENT VISIBILITY: public-MATCH remains the v0.4a control", text)
         self.assertIn("STAMINA PACING LOW", text)
         self.assertIn("Exhausted Top 2:30, Bottom 2:30", text)
         self.assertIn("STAMINA PACING MEDIUM", text)
