@@ -424,6 +424,62 @@ def _v03_standard_batch():
     )
 
 
+@lru_cache(maxsize=1)
+def _v04_informed_standard_batch():
+    """v0.4a Gate-B batch: informed response choice + public MATCH commitment."""
+    from ..interfaces.batch import (
+        BatchResponderMode,
+        BatchResponseCommitmentMode,
+        run_escape_first_batch,
+    )
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        bottom_responder_mode=BatchResponderMode.INFORMED,
+        response_commitment_mode=BatchResponseCommitmentMode.MATCH,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v04_commitment_semantics=True,
+    )
+
+
+@lru_cache(maxsize=1)
+def _v04_random_standard_batch():
+    """v0.4a random-response/commitment contrast with independent commitment RNG."""
+    from ..interfaces.batch import (
+        BatchResponderMode,
+        BatchResponseCommitmentMode,
+        run_escape_first_batch,
+    )
+
+    return run_escape_first_batch(
+        matches=100,
+        base_seed=42,
+        top_behavior=TopBehavior.PRESSURE,
+        bottom_behavior=BottomBehavior.ESCAPE,
+        commitment=Commitment.MEDIUM,
+        initial_clock=300,
+        starting_axis=1.50,
+        interval_seconds=5,
+        top_stamina=100,
+        bottom_stamina=100,
+        bottom_responder_mode=BatchResponderMode.RANDOM,
+        response_commitment_mode=BatchResponseCommitmentMode.RANDOM,
+        enable_v02_setup=True,
+        enable_v03_submissions=True,
+        enable_v04_commitment_semantics=True,
+    )
+
+
 def _resolution_signature(result) -> tuple:
     return (
         result.final_grade,
@@ -1602,19 +1658,15 @@ def render_v03a_behavior_and_reacquisition_probe() -> tuple[str, str]:
 
 
 def _v03_response_commitment_present() -> bool:
-    """Auto-expiry signal: any real response carries commitment state."""
-    attribute_names = (
-        "response_commitment",
-        "commitment",
-        "commitment_level",
-        "commitment_policy",
+    """Auto-expiry signal from the real runtime capability, not catalog metadata."""
+    from ..engine.match import MountMatch
+
+    enabled = MountMatch(enable_v04_commitment_semantics=True)
+    disabled = MountMatch(enable_v04_commitment_semantics=False)
+    return (
+        enabled.response_commitment_enabled
+        and not disabled.response_commitment_enabled
     )
-    for side in (Side.TOP, Side.BOTTOM):
-        for response in responses_for(side):
-            for name in attribute_names:
-                if getattr(response, name, None) is not None:
-                    return True
-    return False
 
 
 def _v03_recognition_mechanic_present() -> bool:
