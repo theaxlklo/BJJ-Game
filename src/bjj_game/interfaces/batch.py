@@ -10,6 +10,7 @@ from ..domain.action import Commitment
 from ..domain.model import Band, BottomBehavior, ExitDestination, Grade, Side, TopBehavior
 from ..domain.recognition import CommitmentRecognitionRead
 from ..domain.stamina import StaminaBand
+from ..domain.submission import SubmissionStage
 from ..engine.match import MountMatch
 from ..positions.mount.catalog import (
     MODERN_ENTITY_BY_ID,
