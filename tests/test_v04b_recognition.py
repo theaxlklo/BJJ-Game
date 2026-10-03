@@ -2,7 +2,11 @@ import unittest
 
 from bjj_game.diagnostics.checker import (
     V02GateStatus,
+    _v04b_informed_always_high_batch,
+    _v04b_informed_hedge_one_batch,
+    _v04b_informed_standard_batch,
     measure_v04b_definition_of_done,
+    render_v04b_defender_policy_hedge_observation,
 )
 from bjj_game.domain.action import Commitment
 from bjj_game.domain.recognition import (
@@ -217,6 +221,57 @@ class V04BRecognitionPolicyTests(unittest.TestCase):
         )
         self.assertIs(selected, Commitment.LOW)
 
+    def test_hedge_one_raises_trust_choice_exactly_one_selectable_level(self):
+        match = MountMatch(
+            enable_v04_commitment_semantics=True,
+            enable_v04b_recognition=True,
+        )
+        cases = (
+            (Commitment.LOW, None, Commitment.MEDIUM),
+            (Commitment.MEDIUM, Commitment.LOW, Commitment.MEDIUM),
+            (Commitment.MEDIUM, Commitment.MEDIUM, Commitment.HIGH),
+            (Commitment.HIGH, Commitment.HIGH, Commitment.HIGH),
+        )
+        for perceived_requested, perceived_effective, expected in cases:
+            read = CommitmentRecognitionRead(
+                true_requested=Commitment.MEDIUM,
+                perceived_requested=perceived_requested,
+                true_effective=Commitment.MEDIUM,
+                perceived_effective=perceived_effective,
+                intent_roll=3,
+                capability_roll=3,
+            )
+            selected = _response_commitment_for_exchange(
+                match,
+                initiator_commitment=Commitment.MEDIUM,
+                mode=BatchResponseCommitmentMode.RECOGNITION_HEDGE_ONE,
+                rng=__import__("random").Random(1),
+                recognition_read=read,
+            )
+            self.assertIs(selected, expected)
+
+    def test_always_high_policy_ignores_read_for_commitment_only(self):
+        match = MountMatch(
+            enable_v04_commitment_semantics=True,
+            enable_v04b_recognition=True,
+        )
+        read = CommitmentRecognitionRead(
+            true_requested=Commitment.MEDIUM,
+            perceived_requested=Commitment.LOW,
+            true_effective=Commitment.MEDIUM,
+            perceived_effective=None,
+            intent_roll=1,
+            capability_roll=1,
+        )
+        selected = _response_commitment_for_exchange(
+            match,
+            initiator_commitment=Commitment.MEDIUM,
+            mode=BatchResponseCommitmentMode.RECOGNITION_ALWAYS_HIGH,
+            rng=__import__("random").Random(1),
+            recognition_read=read,
+        )
+        self.assertIs(selected, Commitment.HIGH)
+
     def test_informed_response_choice_ignores_true_commitment_when_recognition_is_used(self):
         match = MountMatch(
             enable_v04_commitment_semantics=True,
@@ -303,6 +358,114 @@ class V04BRecognitionPolicyTests(unittest.TestCase):
             0,
         )
 
+
+
+class V04BDefenderPolicyObservationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.trust = _v04b_informed_standard_batch()
+        cls.hedge = _v04b_informed_hedge_one_batch()
+        cls.always_high = _v04b_informed_always_high_batch()
+
+    @staticmethod
+    def _taps(summary):
+        return summary.outcome_counts.get("TAP — Americana", 0)
+
+    @staticmethod
+    def _escapes(summary):
+        from bjj_game.domain.model import ExitDestination
+
+        return sum(
+            summary.outcome_counts.get(destination.value, 0)
+            for destination in ExitDestination
+        )
+
+    def test_three_named_policies_reproduce_review_measurements(self):
+        self.assertEqual(self._taps(self.trust), 6)
+        self.assertEqual(self._escapes(self.trust), 11)
+        self.assertEqual(
+            self.trust.total_response_commitment_stamina_charged,
+            7352,
+        )
+        self.assertEqual(self.trust.top_final_stamina_median, 0)
+        self.assertEqual(self.trust.bottom_final_stamina_median, 0)
+
+        self.assertEqual(self._taps(self.hedge), 0)
+        self.assertEqual(self._escapes(self.hedge), 22)
+        self.assertEqual(
+            self.hedge.total_response_commitment_stamina_charged,
+            8843,
+        )
+        self.assertEqual(
+            self.hedge.response_requested_commitment_counts,
+            {"HIGH": 582, "MEDIUM": 4054},
+        )
+        self.assertEqual(self.hedge.top_final_stamina_median, 0)
+        self.assertEqual(self.hedge.bottom_final_stamina_median, 0)
+
+        self.assertEqual(self._taps(self.always_high), 0)
+        self.assertEqual(self._escapes(self.always_high), 22)
+        self.assertEqual(
+            self.always_high.total_response_commitment_stamina_charged,
+            9480,
+        )
+        self.assertEqual(
+            self.always_high.response_requested_commitment_counts,
+            {"HIGH": 4612},
+        )
+        self.assertEqual(self.always_high.top_final_stamina_median, 0)
+        self.assertEqual(self.always_high.bottom_final_stamina_median, 0)
+
+    def test_undercommitment_is_split_by_pre_exchange_mutual_exhaustion(self):
+        self.assertEqual(
+            (
+                self.trust.undercommitment_events_before_mutual_exhaustion,
+                self.trust.undercommitment_events_after_mutual_exhaustion,
+            ),
+            (311, 108),
+        )
+        self.assertEqual(
+            (
+                self.trust.undercommitment_caused_taps_before_mutual_exhaustion,
+                self.trust.undercommitment_caused_taps_after_mutual_exhaustion,
+            ),
+            (1, 4),
+        )
+        self.assertEqual(
+            (
+                self.hedge.undercommitment_events_before_mutual_exhaustion,
+                self.hedge.undercommitment_events_after_mutual_exhaustion,
+            ),
+            (1, 45),
+        )
+        self.assertEqual(
+            (
+                self.hedge.undercommitment_caused_taps_before_mutual_exhaustion,
+                self.hedge.undercommitment_caused_taps_after_mutual_exhaustion,
+            ),
+            (0, 0),
+        )
+        self.assertEqual(
+            (
+                self.always_high.undercommitment_events_before_mutual_exhaustion,
+                self.always_high.undercommitment_events_after_mutual_exhaustion,
+            ),
+            (0, 78),
+        )
+        self.assertEqual(
+            (
+                self.always_high.undercommitment_caused_taps_before_mutual_exhaustion,
+                self.always_high.undercommitment_caused_taps_after_mutual_exhaustion,
+            ),
+            (0, 0),
+        )
+
+    def test_checker_names_all_three_policies_and_scopes_gate_f(self):
+        rendered = render_v04b_defender_policy_hedge_observation()
+        self.assertIn("trusts reads", rendered)
+        self.assertIn("one level above", rendered)
+        self.assertIn("always HIGH", rendered)
+        self.assertIn("Gate F applies only to the frozen trusts-reads policy", rendered)
 
 
 class V04BDefinitionOfDoneMeasurementTests(unittest.TestCase):
