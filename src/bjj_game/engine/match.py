@@ -357,6 +357,30 @@ class MountMatch:
             else 0
         )
 
+    @classmethod
+    def _commitment_grade_transform(
+        cls,
+        *,
+        grade_after_exhaustion: Grade,
+        initiator_commitment: Commitment | None,
+        responder_commitment: Commitment | None,
+    ) -> tuple[Grade, int, int]:
+        """Apply v0.4a commitment steps in the frozen sequential order."""
+        commitment_modifier = cls._initiator_commitment_modifier(
+            initiator_commitment,
+            grade_after_exhaustion,
+        )
+        after_magnitude = grade_after_exhaustion.shift(
+            commitment_modifier
+        )
+        response_modifier = cls._response_undercommitment_modifier(
+            initiator_commitment=initiator_commitment,
+            responder_commitment=responder_commitment,
+        )
+        final_grade = after_magnitude.shift(response_modifier)
+        return final_grade, commitment_modifier, response_modifier
+
+
     def _resolve_attempt_resolution(
         self,
         *,
@@ -401,16 +425,15 @@ class MountMatch:
         if not self.enable_v04_commitment_semantics:
             return base_resolution, exhausted_resolution, 0, 0
 
-        commitment_modifier = self._initiator_commitment_modifier(
-            effective_commitment,
-            exhausted_grade,
-        )
-        commitment_grade = exhausted_grade.shift(commitment_modifier)
-        response_modifier = self._response_undercommitment_modifier(
+        (
+            final_grade,
+            commitment_modifier,
+            response_modifier,
+        ) = self._commitment_grade_transform(
+            grade_after_exhaustion=exhausted_grade,
             initiator_commitment=effective_commitment,
             responder_commitment=response_effective_commitment,
         )
-        final_grade = commitment_grade.shift(response_modifier)
 
         # Preserve the frozen sequential grade order exactly. Summing the
         # individual modifiers and applying them once is not equivalent when
