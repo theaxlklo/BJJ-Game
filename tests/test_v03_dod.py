@@ -39,7 +39,7 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
         self.assertIn("v03b_sweep_cases=26", v02[2].metric)
         self.assertIn("v03b_sweep_failing=26", v02[2].metric)
         self.assertIn("v03b_max_locked_share=", v02[2].metric)
-        self.assertIn("steady state", v02[2].evidence)
+        self.assertIn("has not resolved the lock", v02[2].evidence)
 
     def test_gate_a_uses_positive_submission_probability_and_policy_order(self):
         probability, selected = _v03_locked_submission_probe()
