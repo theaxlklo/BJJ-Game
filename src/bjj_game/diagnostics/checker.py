@@ -1732,25 +1732,15 @@ def _v03_response_commitment_present() -> bool:
 
 
 def _v03_recognition_mechanic_present() -> bool:
-    """Auto-expiry signal: match/competitor exposes real information state."""
+    """Auto-expiry signal from the explicit runtime Recognition capability."""
     from ..engine.match import MountMatch
 
-    probe = MountMatch(
-        enable_v02_setup=True,
-        enable_v03_submissions=True,
+    disabled = MountMatch(enable_v04_commitment_semantics=True)
+    enabled = MountMatch(
+        enable_v04_commitment_semantics=True,
+        enable_v04b_recognition=True,
     )
-    attribute_names = (
-        "recognition",
-        "recognition_state",
-        "information",
-        "information_state",
-        "information_policy",
-    )
-    for owner in (probe, probe.top, probe.bottom):
-        for name in attribute_names:
-            if getattr(owner, name, None) is not None:
-                return True
-    return False
+    return enabled.recognition_enabled and not disabled.recognition_enabled
 
 
 def _v03_gate_b_status(
@@ -2780,9 +2770,13 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
         else _v03_standard_batch()
     )
     informed_batch = (
-        _v04_informed_standard_batch()
-        if response_commitment_present
-        else _v03_informed_standard_batch()
+        _v04b_informed_standard_batch()
+        if recognition_present
+        else (
+            _v04_informed_standard_batch()
+            if response_commitment_present
+            else _v03_informed_standard_batch()
+        )
     )
     tap_count = informed_batch.outcome_counts.get("TAP — Americana", 0)
     tap_rate = tap_count / informed_batch.matches
@@ -2795,25 +2789,29 @@ def measure_v03a_definition_of_done() -> tuple[V03GateMeasurement, ...]:
     )
     gate_b_evidence = (
         (
-            "Response commitment is now a live runtime capability, so the "
-            "Gate-B deferral auto-expires; the self-expiring deferral has ended "
-            "and the unchanged "
-            "0% < informed Tap < 50% criterion is active. Public MATCH "
-            "commitment still lets the informed defender hold conversion at "
-            "0 taps; this is evidence for the later Recognition/information "
-            "slice, not a reason to retune the Gate-B range. Random response "
-            "remains contrast only."
+            "Recognition is now a live runtime capability, so the informed "
+            "Gate-B batch uses the frozen v0.4b separate intent/capability "
+            "reads and Recognition response-commitment policy. The unchanged "
+            "0% < informed Tap < 50% criterion remains authoritative; no "
+            "Recognition probability may be tuned merely to satisfy it."
         )
-        if response_commitment_present
+        if recognition_present
         else (
-            "DEFERRED while response commitment and Recognition/information "
-            "are both absent; the deferral auto-expires when either capability "
-            "becomes present. LOW=3 moved informed Threat reachability from "
-            "0 to 78/100, but full-match conversion remains blocked because "
-            "sustained PRESSURE exhausts both fighters: Exhausted initiator -1 "
-            "plus Exhausted responder +1 cancels to 0. When the deferral "
-            "expires, the unchanged 0% < informed Tap < 50% criterion resumes; "
-            "random response remains contrast only."
+            (
+                "Response commitment is now a live runtime capability, so the "
+                "Gate-B deferral auto-expires; the unchanged "
+                "0% < informed Tap < 50% criterion is active. Public MATCH "
+                "commitment lets the informed defender hold conversion at "
+                "0 taps; random response remains contrast only."
+            )
+            if response_commitment_present
+            else (
+                "DEFERRED while response commitment and Recognition/information "
+                "are both absent; the deferral auto-expires when either capability "
+                "becomes present. LOW=3 moved informed Threat reachability from "
+                "0 to 78/100, but full-match conversion remains blocked because "
+                "sustained PRESSURE exhausts both fighters."
+            )
         )
     )
     defense = _v03_best_defense_evidence()
