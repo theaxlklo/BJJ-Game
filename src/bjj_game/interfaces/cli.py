@@ -685,7 +685,7 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
         report = run_checks()
         if commitment_enabled:
             print("INFO: V0.4a COMMITMENT SEMANTICS: LOW/MEDIUM/HIGH now change exchange magnitude when v0.4a is enabled; response commitment uses the same effective-funding policy.")
-            print("INFO: COMMITMENT VISIBILITY: public in v0.4a; hidden/imperfectly recognized commitment remains deferred to Recognition.")
+            print("INFO: COMMITMENT VISIBILITY: public-MATCH remains the v0.4a control; v0.4b Recognition adds separate imperfect reads of requested intent and effective capability.")
             for commitment in Commitment:
                 projection = project_active_stamina_pacing(commitment=commitment)
                 print(
