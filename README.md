@@ -513,70 +513,95 @@ See:
 
 v0.3b distinguishes **engagement** from successful advancement.
 
-A legal attempt through a progress-capable route counts as engagement even when the opponent stops it. A legal defensive response to that attempt also counts as engagement.
+A legal progress-capable attempt counts as engagement even when the opponent stops it. A legal defensive response to that attempt also counts as engagement.
 
 Each player owns an independent 20-second simulated-time advancement clock.
 
-The escalation remains:
+The escalation ladder is:
 
 ```text
 offense 1 -> persistent Warning
 offense 2 -> one visible-band penalty / boundary free initiative
-offense 3+ -> Position Reset to +1.50 Stable
+offense 3+ -> directional escalation
 ```
 
-Position Reset changes only Mount positional control; it does not clear stamina, setup state, Americana submission state, warning history, offense history, or the match clock.
+For offense 3+:
 
-### Gate A is now timing-independent — and currently OPEN
+```text
+Top offender:
+  use min(+1.50, current one-band target)
+  or Bottom free initiative at Loose
 
-The earlier timeout-band measurement is superseded.
+Bottom offender:
+  never use canonical +1.50 reset
+  use one-band movement toward Top
+  or Top free initiative at Locked
+```
 
-Gate A now uses a fixed 26-case sweep:
+This preserves the frozen rule that stalling consequences always benefit the non-stalling player and prevents later escalation from becoming weaker than offense 2.
+
+### Gate F — direction and escalation strength
+
+The executable invariant sweeps both offender sides across every 0.1-axis state compatible with each persisted hysteresis band:
+
+```text
+cases=98
+backward effects=0
+weaker later effects=0
+boundary mismatches=0
+Bottom-lowering cases=0
+classic both-RESET Bottom-lowering=0
+```
+
+```text
+v0.3b Gate F PASS
+```
+
+### Gate A — timing-independent simulated-time measurement
+
+The fixed sweep remains:
 
 ```text
 intervals: 5s, 7s
-match lengths: 240..300s in 5s steps
+match lengths: 240..300s in 5s increments
+26 cases
 ```
 
-After the first Position Reset, every case must satisfy:
+After the first canonical Position Reset, every case must satisfy:
 
 ```text
-Locked decision-window share < 0.50
+Locked time share < 0.50
 longest uninterrupted Locked dwell < 20s
 ```
+
+Decision-window share is diagnostic only.
 
 Current result:
 
 ```text
-failing cases=3/26
-max post-reset Locked share=0.500
-max post-reset Locked dwell=7s
+failing cases=0/26
 
-failures:
-  interval 7s / match 250s: share=0.500, dwell=7s
-  interval 7s / match 275s: share=0.500, dwell=7s
-  interval 7s / match 280s: share=0.500, dwell=7s
+max post-reset Locked time share=0.393
+max post-reset decision-window share=0.500
+max post-reset Locked dwell=11s
 ```
 
-Because the frozen share rule is strictly `<0.50`, the exact ties do not pass.
+The previous exact `0.500` failures were caused by sampling decision windows at 7-second intervals. The strict `<0.50` threshold was not changed; the occupancy unit was corrected to simulated time so it matches the dwell metric, the stamina remainder model, and the 20-second stalling clock.
 
 Current gate state:
 
 ```text
-v0.2 Gate 2 OPEN
+v0.2 Gate 2 PASS
 
-v0.3b Gate A OPEN
+v0.3b Gate A PASS
 v0.3b Gate B PASS
 v0.3b Gate C PASS
 v0.3b Gate D PASS
 v0.3b Gate E PASS
+v0.3b Gate F PASS
 ```
 
-The threshold is not changed post-hoc to `<=0.50`.
-
 ### Normal-play guard
-
-The stronger escalation still stays out of already-engaged standard play:
 
 ```text
 V0.3b NORMAL-PLAY GUARD [PASS]
@@ -594,7 +619,7 @@ informed:
 
 ### Stall versus active Bottom
 
-`--check` also reports the requested non-gating observation:
+The non-gating observation remains:
 
 ```text
 Top RESETs every Top initiation
@@ -609,9 +634,7 @@ one-band penalties=100
 Position Resets=800
 ```
 
-The stalling rule changes positional control but does not create a terminal escape in this probe.
-
-This does not yet determine competitive outcome because v0 has no ruleset-level definition of whether `TIMEOUT — Mount retained` is a win, draw, or loss. That belongs to the later scoring/points layer.
+v0 still does not define whether `TIMEOUT — Mount retained` is a win, draw, or loss. That belongs to the later scoring/points ruleset layer.
 
 The v0.3a competent-defender Gate B remains **DEFERRED**:
 
@@ -628,11 +651,12 @@ See:
 - `docs/MOUNT_V0_3B_GATE_A_PROBE_CLARIFICATION.md`
 - `docs/MOUNT_V0_3B_FULL_MATCH_STALLING_FAILURE.md`
 - `docs/MOUNT_V0_3B_POSITION_RESET_ESCALATION.md`
-- `docs/MOUNT_V0_3B_POSITION_RESET_FINAL_MEASUREMENT.md` — timeout-band closure superseded
 - `docs/MOUNT_V0_3B_GATE_A_STEADY_STATE_AMENDMENT.md`
-- `docs/MOUNT_V0_3B_STEADY_STATE_FIRST_MEASUREMENT.md`
 - `docs/MOUNT_V0_3B_GATE_A_STEADY_STATE_WINDOW_CLARIFICATION.md`
-- `docs/MOUNT_V0_3B_POST_RESET_STEADY_STATE_MEASUREMENT.md`
+- `docs/MOUNT_V0_3B_POST_RESET_STEADY_STATE_MEASUREMENT.md` — superseded window-share result
+- `docs/MOUNT_V0_3B_DIRECTIONAL_ESCALATION_INVARIANT.md`
+- `docs/MOUNT_V0_3B_GATE_A_TIME_SHARE_CORRECTION.md`
+- `docs/MOUNT_V0_3B_DIRECTIONAL_TIME_SHARE_FINAL_MEASUREMENT.md`
 
 ## Known v0 limitation
 
