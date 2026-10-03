@@ -326,6 +326,24 @@ class MountMatch:
             f"bottom={self.advancement_clock(Side.BOTTOM)}"
         )
 
+    @staticmethod
+    def _stalling_penalty_target(
+        *,
+        offender: Side,
+        band: Band,
+    ) -> float | None:
+        if offender is Side.TOP:
+            return {
+                Band.LOCKED: 2.80,
+                Band.STRONG: 1.80,
+                Band.STABLE: 0.80,
+            }.get(band)
+        return {
+            Band.LOOSE: 1.20,
+            Band.STABLE: 2.20,
+            Band.STRONG: 3.20,
+        }.get(band)
+
     def _apply_stalling_penalty(
         self,
         *,
@@ -333,20 +351,10 @@ class MountMatch:
     ) -> tuple[float, float, bool]:
         axis_before = self.axis
         band_before = self.band
-        target_axis: float | None = None
-
-        if offender is Side.TOP:
-            target_axis = {
-                Band.LOCKED: 2.80,
-                Band.STRONG: 1.80,
-                Band.STABLE: 0.80,
-            }.get(band_before)
-        else:
-            target_axis = {
-                Band.LOOSE: 1.20,
-                Band.STABLE: 2.20,
-                Band.STRONG: 3.20,
-            }.get(band_before)
+        target_axis = self._stalling_penalty_target(
+            offender=offender,
+            band=band_before,
+        )
 
         if target_axis is None:
             beneficiary = offender.opponent
@@ -360,6 +368,11 @@ class MountMatch:
                 f"{beneficiary.value}@{self.elapsed_simulated_time}s"
             )
             return axis_before, axis_before, True
+
+        if offender is Side.TOP and target_axis >= axis_before:
+            raise RuntimeError("Top stalling penalty must move axis toward Bottom")
+        if offender is Side.BOTTOM and target_axis <= axis_before:
+            raise RuntimeError("Bottom stalling penalty must move axis toward Top")
 
         band_after, changes = self.engine.rules.update_band(
             target_axis,
@@ -377,21 +390,62 @@ class MountMatch:
         )
         return axis_before, self.axis, False
 
-    def _apply_stalling_position_reset(
+    def _apply_stalling_position_reset_rung(
         self,
         *,
         offender: Side,
-    ) -> tuple[float, float]:
+    ) -> tuple[str, float, float, bool]:
+        """Apply offense-3+ without ever helping the offender.
+
+        Returns (effect, axis_before, axis_after, free_initiative), where effect
+        is one of POSITION_RESET, PENALTY, or FREE_INITIATIVE.
+        """
         axis_before = self.axis
         band_before = self.band
-        reset_band = self.engine.rules.initial_band(DEFAULT_AXIS)
-        self.position.apply_control(DEFAULT_AXIS, reset_band)
+        one_band_target = self._stalling_penalty_target(
+            offender=offender,
+            band=band_before,
+        )
+
+        # Bottom offense can never use canonical +1.50 because that can move
+        # Mount control toward Bottom. Use the ordinary one-band/free-window
+        # consequence toward Top instead.
+        if offender is Side.BOTTOM or one_band_target is None:
+            before, after, free = self._apply_stalling_penalty(
+                offender=offender,
+            )
+            return (
+                "FREE_INITIATIVE" if free else "PENALTY",
+                before,
+                after,
+                free,
+            )
+
+        # Top offense moves toward Bottom. The canonical reset is allowed only
+        # when it is at least as severe as the current one-band consequence.
+        target_axis = min(DEFAULT_AXIS, one_band_target)
+        if target_axis == one_band_target:
+            before, after, free = self._apply_stalling_penalty(
+                offender=offender,
+            )
+            return (
+                "FREE_INITIATIVE" if free else "PENALTY",
+                before,
+                after,
+                free,
+            )
+
+        if target_axis >= axis_before:
+            raise RuntimeError("Top Position Reset must move axis toward Bottom")
+
+        reset_band = self.engine.rules.initial_band(target_axis)
+        self.position.apply_control(target_axis, reset_band)
         self.history.stalling_position_reset_history.append(
             f"{offender.value}@{self.elapsed_simulated_time}s:"
             f"{band_before.value}->{reset_band.value}:"
             f"{axis_before:+.2f}->{self.axis:+.2f}"
         )
-        return axis_before, self.axis
+        return "POSITION_RESET", axis_before, self.axis, False
 
     def _validate_action_legality(self, action_id: str) -> None:
         if action_id not in self.legal_action_ids():
@@ -836,11 +890,21 @@ class MountMatch:
                     free_initiative_window,
                 ) = self._apply_stalling_penalty(offender=initiator)
             elif evaluation.consequence is StallingConsequence.POSITION_RESET:
-                position_reset = True
                 (
-                    position_reset_axis_before,
-                    position_reset_axis_after,
-                ) = self._apply_stalling_position_reset(offender=initiator)
+                    applied_effect,
+                    effect_axis_before,
+                    effect_axis_after,
+                    free_initiative_window,
+                ) = self._apply_stalling_position_reset_rung(
+                    offender=initiator
+                )
+                if applied_effect == "POSITION_RESET":
+                    position_reset = True
+                    position_reset_axis_before = effect_axis_before
+                    position_reset_axis_after = effect_axis_after
+                else:
+                    penalty_axis_before = effect_axis_before
+                    penalty_axis_after = effect_axis_after
 
         next_initiator = initiator.opponent
         result = ResetWindowResult(
