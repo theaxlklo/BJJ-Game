@@ -387,31 +387,42 @@ class MountMatch:
             )
 
         base_resolution = resolve(0)
+        exhausted_grade = base_resolution.final_grade.shift(
+            exhaustion_modifier
+        )
+        exhausted_delta = (
+            int(exhausted_grade) - int(base_resolution.final_grade)
+        )
         exhausted_resolution = (
             base_resolution
-            if exhaustion_modifier == 0
-            else resolve(exhaustion_modifier)
+            if exhausted_delta == 0
+            else resolve(exhausted_delta)
         )
         if not self.enable_v04_commitment_semantics:
             return base_resolution, exhausted_resolution, 0, 0
 
         commitment_modifier = self._initiator_commitment_modifier(
             effective_commitment,
-            exhausted_resolution.final_grade,
+            exhausted_grade,
         )
+        commitment_grade = exhausted_grade.shift(commitment_modifier)
         response_modifier = self._response_undercommitment_modifier(
             initiator_commitment=effective_commitment,
             responder_commitment=response_effective_commitment,
         )
-        total_modifier = (
-            exhaustion_modifier
-            + commitment_modifier
-            + response_modifier
+        final_grade = commitment_grade.shift(response_modifier)
+
+        # Preserve the frozen sequential grade order exactly. Summing the
+        # individual modifiers and applying them once is not equivalent when
+        # an earlier step clamps at Strong Failure / Strong Success and a later
+        # step moves back toward Contested.
+        final_delta_from_base = (
+            int(final_grade) - int(base_resolution.final_grade)
         )
         result = (
-            exhausted_resolution
-            if commitment_modifier == 0 and response_modifier == 0
-            else resolve(total_modifier)
+            base_resolution
+            if final_delta_from_base == 0
+            else resolve(final_delta_from_base)
         )
         return (
             base_resolution,
