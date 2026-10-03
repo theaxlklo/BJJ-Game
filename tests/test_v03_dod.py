@@ -85,8 +85,8 @@ class V03DefinitionOfDoneTests(unittest.TestCase):
             f"random contrast Tap={random_taps}/{random.matches}",
             self.gates["B"].metric,
         )
-        self.assertIn("auto-expires", self.gates["B"].evidence)
-        self.assertEqual(taps, 0)
+        self.assertIn("Recognition is now a live runtime capability", self.gates["B"].evidence)
+        self.assertEqual(taps, 6)
 
     def test_gate_b_deferral_auto_expires_on_either_future_capability(self):
         self.assertIs(
