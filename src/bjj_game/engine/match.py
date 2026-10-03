@@ -14,6 +14,11 @@ from ..domain.model import (
     Side,
     TopBehavior,
 )
+from ..domain.recognition import (
+    CommitmentRecognitionPolicy,
+    CommitmentRecognitionRead,
+    DEFAULT_COMMITMENT_RECOGNITION_POLICY,
+)
 from ..domain.setup import SetupState, SetupTier
 from ..domain.submission import SubmissionStage, SubmissionState
 from ..positions.mount.catalog import (
@@ -74,6 +79,11 @@ class MountMatch:
     enable_v03_submissions: bool = False
     enable_v03b_stalling: bool = False
     enable_v04_commitment_semantics: bool = False
+    enable_v04b_recognition: bool = False
+    recognition_policy: CommitmentRecognitionPolicy = field(
+        default_factory=lambda: DEFAULT_COMMITMENT_RECOGNITION_POLICY,
+        repr=False,
+    )
     setup_policy: MountSetupPolicy = field(
         default_factory=lambda: DEFAULT_MOUNT_SETUP_POLICY, repr=False
     )
@@ -104,6 +114,8 @@ class MountMatch:
             raise ValueError("v0.3a submissions require v0.2 setup/Ready")
         if self.enable_v03b_stalling and not self.enable_v03_submissions:
             raise ValueError("v0.3b stalling requires v0.3a submissions")
+        if self.enable_v04b_recognition and not self.enable_v04_commitment_semantics:
+            raise ValueError("v0.4b Recognition requires v0.4a commitment semantics")
         self.clock_seconds = self.initial_clock
         self.position = MountPosition.from_axis(self.starting_axis)
         self.initial_band = self.position.control.band
@@ -311,6 +323,32 @@ class MountMatch:
         """Runtime capability used by the v0.3a Gate-B auto-expiry check."""
         return self.enable_v04_commitment_semantics
 
+    @property
+    def recognition_enabled(self) -> bool:
+        """Real runtime capability for the v0.4b information layer."""
+        return self.enable_v04b_recognition
+
+    def recognize_commitment(
+        self,
+        *,
+        requested: Commitment,
+        intent_roll: int,
+        capability_roll: int,
+    ) -> CommitmentRecognitionRead:
+        if not self.enable_v04b_recognition:
+            raise RuntimeError("v0.4b Recognition is not enabled")
+        pool = self.competitor(self.initiator).stamina
+        effective = self.stamina_cost_policy.effective_commitment(
+            requested=requested,
+            available_stamina=pool.current,
+        )
+        return self.recognition_policy.read(
+            requested=requested,
+            effective=effective,
+            intent_roll=intent_roll,
+            capability_roll=capability_roll,
+        )
+
     @staticmethod
     def _commitment_rank(commitment: Commitment | None) -> int:
         return {
@@ -508,6 +546,59 @@ class MountMatch:
             ready_grade_override=ready_grade_override,
             exhaustion_modifier=exhaustion_modifier,
             effective_commitment=effective_commitment,
+            response_effective_commitment=response_effective_commitment,
+        )
+        return result
+
+    def preview_attempt_resolution_from_effective(
+        self,
+        *,
+        action_id: str,
+        response_id: str,
+        initiator_effective_commitment: Commitment | None,
+        response_commitment: Commitment,
+    ):
+        """Preview perceived exchange math without consulting hidden initiator truth."""
+        top_behavior, bottom_behavior = self._behaviors(None, None)
+        initiator = self.initiator
+        self._validate_action_legality(action_id)
+        self._validate_response_legality(action_id, response_id)
+
+        target_was_ready = (
+            self.enable_v02_setup
+            and action_id in self.setup_policy.target_action_ids
+            and self.setup_state.is_ready(action_id)
+        )
+        ready_grade_override = (
+            self.setup_policy.ready_final_grade_override(
+                action_id,
+                response_id,
+            )
+            if target_was_ready
+            else None
+        )
+
+        pool = self.competitor(initiator).stamina
+        responder_pool = self.competitor(initiator.opponent).stamina
+        exhaustion_modifier = self.exhaustion_policy.exchange_grade_modifier(
+            initiator_band=pool.band,
+            responder_band=responder_pool.band,
+        )
+        response_effective_commitment = (
+            self.stamina_cost_policy.effective_commitment(
+                requested=response_commitment,
+                available_stamina=responder_pool.current,
+            )
+        )
+
+        _, result, _, _ = self._resolve_attempt_resolution(
+            action_id=action_id,
+            response_id=response_id,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            ready_grade_override=ready_grade_override,
+            exhaustion_modifier=exhaustion_modifier,
+            effective_commitment=initiator_effective_commitment,
             response_effective_commitment=response_effective_commitment,
         )
         return result
@@ -1165,8 +1256,9 @@ class MountMatch:
         response_id: str,
         commitment: Commitment,
         response_commitment: Commitment | None = None,
+        recognition_read: CommitmentRecognitionRead | None = None,
     ) -> AttemptResult:
-        """Resolve an exchange with stamina, exhaustion, and optional v0.4a semantics."""
+        """Resolve an exchange; Recognition may inform choices but never truth."""
         top_behavior, bottom_behavior = self._behaviors(None, None)
         initiator = self.initiator
         self._validate_action_legality(action_id)
@@ -1232,6 +1324,17 @@ class MountMatch:
             else 0
         )
         funding_gap = requested_cost - effective_cost
+
+        if self.enable_v04b_recognition:
+            if recognition_read is None:
+                raise ValueError("v0.4b exchange requires a Recognition read")
+            if (
+                recognition_read.true_requested is not commitment
+                or recognition_read.true_effective is not effective_commitment
+            ):
+                raise ValueError("Recognition truth does not match current exchange")
+        elif recognition_read is not None:
+            raise ValueError("Recognition read supplied while v0.4b is disabled")
 
         response_requested_commitment = None
         response_effective_commitment = None
@@ -1386,6 +1489,30 @@ class MountMatch:
             )
             self.history.response_undercommitment_modifier_history.append(
                 response_modifier
+            )
+        if recognition_read is not None:
+            true_effective_label = (
+                recognition_read.true_effective.value
+                if recognition_read.true_effective is not None
+                else "UNFUNDED"
+            )
+            perceived_effective_label = (
+                recognition_read.perceived_effective.value
+                if recognition_read.perceived_effective is not None
+                else "UNFUNDED"
+            )
+            response_label = (
+                response_requested_commitment.value
+                if response_requested_commitment is not None
+                else "NONE"
+            )
+            self.history.recognition_history.append(
+                f"{initiator.value}@{self.elapsed_simulated_time}s:"
+                f"requested={recognition_read.true_requested.value}->"
+                f"{recognition_read.perceived_requested.value}:"
+                f"effective={true_effective_label}->{perceived_effective_label}:"
+                f"rolls={recognition_read.intent_roll}/{recognition_read.capability_roll}:"
+                f"response={response_label}"
             )
 
         self.history.stamina_band_at_initiation_history.append(
