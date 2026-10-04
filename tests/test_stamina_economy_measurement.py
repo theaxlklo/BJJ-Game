@@ -179,11 +179,11 @@ class StaminaEconomyMeasurementTests(unittest.TestCase):
             for observation in prechange_defender_drain_observations()
         }
 
-        surface_b = observations[("B trusts reads", "exact-zero", "Top")]
+        surface_b = observations[("B trusts reads", "exact-zero", "top")]
         self.assertEqual(surface_b.total_charged, 95)
 
         surface_e = observations[
-            ("E trusts reads + Bottom RECOVER", "exact-zero", "Top")
+            ("E trusts reads + Bottom RECOVER", "exact-zero", "top")
         ]
         self.assertEqual(surface_e.exchange_count, 1949)
         self.assertEqual(surface_e.total_charged, 6202)
