@@ -716,6 +716,13 @@ class CliTests(unittest.TestCase):
         self.assertIn("STAMINA-RECOVERY CANDIDATE — RESET_WHILE_EXHAUSTED/ON", text)
         self.assertIn("STAMINA-RECOVERY CANDIDATE — LOW_WHILE_EXHAUSTED/ON", text)
         self.assertIn("STAMINA-RECOVERY STALLING DIVERGENCE", text)
+        for letter in "ABCDEFGHIJ":
+            self.assertIn(
+                f"STAMINA-RECOVERY AMENDMENT GATE {letter} [PASS]",
+                text,
+            )
+        self.assertIn("STAMINA-RECOVERY PREDICTION — P1", text)
+        self.assertIn("STAMINA-RECOVERY PREDICTION — P8 [NOT CONFIRMED]", text)
         self.assertIn("not a gameplay-health verdict", text)
         self.assertIn("V0.4a PREDICTION PROBE", text)
         self.assertIn("V0.3b PREDICTION PROBE", text)
