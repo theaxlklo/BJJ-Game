@@ -17,6 +17,11 @@ from .stamina_economy import (
     StaminaEconomyCollector,
     StaminaEconomyMeasurement,
 )
+from .recovery_policy import (
+    RecoveryInitiationMode,
+    RecoveryPolicyCollector,
+    RecoveryPolicyMeasurement,
+)
 from ..positions.mount.catalog import (
     MODERN_ENTITY_BY_ID,
     TOP_AMERICANA_ARM_ISOLATION,
@@ -658,6 +663,7 @@ class BatchSummary:
     top_behavior_switch_count: int
     bottom_behavior_switch_count: int
     stamina_economy: StaminaEconomyMeasurement | None = None
+    recovery_policy: RecoveryPolicyMeasurement | None = None
 
     def render(self) -> str:
         ordered_outcomes = [
@@ -882,7 +888,14 @@ def run_escape_first_batch(
     enable_v04_commitment_semantics: bool = False,
     enable_v04b_recognition: bool = False,
     enable_stamina_settlement_rules: bool = False,
+    enable_unfunded_responder_cost_waiver: bool = False,
+    enable_supplemental_hold_settlement: bool = False,
+    recovery_initiation_mode: RecoveryInitiationMode = (
+        RecoveryInitiationMode.CURRENT
+    ),
     measure_stamina_economy: bool = False,
+    measure_recovery_policy: bool = False,
+    shadow_stalling: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
         raise ValueError("matches must be > 0")
@@ -892,7 +905,11 @@ def run_escape_first_batch(
         raise ValueError("v0.3b stalling requires v0.3a submissions")
     if enable_v04b_recognition and not enable_v04_commitment_semantics:
         raise ValueError("v0.4b Recognition requires v0.4a commitment semantics")
-    if enable_stamina_settlement_rules and not enable_v04_commitment_semantics:
+    if (
+        enable_stamina_settlement_rules
+        or enable_unfunded_responder_cost_waiver
+        or enable_supplemental_hold_settlement
+    ) and not enable_v04_commitment_semantics:
         raise ValueError(
             "stamina settlement rules require v0.4a commitment semantics"
         )
@@ -909,6 +926,21 @@ def run_escape_first_batch(
         raise ValueError(
             "stamina-economy measurement requires v0.4a commitment semantics"
         )
+    if (
+        recovery_initiation_mode is not RecoveryInitiationMode.CURRENT
+        and bottom_behavior_mode is not BatchBehaviorMode.RECOVER
+    ):
+        raise ValueError(
+            "recovery initiation candidates require Bottom RECOVER behavior"
+        )
+    if shadow_stalling and enable_v03b_stalling:
+        raise ValueError(
+            "shadow stalling is only valid when real v0.3b stalling is off"
+        )
+    if shadow_stalling and not measure_recovery_policy:
+        raise ValueError(
+            "shadow stalling requires recovery-policy measurement"
+        )
 
     stamina_economy_collector = (
         StaminaEconomyCollector(
@@ -918,6 +950,14 @@ def run_escape_first_batch(
             ),
         )
         if measure_stamina_economy
+        else None
+    )
+    recovery_policy_collector = (
+        RecoveryPolicyCollector(
+            mode=recovery_initiation_mode,
+            shadow_stalling=shadow_stalling,
+        )
+        if measure_recovery_policy
         else None
     )
 
@@ -991,6 +1031,12 @@ def run_escape_first_batch(
             enable_v04_commitment_semantics=enable_v04_commitment_semantics,
             enable_v04b_recognition=enable_v04b_recognition,
             enable_stamina_settlement_rules=enable_stamina_settlement_rules,
+            enable_unfunded_responder_cost_waiver=(
+                enable_unfunded_responder_cost_waiver
+            ),
+            enable_supplemental_hold_settlement=(
+                enable_supplemental_hold_settlement
+            ),
         )
         match.top.stamina.set_current(top_stamina)
         match.bottom.stamina.set_current(bottom_stamina)
@@ -1009,6 +1055,11 @@ def run_escape_first_batch(
         match.set_behaviors(top=current_top, bottom=current_bottom)
         if stamina_economy_collector is not None:
             stamina_economy_collector.start_match(
+                match,
+                match_index=match_index,
+            )
+        if recovery_policy_collector is not None:
+            recovery_policy_collector.start_match(
                 match,
                 match_index=match_index,
             )
@@ -1080,6 +1131,14 @@ def run_escape_first_batch(
                         state_before=stamina_state_before_advance,
                         result=advance_result,
                     )
+                if recovery_policy_collector is not None:
+                    recovery_policy_collector.after_advance(
+                        match,
+                        duration_seconds=(
+                            advance_result.drift.start_clock
+                            - advance_result.drift.end_clock
+                        ),
+                    )
                 record_exhaustion()
                 if match.ended:
                     break
@@ -1103,14 +1162,57 @@ def run_escape_first_batch(
             else:
                 free_initiative_windows += 1
 
+            if recovery_policy_collector is not None:
+                recovery_policy_collector.record_trajectory(match)
+
             side = match.initiator
+            bottom_recovery_exhausted_turn = (
+                side is Side.BOTTOM
+                and bottom_behavior_mode is BatchBehaviorMode.RECOVER
+                and match.bottom.stamina.band is StaminaBand.EXHAUSTED
+            )
+            force_recovery_reset = (
+                bottom_recovery_exhausted_turn
+                and recovery_initiation_mode
+                is RecoveryInitiationMode.RESET_WHILE_EXHAUSTED
+            )
+            selected_initiator_commitment = (
+                Commitment.LOW
+                if (
+                    bottom_recovery_exhausted_turn
+                    and recovery_initiation_mode
+                    is RecoveryInitiationMode.LOW_WHILE_EXHAUSTED
+                )
+                else commitment
+            )
             recognition_read: CommitmentRecognitionRead | None = None
             if enable_v02_setup:
                 # v0.2 restores established-position ordering:
                 # initiator locks action before responder chooses among legal responses.
-                decision = policy.choose(match)
+                decision = (
+                    BatchDecision(
+                        action_id=None,
+                        reason="recovery-reset",
+                        escape_probability=0.0,
+                        submission_progress_probability=0.0,
+                        expected_raw_axis=0.0,
+                        expected_realized_axis=0.0,
+                    )
+                    if force_recovery_reset
+                    else policy.choose(match)
+                )
                 if decision.action_id is None:
+                    if recovery_policy_collector is not None:
+                        recovery_policy_collector.before_reset(
+                            match,
+                            forced_recovery_reset=force_recovery_reset,
+                        )
                     reset = match.reset_window()
+                    if recovery_policy_collector is not None:
+                        recovery_policy_collector.after_reset(
+                            match,
+                            result=reset,
+                        )
                     if side is Side.TOP:
                         top_resets += 1
                         if reset.progress_route_available:
@@ -1142,14 +1244,14 @@ def run_escape_first_batch(
                     continue
                 if enable_v04b_recognition:
                     recognition_read = match.recognize_commitment(
-                        requested=commitment,
+                        requested=selected_initiator_commitment,
                         intent_roll=recognition_intent_rng.randint(1, 6),
                         capability_roll=recognition_capability_rng.randint(1, 6),
                     )
                 selected_response_commitment = (
                     _response_commitment_for_exchange(
                         match,
-                        initiator_commitment=commitment,
+                        initiator_commitment=selected_initiator_commitment,
                         mode=response_commitment_mode,
                         rng=response_commitment_rng,
                         recognition_read=recognition_read,
@@ -1164,7 +1266,7 @@ def run_escape_first_batch(
                     response_id = _informed_bottom_response_id(
                         match,
                         action_id=decision.action_id,
-                        commitment=commitment,
+                        commitment=selected_initiator_commitment,
                         response_commitment=selected_response_commitment,
                         use_recognition=recognition_read is not None,
                         perceived_effective_commitment=(
@@ -1191,9 +1293,30 @@ def run_escape_first_batch(
                 # v0.1 blind harness preserves historical responder-first sampling.
                 hidden = responder.choose(side.opponent)
                 response_id = hidden.response_id
-                decision = policy.choose(match)
+                decision = (
+                    BatchDecision(
+                        action_id=None,
+                        reason="recovery-reset",
+                        escape_probability=0.0,
+                        submission_progress_probability=0.0,
+                        expected_raw_axis=0.0,
+                        expected_realized_axis=0.0,
+                    )
+                    if force_recovery_reset
+                    else policy.choose(match)
+                )
                 if decision.action_id is None:
+                    if recovery_policy_collector is not None:
+                        recovery_policy_collector.before_reset(
+                            match,
+                            forced_recovery_reset=force_recovery_reset,
+                        )
                     reset = match.reset_window()
+                    if recovery_policy_collector is not None:
+                        recovery_policy_collector.after_reset(
+                            match,
+                            result=reset,
+                        )
                     if side is Side.TOP:
                         top_resets += 1
                         if reset.progress_route_available:
@@ -1225,14 +1348,14 @@ def run_escape_first_batch(
                     continue
                 if enable_v04b_recognition:
                     recognition_read = match.recognize_commitment(
-                        requested=commitment,
+                        requested=selected_initiator_commitment,
                         intent_roll=recognition_intent_rng.randint(1, 6),
                         capability_roll=recognition_capability_rng.randint(1, 6),
                     )
                 selected_response_commitment = (
                     _response_commitment_for_exchange(
                         match,
-                        initiator_commitment=commitment,
+                        initiator_commitment=selected_initiator_commitment,
                         mode=response_commitment_mode,
                         rng=response_commitment_rng,
                         recognition_read=recognition_read,
@@ -1287,11 +1410,20 @@ def run_escape_first_batch(
             feint_caps_before = len(
                 match.history.submission_feint_cap_history
             )
+            recovery_policy_attempt = (
+                recovery_policy_collector.before_attempt(
+                    match,
+                    action_id=decision.action_id,
+                    requested_commitment=selected_initiator_commitment,
+                )
+                if recovery_policy_collector is not None
+                else None
+            )
             stamina_economy_attempt = (
                 stamina_economy_collector.before_attempt(
                     match,
                     action_id=decision.action_id,
-                    initiator_commitment=commitment,
+                    initiator_commitment=selected_initiator_commitment,
                     responder_commitment=(
                         selected_response_commitment
                         if selected_response_commitment is not None
@@ -1313,7 +1445,7 @@ def run_escape_first_batch(
             attempt_result = match.attempt(
                 action_id=decision.action_id,
                 response_id=response_id,
-                commitment=commitment,
+                commitment=selected_initiator_commitment,
                 response_commitment=selected_response_commitment,
                 recognition_read=recognition_read,
             )
@@ -1322,6 +1454,12 @@ def run_escape_first_batch(
                     match,
                     snapshot=stamina_economy_attempt,
                     result=attempt_result,
+                )
+            if recovery_policy_collector is not None:
+                recovery_policy_collector.after_attempt(
+                    match,
+                    context=recovery_policy_attempt,
+                    decision_reason=decision.reason,
                 )
             record_exhaustion()
 
@@ -1458,6 +1596,11 @@ def run_escape_first_batch(
                 match,
                 outcome=outcome,
             )
+        if recovery_policy_collector is not None:
+            recovery_policy_collector.finish_match(
+                match,
+                outcome=outcome,
+            )
         top_final.append(match.top.stamina.current)
         bottom_final.append(match.bottom.stamina.current)
         if top_first_exhausted is not None:
@@ -1562,6 +1705,11 @@ def run_escape_first_batch(
         stamina_economy=(
             stamina_economy_collector.measurement()
             if stamina_economy_collector is not None
+            else None
+        ),
+        recovery_policy=(
+            recovery_policy_collector.measurement()
+            if recovery_policy_collector is not None
             else None
         ),
     )

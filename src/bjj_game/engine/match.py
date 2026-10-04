@@ -81,6 +81,8 @@ class MountMatch:
     enable_v04_commitment_semantics: bool = False
     enable_v04b_recognition: bool = False
     enable_stamina_settlement_rules: bool = False
+    enable_unfunded_responder_cost_waiver: bool = False
+    enable_supplemental_hold_settlement: bool = False
     recognition_policy: CommitmentRecognitionPolicy = field(
         default_factory=lambda: DEFAULT_COMMITMENT_RECOGNITION_POLICY,
         repr=False,
@@ -117,7 +119,11 @@ class MountMatch:
             raise ValueError("v0.3b stalling requires v0.3a submissions")
         if self.enable_v04b_recognition and not self.enable_v04_commitment_semantics:
             raise ValueError("v0.4b Recognition requires v0.4a commitment semantics")
-        if self.enable_stamina_settlement_rules and not self.enable_v04_commitment_semantics:
+        if (
+            self.enable_stamina_settlement_rules
+            or self.enable_unfunded_responder_cost_waiver
+            or self.enable_supplemental_hold_settlement
+        ) and not self.enable_v04_commitment_semantics:
             raise ValueError(
                 "stamina settlement rules require v0.4a commitment semantics"
             )
@@ -138,6 +144,20 @@ class MountMatch:
         self.submission_state = SubmissionState()
         self.stalling_tracker = StallingTracker(
             threshold_seconds=STALLING_THRESHOLD_SECONDS
+        )
+
+    @property
+    def unfunded_responder_cost_waiver_enabled(self) -> bool:
+        return (
+            self.enable_stamina_settlement_rules
+            or self.enable_unfunded_responder_cost_waiver
+        )
+
+    @property
+    def supplemental_hold_settlement_enabled(self) -> bool:
+        return (
+            self.enable_stamina_settlement_rules
+            or self.enable_supplemental_hold_settlement
         )
 
     @property
@@ -1428,7 +1448,7 @@ class MountMatch:
         response_stamina_waived = 0
         if self.enable_v04_commitment_semantics:
             if (
-                self.enable_stamina_settlement_rules
+                self.unfunded_responder_cost_waiver_enabled
                 and effective_commitment is None
             ):
                 response_stamina_waived = response_effective_cost
@@ -1454,28 +1474,35 @@ class MountMatch:
         hold_spend = None
         if submission_hold:
             hold_nominal_cost = self.stamina_cost_policy.cost(Commitment.LOW)
-            if self.enable_stamina_settlement_rules:
-                if effective_commitment is None:
-                    # Rule 1: an UNFUNDED initiator cannot extract responder
-                    # stamina through either response commitment or hold.
-                    hold_request = 0
-                else:
-                    # Rule 2: response commitment covers the first 3 points
-                    # of the provisional hold burden.
-                    response_charged = (
-                        response_spend.charged
-                        if response_spend is not None
-                        else 0
-                    )
-                    hold_covered_by_response = min(
-                        hold_nominal_cost,
-                        response_charged,
-                    )
-                    hold_request = max(
-                        0,
-                        hold_nominal_cost - response_charged,
-                    )
+            if (
+                self.unfunded_responder_cost_waiver_enabled
+                and effective_commitment is None
+            ):
+                # Rule 1: an UNFUNDED initiator cannot extract responder
+                # stamina through either response commitment or hold.
+                hold_request = 0
+            elif (
+                self.supplemental_hold_settlement_enabled
+                and effective_commitment is not None
+            ):
+                # Rule 2: on funded-initiator holds, response commitment
+                # covers the first 3 points of the nominal hold burden.
+                response_charged = (
+                    response_spend.charged
+                    if response_spend is not None
+                    else 0
+                )
+                hold_covered_by_response = min(
+                    hold_nominal_cost,
+                    response_charged,
+                )
+                hold_request = max(
+                    0,
+                    hold_nominal_cost - response_charged,
+                )
             else:
+                # Legacy hold settlement remains authoritative when Rule 2
+                # is disabled, including Rule2-only + UNFUNDED initiator.
                 hold_request = hold_nominal_cost
 
             hold_spend = responder_pool.spend_up_to(hold_request)

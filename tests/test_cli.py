@@ -706,6 +706,23 @@ class CliTests(unittest.TestCase):
             self.assertIn(f"STAMINA-RULE GATE {letter} [", text)
         self.assertIn("STAMINA-RULE PREDICTION — P1", text)
         self.assertIn("STAMINA-RULE PREDICTION — P6", text)
+        self.assertIn("STAMINA-RECOVERY STARTING EVIDENCE — LEGACY", text)
+        self.assertIn("STAMINA-RECOVERY STARTING EVIDENCE — BOTH", text)
+        self.assertIn("STAMINA-RECOVERY FLAG COMPATIBILITY", text)
+        self.assertIn("STAMINA-RECOVERY ATTRIBUTION — A/NONE", text)
+        self.assertIn("STAMINA-RECOVERY ATTRIBUTION — E/BOTH", text)
+        self.assertIn("STAMINA-RECOVERY SHADOW NONPERTURBATION", text)
+        self.assertIn("STAMINA-RECOVERY CANDIDATE — CURRENT/OFF+shadow", text)
+        self.assertIn("STAMINA-RECOVERY CANDIDATE — RESET_WHILE_EXHAUSTED/ON", text)
+        self.assertIn("STAMINA-RECOVERY CANDIDATE — LOW_WHILE_EXHAUSTED/ON", text)
+        self.assertIn("STAMINA-RECOVERY STALLING DIVERGENCE", text)
+        for letter in "ABCDEFGHIJ":
+            self.assertIn(
+                f"STAMINA-RECOVERY AMENDMENT GATE {letter} [PASS]",
+                text,
+            )
+        self.assertIn("STAMINA-RECOVERY PREDICTION — P1", text)
+        self.assertIn("STAMINA-RECOVERY PREDICTION — P8 [NOT CONFIRMED]", text)
         self.assertIn("not a gameplay-health verdict", text)
         self.assertIn("V0.4a PREDICTION PROBE", text)
         self.assertIn("V0.3b PREDICTION PROBE", text)
