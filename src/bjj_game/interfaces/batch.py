@@ -652,7 +652,15 @@ class ReExhaustionHandoffMeasurement:
 
 
 class ReExhaustionHandoffObserver:
-    """Read-only Bottom Exhausted clear/re-exhaustion episode observer."""
+    """Read-only Bottom Exhausted clear/re-exhaustion episode observer.
+
+    Sampling after each advance, reset, and attempt is complete: StaminaPool
+    hysteresis means spend_up_to can only enter Exhausted and recover_up_to
+    can only clear it; advance applies at most one behavior spend-or-recover
+    to Bottom, attempt only spends, and reset_window never touches stamina.
+    No single engine operation can therefore clear and re-exhaust Bottom
+    between two samples.
+    """
 
     def __init__(self) -> None:
         self._episodes: list[ReExhaustionHandoffEpisode] = []

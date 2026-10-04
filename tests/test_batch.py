@@ -501,6 +501,95 @@ class ReExhaustionHandoffObserverTests(unittest.TestCase):
         self.assertEqual(observer.measurement(), before)
         self.assertIsNone(before.episodes[0].reexhausted_elapsed_seconds)
 
+    @staticmethod
+    def _single_episode(*, reexhausted_at, match_end):
+        # Clear at t=10s; engine time is integer simulated seconds.
+        observer = ReExhaustionHandoffObserver()
+        observer.start_match(
+            match_index=0,
+            elapsed_seconds=0,
+            bottom_exhausted=True,
+        )
+        observer.observe(elapsed_seconds=10, bottom_exhausted=False)
+        if reexhausted_at is not None:
+            observer.observe(
+                elapsed_seconds=reexhausted_at,
+                bottom_exhausted=True,
+            )
+        observer.finish_match(
+            elapsed_seconds=match_end,
+            bottom_exhausted=reexhausted_at is not None,
+        )
+        (episode,) = observer.measurement().episodes
+        return episode
+
+    def test_horizon_boundary_reexhaustion_is_inclusive(self):
+        horizon = 10
+        cases = (
+            # (seconds after clear, expected status at h=10)
+            (horizon - 5, HandoffEpisodeStatus.REEXHAUSTED_WITHIN_HORIZON),
+            (horizon - 1, HandoffEpisodeStatus.REEXHAUSTED_WITHIN_HORIZON),
+            (horizon, HandoffEpisodeStatus.REEXHAUSTED_WITHIN_HORIZON),
+            (horizon + 1, HandoffEpisodeStatus.SURVIVED_THROUGH_HORIZON),
+            (horizon + 5, HandoffEpisodeStatus.SURVIVED_THROUGH_HORIZON),
+        )
+        for offset, expected in cases:
+            with self.subTest(offset=offset):
+                episode = self._single_episode(
+                    reexhausted_at=10 + offset,
+                    match_end=100,
+                )
+                self.assertEqual(episode.seconds_to_reexhaustion, offset)
+                self.assertIs(episode.status_at(horizon), expected)
+
+    def test_horizon_boundary_reexhaustion_exactly_at_h_and_match_end(self):
+        episode = self._single_episode(reexhausted_at=20, match_end=20)
+        self.assertIs(
+            episode.status_at(10),
+            HandoffEpisodeStatus.REEXHAUSTED_WITHIN_HORIZON,
+        )
+
+    def test_horizon_boundary_survival_requires_full_h(self):
+        horizon = 10
+        cases = (
+            # (observed non-Exhausted seconds before match end, status)
+            (horizon - 5, HandoffEpisodeStatus.RIGHT_CENSORED),
+            (horizon - 1, HandoffEpisodeStatus.RIGHT_CENSORED),
+            (horizon, HandoffEpisodeStatus.SURVIVED_THROUGH_HORIZON),
+            (horizon + 1, HandoffEpisodeStatus.SURVIVED_THROUGH_HORIZON),
+        )
+        for observed, expected in cases:
+            with self.subTest(observed=observed):
+                episode = self._single_episode(
+                    reexhausted_at=None,
+                    match_end=10 + observed,
+                )
+                self.assertIsNone(episode.reexhausted_elapsed_seconds)
+                self.assertIs(episode.status_at(horizon), expected)
+
+    def test_clear_at_match_end_is_right_censored_for_every_frozen_h(self):
+        episode = self._single_episode(reexhausted_at=None, match_end=10)
+        for horizon in (5, 10, 15, 20):
+            self.assertIs(
+                episode.status_at(horizon),
+                HandoffEpisodeStatus.RIGHT_CENSORED,
+            )
+
+    def test_same_operation_cannot_clear_and_reexhaust_one_sample(self):
+        # Fixed samples see one latch state per engine operation. Two
+        # consecutive Exhausted samples therefore record no clear; the
+        # engine-level proof that this cannot hide a clear/re-exhaust pair is
+        # in test_reexhaustion_handoff_inertness.
+        observer = ReExhaustionHandoffObserver()
+        observer.start_match(
+            match_index=0,
+            elapsed_seconds=0,
+            bottom_exhausted=True,
+        )
+        observer.observe(elapsed_seconds=5, bottom_exhausted=True)
+        observer.finish_match(elapsed_seconds=10, bottom_exhausted=True)
+        self.assertEqual(observer.measurement().episodes, ())
+
     def test_ext_100_seed_freeze_matches_dod_and_hash(self):
         dod_path = (
             Path(__file__).resolve().parents[1]
