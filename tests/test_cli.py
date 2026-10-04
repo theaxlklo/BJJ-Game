@@ -706,6 +706,8 @@ class CliTests(unittest.TestCase):
             self.assertIn(f"STAMINA-RULE GATE {letter} [", text)
         self.assertIn("STAMINA-RULE PREDICTION — P1", text)
         self.assertIn("STAMINA-RULE PREDICTION — P6", text)
+        self.assertIn("STAMINA-RECOVERY STARTING EVIDENCE — LEGACY", text)
+        self.assertIn("STAMINA-RECOVERY STARTING EVIDENCE — BOTH", text)
         self.assertIn("not a gameplay-health verdict", text)
         self.assertIn("V0.4a PREDICTION PROBE", text)
         self.assertIn("V0.3b PREDICTION PROBE", text)
