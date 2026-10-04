@@ -688,6 +688,20 @@ class CliTests(unittest.TestCase):
         self.assertIn("one level above", text)
         self.assertIn("always HIGH", text)
         self.assertIn("V0.4b STAMINA-PACING OBSERVATION", text)
+        for letter in "ABCDEFGH":
+            self.assertIn(
+                f"STAMINA-ECONOMY MEASUREMENT GATE {letter} [PASS]",
+                text,
+            )
+        self.assertIn("STAMINA-ECONOMY SURFACE", text)
+        self.assertIn("STAMINA-ECONOMY DURATION", text)
+        self.assertIn("STAMINA-ECONOMY RECOVERY", text)
+        self.assertIn("STAMINA-ECONOMY AFFORDABILITY", text)
+        self.assertIn("STAMINA-ECONOMY DECISIVE", text)
+        self.assertIn("STAMINA-ECONOMY SOURCES", text)
+        self.assertIn("STAMINA-ECONOMY FUNDING", text)
+        self.assertIn("STAMINA-ECONOMY ZERO", text)
+        self.assertIn("not a gameplay-health verdict", text)
         self.assertIn("V0.4a PREDICTION PROBE", text)
         self.assertIn("V0.3b PREDICTION PROBE", text)
         self.assertIn("V0.3b NORMAL-PLAY GUARD [PASS]", text)

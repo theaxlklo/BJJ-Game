@@ -12,6 +12,11 @@ from ..domain.recognition import CommitmentRecognitionRead
 from ..domain.stamina import StaminaBand
 from ..domain.submission import SubmissionStage
 from ..engine.match import MountMatch
+from ..engine.stamina import DEFAULT_BEHAVIOR_STAMINA_POLICY
+from .stamina_economy import (
+    StaminaEconomyCollector,
+    StaminaEconomyMeasurement,
+)
 from ..positions.mount.catalog import (
     MODERN_ENTITY_BY_ID,
     TOP_AMERICANA_ARM_ISOLATION,
@@ -652,6 +657,7 @@ class BatchSummary:
     bottom_behavior_window_counts: dict[str, int]
     top_behavior_switch_count: int
     bottom_behavior_switch_count: int
+    stamina_economy: StaminaEconomyMeasurement | None = None
 
     def render(self) -> str:
         ordered_outcomes = [
@@ -875,6 +881,7 @@ def run_escape_first_batch(
     enable_v03b_stalling: bool = False,
     enable_v04_commitment_semantics: bool = False,
     enable_v04b_recognition: bool = False,
+    measure_stamina_economy: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
         raise ValueError("matches must be > 0")
@@ -893,6 +900,21 @@ def run_escape_first_batch(
         and not enable_v04b_recognition
     ):
         raise ValueError("recognition response policy requires v0.4b Recognition")
+    if measure_stamina_economy and not enable_v04_commitment_semantics:
+        raise ValueError(
+            "stamina-economy measurement requires v0.4a commitment semantics"
+        )
+
+    stamina_economy_collector = (
+        StaminaEconomyCollector(
+            interval_seconds=interval_seconds,
+            behavior_quantum_seconds=(
+                DEFAULT_BEHAVIOR_STAMINA_POLICY.quantum_seconds
+            ),
+        )
+        if measure_stamina_economy
+        else None
+    )
 
     policy = EscapeFirstInitiatorPolicy()
     outcomes: Counter[str] = Counter()
@@ -979,6 +1001,11 @@ def run_escape_first_batch(
         current_top = top_policy.choose(match)
         current_bottom = bottom_policy.choose(match)
         match.set_behaviors(top=current_top, bottom=current_bottom)
+        if stamina_economy_collector is not None:
+            stamina_economy_collector.start_match(
+                match,
+                match_index=match_index,
+            )
         responder = RandomBlindResponder(base_seed + match_index)
         response_commitment_rng = random.Random(
             base_seed + match_index + 1_000_003
@@ -1026,11 +1053,27 @@ def run_escape_first_batch(
                 if next_bottom is not current_bottom:
                     bottom_behavior_switches += 1
                     current_bottom = next_bottom
+                    if stamina_economy_collector is not None:
+                        stamina_economy_collector.behavior_switch(
+                            side=Side.BOTTOM,
+                            new_behavior=current_bottom.value,
+                        )
                 match.set_behaviors(top=current_top, bottom=current_bottom)
                 top_behavior_windows[current_top.value] += 1
                 bottom_behavior_windows[current_bottom.value] += 1
 
-                match.advance()
+                stamina_state_before_advance = (
+                    stamina_economy_collector.before_advance(match)
+                    if stamina_economy_collector is not None
+                    else None
+                )
+                advance_result = match.advance()
+                if stamina_economy_collector is not None:
+                    stamina_economy_collector.after_advance(
+                        match,
+                        state_before=stamina_state_before_advance,
+                        result=advance_result,
+                    )
                 record_exhaustion()
                 if match.ended:
                     break
@@ -1045,6 +1088,11 @@ def run_escape_first_batch(
                 if post_bottom is not current_bottom:
                     bottom_behavior_switches += 1
                     current_bottom = post_bottom
+                    if stamina_economy_collector is not None:
+                        stamina_economy_collector.behavior_switch(
+                            side=Side.BOTTOM,
+                            new_behavior=current_bottom.value,
+                        )
                 match.set_behaviors(top=current_top, bottom=current_bottom)
             else:
                 free_initiative_windows += 1
@@ -1233,6 +1281,20 @@ def run_escape_first_batch(
             feint_caps_before = len(
                 match.history.submission_feint_cap_history
             )
+            stamina_economy_attempt = (
+                stamina_economy_collector.before_attempt(
+                    match,
+                    action_id=decision.action_id,
+                    initiator_commitment=commitment,
+                    responder_commitment=(
+                        selected_response_commitment
+                        if selected_response_commitment is not None
+                        else Commitment.MEDIUM
+                    ),
+                )
+                if stamina_economy_collector is not None
+                else None
+            )
             submission_stage_before = (
                 match.submission_state.stage
                 if action.id == TOP_AMERICANA_SUBMISSION_FINISH
@@ -1249,6 +1311,12 @@ def run_escape_first_batch(
                 response_commitment=selected_response_commitment,
                 recognition_read=recognition_read,
             )
+            if stamina_economy_collector is not None:
+                stamina_economy_collector.after_attempt(
+                    match,
+                    snapshot=stamina_economy_attempt,
+                    result=attempt_result,
+                )
             record_exhaustion()
 
             undercommitted = (
@@ -1379,6 +1447,11 @@ def run_escape_first_batch(
             else match.exit_reason or "UNKNOWN"
         )
         outcomes[outcome] += 1
+        if stamina_economy_collector is not None:
+            stamina_economy_collector.finish_match(
+                match,
+                outcome=outcome,
+            )
         top_final.append(match.top.stamina.current)
         bottom_final.append(match.bottom.stamina.current)
         if top_first_exhausted is not None:
@@ -1480,6 +1553,11 @@ def run_escape_first_batch(
         bottom_behavior_window_counts=dict(bottom_behavior_windows),
         top_behavior_switch_count=top_behavior_switches,
         bottom_behavior_switch_count=bottom_behavior_switches,
+        stamina_economy=(
+            stamina_economy_collector.measurement()
+            if stamina_economy_collector is not None
+            else None
+        ),
     )
 
 

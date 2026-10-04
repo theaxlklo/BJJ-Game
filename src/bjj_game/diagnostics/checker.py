@@ -4699,6 +4699,18 @@ def run_checks() -> CheckReport:
             f"POSITIONAL MODIFIER CAP-HITS: {cap_hits}/{modifier_applications} applicable raw-grade cases clamp at Strong Failure"
         )
 
+    from .stamina_economy import (
+        StaminaMeasurementGateStatus,
+        measure_stamina_economy_definition_of_done,
+    )
+
+    for gate in measure_stamina_economy_definition_of_done():
+        if gate.status is not StaminaMeasurementGateStatus.PASS:
+            report.errors.append(
+                f"Stamina-economy measurement Gate {gate.letter} is "
+                f"{gate.status.value}: {gate.metric}"
+            )
+
     return report
 
 
