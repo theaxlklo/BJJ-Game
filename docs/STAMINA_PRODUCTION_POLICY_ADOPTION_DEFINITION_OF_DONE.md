@@ -100,6 +100,45 @@ Threat collapse is therefore causally attributable to Rule 2.
 
 Rule 2 remains available as an explicit diagnostic/experimental capability, but the proposed production configuration must keep it disabled.
 
+### Rule 2 intended to fix — additive response + provisional-hold double charging
+
+Rule 2 was not arbitrary. It was introduced to address a measured stamina-economy problem in the existing provisional hold path:
+
+```text
+responder pays response commitment
++
+Contested submission hold may charge up to another 3 stamina
+```
+
+The measurement slice showed that commitment-only affordability could therefore overstate the defender's real ability to pay a response-plus-hold burden.
+
+Surface-E evidence included:
+
+```text
+State-2 hold exchanges=1,490
+FULL/PARTIAL/NONE=100/1,113/277
+
+commitment-only fundable
+but requested commitment + hold not fully fundable=1,366
+```
+
+Rule 2 attempted to solve that by making the 3-point hold burden supplemental rather than additive.
+
+Its isolated measurement then revealed a worse regression:
+
+```text
+public-MATCH Threat reach:
+78/100 -> 0/100
+```
+
+Therefore deferring Rule 2 explicitly reopens this debt:
+
+> **The legacy funded-response + provisional-hold path can still impose an additive stamina charge, and commitment-only affordability can still overstate the responder's true hold-inclusive affordability.**
+
+That debt must remain named until Rule 2 is redesigned, replaced, or the provisional hold model itself is deliberately retained.
+
+Do not silently treat "Rule 2 deferred" as "hold-settlement problem solved."
+
 ## LOW_WHILE_EXHAUSTED — preferred recovery candidate
 
 Under the previous BOTH settlement configuration:
@@ -270,47 +309,98 @@ The production stamina/recovery policy must be composable with those systems rat
 
 # Required chronology after authorization
 
-If and only if the user authorizes this committed DoD:
+If and only if the user authorizes this committed DoD, implementation has **two authorization stages**.
+
+## Stage 1 — handoff baseline / final preregistration
 
 ```text
-1. add a PROPOSED-PRODUCTION diagnostic configuration only
-   Rule1 ON
-   Rule2 OFF
-   LOW_WHILE_EXHAUSTED
+1. add read-only LOW->MEDIUM handoff / re-exhaustion instrumentation only
 
-2. do NOT change any default yet
+2. do NOT add or run the Rule1-only + LOW production candidate yet
 
-3. run the exact production-candidate measurements below
+3. run the historical LOW+BOTH recovery surface on the same 100 seeds
+   and measure re-exhaustion after every Exhausted-latch clear
 
-4. record first untuned production-candidate evidence
+4. also run CURRENT+Rule1-only as a control and report that it has
+   no usable re-exhaustion denominator if latch clears remain zero
 
-5. evaluate Gates A-H
+5. record cumulative re-exhaustion after:
+   1 tick  = 5 s
+   2 ticks = 10 s
+   3 ticks = 15 s
+   4 ticks = 20 s
+   plus median/percentiles for time-to-re-exhaustion when observed
 
-6. if any adoption gate is OPEN:
-     record it
-     do not promote defaults/config
-     do not tune
-     write a separate amendment if needed
+6. create:
+   docs/STAMINA_PRODUCTION_POLICY_ADOPTION_PREREGISTRATION.md
 
-7. only if adoption gates pass:
-     add the canonical production stamina/recovery entry point
-     selecting Rule1 ON / Rule2 OFF / LOW recovery
+7. copy A1-A10 into that document unchanged except A9, which must now
+   freeze one explicit N-tick horizon and one explicit X% threshold
+   using the measured historical LOW+BOTH handoff baseline
 
-8. prove canonical production output is identical to
-   the already-measured proposed-production diagnostic
+8. commit the preregistration document
 
-9. run full regression / digest / checker suite
+9. HARD STOP again
 
-10. record adoption verification
-
-11. open/update PR
-
-12. HARD STOP for user review
-
-13. no merge without explicit authorization
+10. user reviews the frozen A9 threshold and explicitly authorizes
+    the actual production-candidate run
 ```
 
-The candidate is measured **before** it becomes canonical production behavior.
+CURRENT+Rule1-only is still reported because it is the production settlement control, but prior evidence shows zero clears; if that remains true, it cannot define a percentage of clear events that re-exhaust.
+
+The historical LOW+BOTH policy is the primary A9 baseline because it has a real clear population:
+
+```text
+67 latch clears
+```
+
+The A9 threshold must be frozen **before** Rule1-only + LOW is run.
+
+## Stage 2 — adoption candidate
+
+Only after the second authorization:
+
+```text
+11. add a PROPOSED-PRODUCTION diagnostic configuration only
+    Rule1 ON
+    Rule2 OFF
+    LOW_WHILE_EXHAUSTED
+
+12. do NOT change any default yet
+
+13. run the exact production-candidate measurements below
+
+14. score A1-A10 as CONFIRMED / PARTIAL / NOT CONFIRMED
+
+15. record first untuned production-candidate evidence
+
+16. evaluate Gates A-H
+
+17. if any adoption gate is OPEN:
+      record it
+      do not promote defaults/config
+      do not tune
+      write a separate amendment if needed
+
+18. only if adoption gates pass:
+      add the canonical production stamina/recovery entry point
+      selecting Rule1 ON / Rule2 OFF / LOW recovery
+
+19. prove canonical production output is identical to
+    the already-measured proposed-production diagnostic
+
+20. run full regression / digest / checker suite
+
+21. record adoption verification
+
+22. open/update PR
+
+23. HARD STOP for user review
+
+24. no merge without explicit authorization
+```
+
+The candidate is measured **before** it becomes canonical production behavior, and the re-exhaustion threshold is preregistered before the candidate is measured.
 
 ---
 
@@ -406,6 +496,10 @@ For Bottom on Surface E-PROD report:
 - Exhausted-latch clears;
 - CONSERVE -> ESCAPE switches;
 - State2 -> State1 exits;
+- non-Exhausted -> Exhausted re-entries after a clear;
+- elapsed time from each clear to the next re-exhaustion;
+- cumulative re-exhaustion within 1/2/3/4 behavior ticks (5/10/15/20 s);
+- share of clear events that remain non-Exhausted through match end;
 - State1 / State2 / State3 shares.
 
 Setup interaction while Exhausted:
@@ -495,6 +589,22 @@ State2 -> State1 exits > 0
 No exact positive count is frozen.
 
 Also report the exact counts and first-clear timing/stamina distribution.
+
+For the LOW -> MEDIUM handoff, report:
+
+```text
+clear events
+re-exhaustion events after a clear
+time from clear -> re-exhaustion
+re-exhaustion within 1 / 2 / 3 / 4 ticks
+clear events surviving non-Exhausted through match end
+```
+
+The final preregistered A9 threshold from
+`STAMINA_PRODUCTION_POLICY_ADOPTION_PREREGISTRATION.md`
+is observational, not an additional Gate-C pass criterion unless the user explicitly amends this DoD before the candidate run.
+
+A severe clear-then-relapse loop can therefore be visible even if the minimal Gate-C condition passes.
 
 If any of the three remain zero:
 
@@ -704,118 +814,288 @@ Do not in this slice:
 
 ---
 
-# Predeclared predictions
+# Adoption-run pre-registration
 
-These predictions are frozen before running the proposed Rule1-only + LOW production candidate.
+The following predictions are frozen **before any Rule1-only + LOW candidate run**.
 
-Do not rewrite them after measurement.
-
-## P1 — public MATCH compatibility
-
-Prediction:
+Anchors from the completed LOW+BOTH measurement:
 
 ```text
-Surface A remains exactly at:
+latch clears=67
+Bottom final median=26
+Half/Open/Reversal=31/15/5
+timeouts=44
+setup builders=1,114
+RESET-with-route exposure=7
+```
+
+Scoring rules:
+
+```text
+Gates remain pass/fail exactly as defined elsewhere in this DoD.
+
+Predictions A1-A10 are scored:
+CONFIRMED
+PARTIAL
+NOT CONFIRMED
+
+A prediction miss is not automatically a gate failure.
+
+Every miss requires a written explanation in the measurement document.
+
+No numeric range may be edited after the candidate run begins.
+```
+
+A1-A8 and A10 are frozen now.
+
+A9 is intentionally completed only through the Stage-1 historical handoff baseline, committed in
+`STAMINA_PRODUCTION_POLICY_ADOPTION_PREREGISTRATION.md`,
+and subjected to a second HARD STOP before the candidate run.
+
+## A1 — public-MATCH Threat compatibility
+
+Frozen expectation:
+
+```text
 Threat matches=78/100
 Threat entries=1,950
 Tap=0/100
 ```
 
-because Rule 1 alone already produced those values and LOW recovery is not active on this surface.
+Expected: **exact**.
 
----
+Rule1-only already produced these values, and recovery LOW is inactive on Surface A.
 
-## P2 — trust-read Gate B
+## A2 — latch clears
 
-Prediction:
+Hard observational floor:
 
 ```text
-Surface B remains inside:
+latch clears >=34
+```
+
+Expected range:
+
+```text
+40-120
+```
+
+Anchor:
+
+```text
+LOW+BOTH=67
+```
+
+The 34 floor is one-half of the previous LOW+BOTH result.
+
+Gate C itself remains the minimal `>0` adoption gate; falling below 34 is therefore a prediction miss requiring review, not automatic gate failure.
+
+## A3 — exhausted-state setup construction
+
+Hard observational floor:
+
+```text
+setup-builder attempts >=557
+```
+
+Expected range:
+
+```text
+800-1,400
+```
+
+Anchor:
+
+```text
+LOW+BOTH=1,114
+```
+
+The 557 floor is one-half of the previous LOW+BOTH result.
+
+Gate D still only becomes OPEN on total collapse to zero. A value from 1-556 would therefore PASS Gate D but score A3 NOT CONFIRMED and require explicit review before adoption.
+
+## A4 — Bottom final stamina
+
+Expected median:
+
+```text
+20-35
+```
+
+Anchor:
+
+```text
+LOW+BOTH=26
+```
+
+This is observational, not an independent gate.
+
+## A5 — timeouts
+
+Expected:
+
+```text
+30-75
+```
+
+Anchors:
+
+```text
+LOW+BOTH=44
+CURRENT+BOTH=75
+```
+
+This is observational.
+
+## A6 — LOW stalling exposure under Rule1-only
+
+This must be re-measured; the prior value of 7 came from LOW+BOTH.
+
+Expected:
+
+```text
+RESET-with-progress-route exposure <=15
+
+real v0.3b:
+Warnings=0
+Penalties=0
+Position Resets=0
+```
+
+Anchor:
+
+```text
+LOW+BOTH exposure=7
+CURRENT+BOTH exposure=7
+RESET+BOTH exposure=983
+```
+
+If exposure exceeds 15 or a real offense fires, record it as new evidence. Do not alter v0.3b.
+
+## A7 — OFF+shadow versus real stalling ON
+
+If no real offense fires, expected:
+
+```text
+OFF/ON gameplay identical=True
+diverged matches=0/100
+```
+
+If a real offense fires, divergence is legitimate new evidence and A7 may be PARTIAL / NOT CONFIRMED without implying observer failure.
+
+## A8 — exit split
+
+Anchor:
+
+```text
+LOW+BOTH:
+Half Guard=31
+Open Guard=15
+Reversal=5
+```
+
+Expected:
+
+```text
+Half Guard remains the largest of the three exit categories
+Reversal <15% of matches
+```
+
+The full Half/Open/Reversal counts must be printed.
+
+## A9 — LOW -> MEDIUM handoff / re-exhaustion
+
+A9 tests for a clear-then-relapse loop that the existing latch-clear gates do not detect.
+
+Definitions:
+
+```text
+clear event:
+Bottom Exhausted latch transitions Exhausted -> non-Exhausted
+
+re-exhaustion:
+the same Bottom subsequently transitions non-Exhausted -> Exhausted
+
+time-to-re-exhaustion:
+simulated seconds from clear timestamp to the next re-exhaustion
+```
+
+Stage-1 baseline must measure the historical LOW+BOTH policy on the exact same 100 seeds and report cumulative re-exhaustion within:
+
+```text
+1 tick  = 5 s
+2 ticks = 10 s
+3 ticks = 15 s
+4 ticks = 20 s
+```
+
+Also report:
+
+- total clear events;
+- total re-exhaustions after a clear;
+- median time-to-re-exhaustion;
+- p25/p75 when defined;
+- clears that remain non-Exhausted through match end.
+
+CURRENT+Rule1-only must be reported as a control. If it again produces zero clears, its re-exhaustion percentage is explicitly:
+
+```text
+N/A — no clear-event denominator
+```
+
+The historical LOW+BOTH clear population is the primary handoff baseline because it previously produced:
+
+```text
+67 clears
+```
+
+After that baseline—and before any Rule1-only + LOW run—create and commit:
+
+```text
+docs/STAMINA_PRODUCTION_POLICY_ADOPTION_PREREGISTRATION.md
+```
+
+That file must freeze:
+
+```text
+A9 horizon N = <explicit tick count and seconds>
+A9 maximum acceptable prediction threshold X = <explicit % of clear events>
+historical LOW+BOTH rate at N
+reason for choosing N and X
+```
+
+Then:
+
+```text
+HARD STOP
+-> user review
+-> explicit authorization
+-> only then run Rule1-only + LOW
+```
+
+No A9 number may be selected after seeing the production candidate.
+
+A9 is scored CONFIRMED / PARTIAL / NOT CONFIRMED in the final measurement document.
+
+## A10 — trust-read Tap gate
+
+Expected:
+
+```text
 0% < Tap < 50%
 ```
 
-The exact tap count is not predicted.
+This is also Gate E.
 
----
-
-## P3 — recovery deadlock
-
-Prediction:
+Historical context:
 
 ```text
-Rule1-only + LOW produces >0 Bottom latch clears
+legacy trust-read=6/100
+Rule1-only=9/100
+BOTH=7/100
 ```
 
-because LOW+BOTH already produced 67 clears and removing Rule 2 restores more legacy hold pressure rather than increasing Bottom's own MEDIUM attack cost.
-
-The exact count may differ substantially.
-
----
-
-## P4 — setup preservation
-
-Prediction:
-
-```text
-Rule1-only + LOW retains substantial exhausted-state setup construction
-and does not collapse setup-builder attempts to zero
-```
-
-No exact percentage of the prior 1,114 is predicted.
-
----
-
-## P5 — final stamina
-
-Prediction:
-
-```text
-Bottom final median on E-PROD remains above CURRENT+BOTH's median of 6
-```
-
-It may be below or above LOW+BOTH's prior median of 26.
-
-This is observational, not a gate by itself.
-
----
-
-## P6 — Rule 2 Threat regression disappears
-
-Prediction:
-
-```text
-the 78 -> 0 public-MATCH Threat collapse is absent
-```
-
-This overlaps Gate B and is expected to be exact.
-
----
-
-## P7 — stalling remains non-dominant for LOW
-
-Prediction:
-
-```text
-LOW's stalling exposure remains close to CURRENT
-rather than RESET's very large exposure
-```
-
-Real v0.3b may still produce zero offenses.
-
-No exact offense/exposure count is predicted.
-
----
-
-## P8 — OFF/ON interpretation
-
-Prediction:
-
-```text
-if no real v0.3b offense fires,
-OFF and ON gameplay remain identical
-```
-
-If an offense does fire under the Rule1-only + LOW trajectory, divergence is valid new evidence rather than a failure of the observer.
+No exact tap count is predicted.
 
 ---
 
@@ -831,16 +1111,17 @@ It must contain:
 
 1. exact candidate configuration;
 2. Gates A-H;
-3. P1-P8 comparison;
+3. A1-A10 preregistration comparison;
 4. A/B/E-PROD outcome tables;
 5. Half/Open/Reversal exit split;
 6. recovery/stamina budget;
-7. setup interaction;
-8. shadow/real stalling comparison;
-9. canonical-production equivalence if promotion occurs;
-10. explicit Rule 2 deferred status;
-11. residual RESET/stalling risk;
-12. clear separation between facts and remaining design debt.
+7. LOW -> MEDIUM re-exhaustion / handoff analysis;
+8. setup interaction;
+9. shadow/real stalling comparison;
+10. canonical-production equivalence if promotion occurs;
+11. explicit Rule 2 deferred status and named additive-hold debt;
+12. residual RESET/stalling risk;
+13. clear separation between facts and remaining design debt.
 
 ---
 
@@ -908,6 +1189,8 @@ This commit authorizes **design review only**.
 
 Do not:
 
+- add re-exhaustion instrumentation;
+- run the historical LOW+BOTH handoff baseline;
 - run the Rule1-only + LOW production candidate;
 - add a canonical production configuration;
 - change any default;
