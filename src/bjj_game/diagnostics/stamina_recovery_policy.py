@@ -50,6 +50,9 @@ class SettlementAttributionCell:
     hold_covered: int
     hold_supplemental_requested: int
     hold_supplemental_charged: int
+    funded_initiator_supplemental_charged: int
+    unfunded_initiator_hold_charged: int
+    additive_double_charge_cases: int
     unfunded_initiator_exchanges: int
     unfunded_responder_spend: int
 
@@ -165,6 +168,21 @@ def _attribution_cell(
         hold_covered=sum(row.hold_covered_by_response for row in holds),
         hold_supplemental_requested=sum(row.hold_requested for row in holds),
         hold_supplemental_charged=sum(row.hold_charged for row in holds),
+        funded_initiator_supplemental_charged=sum(
+            row.hold_charged
+            for row in holds
+            if row.initiator_effective_commitment != "UNFUNDED"
+        ),
+        unfunded_initiator_hold_charged=sum(
+            row.hold_charged
+            for row in holds
+            if row.initiator_effective_commitment == "UNFUNDED"
+        ),
+        additive_double_charge_cases=sum(
+            row.response_commitment_charged >= 3 and row.hold_charged > 0
+            for row in holds
+            if row.initiator_effective_commitment != "UNFUNDED"
+        ),
         unfunded_initiator_exchanges=len(unfunded),
         unfunded_responder_spend=sum(
             row.response_commitment_charged + row.hold_charged
@@ -256,6 +274,11 @@ def render_settlement_attribution_matrix() -> tuple[str, ...]:
             f"{cell.hold_nominal}/{cell.hold_covered}/"
             f"{cell.hold_supplemental_requested}/"
             f"{cell.hold_supplemental_charged}; "
+            f"funded-init supplemental charged="
+            f"{cell.funded_initiator_supplemental_charged}; "
+            f"UNFUNDED-init hold charged="
+            f"{cell.unfunded_initiator_hold_charged}; "
+            f"additive double-charge={cell.additive_double_charge_cases}; "
             f"UNFUNDED exchanges/responder spend="
             f"{cell.unfunded_initiator_exchanges}/"
             f"{cell.unfunded_responder_spend}"
