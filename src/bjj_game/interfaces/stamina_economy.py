@@ -115,6 +115,9 @@ class StaminaEconomyExchangeRecord:
     response_commitment_requested_cost: int
     response_commitment_charged: int
     response_commitment_shortfall: int
+    response_commitment_waived: int
+    hold_nominal_cost: int
+    hold_covered_by_response: int
     hold_requested: int
     hold_charged: int
     hold_shortfall: int
@@ -422,16 +425,26 @@ class StaminaEconomyCollector:
             len(match.history.submission_hold_stamina_requested_history)
             > snapshot.hold_history_len
         )
+        hold_nominal_cost = 0
+        hold_covered_by_response = 0
         hold_requested = 0
         hold_charged = 0
         hold_shortfall = 0
         hold_status: str | None = None
         if hold_added:
+            hold_nominal_cost = (
+                match.history.submission_hold_nominal_stamina_history[-1]
+            )
+            hold_covered_by_response = (
+                match.history.submission_hold_covered_by_response_history[-1]
+            )
             hold_requested = match.history.submission_hold_stamina_requested_history[-1]
             hold_charged = match.history.submission_hold_stamina_charged_history[-1]
             hold_shortfall = match.history.submission_hold_stamina_shortfall_history[-1]
             current["hold_spend"][snapshot.initiator.opponent] += hold_charged
-            if hold_charged == hold_requested:
+            if hold_requested == 0:
+                hold_status = "NONE"
+            elif hold_charged == hold_requested:
                 hold_status = "FULL"
             elif hold_charged == 0:
                 hold_status = "NONE"
@@ -605,6 +618,9 @@ class StaminaEconomyCollector:
                         else 0
                     )
                 ),
+                response_commitment_waived=result.response_stamina_waived,
+                hold_nominal_cost=hold_nominal_cost,
+                hold_covered_by_response=hold_covered_by_response,
                 hold_requested=hold_requested,
                 hold_charged=hold_charged,
                 hold_shortfall=hold_shortfall,
