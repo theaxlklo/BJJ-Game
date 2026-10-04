@@ -701,6 +701,11 @@ class CliTests(unittest.TestCase):
         self.assertIn("STAMINA-ECONOMY SOURCES", text)
         self.assertIn("STAMINA-ECONOMY FUNDING", text)
         self.assertIn("STAMINA-ECONOMY ZERO", text)
+        self.assertIn("STAMINA-RULE PRECHANGE DEFENDER DRAIN", text)
+        for letter in "ABCDEFGHI":
+            self.assertIn(f"STAMINA-RULE GATE {letter} [", text)
+        self.assertIn("STAMINA-RULE PREDICTION — P1", text)
+        self.assertIn("STAMINA-RULE PREDICTION — P6", text)
         self.assertIn("not a gameplay-health verdict", text)
         self.assertIn("V0.4a PREDICTION PROBE", text)
         self.assertIn("V0.3b PREDICTION PROBE", text)

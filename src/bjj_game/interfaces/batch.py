@@ -881,6 +881,7 @@ def run_escape_first_batch(
     enable_v03b_stalling: bool = False,
     enable_v04_commitment_semantics: bool = False,
     enable_v04b_recognition: bool = False,
+    enable_stamina_settlement_rules: bool = False,
     measure_stamina_economy: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
@@ -891,6 +892,10 @@ def run_escape_first_batch(
         raise ValueError("v0.3b stalling requires v0.3a submissions")
     if enable_v04b_recognition and not enable_v04_commitment_semantics:
         raise ValueError("v0.4b Recognition requires v0.4a commitment semantics")
+    if enable_stamina_settlement_rules and not enable_v04_commitment_semantics:
+        raise ValueError(
+            "stamina settlement rules require v0.4a commitment semantics"
+        )
     if (
         response_commitment_mode in {
             BatchResponseCommitmentMode.RECOGNITION,
@@ -985,6 +990,7 @@ def run_escape_first_batch(
             enable_v03b_stalling=enable_v03b_stalling,
             enable_v04_commitment_semantics=enable_v04_commitment_semantics,
             enable_v04b_recognition=enable_v04b_recognition,
+            enable_stamina_settlement_rules=enable_stamina_settlement_rules,
         )
         match.top.stamina.set_current(top_stamina)
         match.bottom.stamina.set_current(bottom_stamina)

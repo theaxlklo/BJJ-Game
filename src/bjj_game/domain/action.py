@@ -51,6 +51,10 @@ class AttemptResult:
     response_effective_cost: int
     response_funding_gap: int
     response_stamina: StaminaSpend | None
+    response_stamina_waived: int
+    submission_hold_nominal_cost: int
+    submission_hold_covered_by_response: int
+    submission_hold_stamina: StaminaSpend | None
     stamina_band_before_action: StaminaBand
     responder_stamina_band_before_action: StaminaBand
     initiator_exhaustion_modifier: int

@@ -80,6 +80,7 @@ class MountMatch:
     enable_v03b_stalling: bool = False
     enable_v04_commitment_semantics: bool = False
     enable_v04b_recognition: bool = False
+    enable_stamina_settlement_rules: bool = False
     recognition_policy: CommitmentRecognitionPolicy = field(
         default_factory=lambda: DEFAULT_COMMITMENT_RECOGNITION_POLICY,
         repr=False,
@@ -116,6 +117,10 @@ class MountMatch:
             raise ValueError("v0.3b stalling requires v0.3a submissions")
         if self.enable_v04b_recognition and not self.enable_v04_commitment_semantics:
             raise ValueError("v0.4b Recognition requires v0.4a commitment semantics")
+        if self.enable_stamina_settlement_rules and not self.enable_v04_commitment_semantics:
+            raise ValueError(
+                "stamina settlement rules require v0.4a commitment semantics"
+            )
         self.clock_seconds = self.initial_clock
         self.position = MountPosition.from_axis(self.starting_axis)
         self.initial_band = self.position.control.band
@@ -1419,11 +1424,21 @@ class MountMatch:
 
         # Current exchange semantics are fixed before costs are charged.
         spend = pool.spend_up_to(effective_cost)
-        response_spend = (
-            responder_pool.spend_up_to(response_effective_cost)
-            if self.enable_v04_commitment_semantics
-            else None
-        )
+
+        response_stamina_waived = 0
+        if self.enable_v04_commitment_semantics:
+            if (
+                self.enable_stamina_settlement_rules
+                and effective_commitment is None
+            ):
+                response_stamina_waived = response_effective_cost
+                response_spend = responder_pool.spend_up_to(0)
+            else:
+                response_spend = responder_pool.spend_up_to(
+                    response_effective_cost
+                )
+        else:
+            response_spend = None
 
         submission_hold = (
             action_id == TOP_AMERICANA_SUBMISSION_FINISH
@@ -1434,14 +1449,47 @@ class MountMatch:
             and target_was_ready
             and result.final_grade is Grade.CONTESTED
         )
+        hold_nominal_cost = 0
+        hold_covered_by_response = 0
+        hold_spend = None
         if submission_hold:
-            hold_cost = self.stamina_cost_policy.cost(Commitment.LOW)
-            hold_spend = responder_pool.spend_up_to(hold_cost)
+            hold_nominal_cost = self.stamina_cost_policy.cost(Commitment.LOW)
+            if self.enable_stamina_settlement_rules:
+                if effective_commitment is None:
+                    # Rule 1: an UNFUNDED initiator cannot extract responder
+                    # stamina through either response commitment or hold.
+                    hold_request = 0
+                else:
+                    # Rule 2: response commitment covers the first 3 points
+                    # of the provisional hold burden.
+                    response_charged = (
+                        response_spend.charged
+                        if response_spend is not None
+                        else 0
+                    )
+                    hold_covered_by_response = min(
+                        hold_nominal_cost,
+                        response_charged,
+                    )
+                    hold_request = max(
+                        0,
+                        hold_nominal_cost - response_charged,
+                    )
+            else:
+                hold_request = hold_nominal_cost
+
+            hold_spend = responder_pool.spend_up_to(hold_request)
             self.history.submission_hold_responder_side_history.append(
                 initiator.opponent.value
             )
+            self.history.submission_hold_nominal_stamina_history.append(
+                hold_nominal_cost
+            )
+            self.history.submission_hold_covered_by_response_history.append(
+                hold_covered_by_response
+            )
             self.history.submission_hold_stamina_requested_history.append(
-                hold_cost
+                hold_request
             )
             self.history.submission_hold_stamina_charged_history.append(
                 hold_spend.charged
@@ -1483,6 +1531,9 @@ class MountMatch:
             )
             self.history.response_stamina_funding_gap_history.append(
                 response_funding_gap
+            )
+            self.history.response_stamina_waived_history.append(
+                response_stamina_waived
             )
             self.history.initiator_commitment_modifier_history.append(
                 commitment_modifier
@@ -1541,6 +1592,10 @@ class MountMatch:
             response_effective_cost=response_effective_cost,
             response_funding_gap=response_funding_gap,
             response_stamina=response_spend,
+            response_stamina_waived=response_stamina_waived,
+            submission_hold_nominal_cost=hold_nominal_cost,
+            submission_hold_covered_by_response=hold_covered_by_response,
+            submission_hold_stamina=hold_spend,
             stamina_band_before_action=stamina_band_before_action,
             responder_stamina_band_before_action=(
                 responder_stamina_band_before_action

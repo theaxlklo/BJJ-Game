@@ -7,7 +7,11 @@ from functools import lru_cache
 from statistics import median, quantiles
 
 from ..domain.action import Commitment
-from ..domain.model import BottomBehavior, ExitDestination, TopBehavior
+from ..domain.model import BottomBehavior, ExitDestination, Side, TopBehavior
+from ..positions.mount.catalog import (
+    TOP_AMERICANA_ARM_ISOLATION,
+    TOP_AMERICANA_SUBMISSION_FINISH,
+)
 from ..interfaces.batch import (
     BatchBehaviorMode,
     BatchResponderMode,
@@ -46,6 +50,28 @@ class StaminaMeasurementGate:
 class StaminaEconomySurface:
     label: str
     summary: BatchSummary
+
+
+@dataclass(frozen=True, slots=True)
+class DefenderDrainObservation:
+    surface_label: str
+    selector: str
+    initiator_side: Side
+    exchange_count: int
+    response_charged: int
+    hold_charged: int
+    total_charged: int
+    by_state: tuple[tuple[str, int], ...]
+    by_action: tuple[tuple[str, int], ...]
+    submission_charged: int
+    non_submission_charged: int
+    responder_behavior_recovery: int | None = None
+
+    @property
+    def recovery_share(self) -> float | None:
+        if not self.responder_behavior_recovery:
+            return None
+        return self.total_charged / self.responder_behavior_recovery
 
 
 _SURFACE_ORDER = (
@@ -502,6 +528,121 @@ def _surface_funding_line(surface: StaminaEconomySurface) -> str:
     )
 
 
+def _drain_observation(
+    surface: StaminaEconomySurface,
+    *,
+    initiator_side: Side,
+    selector: str,
+) -> DefenderDrainObservation:
+    measurement = _measurement(surface)
+    if selector == "exact-zero":
+        rows = [
+            row
+            for row in measurement.exchanges
+            if row.initiator is initiator_side and row.initiator_stamina == 0
+        ]
+    elif selector == "true-UNFUNDED":
+        rows = [
+            row
+            for row in measurement.exchanges
+            if row.initiator is initiator_side
+            and row.initiator_effective_commitment == "UNFUNDED"
+        ]
+    else:
+        raise ValueError(f"unknown defender-drain selector: {selector}")
+
+    def spend(row) -> int:
+        return row.response_commitment_charged + row.hold_charged
+
+    by_state = Counter()
+    by_action = Counter()
+    submission_charged = 0
+    non_submission_charged = 0
+    submission_action_ids = {
+        TOP_AMERICANA_ARM_ISOLATION,
+        TOP_AMERICANA_SUBMISSION_FINISH,
+    }
+    for row in rows:
+        charged = spend(row)
+        by_state[row.state.value] += charged
+        by_action[row.action_id] += charged
+        if row.action_id in submission_action_ids:
+            submission_charged += charged
+        else:
+            non_submission_charged += charged
+
+    responder_side = initiator_side.opponent
+    responder_behavior_recovery = sum(
+        (
+            record.top_sources.behavior_recovery
+            if responder_side is Side.TOP
+            else record.bottom_sources.behavior_recovery
+        )
+        for record in measurement.matches
+    )
+    return DefenderDrainObservation(
+        surface_label=surface.label,
+        selector=selector,
+        initiator_side=initiator_side,
+        exchange_count=len(rows),
+        response_charged=sum(row.response_commitment_charged for row in rows),
+        hold_charged=sum(row.hold_charged for row in rows),
+        total_charged=sum(spend(row) for row in rows),
+        by_state=tuple(sorted(by_state.items())),
+        by_action=tuple(sorted(by_action.items())),
+        submission_charged=submission_charged,
+        non_submission_charged=non_submission_charged,
+        responder_behavior_recovery=responder_behavior_recovery,
+    )
+
+
+@lru_cache(maxsize=1)
+def prechange_defender_drain_observations() -> tuple[DefenderDrainObservation, ...]:
+    surfaces = measured_surfaces()
+    observations: list[DefenderDrainObservation] = []
+    for surface in surfaces:
+        for initiator_side in (Side.TOP, Side.BOTTOM):
+            observations.append(
+                _drain_observation(
+                    surface,
+                    initiator_side=initiator_side,
+                    selector="exact-zero",
+                )
+            )
+            observations.append(
+                _drain_observation(
+                    surface,
+                    initiator_side=initiator_side,
+                    selector="true-UNFUNDED",
+                )
+            )
+    return tuple(observations)
+
+
+def _render_defender_drain_observation(
+    observation: DefenderDrainObservation,
+) -> str:
+    recovery = observation.responder_behavior_recovery
+    share = observation.recovery_share
+    return (
+        f"{observation.surface_label}: selector={observation.selector}, "
+        f"initiator={observation.initiator_side.value}, "
+        f"exchanges={observation.exchange_count}, "
+        f"response/hold/total="
+        f"{observation.response_charged}/"
+        f"{observation.hold_charged}/"
+        f"{observation.total_charged}, "
+        f"by-state={dict(observation.by_state)}, "
+        f"by-action={dict(observation.by_action)}, "
+        f"submission/non-submission="
+        f"{observation.submission_charged}/"
+        f"{observation.non_submission_charged}, "
+        f"responder behavior recovery={recovery}, "
+        f"drain/recovery="
+        f"{'n/a' if share is None else f'{share:.4f}'}"
+    )
+
+
 def _surface_zero_attack_line(surface: StaminaEconomySurface) -> str:
     rows = [
         row
@@ -782,5 +923,10 @@ def render_stamina_economy_measurement() -> tuple[str, ...]:
     lines.extend(
         "STAMINA-ECONOMY ZERO — " + _surface_zero_attack_line(s)
         for s in surfaces
+    )
+    lines.extend(
+        "STAMINA-RULE PRECHANGE DEFENDER DRAIN — "
+        + _render_defender_drain_observation(observation)
+        for observation in prechange_defender_drain_observations()
     )
     return tuple(lines)

@@ -4,6 +4,7 @@ from bjj_game.diagnostics.stamina_economy import (
     StaminaMeasurementGateStatus,
     measure_stamina_economy_definition_of_done,
     measured_surfaces,
+    prechange_defender_drain_observations,
     unmeasured_surfaces,
 )
 from bjj_game.interfaces.batch import BatchBehaviorMode
@@ -165,6 +166,53 @@ class StaminaEconomyMeasurementTests(unittest.TestCase):
                 row.initiator_effective_commitment == "UNFUNDED"
                 and row.initiator_effective_cost == 0
                 for row in zero_rows
+            )
+        )
+
+    def test_prechange_zero_attack_defender_drain_matches_review_evidence(self):
+        observations = {
+            (
+                observation.surface_label,
+                observation.selector,
+                observation.initiator_side.value,
+            ): observation
+            for observation in prechange_defender_drain_observations()
+        }
+
+        surface_b_top = observations[("B trusts reads", "exact-zero", "top")]
+        surface_b_bottom = observations[
+            ("B trusts reads", "exact-zero", "bottom")
+        ]
+        self.assertEqual(surface_b_top.response_charged, 24)
+        self.assertEqual(surface_b_top.hold_charged, 5)
+        self.assertEqual(surface_b_top.total_charged, 29)
+        self.assertEqual(surface_b_bottom.response_charged, 66)
+        self.assertEqual(surface_b_bottom.hold_charged, 0)
+        self.assertEqual(surface_b_bottom.total_charged, 66)
+        self.assertEqual(
+            surface_b_top.total_charged + surface_b_bottom.total_charged,
+            95,
+        )
+
+        surface_e = observations[
+            ("E trusts reads + Bottom RECOVER", "exact-zero", "top")
+        ]
+        self.assertEqual(surface_e.exchange_count, 1949)
+        self.assertEqual(surface_e.response_charged, 5010)
+        self.assertEqual(surface_e.hold_charged, 1192)
+        self.assertEqual(surface_e.total_charged, 6202)
+        self.assertEqual(surface_e.responder_behavior_recovery, 8658)
+        self.assertAlmostEqual(surface_e.recovery_share, 6202 / 8658)
+
+    def test_prechange_semantic_unfunded_metric_is_separate(self):
+        observations = prechange_defender_drain_observations()
+        selectors = {observation.selector for observation in observations}
+        self.assertEqual(selectors, {"exact-zero", "true-UNFUNDED"})
+        self.assertTrue(
+            any(
+                observation.selector == "true-UNFUNDED"
+                and observation.exchange_count > 0
+                for observation in observations
             )
         )
 
