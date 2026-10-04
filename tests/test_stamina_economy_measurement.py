@@ -183,13 +183,23 @@ class StaminaEconomyMeasurementTests(unittest.TestCase):
         surface_b_bottom = observations[
             ("B trusts reads", "exact-zero", "bottom")
         ]
-        self.assertGreaterEqual(surface_b_top.total_charged, 0)
-        self.assertGreaterEqual(surface_b_bottom.total_charged, 0)
+        self.assertEqual(surface_b_top.response_charged, 24)
+        self.assertEqual(surface_b_top.hold_charged, 5)
+        self.assertEqual(surface_b_top.total_charged, 29)
+        self.assertEqual(surface_b_bottom.response_charged, 66)
+        self.assertEqual(surface_b_bottom.hold_charged, 0)
+        self.assertEqual(surface_b_bottom.total_charged, 66)
+        self.assertEqual(
+            surface_b_top.total_charged + surface_b_bottom.total_charged,
+            95,
+        )
 
         surface_e = observations[
             ("E trusts reads + Bottom RECOVER", "exact-zero", "top")
         ]
         self.assertEqual(surface_e.exchange_count, 1949)
+        self.assertEqual(surface_e.response_charged, 5010)
+        self.assertEqual(surface_e.hold_charged, 1192)
         self.assertEqual(surface_e.total_charged, 6202)
         self.assertEqual(surface_e.responder_behavior_recovery, 8658)
         self.assertAlmostEqual(surface_e.recovery_share, 6202 / 8658)
