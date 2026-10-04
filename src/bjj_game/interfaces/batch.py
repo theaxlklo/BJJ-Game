@@ -882,6 +882,8 @@ def run_escape_first_batch(
     enable_v04_commitment_semantics: bool = False,
     enable_v04b_recognition: bool = False,
     enable_stamina_settlement_rules: bool = False,
+    enable_unfunded_responder_cost_waiver: bool = False,
+    enable_supplemental_hold_settlement: bool = False,
     measure_stamina_economy: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
@@ -892,7 +894,11 @@ def run_escape_first_batch(
         raise ValueError("v0.3b stalling requires v0.3a submissions")
     if enable_v04b_recognition and not enable_v04_commitment_semantics:
         raise ValueError("v0.4b Recognition requires v0.4a commitment semantics")
-    if enable_stamina_settlement_rules and not enable_v04_commitment_semantics:
+    if (
+        enable_stamina_settlement_rules
+        or enable_unfunded_responder_cost_waiver
+        or enable_supplemental_hold_settlement
+    ) and not enable_v04_commitment_semantics:
         raise ValueError(
             "stamina settlement rules require v0.4a commitment semantics"
         )
@@ -991,6 +997,12 @@ def run_escape_first_batch(
             enable_v04_commitment_semantics=enable_v04_commitment_semantics,
             enable_v04b_recognition=enable_v04b_recognition,
             enable_stamina_settlement_rules=enable_stamina_settlement_rules,
+            enable_unfunded_responder_cost_waiver=(
+                enable_unfunded_responder_cost_waiver
+            ),
+            enable_supplemental_hold_settlement=(
+                enable_supplemental_hold_settlement
+            ),
         )
         match.top.stamina.set_current(top_stamina)
         match.bottom.stamina.set_current(bottom_stamina)
