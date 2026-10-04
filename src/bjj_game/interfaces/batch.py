@@ -592,6 +592,158 @@ class EscapeFirstInitiatorPolicy:
         )
 
 
+class HandoffEpisodeStatus(str, Enum):
+    REEXHAUSTED_WITHIN_HORIZON = "reexhausted-within-horizon"
+    SURVIVED_THROUGH_HORIZON = "survived-through-horizon"
+    RIGHT_CENSORED = "right-censored"
+
+
+@dataclass(frozen=True, slots=True)
+class ReExhaustionHandoffEpisode:
+    match_index: int
+    clear_elapsed_seconds: int
+    reexhausted_elapsed_seconds: int | None
+    match_end_elapsed_seconds: int
+
+    def __post_init__(self) -> None:
+        if self.clear_elapsed_seconds < 0:
+            raise ValueError("clear_elapsed_seconds must be >= 0")
+        if self.match_end_elapsed_seconds < self.clear_elapsed_seconds:
+            raise ValueError("match end cannot precede clear")
+        if (
+            self.reexhausted_elapsed_seconds is not None
+            and self.reexhausted_elapsed_seconds < self.clear_elapsed_seconds
+        ):
+            raise ValueError("re-exhaustion cannot precede clear")
+        if (
+            self.reexhausted_elapsed_seconds is not None
+            and self.reexhausted_elapsed_seconds > self.match_end_elapsed_seconds
+        ):
+            raise ValueError("re-exhaustion cannot occur after match end")
+
+    @property
+    def seconds_to_reexhaustion(self) -> int | None:
+        if self.reexhausted_elapsed_seconds is None:
+            return None
+        return self.reexhausted_elapsed_seconds - self.clear_elapsed_seconds
+
+    def status_at(self, horizon_seconds: int) -> HandoffEpisodeStatus:
+        if horizon_seconds <= 0:
+            raise ValueError("horizon_seconds must be > 0")
+
+        seconds_to_reexhaustion = self.seconds_to_reexhaustion
+        if (
+            seconds_to_reexhaustion is not None
+            and seconds_to_reexhaustion <= horizon_seconds
+        ):
+            return HandoffEpisodeStatus.REEXHAUSTED_WITHIN_HORIZON
+
+        observed_seconds = (
+            self.match_end_elapsed_seconds - self.clear_elapsed_seconds
+        )
+        if observed_seconds >= horizon_seconds:
+            return HandoffEpisodeStatus.SURVIVED_THROUGH_HORIZON
+        return HandoffEpisodeStatus.RIGHT_CENSORED
+
+
+@dataclass(frozen=True, slots=True)
+class ReExhaustionHandoffMeasurement:
+    episodes: tuple[ReExhaustionHandoffEpisode, ...]
+
+
+class ReExhaustionHandoffObserver:
+    """Read-only Bottom Exhausted clear/re-exhaustion episode observer."""
+
+    def __init__(self) -> None:
+        self._episodes: list[ReExhaustionHandoffEpisode] = []
+        self._match_index: int | None = None
+        self._previous_exhausted: bool | None = None
+        self._current_episodes: list[list[int | None]] = []
+        self._last_elapsed_seconds: int | None = None
+
+    def start_match(
+        self,
+        *,
+        match_index: int,
+        elapsed_seconds: int,
+        bottom_exhausted: bool,
+    ) -> None:
+        if self._match_index is not None:
+            raise RuntimeError("re-exhaustion handoff match already active")
+        if elapsed_seconds < 0:
+            raise ValueError("elapsed_seconds must be >= 0")
+        self._match_index = match_index
+        self._previous_exhausted = bottom_exhausted
+        self._current_episodes = []
+        self._last_elapsed_seconds = elapsed_seconds
+
+    def observe(
+        self,
+        *,
+        elapsed_seconds: int,
+        bottom_exhausted: bool,
+    ) -> None:
+        if self._match_index is None or self._previous_exhausted is None:
+            raise RuntimeError("re-exhaustion handoff match is not active")
+        if (
+            self._last_elapsed_seconds is not None
+            and elapsed_seconds < self._last_elapsed_seconds
+        ):
+            raise ValueError("observer time cannot move backwards")
+
+        if self._previous_exhausted and not bottom_exhausted:
+            self._current_episodes.append([elapsed_seconds, None])
+        elif (
+            not self._previous_exhausted
+            and bottom_exhausted
+            and self._current_episodes
+            and self._current_episodes[-1][1] is None
+        ):
+            self._current_episodes[-1][1] = elapsed_seconds
+
+        self._previous_exhausted = bottom_exhausted
+        self._last_elapsed_seconds = elapsed_seconds
+
+    def finish_match(
+        self,
+        *,
+        elapsed_seconds: int,
+        bottom_exhausted: bool,
+    ) -> None:
+        if self._match_index is None:
+            raise RuntimeError("re-exhaustion handoff match is not active")
+
+        self.observe(
+            elapsed_seconds=elapsed_seconds,
+            bottom_exhausted=bottom_exhausted,
+        )
+        match_index = self._match_index
+        for clear_elapsed, reexhausted_elapsed in self._current_episodes:
+            if clear_elapsed is None:
+                raise RuntimeError("handoff episode missing clear timestamp")
+            self._episodes.append(
+                ReExhaustionHandoffEpisode(
+                    match_index=match_index,
+                    clear_elapsed_seconds=clear_elapsed,
+                    reexhausted_elapsed_seconds=reexhausted_elapsed,
+                    match_end_elapsed_seconds=elapsed_seconds,
+                )
+            )
+
+        self._match_index = None
+        self._previous_exhausted = None
+        self._current_episodes = []
+        self._last_elapsed_seconds = None
+
+    def measurement(self) -> ReExhaustionHandoffMeasurement:
+        if self._match_index is not None:
+            raise RuntimeError(
+                "cannot finalize re-exhaustion handoff measurement "
+                "with active match"
+            )
+        return ReExhaustionHandoffMeasurement(episodes=tuple(self._episodes))
+
+
 @dataclass(frozen=True, slots=True)
 class BatchSummary:
     matches: int
@@ -664,6 +816,7 @@ class BatchSummary:
     bottom_behavior_switch_count: int
     stamina_economy: StaminaEconomyMeasurement | None = None
     recovery_policy: RecoveryPolicyMeasurement | None = None
+    reexhaustion_handoffs: ReExhaustionHandoffMeasurement | None = None
 
     def render(self) -> str:
         ordered_outcomes = [
@@ -895,6 +1048,7 @@ def run_escape_first_batch(
     ),
     measure_stamina_economy: bool = False,
     measure_recovery_policy: bool = False,
+    measure_reexhaustion_handoffs: bool = False,
     shadow_stalling: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
@@ -958,6 +1112,11 @@ def run_escape_first_batch(
             shadow_stalling=shadow_stalling,
         )
         if measure_recovery_policy
+        else None
+    )
+    reexhaustion_handoff_observer = (
+        ReExhaustionHandoffObserver()
+        if measure_reexhaustion_handoffs
         else None
     )
 
@@ -1063,6 +1222,14 @@ def run_escape_first_batch(
                 match,
                 match_index=match_index,
             )
+        if reexhaustion_handoff_observer is not None:
+            reexhaustion_handoff_observer.start_match(
+                match_index=match_index,
+                elapsed_seconds=match.elapsed_simulated_time,
+                bottom_exhausted=(
+                    match.bottom.stamina.band is StaminaBand.EXHAUSTED
+                ),
+            )
         responder = RandomBlindResponder(base_seed + match_index)
         response_commitment_rng = random.Random(
             base_seed + match_index + 1_000_003
@@ -1140,6 +1307,14 @@ def run_escape_first_batch(
                         ),
                     )
                 record_exhaustion()
+                if reexhaustion_handoff_observer is not None:
+                    reexhaustion_handoff_observer.observe(
+                        elapsed_seconds=match.elapsed_simulated_time,
+                        bottom_exhausted=(
+                            match.bottom.stamina.band
+                            is StaminaBand.EXHAUSTED
+                        ),
+                    )
                 if match.ended:
                     break
 
@@ -1241,6 +1416,14 @@ def run_escape_first_batch(
                             and reset.penalty_axis_after != reset.penalty_axis_before
                         ):
                             bottom_stalling_penalties += 1
+                    if reexhaustion_handoff_observer is not None:
+                        reexhaustion_handoff_observer.observe(
+                            elapsed_seconds=match.elapsed_simulated_time,
+                            bottom_exhausted=(
+                                match.bottom.stamina.band
+                                is StaminaBand.EXHAUSTED
+                            ),
+                        )
                     continue
                 if enable_v04b_recognition:
                     recognition_read = match.recognize_commitment(
@@ -1462,6 +1645,13 @@ def run_escape_first_batch(
                     decision_reason=decision.reason,
                 )
             record_exhaustion()
+            if reexhaustion_handoff_observer is not None:
+                reexhaustion_handoff_observer.observe(
+                    elapsed_seconds=match.elapsed_simulated_time,
+                    bottom_exhausted=(
+                        match.bottom.stamina.band is StaminaBand.EXHAUSTED
+                    ),
+                )
 
             undercommitted = (
                 attempt_result.response_undercommitment_modifier > 0
@@ -1601,6 +1791,13 @@ def run_escape_first_batch(
                 match,
                 outcome=outcome,
             )
+        if reexhaustion_handoff_observer is not None:
+            reexhaustion_handoff_observer.finish_match(
+                elapsed_seconds=match.elapsed_simulated_time,
+                bottom_exhausted=(
+                    match.bottom.stamina.band is StaminaBand.EXHAUSTED
+                ),
+            )
         top_final.append(match.top.stamina.current)
         bottom_final.append(match.bottom.stamina.current)
         if top_first_exhausted is not None:
@@ -1710,6 +1907,11 @@ def run_escape_first_batch(
         recovery_policy=(
             recovery_policy_collector.measurement()
             if recovery_policy_collector is not None
+            else None
+        ),
+        reexhaustion_handoffs=(
+            reexhaustion_handoff_observer.measurement()
+            if reexhaustion_handoff_observer is not None
             else None
         ),
     )
