@@ -195,6 +195,118 @@ class StaminaSettlementRuleTests(unittest.TestCase):
             legacy.bottom.stamina.current,
         )
 
+    def test_explicit_settlement_flags_require_v04a(self):
+        with self.assertRaises(ValueError):
+            MountMatch(enable_unfunded_responder_cost_waiver=True)
+        with self.assertRaises(ValueError):
+            MountMatch(enable_supplemental_hold_settlement=True)
+
+    def test_explicit_both_matches_umbrella_for_unfunded_hold(self):
+        def run(*, umbrella=False, rule1=False, rule2=False):
+            match = MountMatch(
+                starting_axis=4.0,
+                enable_v02_setup=True,
+                enable_v03_submissions=True,
+                enable_v04_commitment_semantics=True,
+                enable_stamina_settlement_rules=umbrella,
+                enable_unfunded_responder_cost_waiver=rule1,
+                enable_supplemental_hold_settlement=rule2,
+            )
+            match.top.stamina.set_current(0)
+            match.bottom.stamina.set_current(20)
+            match.initiator = Side.TOP
+            match.submission_state.stage = SubmissionStage.THREAT
+            result = match.attempt(
+                action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+                response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+                commitment=Commitment.LOW,
+                response_commitment=Commitment.HIGH,
+            )
+            return (
+                result.resolution,
+                result.response_stamina.charged,
+                result.response_stamina_waived,
+                result.submission_hold_stamina.requested,
+                result.submission_hold_stamina.charged,
+                match.bottom.stamina.current,
+            )
+
+        self.assertEqual(
+            run(umbrella=True),
+            run(rule1=True, rule2=True),
+        )
+
+    def test_rule_one_only_does_not_enable_rule_two(self):
+        match = MountMatch(
+            starting_axis=4.0,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v04_commitment_semantics=True,
+            enable_unfunded_responder_cost_waiver=True,
+        )
+        match.top.stamina.set_current(20)
+        match.bottom.stamina.set_current(20)
+        match.initiator = Side.TOP
+        match.submission_state.stage = SubmissionStage.THREAT
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+            response_commitment=Commitment.LOW,
+        )
+        self.assertEqual(result.response_stamina.charged, 3)
+        self.assertEqual(result.submission_hold_covered_by_response, 0)
+        self.assertEqual(result.submission_hold_stamina.requested, 3)
+        self.assertEqual(result.submission_hold_stamina.charged, 3)
+
+    def test_rule_two_only_does_not_enable_rule_one(self):
+        match = MountMatch(
+            starting_axis=4.0,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v04_commitment_semantics=True,
+            enable_supplemental_hold_settlement=True,
+        )
+        match.top.stamina.set_current(0)
+        match.bottom.stamina.set_current(20)
+        match.initiator = Side.TOP
+        match.submission_state.stage = SubmissionStage.THREAT
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+            response_commitment=Commitment.HIGH,
+        )
+        self.assertIsNone(result.attempt.effective_commitment)
+        self.assertEqual(result.response_stamina_waived, 0)
+        self.assertEqual(result.response_stamina.charged, 12)
+        self.assertEqual(result.submission_hold_covered_by_response, 0)
+        self.assertEqual(result.submission_hold_stamina.requested, 3)
+        self.assertEqual(result.submission_hold_stamina.charged, 3)
+
+    def test_rule_two_only_covers_funded_hold(self):
+        match = MountMatch(
+            starting_axis=4.0,
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v04_commitment_semantics=True,
+            enable_supplemental_hold_settlement=True,
+        )
+        match.top.stamina.set_current(20)
+        match.bottom.stamina.set_current(20)
+        match.initiator = Side.TOP
+        match.submission_state.stage = SubmissionStage.THREAT
+        result = match.attempt(
+            action_id=TOP_AMERICANA_SUBMISSION_FINISH,
+            response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
+            commitment=Commitment.LOW,
+            response_commitment=Commitment.LOW,
+        )
+        self.assertEqual(result.response_stamina.charged, 3)
+        self.assertEqual(result.submission_hold_covered_by_response, 3)
+        self.assertEqual(result.submission_hold_stamina.requested, 0)
+        self.assertEqual(result.submission_hold_stamina.charged, 0)
+
     def test_unfunded_equality_is_unchanged(self):
         self.assertEqual(
             MountMatch._response_undercommitment_modifier(
