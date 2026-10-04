@@ -316,33 +316,52 @@ If and only if the user authorizes this committed DoD, implementation has **two 
 ```text
 1. add read-only LOW->MEDIUM handoff / re-exhaustion instrumentation only
 
-2. do NOT add or run the Rule1-only + LOW production candidate yet
+2. before using any new handoff data, prove the instrumentation is inert:
+   - the full existing suite still passes with the current baseline count
+     of 344 tests or more;
+   - the frozen digest remains exact;
+   - historical deterministic outcomes remain unchanged;
+   - existing recovery-policy OFF/ON gameplay identity remains unchanged
+     on the previously matched candidate surfaces;
+   - observer enabled vs disabled yields identical gameplay state/outcomes
+     on matched seeds
 
-3. run the historical LOW+BOTH recovery surface on the same 100 seeds
+3. if any inertness check fails:
+     STOP
+     fix instrumentation only
+     do not run or interpret the handoff baseline
+
+4. do NOT add or run the Rule1-only + LOW production candidate yet
+
+5. run the historical LOW+BOTH recovery surface on the same 100 seeds
    and measure re-exhaustion after every Exhausted-latch clear
 
-4. also run CURRENT+Rule1-only as a control and report that it has
+6. also run CURRENT+Rule1-only as a control and report that it has
    no usable re-exhaustion denominator if latch clears remain zero
 
-5. record cumulative re-exhaustion after:
+7. record cumulative re-exhaustion after:
    1 tick  = 5 s
    2 ticks = 10 s
    3 ticks = 15 s
    4 ticks = 20 s
    plus median/percentiles for time-to-re-exhaustion when observed
 
-6. create:
+8. create:
    docs/STAMINA_PRODUCTION_POLICY_ADOPTION_PREREGISTRATION.md
 
-7. copy A1-A10 into that document unchanged except A9, which must now
-   freeze one explicit N-tick horizon and one explicit X% threshold
-   using the measured historical LOW+BOTH handoff baseline
+9. copy A1-A10 into that document unchanged except A9, which must now
+   freeze:
+   - one explicit N-tick horizon;
+   - one explicit X% maximum rapid re-exhaustion threshold;
+   - one minimum usable uncensored clear-event count;
+   - one explicit statistical / margin rule for judging the threshold;
+   using only the historical LOW+BOTH handoff baseline
 
-8. commit the preregistration document
+10. commit the preregistration document
 
-9. HARD STOP again
+11. HARD STOP again
 
-10. user reviews the frozen A9 threshold and explicitly authorizes
+12. user reviews the frozen A9 numbers and explicitly authorizes
     the actual production-candidate run
 ```
 
@@ -361,43 +380,43 @@ The A9 threshold must be frozen **before** Rule1-only + LOW is run.
 Only after the second authorization:
 
 ```text
-11. add a PROPOSED-PRODUCTION diagnostic configuration only
+13. add a PROPOSED-PRODUCTION diagnostic configuration only
     Rule1 ON
     Rule2 OFF
     LOW_WHILE_EXHAUSTED
 
-12. do NOT change any default yet
+14. do NOT change any default yet
 
-13. run the exact production-candidate measurements below
+15. run the exact production-candidate measurements below
 
-14. score A1-A10 as CONFIRMED / PARTIAL / NOT CONFIRMED
+16. score A1-A10 as CONFIRMED / PARTIAL / NOT CONFIRMED
 
-15. record first untuned production-candidate evidence
+17. record first untuned production-candidate evidence
 
-16. evaluate Gates A-H
+18. evaluate Gates A-H, including the preregistered A9 criterion
 
-17. if any adoption gate is OPEN:
+19. if any adoption gate is OPEN:
       record it
       do not promote defaults/config
       do not tune
       write a separate amendment if needed
 
-18. only if adoption gates pass:
+20. only if adoption gates pass:
       add the canonical production stamina/recovery entry point
       selecting Rule1 ON / Rule2 OFF / LOW recovery
 
-19. prove canonical production output is identical to
+21. prove canonical production output is identical to
     the already-measured proposed-production diagnostic
 
-20. run full regression / digest / checker suite
+22. run full regression / digest / checker suite
 
-21. record adoption verification
+23. record adoption verification
 
-22. open/update PR
+24. open/update PR
 
-23. HARD STOP for user review
+25. HARD STOP for user review
 
-24. no merge without explicit authorization
+26. no merge without explicit authorization
 ```
 
 The candidate is measured **before** it becomes canonical production behavior, and the re-exhaustion threshold is preregistered before the candidate is measured.
@@ -602,11 +621,24 @@ clear events surviving non-Exhausted through match end
 
 The final preregistered A9 threshold from
 `STAMINA_PRODUCTION_POLICY_ADOPTION_PREREGISTRATION.md`
-is observational, not an additional Gate-C pass criterion unless the user explicitly amends this DoD before the candidate run.
+**is part of Gate C**.
 
-A severe clear-then-relapse loop can therefore be visible even if the minimal Gate-C condition passes.
+After Stage 1 freezes `N`, `X`, the minimum usable uncensored clear count, and the margin rule, Gate C also requires:
 
-If any of the three remain zero:
+```text
+usable uncensored clear-event count >= preregistered minimum
+
+and
+
+rapid re-exhaustion at the preregistered N horizon
+satisfies the preregistered X / margin rule
+```
+
+This makes the LOW -> MEDIUM handoff a production-adoption criterion rather than a prose-only observation.
+
+If the candidate clears Exhausted frequently but then re-enters Exhausted too quickly, Gate C is OPEN even though the raw latch-clear count is positive.
+
+If any of the three minimal recovery transitions remain zero:
 
 ```text
 Gate C = OPEN
@@ -814,6 +846,63 @@ Do not in this slice:
 
 ---
 
+# Stage-1 instrumentation inertness requirement
+
+The LOW -> MEDIUM handoff observer is read-only instrumentation.
+
+Before any Stage-1 handoff baseline is accepted, the instrumentation commit must demonstrate:
+
+```text
+existing baseline test suite:
+>=344 tests PASS on each supported CI Python lane
+
+frozen Mount enumeration digest:
+3ee55429434f8f95c592183317292d3e824768135d7834c44bae82a6c1a59ff2
+
+semantic checker:
+PASS
+
+legacy entry point:
+PASS
+```
+
+It must also prove matched observer-enabled vs observer-disabled gameplay identity for the relevant historical recovery surfaces.
+
+At minimum compare:
+
+- terminal outcome;
+- final axis;
+- final stamina;
+- setup state/history;
+- submission state/history;
+- commitment request/effective histories;
+- Recognition history;
+- recovery-policy trajectory;
+- existing shadow/real stalling OFF/ON divergence result.
+
+The previously frozen recovery-policy result:
+
+```text
+OFF/ON gameplay identical=True
+diverged matches CURRENT/RESET/LOW=0/0/0
+```
+
+must remain true unless the instrumentation itself exposes a pre-existing comparison bug.
+
+If any gameplay signature changes merely because the handoff observer is enabled:
+
+```text
+instrumentation inertness = FAIL
+-> do not use its baseline
+-> do not choose N/X/minimum/margin
+-> do not proceed to preregistration
+-> fix instrumentation only
+```
+
+No Stage-1 measurement produced by perturbing instrumentation is admissible evidence.
+
+---
+
 # Adoption-run pre-registration
 
 The following predictions are frozen **before any Rule1-only + LOW candidate run**.
@@ -1005,7 +1094,17 @@ The full Half/Open/Reversal counts must be printed.
 
 ## A9 — LOW -> MEDIUM handoff / re-exhaustion
 
-A9 tests for a clear-then-relapse loop that the existing latch-clear gates do not detect.
+**Status: adoption-gate criterion after Stage-1 preregistration.**
+
+A9 is still scored `CONFIRMED / PARTIAL / NOT CONFIRMED` as a prediction, but it also supplies a mandatory Gate-C criterion once its numeric threshold is frozen.
+
+A candidate can therefore:
+
+```text
+have >0 latch clears
+yet still fail adoption
+because the LOW -> MEDIUM handoff re-exhausts too rapidly
+```
 
 Definitions:
 
@@ -1017,10 +1116,79 @@ re-exhaustion:
 the same Bottom subsequently transitions non-Exhausted -> Exhausted
 
 time-to-re-exhaustion:
-simulated seconds from clear timestamp to the next re-exhaustion
+simulated seconds from that clear timestamp to its next re-exhaustion
 ```
 
-Stage-1 baseline must measure the historical LOW+BOTH policy on the exact same 100 seeds and report cumulative re-exhaustion within:
+Each clear event is treated as a separate handoff episode.
+
+If a later re-exhaustion is followed by another clear, that later clear begins a new episode.
+
+## Right-censoring rule
+
+The final A9 horizon is `N` ticks, frozen later in the preregistration document.
+
+For a clear event:
+
+### Observed rapid re-exhaustion
+
+If Bottom re-enters Exhausted within `N` ticks before the match ends:
+
+```text
+count as re-exhausted-within-N
+```
+
+This event is fully observed even if fewer than `N` ticks remain after the clear, because the re-exhaustion itself was seen.
+
+### Observed survival through N
+
+If Bottom remains non-Exhausted for at least the complete `N`-tick horizon:
+
+```text
+count as survived-through-N
+```
+
+### Right-censored clear
+
+If the match terminates before the full `N`-tick horizon and no re-exhaustion was observed:
+
+```text
+count as right-censored
+exclude from the within-N rate denominator
+report separately
+```
+
+A right-censored event must **never** be counted as a successful non-re-exhaustion merely because the match ended.
+
+The within-N denominator is therefore:
+
+```text
+re-exhausted-within-N
++
+survived-through-N
+```
+
+and explicitly excludes:
+
+```text
+right-censored-without-observed-re-exhaustion
+```
+
+For every surface report:
+
+- total clear events;
+- re-exhausted-within-N;
+- survived-through-N;
+- right-censored;
+- usable uncensored denominator;
+- rapid re-exhaustion rate;
+- total eventual re-exhaustions after a clear;
+- median time-to-re-exhaustion;
+- p25/p75 when defined;
+- clears remaining non-Exhausted through match end.
+
+## Stage-1 horizon sweep
+
+Before choosing `N`, the historical LOW+BOTH baseline must report cumulative re-exhaustion within:
 
 ```text
 1 tick  = 5 s
@@ -1029,19 +1197,19 @@ Stage-1 baseline must measure the historical LOW+BOTH policy on the exact same 1
 4 ticks = 20 s
 ```
 
-Also report:
+For each horizon, apply the same censoring rule independently.
 
-- total clear events;
-- total re-exhaustions after a clear;
-- median time-to-re-exhaustion;
-- p25/p75 when defined;
-- clears that remain non-Exhausted through match end.
+CURRENT+Rule1-only must also be reported as a control.
 
-CURRENT+Rule1-only must be reported as a control. If it again produces zero clears, its re-exhaustion percentage is explicitly:
+If it again produces zero clear events, report:
 
 ```text
-N/A — no clear-event denominator
+rate=N/A
+usable denominator=0
+reason=no clear events
 ```
+
+Do not fabricate a 0% rate from an empty denominator.
 
 The historical LOW+BOTH clear population is the primary handoff baseline because it previously produced:
 
@@ -1049,33 +1217,50 @@ The historical LOW+BOTH clear population is the primary handoff baseline because
 67 clears
 ```
 
-After that baseline—and before any Rule1-only + LOW run—create and commit:
+## Numbers deliberately deferred to preregistration
+
+This DoD freezes the **measurement semantics and gate status now**.
+
+It deliberately does **not** freeze the following values yet:
+
+```text
+N = rapid-re-exhaustion horizon
+
+X = maximum acceptable rapid re-exhaustion threshold
+
+minimum usable uncensored clear-event count
+
+margin / uncertainty rule used to judge X
+```
+
+Those four numeric decisions must be based only on the historical Stage-1 baseline, then committed in:
 
 ```text
 docs/STAMINA_PRODUCTION_POLICY_ADOPTION_PREREGISTRATION.md
 ```
 
-That file must freeze:
+before any Rule1-only + LOW candidate run.
 
-```text
-A9 horizon N = <explicit tick count and seconds>
-A9 maximum acceptable prediction threshold X = <explicit % of clear events>
-historical LOW+BOTH rate at N
-reason for choosing N and X
-```
+The preregistration document must state:
+
+- the selected `N` in ticks and seconds;
+- selected `X`;
+- minimum usable uncensored clear count;
+- exact margin/uncertainty rule;
+- historical LOW+BOTH rate and denominator at `N`;
+- censor count at `N`;
+- why those values were selected.
 
 Then:
 
 ```text
 HARD STOP
 -> user review
--> explicit authorization
+-> explicit second authorization
 -> only then run Rule1-only + LOW
 ```
 
-No A9 number may be selected after seeing the production candidate.
-
-A9 is scored CONFIRMED / PARTIAL / NOT CONFIRMED in the final measurement document.
+No A9 number may be selected or changed after seeing production-candidate data.
 
 ## A10 — trust-read Tap gate
 
@@ -1115,7 +1300,7 @@ It must contain:
 4. A/B/E-PROD outcome tables;
 5. Half/Open/Reversal exit split;
 6. recovery/stamina budget;
-7. LOW -> MEDIUM re-exhaustion / handoff analysis;
+7. LOW -> MEDIUM re-exhaustion / handoff analysis, including uncensored/censored counts and the preregistered N/X/minimum/margin verdict;
 8. setup interaction;
 9. shadow/real stalling comparison;
 10. canonical-production equivalence if promotion occurs;
@@ -1191,6 +1376,7 @@ Do not:
 
 - add re-exhaustion instrumentation;
 - run the historical LOW+BOTH handoff baseline;
+- choose A9 N, X, minimum usable clears, or margin rule;
 - run the Rule1-only + LOW production candidate;
 - add a canonical production configuration;
 - change any default;
