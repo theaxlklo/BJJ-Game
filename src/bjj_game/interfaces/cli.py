@@ -13,6 +13,7 @@ from ..diagnostics.checker import render_enumeration, render_exhausted_reachabil
 from ..diagnostics.stamina_economy import render_stamina_economy_measurement
 from ..diagnostics.stamina_settlement import render_stamina_rule_change
 from ..diagnostics.stamina_recovery_policy import (
+    render_recovery_candidate_matrix,
     render_recovery_policy_starting_evidence,
     render_settlement_attribution_matrix,
 )
@@ -769,6 +770,8 @@ def _dispatch(args: argparse.Namespace, *, commitment_enabled: bool = True) -> i
             for line in render_recovery_policy_starting_evidence():
                 print("INFO: " + line)
             for line in render_settlement_attribution_matrix():
+                print("INFO: " + line)
+            for line in render_recovery_candidate_matrix():
                 print("INFO: " + line)
             print("INFO: " + render_v04a_feint_funding_probe())
             print("INFO: " + render_v04a_prediction_probe())
