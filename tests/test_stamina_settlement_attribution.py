@@ -49,7 +49,20 @@ class StaminaSettlementAttributionTests(unittest.TestCase):
     def test_rule_two_only_removes_additive_funded_hold_charging(self):
         for cell in self.cells:
             if cell.mode is SettlementAttributionMode.RULE2_ONLY:
-                self.assertEqual(cell.hold_supplemental_charged, 0)
+                self.assertEqual(
+                    cell.funded_initiator_supplemental_charged,
+                    0,
+                )
+                self.assertEqual(cell.additive_double_charge_cases, 0)
+
+    def test_rule_two_only_can_retain_legacy_unfunded_initiator_hold_charge(self):
+        self.assertTrue(
+            any(
+                cell.unfunded_initiator_hold_charged > 0
+                for cell in self.cells
+                if cell.mode is SettlementAttributionMode.RULE2_ONLY
+            )
+        )
 
 
 if __name__ == "__main__":
