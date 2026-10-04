@@ -292,6 +292,16 @@ The anti-asymmetry rule therefore uses the existing semantic boundary rather tha
 
 The checker must still preserve a dedicated exactly-zero metric.
 
+### Future-design dependency — free over-commit is safe only under current semantics
+
+Under Rule 1, a responder facing an UNFUNDED initiator may still request HIGH while paying zero responder stamina.
+
+That is acceptable **only because over-committing currently provides no direct bonus beyond the existing true/effective comparison semantics**.
+
+Any future rule that rewards over-commitment, grants a defensive bonus for commitment above the attack, or otherwise makes excess requested/effective commitment beneficial must explicitly revisit Rule 1's zero-cost responder settlement.
+
+This dependency must be carried forward as design debt; it is not changed in this slice.
+
 ---
 
 ## Rule 2 — the provisional hold cost is supplemental, not additive
@@ -349,6 +359,45 @@ responder charged 0 because responder itself is UNFUNDED
 ```
 
 The hold amount becomes a **minimum hold burden**, not an additional 3 points on top of an already-funded response commitment.
+
+### Practical consequence — Rule 2 nearly eliminates separate hold charging
+
+Every funded response commitment already costs at least LOW=3.
+
+Therefore, under Rule 2:
+
+```text
+funded responder LOW / MEDIUM / HIGH
+-> supplemental hold request=0
+```
+
+A separate hold charge remains possible only when:
+
+```text
+initiator is funded
+AND
+responder true effective commitment == UNFUNDED
+```
+
+In that case the responder can have at most 0-2 stamina available, so the supplemental hold can charge at most 2.
+
+If the initiator is also UNFUNDED, Rule 1 waives even that.
+
+So this slice intentionally makes response commitment do almost all of the stamina-accounting work that the provisional hold cost was originally added to provide.
+
+That is not treated as an accidental side effect; it is part of the reviewed design.
+
+Because the provisional hold was introduced to keep an informed defender from making Threat effectively unreachable, the checker must separately report the post-change informed defender's:
+
+- Ready -> Threat reach count / rate;
+- total Threat entries;
+- Control entries;
+- Finish entries;
+- taps;
+
+for the frozen trust-read and public-MATCH informed surfaces.
+
+Whether Threat reach collapses back toward the old v0.3a near-zero behavior is an **observation**, not a hidden pass target. If it does, record it and review it; do not restore the additive hold charge or tune another mechanic inside this slice unless a new amendment is reviewed.
 
 ### Rule-1 precedence
 
@@ -728,7 +777,11 @@ They may not directly change:
 - escape destination;
 - Tap determination.
 
-### v0.3a competent-defender Gate B
+This gate contains **no batch outcome requirement**.
+
+---
+
+## Gate F — v0.3a competent-defender Gate B is re-measured, not tuned
 
 The frozen criterion remains exactly:
 
@@ -736,15 +789,73 @@ The frozen criterion remains exactly:
 0% < informed Tap < 50%
 ```
 
-After the stamina rule changes, the standard informed Recognition surface must still satisfy that unchanged range.
+After Rule 1 and Rule 2, rerun the standard informed Recognition surface and report the new tap count.
 
-Do not tune Recognition probabilities, policy weights, or Gate-B thresholds to make it pass.
+The exact historical value:
 
-The exact historical value `6/100` is no longer required to remain numerically identical after an authorized stamina rule change; it remains historical evidence.
+```text
+6/100
+```
+
+is historical evidence only and is not required to remain numerically identical after an authorized stamina rule change.
+
+### PASS / OPEN semantics
+
+If:
+
+```text
+0% < informed Tap < 50%
+```
+
+then Gate F is PASS.
+
+If the post-change result is:
+
+```text
+0%
+OR
+>=50%
+```
+
+then:
+
+```text
+Gate F = OPEN
+```
+
+and the result must be recorded as a regression against the frozen v0.3a criterion.
+
+Do **not** tune:
+
+- Recognition probabilities;
+- trust-read policy;
+- commitment costs;
+- stamina recovery;
+- hold settlement;
+- grade modifiers;
+- Gate-B thresholds;
+
+inside the same implementation merely to force Gate F to PASS.
+
+Instead:
+
+```text
+record the failed measurement
+-> stop rule tuning
+-> write a separate design amendment / DoD
+-> commit it
+-> HARD STOP
+-> user review
+-> only then make any corrective mechanic change
+```
+
+This is the same failure discipline as Gate D.
+
+The checker must also print the historical 6/100 value beside the new result so the regression is visible rather than silently replacing history.
 
 ---
 
-## Gate F — stamina accounting remains exact
+## Gate G — stamina accounting remains exact
 
 For every frozen surface, match, and side:
 
@@ -776,7 +887,7 @@ Do not hide waived or covered amounts inside net totals.
 
 ---
 
-## Gate G — deferred mechanics remain frozen
+## Gate H — deferred mechanics remain frozen
 
 This slice must **not** change:
 
@@ -867,7 +978,7 @@ Do not change:
 
 ---
 
-## Gate H — checker, regression, and review boundary
+## Gate I — checker, regression, and review boundary
 
 The primary semantic checker must print a named section for this rule-changing slice containing:
 
@@ -878,9 +989,10 @@ The primary semantic checker must print a named section for this rule-changing s
 5. old-vs-new hold settlement accounting;
 6. additive double-charge count;
 7. Surface-E recovery/latch-clear results;
-8. stamina-source reconciliation;
-9. v0.3a Gate-B status;
-10. frozen digest.
+8. informed Threat-reach / Threat / Control / Finish / Tap observations;
+9. stamina-source reconciliation;
+10. v0.3a Gate-B historical + post-change status, including PASS vs OPEN;
+11. frozen digest.
 
 Structured values must be available to tests; prose parsing alone is insufficient.
 
@@ -918,7 +1030,8 @@ observed gameplay distribution
 
 The following are **not** pass/fail targets in this slice:
 
-- exact tap count, provided frozen Gate B remains in range;
+- exact tap count; the only tap pass/fail rule is the separately frozen Gate-F range;
+- exact Threat / Control / Finish counts;
 - exact escape count;
 - exact timeout count;
 - final stamina median;
@@ -941,23 +1054,161 @@ If and only if the user authorizes implementation of this DoD:
 4. commit pre-change measurement document
 5. only then implement Rule 1 and Rule 2
 6. add/update unit and regression tests
-7. run all existing gates
+7. run all existing gates, including Gate F PASS/OPEN without tuning
 8. run exact frozen A-E surfaces
-9. record post-change measurement
-10. open/update PR for review
-11. HARD STOP for user review
-12. no merge without explicit authorization
+9. compare observed results against predeclared P1-P6 predictions
+10. record post-change measurement, including Threat reach and hedge comparison
+11. open/update PR for review
+12. HARD STOP for user review
+13. no merge without explicit authorization
 ```
 
 If Step 3 does not reproduce the independent review numbers, implementation stops before mechanic changes.
 
 ---
 
+# Predeclared outcome predictions
+
+These predictions are written **before any Rule-1 / Rule-2 prototype or post-change batch run**.
+
+They are directional hypotheses, not pass/fail targets, except where an existing frozen gate separately defines a requirement.
+
+Do not revise them after seeing results.
+
+## Prediction P1 — trust-read taps
+
+Baseline:
+
+```text
+Surface B trust-read taps=6/100
+```
+
+Prediction:
+
+```text
+post-change trust-read taps will decrease or stay near the low end
+of the existing range rather than increase materially
+```
+
+Reason:
+
+```text
+the defender should retain more stamina
+-> fewer tired-state under-commitment opportunities are expected
+```
+
+A drop to 0 is plausible and would make the separately defined v0.3a Gate F OPEN; it must not be tuned away automatically.
+
+## Prediction P2 — public-MATCH informed taps
+
+Baseline:
+
+```text
+Surface A public MATCH taps=0/100
+```
+
+Prediction:
+
+```text
+public-MATCH informed taps remain at or near 0
+```
+
+Reason:
+
+```text
+the current public-MATCH defender already suppresses submissions strongly;
+preserving defender stamina is not expected to create new submission conversion
+```
+
+This is observational only.
+
+## Prediction P3 — final stamina
+
+Baseline fixed surfaces:
+
+```text
+A/B/C/D median final stamina=0/0
+```
+
+Baseline Surface E:
+
+```text
+median final stamina=0/2
+```
+
+Prediction:
+
+```text
+responder final stamina will increase on at least some surfaces,
+most visibly Surface E
+```
+
+No exact median is predicted.
+
+Top/initiator final stamina is not predicted to increase from these settlement changes.
+
+## Prediction P4 — middle-window and mutual-zero occupancy
+
+Prediction:
+
+```text
+Surface E will still enter the mutually-Exhausted middle window,
+but will spend less of its later trajectory trapped there / at mutual zero,
+and will demonstrate at least one return to State 1
+```
+
+For A-D:
+
+```text
+State-2 / State-3 entry rates or duration shares may decline or be delayed
+because responder stamina is no longer drained by UNFUNDED initiators
+```
+
+No exact frequency is predicted.
+
+## Prediction P5 — hedge comparison
+
+Baseline:
+
+```text
+trusts reads: 6 taps
+hedge-one:     0 taps
+always HIGH:   0 taps
+```
+
+Prediction:
+
+```text
+hedge-one and always-HIGH will continue to be at least as submission-resistant
+as trust-read, but the size and cost of their advantage may change
+because Rule 1 removes responder stamina cost on UNFUNDED attacks for every policy
+```
+
+No exact tap, escape, spend, or stamina target is predicted.
+
+The comparison must still be printed on identical seeds.
+
+## Prediction P6 — Threat reach after hold settlement
+
+Because Rule 2 nearly abolishes a separate funded-response hold charge:
+
+```text
+Threat reach may fall relative to the current v0.4b measurement
+```
+
+The direction is uncertain enough that no pass target is frozen.
+
+In particular, if informed Threat reach collapses toward the old v0.3a near-zero behavior that originally motivated the provisional hold cost, record that result explicitly and treat it as design evidence.
+
+Do not retune inside this slice merely to restore a preferred Threat rate.
+
+---
+
 # Expected causal test
 
-This DoD does not predeclare a desired final match distribution.
+The predictions above do not predeclare a required final match distribution beyond the separately frozen gates.
 
-It does freeze the causal hypothesis being tested:
+This section freezes the causal hypothesis being tested:
 
 ```text
 CURRENT:
@@ -978,9 +1229,22 @@ funded response commitment covers the first 3 points of hold burden
 
 If Rule 1 and Rule 2 satisfy their local invariants but Surface E still has zero latch clears, Gate D remains OPEN.
 
-Do **not** then change recovery rate, thresholds, commitment costs, or Recognition inside the same implementation merely to make Gate D pass.
+If the re-measured competent-defender tap rate falls outside `0% < Tap < 50%`, Gate F remains OPEN.
 
-That failure would be new evidence requiring another reviewed design amendment.
+For either failure:
+
+```text
+record the result
+-> do not tune inside the same slice
+-> write a separate design amendment
+-> commit it
+-> HARD STOP
+-> user review
+```
+
+Do **not** change recovery rate, thresholds, commitment costs, Recognition, hold settlement, or Gate-B thresholds merely to force the failed gate to PASS.
+
+Either failure is new evidence requiring another reviewed design amendment.
 
 ---
 
