@@ -901,6 +901,167 @@ instrumentation inertness = FAIL
 
 No Stage-1 measurement produced by perturbing instrumentation is admissible evidence.
 
+## EXT-100 seed freeze must be machine-checked before baseline data
+
+This DoD freezes the candidate-only extension seed set before Stage 1.
+
+Original 100-seed convention:
+
+```text
+Surface E base_seed=42
+per-match seed=base_seed + zero-based match index
+
+original seeds=42..141
+```
+
+Frozen extension rule:
+
+```text
+take the next 100 values under the same convention
+```
+
+Therefore:
+
+```text
+EXT-100 =
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+```
+
+Canonical serialization for hashing:
+
+```text
+UTF-8 decimal integers
+one seed per line
+ascending order
+final newline included
+```
+
+Frozen SHA-256:
+
+```text
+e392180ccaed040aefb965a27acfd813725bbf1aab0482b21c19a083997a9a02
+```
+
+The Stage-1 instrumentation commit must add a mechanical regression test that, before any baseline data is accepted:
+
+1. regenerates EXT-100 from the frozen rule;
+2. asserts exactly 100 seeds;
+3. asserts all seeds are unique;
+4. asserts exact list equality with the DoD values above;
+5. serializes using the frozen canonical representation;
+6. asserts the SHA-256 above;
+7. asserts disjointness from original seeds `42..141`.
+
+If any seed-freeze assertion fails:
+
+```text
+STOP
+-> do not run or interpret Stage-1 baseline data
+-> fix the mechanical check / transcription only
+-> no alternate seed set
+```
+
+This DoD commit remains documentation-only. The machine enforcement is deliberately added with the Stage-1 observer commit and must pass its inertness CI before any baseline measurement is admissible.
+
 ---
 
 # Adoption-run pre-registration
@@ -1241,15 +1402,22 @@ docs/STAMINA_PRODUCTION_POLICY_ADOPTION_PREREGISTRATION.md
 
 before any Rule1-only + LOW candidate run.
 
-The preregistration document must state:
+The preregistration document must mechanically apply the frozen A9 selection procedure above and state:
 
-- the selected `N` in ticks and seconds;
-- selected `X`;
-- minimum usable uncensored clear count;
-- exact margin/uncertainty rule;
-- historical LOW+BOTH rate and denominator at `N`;
-- censor count at `N`;
-- why those values were selected.
+- `R(5)`, `R(10)`, `R(15)`, `R(20)`;
+- `T=R(20)`;
+- the mechanically selected `N`;
+- baseline admissible count at `N`;
+- baseline censored count at `N`;
+- unrounded baseline `p`;
+- unrounded Wilson `X` using z=1.96 and no continuity correction;
+- display-only X rounded upward to 0.01;
+- frozen `M=43`;
+- whether all baseline STOP conditions are satisfied;
+- the LOW+BOTH match-level sensitivity report;
+- the Rule1-only CURRENT control or N/A if it has zero clear events.
+
+There is no remaining analyst discretion to choose `N`, `X`, `M`, or a margin after seeing the Stage-1 data. The Stage-1 data are inputs to the formulas frozen in this DoD.
 
 Then:
 
@@ -1261,6 +1429,367 @@ HARD STOP
 ```
 
 No A9 number may be selected or changed after seeing production-candidate data.
+
+## A9 selection procedure — frozen before baseline
+
+Population:
+
+```text
+historical LOW+BOTH baseline
+100 original seeds
+```
+
+Censoring uses the already-frozen A9 rule:
+
+- observed re-exhaustions always count;
+- clears with insufficient follow-up and no observed event are excluded from that horizon's denominator;
+- censored clears are reported separately.
+
+Define for each horizon:
+
+```text
+h in {5, 10, 15, 20} seconds
+
+R(h) =
+number of observed re-exhaustions within h
+
+T = R(20)
+```
+
+### Select N
+
+```text
+N =
+smallest h in {5,10,15,20}s
+such that R(h) >= 0.80 * T
+```
+
+Selection uses the observed-event counts `R(h)`, not the censored denominators.
+
+### Baseline rate
+
+At selected `N`:
+
+```text
+p_baseline =
+re-exhaustions within N
+/
+baseline admissible clears at N
+```
+
+Compute this value unrounded.
+
+### X — fixed Wilson procedure
+
+```text
+X =
+upper bound of the 95% Wilson score interval
+for baseline p at N
+
+z = 1.96
+no continuity correction
+```
+
+For `k` rapid re-exhaustions among `n` admissible baseline clears:
+
+```text
+phat = k / n
+
+center =
+(phat + z^2/(2n)) / (1 + z^2/n)
+
+half =
+[z / (1 + z^2/n)]
+* sqrt(phat*(1-phat)/n + z^2/(4n^2))
+
+X = center + half
+```
+
+All calculation and candidate comparison use **unrounded X**.
+
+For display only:
+
+```text
+reported X =
+X rounded upward to the next 0.01
+```
+
+Display rounding must never alter the verdict.
+
+### M — minimum admissible sample size
+
+Frozen independently from the Wilson calculation:
+
+```text
+M = 43 admissible clears
+```
+
+Derivation:
+
+```text
+worst-case normal-approximation 95% half-width <= 0.15
+
+1.96 * sqrt(0.25 / n) <= 0.15
+
+n >= 42.684...
+-> M = 43
+```
+
+This normal-approximation derivation is only the fixed adequacy rule for `M`; it is not the interval used to compute `X`.
+
+### Baseline STOP conditions
+
+STOP before candidate execution, with no substitute rule, if any are true:
+
+```text
+T = R(20) < 10
+(includes T=0)
+
+no h in {5,10,15,20}s satisfies R(h) >= 0.80*T
+
+baseline admissible clears at selected N < 43
+```
+
+On STOP:
+
+```text
+do not invent another N
+do not invent another X
+do not weaken M
+do not run the Rule1-only + LOW adoption candidate
+new DoD commit required and labeled post-hoc
+```
+
+### Candidate A9 verdict
+
+Using the same frozen `N`:
+
+```text
+p_candidate =
+candidate re-exhaustions within N
+/
+candidate admissible clears at N
+```
+
+Compute unrounded.
+
+PASS requires:
+
+```text
+usable candidate admissible clears >= 43
+
+and
+
+unrounded p_candidate <= unrounded X
+```
+
+The boundary is inclusive.
+
+If the candidate has fewer than 43 admissible clears after the permitted extension procedure below:
+
+```text
+A9 = UNSCOREABLE
+Gate C = OPEN
+post-hoc DoD required
+```
+
+### Statistical limitation
+
+This is deliberately a guard against obvious oscillation regressions, not a formal equivalence or non-inferiority test.
+
+The gate compares:
+
+```text
+candidate point estimate
+vs
+baseline Wilson upper bound
+```
+
+It does not include candidate-side uncertainty in the PASS comparison.
+
+---
+
+# A9 candidate extension — frozen before Stage 1
+
+The extension exists only to make A9 scoreable when the original candidate batch has too few admissible clear episodes.
+
+The frozen seed set is the `EXT-100` list and SHA-256 already defined in the Stage-1 inertness section.
+
+## Trigger — sample adequacy only
+
+Run EXT-100 **if and only if**:
+
+```text
+original-100 Rule1-only + LOW candidate
+admissible clears at frozen N < 43
+```
+
+The trigger must never depend on:
+
+- candidate `p`;
+- whether candidate `p` is above or below `X`;
+- A2;
+- whether A9 appears likely to pass;
+- any exit/outcome result;
+- any other favorable or unfavorable measurement.
+
+Because `N` is already frozen from Stage 1, the adequacy trigger is mechanically defined before candidate execution.
+
+## Execution
+
+If triggered:
+
+```text
+run exactly one 100-seed EXT-100 batch
+using the same code commit
+and the same frozen enumerate digest
+as the original candidate run
+```
+
+No second extension is allowed.
+
+## A9 scoring only
+
+If original-100 admissible clears at `N` are at least 43:
+
+```text
+score A9 on original 100 only
+do not run EXT-100
+```
+
+If extension is triggered:
+
+```text
+pool original-100 + EXT-100 admissible clear episodes
+recompute:
+- admissible clears
+- R(N)
+- p_candidate
+```
+
+Then:
+
+```text
+PASS =
+pooled admissible clears >=43
+AND
+pooled unrounded p_candidate <= unrounded X
+```
+
+If pooled admissible clears remain below 43:
+
+```text
+A9 = UNSCOREABLE
+Gate C = OPEN
+post-hoc DoD required
+```
+
+## Isolation
+
+EXT-100 is an A9 sample-adequacy contingency only.
+
+The following remain scored exclusively on the original 100 candidate seeds:
+
+```text
+A1
+A2
+A3
+A4
+A5
+A6
+A7
+A8
+A10
+all non-A9 adoption gates and outcome summaries
+```
+
+In particular, the A2 floor of 34 total clears cannot be rescued or altered by EXT-100.
+
+---
+
+# A9 match-level sensitivity — advisory, non-gating
+
+This report exists because multiple clear episodes can come from the same match, while the authoritative Wilson procedure treats clear episodes as the gating observations.
+
+Population:
+
+- same selected `N`;
+- same admissible clear episodes used by the authoritative A9 calculation;
+- LOW+BOTH baseline always uses its baseline population;
+- if EXT-100 is triggered for the candidate, the pooled original+EXT population is used for candidate sensitivity.
+
+A match whose only clear episodes are right-censored at `N` is excluded from the match-level denominator, matching the episode-level admissibility rule.
+
+For each match with at least one admissible clear at `N`:
+
+```text
+match_reexhausted = true
+if ANY admissible clear in that match
+re-exhausts within N
+```
+
+For baseline and candidate report:
+
+```text
+episode-level:
+  admissible clears
+  R(N)
+  p_episode
+
+match-level:
+  matches with >=1 admissible clear
+  matches with >=1 rapid re-exhaustion
+  p_match
+
+gap:
+  abs(p_episode - p_match)
+```
+
+All rates and comparisons below use unrounded values.
+
+## Mandatory explanation trigger
+
+A written clustering explanation is required if **either** condition holds in either baseline or candidate:
+
+```text
+abs(p_episode - p_match) > 0.05
+```
+
+or if the candidate-vs-baseline ordering flips between levels.
+
+Ordering flip is defined exactly as:
+
+```text
+sign(p_candidate - p_baseline) at episode level
+differs from
+sign(p_candidate - p_baseline) at match level
+
+using strict inequalities
+
+equality at either level is NOT a flip
+```
+
+The ordering comparison uses unrounded values.
+
+The explanation must describe the clustering pattern and why the episode-level and match-level views differ.
+
+It may not change any preregistered rule or verdict.
+
+## Advisory only
+
+`p_match`:
+
+- cannot PASS or FAIL A9;
+- cannot alter `X`;
+- cannot alter `N`;
+- cannot trigger EXT-100;
+- cannot change Gate C;
+- cannot rescue a failed/UNSCOREABLE A9;
+- cannot authorize retuning.
+
+The episode-level Wilson procedure remains authoritative.
+
+---
 
 ## A10 — trust-read Tap gate
 
@@ -1300,13 +1829,15 @@ It must contain:
 4. A/B/E-PROD outcome tables;
 5. Half/Open/Reversal exit split;
 6. recovery/stamina budget;
-7. LOW -> MEDIUM re-exhaustion / handoff analysis, including uncensored/censored counts and the preregistered N/X/minimum/margin verdict;
-8. setup interaction;
-9. shadow/real stalling comparison;
-10. canonical-production equivalence if promotion occurs;
-11. explicit Rule 2 deferred status and named additive-hold debt;
-12. residual RESET/stalling risk;
-13. clear separation between facts and remaining design debt.
+7. LOW -> MEDIUM re-exhaustion / handoff analysis, including uncensored/censored counts and the frozen N/X/M verdict;
+8. whether EXT-100 was mechanically triggered, and if so the original-vs-extension-vs-pooled A9 counts;
+9. baseline and candidate match-level A9 sensitivity, including the >0.05 / strict-ordering-flip explanation rule;
+10. setup interaction;
+11. shadow/real stalling comparison;
+12. canonical-production equivalence if promotion occurs;
+13. explicit Rule 2 deferred status and named additive-hold debt;
+14. residual RESET/stalling risk;
+15. clear separation between facts and remaining design debt.
 
 ---
 
@@ -1376,7 +1907,8 @@ Do not:
 
 - add re-exhaustion instrumentation;
 - run the historical LOW+BOTH handoff baseline;
-- choose A9 N, X, minimum usable clears, or margin rule;
+- run the Stage-1 seed-freeze enforcement test;
+- choose or alter A9 N, X, M, or any threshold outside the frozen formulas;
 - run the Rule1-only + LOW production candidate;
 - add a canonical production configuration;
 - change any default;
