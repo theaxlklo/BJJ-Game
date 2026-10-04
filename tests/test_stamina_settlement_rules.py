@@ -1,7 +1,7 @@
 import unittest
 
 from bjj_game.domain.action import Commitment
-from bjj_game.domain.model import Grade, Side
+from bjj_game.domain.model import BottomBehavior, Grade, Side
 from bjj_game.domain.submission import SubmissionStage
 from bjj_game.engine.match import MountMatch
 from bjj_game.positions.mount.catalog import (
@@ -125,6 +125,7 @@ class StaminaSettlementRuleTests(unittest.TestCase):
 
     def test_unfunded_responder_can_pay_partial_supplemental_hold(self):
         match = self._active_hold_match(top_stamina=20, bottom_stamina=2)
+        match.set_behaviors(bottom=BottomBehavior.PROTECT)
         result = match.attempt(
             action_id=TOP_AMERICANA_SUBMISSION_FINISH,
             response_id=BOTTOM_RESPONSE_TURN_IN_RECOVERY,
