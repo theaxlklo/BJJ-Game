@@ -1528,6 +1528,14 @@ def run_escape_first_batch(
                             and reset.penalty_axis_after != reset.penalty_axis_before
                         ):
                             bottom_stalling_penalties += 1
+                    if reexhaustion_handoff_observer is not None:
+                        reexhaustion_handoff_observer.observe(
+                            elapsed_seconds=match.elapsed_simulated_time,
+                            bottom_exhausted=(
+                                match.bottom.stamina.band
+                                is StaminaBand.EXHAUSTED
+                            ),
+                        )
                     continue
                 if enable_v04b_recognition:
                     recognition_read = match.recognize_commitment(
