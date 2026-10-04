@@ -120,7 +120,7 @@ It must **not** answer that question by changing:
 - matchup grades;
 - submission transition grades;
 - setup mechanics;
-- stalling rules.
+- stalling rules or offense thresholds/consequences.
 
 The amendment is about **attribution and policy**, not stamina tuning.
 
@@ -139,12 +139,15 @@ If and only if the user authorizes this DoD:
 6. prove legacy-off and both-on equivalence
 7. measure NONE / Rule1-only / Rule2-only / BOTH
 8. add batch-only recovery-initiation candidate modes
-9. measure CURRENT / RESET-WHILE-EXHAUSTED / LOW-WHILE-EXHAUSTED
-10. run all gates and predictions
-11. record first untuned measurement
-12. open/update PR
-13. HARD STOP for user review
-14. no merge without explicit authorization
+9. add read-only shadow-v0.3b observer for stalling-OFF candidate runs
+10. measure CURRENT / RESET-WHILE-EXHAUSTED / LOW-WHILE-EXHAUSTED with stalling OFF
+11. run the same three candidates with frozen v0.3b stalling ON
+12. compare real-stalling outcomes against OFF + shadow counterfactuals
+13. run all gates and predictions
+14. record first untuned measurement
+15. open/update PR
+16. HARD STOP for user review
+17. no merge without explicit authorization
 ```
 
 No step may be skipped because a later result appears obvious.
@@ -508,6 +511,206 @@ The measurement must reveal whether LOW_WHILE_EXHAUSTED preserves recovery only 
 
 ---
 
+# Phase 5 — stalling interaction: real matrix plus shadow counterfactual
+
+Recovery and stalling answer different questions:
+
+```text
+recovery policy:
+  can Bottom conserve enough stamina to leave Exhausted?
+
+stalling:
+  what does the frozen v0.3b ruleset do when Bottom spends time not progressing?
+```
+
+This amendment measures both without changing either system.
+
+## Full 3 x 2 recovery/stalling matrix
+
+Using Surface E, BOTH settlement rules, the same 100 seeds, and the exact three recovery-initiation candidates:
+
+```text
+                              STALLING OFF       STALLING ON (frozen v0.3b)
+
+CURRENT                       E-current          E-current-stall
+RESET_WHILE_EXHAUSTED         E-reset            E-reset-stall
+LOW_WHILE_EXHAUSTED           E-low              E-low-stall
+```
+
+The OFF column preserves continuity with all prior Surface-E recovery evidence.
+
+The ON column sets:
+
+```text
+enable_v03b_stalling=True
+```
+
+and applies the existing v0.3b mechanics exactly as already frozen.
+
+Do not change:
+
+- what counts as progress;
+- what counts as legal defensive engagement;
+- the independent 20-second advancement clock;
+- first-offense Warning;
+- second-offense visible-band penalty / boundary free initiative;
+- repeat-offense Position Reset;
+- existing clock reset semantics;
+- any stalling interval or threshold.
+
+## Required real-stalling counters
+
+For every STALLING-ON candidate report at minimum:
+
+- Bottom stalling Warnings;
+- Bottom stalling penalties;
+- Bottom stalling Position Resets;
+- Bottom RESET-with-progress-route count;
+- free-initiative windows caused by Bottom's stalling consequence;
+- total axis movement attributable specifically to Bottom stalling penalties;
+- first Bottom stalling offense time distribution;
+- Bottom Exhausted-latch clears;
+- Bottom CONSERVE -> ESCAPE switches;
+- State2 -> State1 exits;
+- State-1 / State-2 / State-3 time shares;
+- Bottom behavior recovery;
+- Bottom own-attack commitment spend;
+- Bottom defensive spend;
+- Bottom own-attack count;
+- Bottom RESET count;
+- setup-policy interaction counters from the previous section;
+- taps;
+- escapes;
+- timeouts;
+- final Top/Bottom stamina median.
+
+### Axis lost to stalling penalties
+
+Report actual axis movement caused by the frozen stalling penalty path separately from ordinary exchange axis movement.
+
+For Bottom offenses, print both:
+
+```text
+signed axis delta from stalling penalties
+absolute control distance lost by Bottom to those penalties
+```
+
+If the boundary consequence is free initiative rather than an axis move, report it only in the free-initiative counter; do not invent an axis-equivalent value.
+
+---
+
+# Shadow stalling on the STALLING-OFF runs
+
+Every OFF-column run also carries a **read-only shadow v0.3b observer**.
+
+The real match remains:
+
+```text
+enable_v03b_stalling=False
+```
+
+The shadow observer must not mutate:
+
+- axis;
+- initiative;
+- warnings on the real match;
+- position;
+- setup;
+- stamina;
+- clocks used by gameplay;
+- legal actions/responses;
+- submission state;
+- match outcome.
+
+It owns private observer state only.
+
+## Shadow semantics
+
+The shadow observer must reuse the existing frozen v0.3b definitions for:
+
+- progress-capable route;
+- legal defensive engagement;
+- RESET-with-route classification;
+- independent 20-second advancement clock;
+- clock reset conditions;
+- Warning / penalty / Position Reset escalation.
+
+Do not create a second interpretation of stalling semantics merely for the observer.
+
+For each OFF-column candidate, record:
+
+- Bottom RESETs made while a progress-capable route existed;
+- shadow advancement-clock value over time;
+- timestamp each shadow clock first reaches the offense threshold;
+- shadow first Warnings;
+- shadow second-offense penalties;
+- shadow repeat Position Resets;
+- shadow boundary free-initiative consequences;
+- which real RESET/action event caused each shadow offense;
+- Bottom stamina state when each shadow offense would occur;
+- whether Bottom was Exhausted when each shadow offense would occur.
+
+Because penalties are not actually applied in shadow mode, do **not** estimate later axis, escapes, submissions, or outcomes after a shadow consequence.
+
+The shadow record answers only:
+
+```text
+would this OFF-column recovery policy have drawn a frozen v0.3b consequence,
+and why?
+```
+
+The real STALLING-ON column answers:
+
+```text
+what actually happens after those consequences feed back into the match?
+```
+
+## Matched-seed comparison
+
+For each candidate, compare the same match index under:
+
+```text
+STALLING OFF + shadow
+vs
+STALLING ON
+```
+
+At minimum aggregate:
+
+- shadow Warning count vs actual Warning count;
+- shadow penalty count vs actual penalty count;
+- shadow Position Reset count vs actual Position Reset count;
+- first divergence timestamp where applying stalling changes the real trajectory;
+- latch clears OFF vs ON;
+- taps / escapes / timeouts OFF vs ON.
+
+After real stalling changes the trajectory, later shadow-vs-real offense counts are descriptive rather than expected to remain one-to-one.
+
+## Interpretation boundary
+
+**Stalling-on runs are observational. If a candidate clears the Exhausted state only with stalling off, record it as a result; it does not justify changing the stalling rules, and choosing a candidate is a separate review decision.**
+
+Likewise:
+
+```text
+candidate recovers under stalling OFF
+but fails under stalling ON
+```
+
+does not automatically reject the candidate.
+
+And:
+
+```text
+candidate draws many frozen v0.3b penalties
+```
+
+does not authorize weakening v0.3b.
+
+Any change to stalling itself requires its own reviewed amendment.
+
+---
+
 # Frozen gates
 
 ## Gate A — new starting evidence is checker-owned
@@ -644,7 +847,7 @@ This makes the recovery budget explicit.
 
 ## Gate F — recovery-initiation candidates are measured without stamina tuning
 
-Run Surface E with BOTH settlement rules under:
+First run Surface E with BOTH settlement rules and **stalling OFF** under:
 
 ```text
 CURRENT
@@ -664,7 +867,7 @@ Separately report whether each candidate produces:
 
 Those are outcome observations.
 
-If neither candidate produces any latch clear:
+If neither candidate produces any latch clear with stalling OFF:
 
 ```text
 recovery-policy outcome = OPEN
@@ -674,9 +877,50 @@ recovery-policy outcome = OPEN
 
 If one or both candidates do clear the latch, that does **not** automatically select them as default.
 
+The OFF runs must also carry the shadow-stalling record defined in Phase 5.
+
 ---
 
-## Gate G — no stamina or settlement rule changed
+## Gate G — frozen v0.3b stalling interaction is measured
+
+For each recovery candidate, run the matched STALLING-ON surface with frozen v0.3b applied.
+
+PASS for Gate G requires:
+
+1. all six OFF/ON surfaces replay deterministically;
+2. OFF results remain mechanically identical with vs without the shadow observer;
+3. the shadow observer uses frozen v0.3b classification/escalation semantics;
+4. ON runs use the existing real v0.3b implementation unchanged;
+5. all required real-stalling and shadow counters are populated;
+6. actual stalling penalty axis movement is separated from ordinary exchange movement;
+7. boundary free initiative is not converted into invented axis loss;
+8. taps / escapes / timeouts and recovery-state outcomes are reported for every ON cell.
+
+Gate G has **no required favorable gameplay direction**.
+
+For every candidate, explicitly classify:
+
+```text
+recovery clears Exhausted:
+  OFF? yes/no
+  ON?  yes/no
+```
+
+and report:
+
+```text
+shadow consequences predicted on OFF run
+vs
+actual consequences observed on ON run
+```
+
+If a candidate clears only OFF, record that result exactly.
+
+Do not tune or weaken v0.3b to make ON resemble OFF.
+
+---
+
+## Gate H — no stamina or settlement rule changed
 
 PASS requires unchanged:
 
@@ -703,13 +947,16 @@ Only:
 
 - flag granularity;
 - read-only diagnostics;
+- read-only shadow-stalling observer state;
 - batch recovery-initiation policy modes
 
 may change.
 
+The real v0.3b stalling implementation and rules must remain unchanged.
+
 ---
 
-## Gate H — default behavior remains unchanged
+## Gate I — default behavior remains unchanged
 
 With all new explicit flags/modes at defaults:
 
@@ -723,13 +970,15 @@ Specifically:
 - explicit Rule-1 flag off;
 - explicit Rule-2 flag off;
 - recovery-initiation mode CURRENT;
+- real stalling remains off unless explicitly enabled;
+- shadow stalling observer remains off unless explicitly requested for diagnostics;
 - no default match result changes.
 
 Earlier frozen gates must still run on their historical paths.
 
 ---
 
-## Gate I — checker and review boundary
+## Gate J — checker and review boundary
 
 The checker must print structured sections for:
 
@@ -739,10 +988,16 @@ The checker must print structured sections for:
 4. Rule-2 isolated hold settlement;
 5. public-MATCH Threat attribution;
 6. Surface-E recovery budget;
-7. CURRENT / RESET / LOW recovery-initiation comparison;
-8. setup-policy interaction counters;
-9. latch-clear outcomes;
-10. frozen digest.
+7. CURRENT / RESET / LOW recovery-initiation comparison with stalling OFF;
+8. CURRENT / RESET / LOW recovery-initiation comparison with frozen v0.3b stalling ON;
+9. shadow-v0.3b consequences on every OFF candidate;
+10. matched OFF-vs-ON consequence comparison;
+11. setup-policy interaction counters;
+12. actual stalling Warning / penalty / Position Reset / free-initiative counters;
+13. actual axis movement attributable to stalling penalties;
+14. latch-clear outcomes OFF and ON;
+15. taps / escapes / timeouts OFF and ON;
+16. frozen digest.
 
 A design outcome may be OPEN while checker execution still PASSes.
 
@@ -851,6 +1106,48 @@ No exact outcome is predicted.
 
 ---
 
+## P7 — stalling exposure
+
+Prediction:
+
+```text
+RESET_WHILE_EXHAUSTED produces the most shadow and real v0.3b stalling exposure
+because it deliberately forgoes progress-capable actions while recovering
+```
+
+CURRENT is predicted to produce the least additional stalling exposure.
+
+LOW is predicted to fall between CURRENT and RESET, but this direction is uncertain because LOW still attempts legal progress routes and requested-LOW semantics may change whether those attempts count as progress.
+
+No exact Warning, penalty, or Position Reset count is predicted.
+
+---
+
+## P8 — stalling feedback can change recovery outcomes
+
+Prediction:
+
+```text
+applying real v0.3b consequences will make recovery less favorable
+for at least the more passive recovery candidate(s)
+than the same candidate with stalling OFF
+```
+
+Possible manifestations include:
+
+- fewer latch clears;
+- later latch clears;
+- more time deeper in mount;
+- fewer escapes;
+- more timeouts;
+- different setup opportunities after penalties/resets.
+
+No specific candidate is required to fail recovery under stalling ON.
+
+A candidate recovering OFF but not ON is explicitly considered a valid possible result, not a stalling-rule failure.
+
+---
+
 # Explicit non-goals
 
 Do not in this amendment:
@@ -866,6 +1163,9 @@ Do not in this amendment:
 - tune Gate-B thresholds;
 - change matchup grades;
 - change setup progression;
+- change stalling progress definitions;
+- change the 20-second stalling clock;
+- change Warning / penalty / Position Reset escalation;
 - change stalling consequences;
 - change submission stages;
 - choose RESET or LOW as the permanent/default game policy.
@@ -881,7 +1181,9 @@ The likely review decisions after implementation are intentionally left open:
 2. keep / amend / remove Rule 2?
 3. should recovery-aware initiation exist?
 4. if yes, RESET, LOW, or something else?
-5. does setup-policy debt need its own slice before choosing?
+5. is any recovery candidate still viable under frozen v0.3b stalling?
+6. does setup-policy debt need its own slice before choosing?
+7. does any stalling interaction require a separate stalling amendment?
 ```
 
 This amendment gathers the evidence needed to answer those questions.
@@ -901,8 +1203,10 @@ Do not:
 - implement Rule1-only / Rule2-only modes;
 - implement RESET_WHILE_EXHAUSTED;
 - implement LOW_WHILE_EXHAUSTED;
+- add the shadow-stalling observer;
+- run stalling-ON recovery candidate experiments;
 - run candidate-policy experiments;
-- change any stamina or policy rule;
+- change any stamina, recovery, or stalling rule;
 
 until the user explicitly authorizes implementation after reviewing this committed DoD.
 
