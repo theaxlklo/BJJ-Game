@@ -8,7 +8,7 @@ from inspect import signature
 from statistics import median
 
 from ..domain.action import Commitment
-from ..domain.model import BottomBehavior, ExitDestination, TopBehavior
+from ..domain.model import BottomBehavior, ExitDestination, Side, TopBehavior
 from ..domain.stamina import StaminaPool
 from ..engine.match import MountMatch
 from ..engine.stalling import STALLING_THRESHOLD_SECONDS
