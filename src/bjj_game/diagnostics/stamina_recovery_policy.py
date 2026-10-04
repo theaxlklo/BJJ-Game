@@ -1281,12 +1281,7 @@ def render_recovery_policy_predictions() -> tuple[str, ...]:
     )
 
     off_on_identical = all(
-        _gameplay_summary_signature(
-            _candidate_cell_for(mode, stalling=False).summary
-        )
-        == _gameplay_summary_signature(
-            _candidate_cell_for(mode, stalling=True).summary
-        )
+        not matched_first_divergence_times(mode)
         for mode in RecoveryInitiationMode
     )
 
