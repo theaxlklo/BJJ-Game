@@ -125,11 +125,18 @@ This `6,202` value is **review-provided evidence, not yet checker-owned evidence
 
 The implementation order below requires the checker to reproduce and record it before any rule change.
 
-Surface B independent contrast:
+Surface B independent contrast, clarified by checker-owned accounting:
 
 ```text
-Bottom spend caused by Top zero-stamina attacks=95
+combined defender spend caused by exact-zero initiators=95
+
+Top exact-zero attacks -> Bottom spend=29
+Bottom exact-zero attacks -> Top spend=66
 ```
+
+The earlier wording that described all 95 points as Top -> Bottom was an accounting-label error discovered by the mandatory pre-change checker checkpoint.
+
+The total `95` remains reproduced; its direction split is now frozen explicitly.
 
 The reason for the large Surface-E difference is that RECOVER repeatedly creates small amounts of spendable stamina for Bottom, while Top continues to initiate for zero commitment cost.
 
@@ -501,7 +508,10 @@ share approximately 71.6%
 Surface B must reproduce:
 
 ```text
-Bottom zero-attack-caused response+hold spend=95
+combined exact-zero-initiator defender drain=95
+
+Top -> Bottom=29
+Bottom -> Top=66
 ```
 
 If the checker does not reproduce those values, stop and resolve the accounting disagreement before changing mechanics.
@@ -524,11 +534,19 @@ PASS requires:
    - 6,202 Bottom stamina charged because of those attacks;
    - 8,658 Bottom behavior recovery;
    - approximately 71.6% drain/recovery share;
-3. Surface B reproduces 95 Bottom stamina charged by Top zero-stamina attacks;
+3. Surface B reproduces 95 combined exact-zero defender drain, split as 29 Top -> Bottom and 66 Bottom -> Top;
 4. the response-vs-hold split is printed even though no split value is predeclared here;
 5. the failed baseline is committed before mechanic changes.
 
 This gate freezes evidence, not a desired post-change value.
+
+The authoritative pre-change evidence document is:
+
+```text
+docs/STAMINA_ECONOMY_RULE_PRECHANGE_EVIDENCE.md
+```
+
+It must remain committed before any Rule 1 / Rule 2 mechanic change.
 
 ---
 
@@ -1050,7 +1068,7 @@ If and only if the user authorizes implementation of this DoD:
 ```text
 1. add checker metric for defender spend caused by zero-stamina / UNFUNDED attacks
 2. run frozen pre-change surfaces
-3. reproduce 6,202 / 8,658 Surface-E evidence and Surface-B 95
+3. reproduce 6,202 / 8,658 Surface-E evidence and Surface-B combined 95 = 29 + 66
 4. commit pre-change measurement document
 5. only then implement Rule 1 and Rule 2
 6. add/update unit and regression tests
