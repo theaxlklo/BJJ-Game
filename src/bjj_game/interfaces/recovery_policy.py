@@ -62,9 +62,12 @@ class RecoveryPolicyMatchRecord:
     trajectory: tuple[RecoveryTrajectorySnapshot, ...]
     shadow_events: tuple[ShadowStallingEvent, ...]
     shadow_threshold_reach_times_bottom: tuple[int, ...]
+    shadow_bottom_resets_with_route: int
     bottom_actual_stalling_signed_axis_delta: float
     bottom_actual_stalling_absolute_control_loss: float
+    bottom_actual_stalling_free_initiative: int
     bottom_first_actual_stalling_offense_time: int | None
+    bottom_exhausted_requested_commitments: tuple[tuple[str, int], ...]
     bottom_exhausted_bridge_attempts: int
     bottom_exhausted_setup_builder_attempts: int
     bottom_exhausted_setup_advances: int
@@ -123,9 +126,12 @@ class RecoveryPolicyCollector:
             "shadow_threshold_bottom": [],
             "shadow_previous_bottom_clock": 0,
             "trajectory": [],
+            "shadow_bottom_resets_with_route": 0,
             "bottom_axis_delta": 0.0,
             "bottom_abs_loss": 0.0,
+            "bottom_actual_free_initiative": 0,
             "bottom_first_actual_offense": None,
+            "bottom_exhausted_requested_commitments": Counter(),
             "bottom_bridge_attempts": 0,
             "bottom_setup_builder_attempts": 0,
             "bottom_setup_advances": 0,
@@ -260,6 +266,8 @@ class RecoveryPolicyCollector:
 
         tracker = current["shadow_tracker"]
         if tracker is not None:
+            if side is Side.BOTTOM and progress_route_available:
+                current["shadow_bottom_resets_with_route"] += 1
             current["bottom_reset_sequence"] += side is Side.BOTTOM
             evaluation = tracker.evaluate_reset(
                 side=side,
@@ -301,6 +309,8 @@ class RecoveryPolicyCollector:
     ) -> None:
         current = self._require()
         if result.initiator is Side.BOTTOM:
+            if result.free_initiative_window:
+                current["bottom_actual_free_initiative"] += 1
             if (
                 result.stalling_offense
                 and current["bottom_first_actual_offense"] is None
@@ -360,6 +370,9 @@ class RecoveryPolicyCollector:
         )
 
         if bottom_exhausted:
+            current["bottom_exhausted_requested_commitments"][
+                requested_commitment.value
+            ] += 1
             if action_id == BOTTOM_BRIDGE:
                 current["bottom_bridge_attempts"] += 1
             if setup_target is not None:
@@ -444,15 +457,28 @@ class RecoveryPolicyCollector:
                 shadow_threshold_reach_times_bottom=tuple(
                     current["shadow_threshold_bottom"]
                 ),
+                shadow_bottom_resets_with_route=current[
+                    "shadow_bottom_resets_with_route"
+                ],
                 bottom_actual_stalling_signed_axis_delta=current[
                     "bottom_axis_delta"
                 ],
                 bottom_actual_stalling_absolute_control_loss=current[
                     "bottom_abs_loss"
                 ],
+                bottom_actual_stalling_free_initiative=current[
+                    "bottom_actual_free_initiative"
+                ],
                 bottom_first_actual_stalling_offense_time=current[
                     "bottom_first_actual_offense"
                 ],
+                bottom_exhausted_requested_commitments=tuple(
+                    sorted(
+                        current[
+                            "bottom_exhausted_requested_commitments"
+                        ].items()
+                    )
+                ),
                 bottom_exhausted_bridge_attempts=current[
                     "bottom_bridge_attempts"
                 ],
