@@ -36,6 +36,7 @@ class StaminaRecoveryPolicyAmendmentDodTests(unittest.TestCase):
         lines = render_recovery_policy_predictions()
         self.assertIn("[PARTIAL]", lines[6])
         self.assertIn("[NOT CONFIRMED]", lines[7])
+        self.assertIn("OFF/ON gameplay identical=True", lines[7])
 
 
 if __name__ == "__main__":
