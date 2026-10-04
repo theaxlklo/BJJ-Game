@@ -13,10 +13,12 @@ from bjj_game.positions.mount.catalog import (
     TOP_AMERICANA_SUBMISSION_FINISH,
     TOP_HIGH_MOUNT_CLIMB,
 )
+from bjj_game.interfaces.recovery_policy import RecoveryInitiationMode
 from bjj_game.interfaces.batch import (
     AdaptiveBehaviorPolicy,
     BatchBehaviorMode,
     BatchResponderMode,
+    BatchResponseCommitmentMode,
     EscapeFirstInitiatorPolicy,
     HandoffEpisodeStatus,
     ReExhaustionHandoffObserver,
@@ -560,6 +562,66 @@ class ReExhaustionHandoffObserverTests(unittest.TestCase):
             without_observer,
             replace(with_observer, reexhaustion_handoffs=None),
         )
+
+    def test_observer_is_inert_across_recovery_feature_stack(self):
+        common = dict(
+            matches=3,
+            base_seed=900_000,
+            top_behavior=TopBehavior.PRESSURE,
+            bottom_behavior=BottomBehavior.ESCAPE,
+            commitment=Commitment.MEDIUM,
+            initial_clock=90,
+            starting_axis=1.50,
+            interval_seconds=5,
+            top_stamina=100,
+            bottom_stamina=100,
+            bottom_behavior_mode=BatchBehaviorMode.RECOVER,
+            bottom_responder_mode=BatchResponderMode.INFORMED,
+            response_commitment_mode=(
+                BatchResponseCommitmentMode.RECOGNITION
+            ),
+            enable_v02_setup=True,
+            enable_v03_submissions=True,
+            enable_v04_commitment_semantics=True,
+            enable_v04b_recognition=True,
+            enable_stamina_settlement_rules=True,
+            measure_recovery_policy=True,
+        )
+
+        for mode in RecoveryInitiationMode:
+            for real_stalling in (False, True):
+                with self.subTest(
+                    mode=mode.value,
+                    real_stalling=real_stalling,
+                ):
+                    kwargs = dict(
+                        common,
+                        recovery_initiation_mode=mode,
+                        enable_v03b_stalling=real_stalling,
+                        shadow_stalling=not real_stalling,
+                    )
+                    without_observer = run_escape_first_batch(
+                        **kwargs,
+                        measure_reexhaustion_handoffs=False,
+                    )
+                    with_observer = run_escape_first_batch(
+                        **kwargs,
+                        measure_reexhaustion_handoffs=True,
+                    )
+
+                    self.assertIsNone(
+                        without_observer.reexhaustion_handoffs
+                    )
+                    self.assertIsNotNone(
+                        with_observer.reexhaustion_handoffs
+                    )
+                    self.assertEqual(
+                        without_observer,
+                        replace(
+                            with_observer,
+                            reexhaustion_handoffs=None,
+                        ),
+                    )
 
 
 if __name__ == "__main__":
