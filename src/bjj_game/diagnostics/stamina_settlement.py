@@ -21,6 +21,7 @@ from ..positions.mount.matchups import RAW_GRADES
 from .stamina_economy import (
     StaminaEconomyState,
     StaminaEconomySurface,
+    _drain_observation,
     _measurement,
     _surface_kwargs,
     measured_surfaces,
@@ -524,15 +525,24 @@ def render_prediction_comparison() -> tuple[str, ...]:
         f"{post[3].summary.total_response_commitment_stamina_charged}"
     )
 
+    pre_public_threat = _threat_observation(pre[0])
+    pre_trust_threat = _threat_observation(pre[1])
     public_threat = _threat_observation(post[0])
     trust_threat = _threat_observation(post[1])
     lines.append(
         "P6 Threat reach — predicted possible fall, observational only; "
-        f"public matches-Threat/entries/Control/Finish/Tap="
+        f"public matches-Threat/entries/Control/Finish/Tap "
+        f"{pre_public_threat['matches_threat']}/{pre_public_threat['threat_entries']}/"
+        f"{pre_public_threat['control_entries']}/{pre_public_threat['finish_entries']}/"
+        f"{pre_public_threat['taps']}->"
         f"{public_threat['matches_threat']}/{public_threat['threat_entries']}/"
         f"{public_threat['control_entries']}/{public_threat['finish_entries']}/"
         f"{public_threat['taps']}; "
-        f"trust={trust_threat['matches_threat']}/{trust_threat['threat_entries']}/"
+        f"trust "
+        f"{pre_trust_threat['matches_threat']}/{pre_trust_threat['threat_entries']}/"
+        f"{pre_trust_threat['control_entries']}/{pre_trust_threat['finish_entries']}/"
+        f"{pre_trust_threat['taps']}->"
+        f"{trust_threat['matches_threat']}/{trust_threat['threat_entries']}/"
         f"{trust_threat['control_entries']}/{trust_threat['finish_entries']}/"
         f"{trust_threat['taps']}"
     )
@@ -547,7 +557,8 @@ def render_stamina_rule_change() -> tuple[str, ...]:
         "OPEN does not authorize tuning inside this slice."
     )
 
-    for surface in post:
+    pre = measured_surfaces()
+    for index, surface in enumerate(post):
         measurement = _measurement(surface)
         unfunded = [
             row
@@ -558,7 +569,9 @@ def render_stamina_rule_change() -> tuple[str, ...]:
         holds = [row for row in measurement.exchanges if row.submission_hold]
         waived = sum(row.response_commitment_waived for row in measurement.exchanges)
         covered = sum(row.hold_covered_by_response for row in holds)
-        supplemental = sum(row.hold_charged for row in holds)
+        nominal_hold = sum(row.hold_nominal_cost for row in holds)
+        supplemental_requested = sum(row.hold_requested for row in holds)
+        supplemental_charged = sum(row.hold_charged for row in holds)
         threat = _threat_observation(surface)
         lines.append(
             f"STAMINA-RULE SURFACE — {surface.label}: "
@@ -567,11 +580,48 @@ def render_stamina_rule_change() -> tuple[str, ...]:
             f"final stamina={surface.summary.top_final_stamina_median:.1f}/"
             f"{surface.summary.bottom_final_stamina_median:.1f}, "
             f"UNFUNDED/exact-zero exchanges={len(unfunded)}/{len(exact_zero)}, "
-            f"waived response={waived}, hold covered={covered}, "
-            f"supplemental hold charged={supplemental}, "
+            f"waived response={waived}, hold nominal/covered/"
+            f"supplemental-requested/supplemental-charged="
+            f"{nominal_hold}/{covered}/{supplemental_requested}/{supplemental_charged}, "
             f"Threat matches/entries/Control/Finish="
             f"{threat['matches_threat']}/{threat['threat_entries']}/"
             f"{threat['control_entries']}/{threat['finish_entries']}"
+        )
+
+        for initiator_side in (Side.TOP, Side.BOTTOM):
+            for selector in ("exact-zero", "true-UNFUNDED"):
+                observation = _drain_observation(
+                    surface,
+                    initiator_side=initiator_side,
+                    selector=selector,
+                )
+                lines.append(
+                    f"STAMINA-RULE POSTCHANGE DEFENDER DRAIN — "
+                    f"{surface.label}: selector={selector}, "
+                    f"initiator={initiator_side.value}, "
+                    f"exchanges={observation.exchange_count}, "
+                    f"response/hold/total="
+                    f"{observation.response_charged}/"
+                    f"{observation.hold_charged}/"
+                    f"{observation.total_charged}, "
+                    f"responder recovery={observation.responder_behavior_recovery}, "
+                    f"drain/recovery="
+                    f"{'n/a' if observation.recovery_share is None else f'{observation.recovery_share:.4f}'}"
+                )
+
+        pre_holds = [
+            row
+            for row in _measurement(pre[index]).exchanges
+            if row.submission_hold
+        ]
+        lines.append(
+            f"STAMINA-RULE HOLD SETTLEMENT — {surface.label}: "
+            f"pre holds={len(pre_holds)}, requested/charged="
+            f"{sum(row.hold_requested for row in pre_holds)}/"
+            f"{sum(row.hold_charged for row in pre_holds)}; "
+            f"post holds={len(holds)}, nominal={nominal_hold}, "
+            f"covered-by-response={covered}, supplemental requested/charged="
+            f"{supplemental_requested}/{supplemental_charged}"
         )
 
     lines.extend(
