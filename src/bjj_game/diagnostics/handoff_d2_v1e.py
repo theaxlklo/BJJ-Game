@@ -527,7 +527,9 @@ def _p90(values: list[int]) -> int | None:
 
 def _hist(values) -> str:
     counts = Counter(values)
-    return ", ".join(f"{k}: {v}" for k, v in sorted(counts.items(), key=lambda kv: str(kv[0]))) or "none"
+    numeric = all(isinstance(k, (int, float)) for k in counts)
+    key = (lambda kv: kv[0]) if numeric else (lambda kv: str(kv[0]))
+    return ", ".join(f"{k}: {v}" for k, v in sorted(counts.items(), key=key)) or "none"
 
 
 # ---------------------------------------------------------------------------
@@ -1000,8 +1002,9 @@ def diagnostics(stalling: str) -> dict:
     exhausted_lows = sum(1 for v in vs for e in v.events
                          if e["k"] == "att" and e["side"] == "bottom" and e["bx_before"] and e["req"] == "LOW")
     d["exhausted_low_requests"] = exhausted_lows
-    reent = Counter(c for v in vs for _, c, _ in v.reentries)
-    d["reentries_by_cause"] = dict(reent)
+    d["exhaustion_entries_by_cause_all"] = dict(Counter(c for v in vs for _, c, _ in v.reentries))
+    d["post_clear_reentries_by_cause"] = dict(Counter(
+        c for v in vs if v.clears for t, c, _ in v.reentries if t > v.clears[0]))
 
     # 15 — reserve model + v1/v1c attribution.
     violations, drains, truncated = [], [], 0
@@ -1054,9 +1057,12 @@ def diagnostics(stalling: str) -> dict:
         for seed in SEEDS:
             rec = r.v1e[(seed, stalling)].recovery_policy.matches
             for v in views()["v1e"][(seed, stalling)]:
-                traj = rec[v.index % 100].trajectory
+                # Trajectory = start snapshot + one per decision window + finish.
+                traj = rec[v.index % 100].trajectory[1:-1]
                 wins = [e for e in v.events if e["k"] == "win"]
-                if len(traj) != len(wins):
+                if len(traj) != len(wins) or any(
+                    t.elapsed_seconds != e["t"] for t, e in zip(traj, wins)
+                ):
                     raise RuntimeError("trajectory/window alignment failed")
                 clocks += [traj[n].shadow_bottom_clock for n, e in enumerate(wins)
                            if e["side"] == "bottom" and e.get("kind") in {"ENTER_HOLD", "HOLD"}]
@@ -1081,6 +1087,7 @@ def diagnostics(stalling: str) -> dict:
     d["advances_before_release"] = _hist(c.advances for c in all_cycles if c.end_kind == "RELEASE")
     d["pending_cycles"] = sum(1 for c in all_cycles if c.end_kind == "PENDING_AT_END")
     shares, shares_nx = [], []
+    pooled_mode, pooled_span = 0, 0
     for v in armed_views:
         first = v.clears[0]
         span = v.end_t - first
@@ -1100,10 +1107,12 @@ def diagnostics(stalling: str) -> dict:
                 exhausted += e["t"] - last_t
             state, last_t = e["bx"], e["t"]
         shares.append(in_mode / span)
+        pooled_mode += in_mode
+        pooled_span += span
         if span - exhausted > 0:
             shares_nx.append(in_mode / (span - exhausted))
     d["post_clear_time_in_mode_share_median"] = _median(shares)
-    d["post_clear_time_in_mode_share_pooled"] = None
+    d["post_clear_time_in_mode_share_pooled"] = pooled_mode / pooled_span if pooled_span else None
     d["post_clear_time_in_mode_share_non_exhausted_median"] = _median(shares_nx)
     after_release_first = []
     release_was_reset = 0
@@ -1206,9 +1215,19 @@ def outcome_comparison(stalling: str) -> dict:
         changed[(c.outcome, v.outcome)] += 1
         sl = _strong_locked_share_post_clear(v)
         sl_c = _strong_locked_share_post_clear(c)
+        first = v.clears[0] if v.clears else None
+        escaping = next((e for e in c.events if e["k"] == "att" and e["side"] == "bottom"
+                         and e["exit"] is not None), None)
         rows.append({"match": v.index, "control": c.outcome, "v1e": v.outcome,
                      "v1e_strong_locked": sl, "control_strong_locked": sl_c,
-                     "first_clear": v.clears[0] if v.clears else None})
+                     "first_clear": first,
+                     "control_escape_attempt": (
+                         f"t={escaping['t']} (+{escaping['t'] - first if first is not None else '?'}s) "
+                         f"{escaping['req']}->{escaping['eff']} "
+                         f"{'Exhausted' if escaping['bx_before'] else 'non-Exhausted'} {escaping['band_before']}"
+                         if escaping else None),
+                     "post_clear_bottom_initiations_control": _post_clear_inits(c),
+                     "post_clear_bottom_initiations_v1e": _post_clear_inits(v)})
     lost = [r for r in rows if r["control"] in ESCAPES and r["v1e"] not in ESCAPES]
     gained = [r for r in rows if r["control"] not in ESCAPES and r["v1e"] in ESCAPES]
     return {
@@ -1220,6 +1239,12 @@ def outcome_comparison(stalling: str) -> dict:
         "escape_lost_strong_locked_median_control": _median([r["control_strong_locked"] for r in lost if r["control_strong_locked"] is not None]),
         "rows": rows,
     }
+
+
+def _post_clear_inits(v: MatchView) -> int | None:
+    if not v.clears:
+        return None
+    return sum(1 for e in v.events if e["k"] == "att" and e["side"] == "bottom" and e["t"] >= v.clears[0])
 
 
 def _strong_locked_share_post_clear(v: MatchView) -> float | None:
@@ -1348,11 +1373,13 @@ def report() -> str:
         oc = outcome_comparison(stalling)
         lines += ["", f"## Seed-matched outcome changes vs control — {stalling}", ""]
         lines += _fmt({k: v for k, v in oc.items() if k != "rows"})
-        lines += ["", "| match | control | v1e | first clear | v1e Strong/Locked share | control Strong/Locked share |",
-                  "|---|---|---|---|---|---|"]
+        lines += ["", "| match | control | v1e | first clear | control escaping attempt | post-clear Bottom initiations control/v1e | Strong/Locked share control/v1e |",
+                  "|---|---|---|---|---|---|---|"]
         for row in oc["rows"]:
             lines.append(f"| {row['match']} | {row['control']} | {row['v1e']} | {row['first_clear']} | "
-                         f"{row['v1e_strong_locked']} | {row['control_strong_locked']} |")
+                         f"{row['control_escape_attempt']} | {row['post_clear_bottom_initiations_control']}/"
+                         f"{row['post_clear_bottom_initiations_v1e']} | "
+                         f"{row['control_strong_locked']:.2f}/{row['v1e_strong_locked']:.2f} |")
         lines += ["", f"## Traced prediction vs reality — {stalling}", "",
                   "Predicted: ~130 s period, 4 MEDIUM + 9 holds, ~69% of Bottom windows held, stamina 26-38.", ""]
         lines += _fmt(prediction_vs_reality(stalling))

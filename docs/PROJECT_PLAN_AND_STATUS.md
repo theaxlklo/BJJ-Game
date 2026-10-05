@@ -75,7 +75,7 @@ About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *
 | v1b | `f624db2` | + behavior reserve 2, fallback = forced RESET | not selected; predicted RESET spam vs criterion 5 (<=23) |
 | v1c | `f30ace9` | + behavior reserve 2, fallback = non-RESET RECOVERY HOLD | not selected; predicted 26..31 LOW sawtooth, MEDIUM never returns |
 | v1d | `8dcaabb` | + hold persists as a mode; only reserve-safe MEDIUM (stamina >= 35) releases it; LOW never releases | not selected; one-shot CONSERVE gives ~90 s holds, ~66/82 predicted never to release, and no gate caught it |
-| v1e | this branch | + CONSERVE on every normal advance while the mode is active (not through resolution); + post-hold return gate (criterion 16) | **awaiting review** |
+| v1e | `c4a9c33` (impl. `d00c48e`) | + CONSERVE on every normal advance while the mode is active (not through resolution); + post-hold return gate (criterion 16) | **measured: D2 FAIL on criterion 4** (escapes 17 < 25, timeouts 78 > 70). Stability 0/68 at 10 s, return gate 44/44. See `docs/HANDOFF_OSCILLATION_D2_V1E_RESULT.md` |
 
 **D2 acceptance contract** (criteria 1-16 in `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1E.md`; 1-15 unchanged in substance since v1c, 16 new in v1e):
 
@@ -94,7 +94,7 @@ About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *
 
 ### Next actions (in order)
 
-1. **Review the v1e preregistration SHA** on `review/handoff-oscillation-d1` (v1c and v1d were reviewed and not selected). Decide whether to authorize D2 implementation + measurement of v1e as frozen.
+1. **Review the v1e D2 result** (`docs/HANDOFF_OSCILLATION_D2_V1E_RESULT.md`): FAIL on criterion 4 only. v1e fixes the oscillation and returns to MEDIUM, but costs post-clear escapes: 18 of 28 lost escapes were the adopted policy's own +10 s MEDIUM. The next step (defer debt 1, revisit criterion 4, or a new preregistered candidate) needs explicit authorization.
 2. **D2 implementation + measurement** (only after explicit authorization):
    - implement the v1e diagnostic mode and `MountMatch.recovery_hold()` (opt-in);
    - run seeds 42 and 142, OFF + shadow and ON, plus adopted controls;
