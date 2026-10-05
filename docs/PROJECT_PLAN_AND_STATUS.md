@@ -39,7 +39,7 @@ branch -> freeze DoD / preregistration -> HARD STOP -> review
 | D3-B production promotion | PR #11, head `0aa23db5089476982eb6eaf94d91b316d857cee1`, merge `b59fc7f046d5420e3edc05f3300ad9699473776d` | **MERGED** |
 | Final-main qualification | CI `37370017411` | **PASS** on Python 3.11 and 3.13; 504 tests, 1 skipped; digest exact |
 | LOW -> MEDIUM handoff oscillation | D3-B design + promotion lineage | **CLOSED IN PRODUCTION** |
-| R1 — response commitment / provisional-hold affordability | branch `review/r1-hold-inclusive-affordability` | **characterized; DoD frozen for review; outcome not yet selected** |
+| R1 — response commitment / provisional-hold affordability | branch `review/r1-hold-inclusive-affordability`; DoD `a2e2887` (CI `37382027293`) | **CLOSED BY CHARACTERIZATION — no gameplay change** |
 
 The review branches and historical checkpoint commits are intentionally preserved. The final integration kept the full evidence chain reachable from `main`.
 
@@ -167,25 +167,22 @@ Docs:
 
 ## 6. Next actions
 
-### 6.1 Current slice: R1 — response commitment / provisional-hold affordability
+### 6.1 Completed: R1 — response commitment / provisional-hold affordability
 
-Renamed from "Rule 2 double charge". Authoritative document: `docs/R1_HOLD_INCLUSIVE_AFFORDABILITY_DOD.md`.
+**R1 OUTCOME = CLOSE (closed by characterization).** Records: `docs/R1_HOLD_INCLUSIVE_AFFORDABILITY_DOD.md` (frozen at `a2e2887`) and `docs/R1_HOLD_INCLUSIVE_AFFORDABILITY_RESULT.md`.
 
-Frozen premise: settlement semantics A is intentional. Response commitment and the 3-point provisional Contested hold are additive. The hold is a separate cost of surviving a contested lock. Rule 2 / semantics B (the commitment covers the hold) remains rejected: public-MATCH Threat reach 78/100 -> 0/100. The E-PROD "179" counts how often semantics A applies; it is not a defect count.
+Frozen production semantics: response commitment and the provisional Contested hold are additive. The LOW = 3 hold is charged on a best-effort basis. A responder with 0-2 stamina left pays what remains, and the Contested result is not revoked. Rule 1 still waives everything when the initiator is UNFUNDED. Rule 2 stays OFF; semantics B remains rejected (public-MATCH Threat 78/100 -> 0/100).
 
-Characterization results (observer only, no gameplay change):
-
-- The historical 1,366 "commitment-only fundable, hold not" cases reproduce exactly on the pre-change configuration. Rule 1 alone removes 1,362 of them. Canonical production: E-PROD 0 / 2 (seeds 42 / 142), B-PROD 6, A-PROD 78.
-- A hold shortfall has no mechanical consequence. The Contested result is fixed before stamina is charged.
-- No free hold-aware downgrade exists on any production surface. Every affordable lower commitment turns the predicted Contested into a Top Success.
-
-Proposed outcome (awaiting user selection): **R1-CLOSE**. Freeze best-effort additive hold semantics and move the projected-burden display requirement into debt 7. Alternative R1-H2 (deliberately more submission pressure) is preregistered but not recommended.
+- H1 not implemented: provably inert on the production surfaces.
+- H2 rejected for R1: it is a submission-balance change, not an affordability fix, and would alter the frozen A-PROD control (78 decisions). It may return later only as a new submission-design slice.
+- Hypothesis not added; `ResponderSettlementPlan` deferred.
+- The projected-burden display requirement moved to debt 7.
 
 ### 6.2 Remaining order after R1
 
-After R1 is closed or explicitly deferred:
+R1 is closed. Next, in order:
 
-1. **Late recovery / pacing:** median first clear remains about 240 s of a 300 s match; decide whether this is intended game pacing or a separate mechanics debt.
+1. **Late recovery / pacing (next slice; characterization first):** median first clear remains about 240 s of a 300 s match; decide whether this is intended game pacing or a separate mechanics debt.
 2. **Setup-policy debt.**
 3. **Initiator tactical commitment-selection policy:** player/AI choice among LOW / MEDIUM / HIGH rather than a fixed baseline.
 4. **Scoring / timeout meaning** for the first playable ruleset.
@@ -197,13 +194,25 @@ After R1 is closed or explicitly deferred:
 | # | Debt | Status |
 |---|---|---|
 | 1 | LOW -> MEDIUM handoff oscillation | **CLOSED IN PRODUCTION — D3-B** |
-| 2 | **R1:** response commitment / provisional-hold affordability | **characterized; DoD at HARD STOP** |
+| 2 | **R1:** response commitment / provisional-hold affordability | **CLOSED BY CHARACTERIZATION** (`a2e2887`; result record) |
 | 3 | Late recovery / match pacing | open |
 | 4 | Setup-policy debt | open |
 | 5 | Initiator tactical commitment-selection policy | open |
 | 6 | Scoring / timeout meaning | open |
-| 7 | Final player-facing state/input contract | open |
+| 7 | Final player-facing state/input contract | open; **includes the R1 projected-burden requirement (below)** |
 | 8 | Recovery-hold visibility / presentation | design consideration; resolve before exposing relevant state to players |
+
+### Debt 7 requirement transferred from R1
+
+The player-facing contract must expose the **response-specific projected burden** on hold-eligible response windows:
+
+```text
+response effective commitment cost
++ 3 when the selected response is predicted Contested and the
+  initiator appears funded from responder-visible information
+```
+
+This is advisory and read-only. Actual engine settlement remains authoritative and may differ, because Recognition can be wrong and Rule 1 uses the true funding state. The projected burden must **never** be presented as a guaranteed actual cost.
 
 ## 8. Definition of "ready for frontend"
 
@@ -234,4 +243,4 @@ Expected:
 
 `b59fc7f046d5420e3edc05f3300ad9699473776d`
 
-R1 work lives on `review/r1-hold-inclusive-affordability` (based on `1e2b5e3`). Read `docs/R1_HOLD_INCLUSIVE_AFFORDABILITY_DOD.md` and make the outcome decision (section 5) before any further R1 work.
+R1 is closed on `review/r1-hold-inclusive-affordability` (based on `1e2b5e3`; frozen DoD `a2e2887`). Merging that branch needs separate authorization. The next slice is late recovery / match-pacing characterization, starting on a fresh branch after explicit authorization.
