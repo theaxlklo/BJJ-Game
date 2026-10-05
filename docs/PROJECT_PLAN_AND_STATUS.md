@@ -1,6 +1,6 @@
 # BJJ-Game — Plan and Status
 
-_Last updated: 2026-10-04. A living overview of where the project stands and what is still missing before the engine is final and frontend work can start._
+_Last updated: 2026-10-05. A living overview of where the project stands and what is still missing before the engine is final and frontend work can start._
 
 The authoritative details always live in the per-slice DoD, preregistration and measurement documents linked below. If anything here conflicts with them, they win.
 
@@ -73,9 +73,10 @@ About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *
 | D1 | `cdb04a0` | characterization + first proposed D2 DoD | accepted as evidence |
 | v1 | `6230959` | initiation-only reserve: `stamina - cost > 25` | not selected; ledger shows a behavior-drain re-entry path |
 | v1b | `f624db2` | + behavior reserve 2, fallback = forced RESET | not selected; predicted RESET spam vs criterion 5 (<=23) |
-| v1c | this branch | + behavior reserve 2, fallback = **non-RESET RECOVERY HOLD** | **awaiting review** |
+| v1c | `f30ace9` | + behavior reserve 2, fallback = non-RESET RECOVERY HOLD | not selected; predicted 26..31 LOW sawtooth, MEDIUM never returns |
+| v1d | this branch | + hold persists as a mode; only reserve-safe MEDIUM (stamina >= 35) releases it; LOW never releases | **awaiting review** |
 
-**D2 acceptance contract** (criteria 1-15 in `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1C.md`):
+**D2 acceptance contract** (criteria 1-15 in `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1D.md`; unchanged in substance since v1c):
 
 - Preservation: Surface A 78/1950/0, Surface B Tap 9, Rule 1 exact, Rule 2 OFF, escapes/exits/timeouts/Tap tolerances, stalling exposure, digest.
 - Absolute stability: re-exhaustion **<=20% within 10 s** and **<=35% within 30 s**, with sample size >=43.
@@ -84,15 +85,15 @@ About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *
 
 **Important prediction already recorded for v1c:** the hold changes *how* Bottom declines an unsafe initiation, but not the stamina ledger. The same 26..31 sawtooth (+1 per 10 s, LOW at 31 back to 26) is predicted, so MEDIUM may still never return after the first hold. The gain is removing the RESET/stalling exposure. Expect the experiment to be decided by the passivity and return criteria (12-15).
 
+**Predictions recorded for v1d:** on the traced path, Bottom holds from 26 up to 35 (+1 per 10 s, 9 holds, about 90 s), then releases to MEDIUM (35 -> 28 -> 26) and holds again. No re-exhaustion on that path. But a release needs a first clear at <=190 s, so only about 16 of 82 pooled clearing matches are predicted to ever release. Criterion 4 (escapes, timeouts) is at risk from fewer post-clear Bottom initiations, and Top-funded responder spend during the long 26-35 band is the remaining re-entry path.
+
 ## 6. What is missing to finalize
 
 ### Next actions (in order)
 
-1. **Review the v1c preregistration SHA** on `review/handoff-oscillation-d1`. Decide whether to:
-   - authorize D2 implementation + measurement of v1c as frozen; or
-   - first preregister a variant that also changes recovery speed (to escape the predicted 26..31 sawtooth), for example a higher reserve before LOW resumes. That would be a new preregistration revision before any run.
+1. **Review the v1d preregistration SHA** on `review/handoff-oscillation-d1` (v1c was reviewed and not selected). Decide whether to authorize D2 implementation + measurement of v1d as frozen. Before authorizing, decide whether post-hold MEDIUM release should be gated: as frozen, criterion 13 is met at the clear window, and v1d predicts most armed matches never release within 300 s (v1d prediction 7).
 2. **D2 implementation + measurement** (only after explicit authorization):
-   - implement the v1c diagnostic mode and `MountMatch.recovery_hold()` (opt-in);
+   - implement the v1d diagnostic mode and `MountMatch.recovery_hold()` (opt-in);
    - run seeds 42 and 142, OFF + shadow and ON, plus adopted controls;
    - score criteria 1-15, record the results document, CI on 3.11/3.13, HARD STOP.
 3. **D2 outcome:**
@@ -111,7 +112,7 @@ About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *
 | 5 | Initiator tactical commitment-selection policy | open |
 | 6 | Scoring / timeout meaning for the first playable ruleset | open |
 | 7 | Final player-facing state/input contract | open |
-| 8 | v0.3b stalling visibility of non-RESET holds (raised by v1c) | design consideration; decide if v1c is ever made player-facing |
+| 8 | v0.3b stalling visibility of non-RESET holds (raised by v1c, kept by v1d) | design consideration; decide if a hold candidate is ever made player-facing |
 
 ### Definition of "ready for frontend"
 
@@ -131,4 +132,4 @@ git log --oneline -6
 PYTHONPATH=src python3 -m unittest discover -s tests
 ```
 
-Then read `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1C.md` and make the step-1 decision above.
+Then read `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1D.md` and make the step-1 decision above.
