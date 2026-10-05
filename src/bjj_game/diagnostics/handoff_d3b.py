@@ -19,6 +19,7 @@ from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
 from functools import lru_cache
 import gzip
+import hashlib
 import json
 from pathlib import Path
 import random
@@ -134,7 +135,10 @@ def _op_trace_run(kwargs: dict) -> tuple[BatchSummary, list[list[tuple]]]:
                  match.bottom.stamina.band is StaminaBand.EXHAUSTED,
                  match.initiator.value,
                  match.exit_destination.value if match.exit_destination else None,
-                 match.exit_reason),
+                 match.exit_reason,
+                 json.dumps(_scalar(match.setup_state), sort_keys=True),
+                 json.dumps(_scalar(match.submission_state), sort_keys=True),
+                 json.dumps(_scalar(match.stalling_tracker), sort_keys=True)),
             ))
             return result
         return wrapper
@@ -355,13 +359,20 @@ def g3(stalling: str) -> dict:
             result = "token-escape"
         elif ep.end_kind == "CLEARED":
             result = "cleared<=60" if ep.duration <= G3_CLEAR_SECONDS else "late-clear"
+        elif v.outcome in ESCAPES:
+            result = "bottom-exit-before-clear-not-token"
         elif v.outcome == TAP:
             result = "tap-before-clear"
         elif v.outcome == TIMEOUT:
             result = "timeout-before-clear"
         else:
             result = "other-terminal-before-clear"
+        still_exhausted_at_60 = (
+            result not in {"token-escape", "cleared<=60"}
+            and min(ep.end_t, v.end_t) - ep.entry_t >= G3_CLEAR_SECONDS
+        )
         rows.append({"seed": seed, "match": v.index % 100, "entry_t": ep.entry_t,
+                     "still_exhausted_at_60": still_exhausted_at_60,
                      "remaining": remaining, "eligible": remaining >= G3_REMAINING_MIN,
                      "result": result, "duration": ep.duration if ep.end_kind == "CLEARED" else None,
                      "entry_stamina": ep.entry_stamina, "outcome": v.outcome})
@@ -371,6 +382,7 @@ def g3(stalling: str) -> dict:
     frozen = {seed: tuple(sorted(r["match"] for r in eligible if r["seed"] == seed)) for seed in SEEDS}
     out = {"rows": rows, "eligible": len(eligible), "success": success, "counts": dict(counts),
            "continued_after_token": sum(1 for r in eligible if r["result"] != "token-escape"),
+           "still_exhausted_at_60": sum(1 for r in eligible if r["still_exhausted_at_60"]),
            "eligible_matches": frozen,
            "population_matches_frozen": frozen == {s: tuple(sorted(G3_ELIGIBLE[s])) for s in SEEDS}}
     if len(eligible) < G3_ELIGIBLE_MIN:
@@ -395,10 +407,11 @@ def g7(stalling: str) -> dict:
             last = eps[-1] if eps else None
             kind = "?"
             window = next((w for w in reversed(v.events[:v.events.index(esc)])
-                           if w["k"] == "win" and w["side"] == "bottom"), None)
+                           if w["k"] == "win" and w["side"] == esc["side"]), None)
             if window is not None:
                 kind = window.get("kind")
             detail = {
+                "side": esc["side"], "axis_before": window["ax"] if window is not None else None,
                 "t": esc["t"], "since_first_clear": esc["t"] - first_clear if first_clear is not None else None,
                 "since_episode_entry": esc["t"] - last.entry_t if last else None,
                 "decision": kind, "action": esc["action"], "req": esc["req"], "eff": esc["eff"],
@@ -444,7 +457,8 @@ def g6() -> dict:
     for stalling in STALLING:
         rows = d2.outcome_comparison(stalling)["rows"]
         ten = [row["match"] for row in rows if row["control_escape_attempt"]
-               and "(+10s) MEDIUM" in row["control_escape_attempt"]]
+               and "(+10s) MEDIUM" in row["control_escape_attempt"]
+               and row["control"] in ESCAPES and row["v1e"] not in ESCAPES]
         d3b = {v.index: v.outcome for v in pooled(stalling)}
         control = {v.index: v.outcome for v in pooled(stalling, "control")}
         restored[stalling] = {"count": len(ten),
@@ -597,8 +611,10 @@ def gates() -> tuple[Gate, ...]:
     for stalling in STALLING:
         orig = [v for v in views()[(42, stalling)] if v.clears]
         pool = [v for v in pooled(stalling) if v.clears]
-        mo, mp = median(v.clears[0] for v in orig), median(v.clears[0] for v in pool)
-        ok = len(orig) >= 40 and len(pool) >= 75 and mo <= 250 and mp <= 250
+        mo = median(v.clears[0] for v in orig) if orig else None
+        mp = median(v.clears[0] for v in pool) if pool else None
+        ok = (len(orig) >= 40 and len(pool) >= 75 and mo is not None and mo <= 250
+              and mp is not None and mp <= 250)
         statuses.append("PASS" if ok else "FAIL")
         parts.append(f"{stalling}: clearing {len(orig)}/{len(pool)}; first-clear median {mo}/{mp}")
     out.append(Gate("P9", "Anti-removal floors", d2._combine(*statuses), "; ".join(parts)))
@@ -722,6 +738,16 @@ def diagnostics(stalling: str) -> dict:
                 ledger["provisional hold / other"] += (e["b_before"] - e["bs"]) - e["resp_charged"]
     d["episode_stamina_ledger"] = dict(ledger)
     d["top_attempts_during_episodes"] = top_attempts_in_lockout
+    top_in_eps = [e for ep in eps for e in ep.view.events[ep.entry_pos + 1:ep.end_pos + 1]
+                  if e["k"] == "att" and e["side"] == "top"]
+    d["top_attempts_during_episodes_by_effective"] = _hist(e["eff"] for e in top_in_eps)
+    d["top_attempts_during_episodes_bottom_charged"] = sum(1 for e in top_in_eps if e["b_before"] != e["bs"])
+    d["token_stamina"] = _hist(ep.token_window["bs"] for ep in tok)
+    d["clear_stamina"] = _hist(ep.view.events[ep.end_pos]["bs"] for ep in cleared)
+    d["lockout_holds_per_episode"] = _hist(sum(1 for w in ep.windows if w.get("kind") == "LOCKOUT_HOLD")
+                                           for ep in eps)
+    d["entry_stamina"] = _hist(ep.entry_stamina for ep in eps)
+    d["lockout_counterfactual_request"] = "LOW (adopted LOW_WHILE_EXHAUSTED; every hold is Exhausted)"
     # Tactical effect.
     def counts(kind):
         out = Counter()
@@ -746,6 +772,32 @@ def diagnostics(stalling: str) -> dict:
                           "matches_reached_submission_finish"))}
         for k, s in summaries.items()}
     return d
+
+
+def episode_records(stalling: str) -> list[dict]:
+    rows = []
+    for v in pooled(stalling):
+        for ep in episodes(v):
+            entry = v.events[ep.entry_pos]
+            tw, tr = ep.token_window, ep.token_result
+            rows.append({
+                "match": v.index, "episode": ep.number, "entry_t": ep.entry_t,
+                "remaining_at_entry": v.initial_clock - ep.entry_t, "entry_stamina": ep.entry_stamina,
+                "cause": ep.cause, "entry_kind": ep.entry_kind, "entry_event": entry["k"],
+                "entry_action": entry.get("action"), "entry_req": entry.get("req"), "entry_eff": entry.get("eff"),
+                "entry_axis": entry["ax"], "entry_band": entry["band"],
+                "token": (None if tr is None else "TOKEN_LOW" if tr["k"] == "att" else
+                          "TOKEN_RESET" if tr["k"] == "reset" else tr["k"]),
+                "token_t": tw["t"] if tw else None, "token_free": tw["free"] if tw else None,
+                "token_stamina": tw["bs"] if tw else None, "token_band": tw["band"] if tw else None,
+                "token_action": tr.get("action") if tr else None, "token_eff": tr.get("eff") if tr else None,
+                "token_grade": tr.get("grade") if tr else None, "token_exit": tr.get("exit") if tr else None,
+                "lockout_holds": sum(1 for w in ep.windows if w.get("kind") == "LOCKOUT_HOLD"),
+                "end": ep.end_kind, "duration": ep.duration,
+                "clear_stamina": v.events[ep.end_pos]["bs"] if ep.end_kind == "CLEARED" else None,
+                "match_outcome": v.outcome,
+            })
+    return rows
 
 
 def band_comparison(stalling: str) -> dict:
@@ -822,6 +874,24 @@ def evidence() -> dict:
             "matches": [{"match_index": m.match_index, "outcome": m.outcome, "events": list(m.events)}
                         for m in s.post_clear_handoff.matches],
         }
+    def digest(trace):
+        return hashlib.sha256(json.dumps(trace, sort_keys=True).encode()).hexdigest()
+
+    out["op_trace_prefix"] = {}
+    for key in RUNS:
+        rows = []
+        for t_d, t_c in zip(r.d3b_traces[key], r.control_traces[key]):
+            cut = token_op_index(t_d)
+            end = len(t_d) if cut is None else cut + 1
+            rows.append({"token_op": cut, "d3b_prefix_sha256": digest(t_d[:end]),
+                         "control_prefix_sha256": digest(t_c[:end]),
+                         "d3b_full_sha256": digest(t_d), "control_full_sha256": digest(t_c)})
+        out["op_trace_prefix"][f"{key[0]}/{key[1]}"] = rows
+    out["episodes"] = {stalling: episode_records(stalling) for stalling in STALLING}
+    out["comparator_evidence"] = {
+        "file": "docs/evidence/handoff_d2_v1e_evidence.json.gz (fe229cb; adopted control + v1e event logs)",
+        "sha256": hashlib.sha256((_root() / "docs/evidence/handoff_d2_v1e_evidence.json.gz").read_bytes()).hexdigest(),
+    }
     out["proofs"] = {
         "replay_equal": {f"{k[0]}/{k[1]}": v for k, v in r.replay_equal.items()},
         "observer_identity": {str(k): v for k, v in r.plain_identity.items()},
@@ -871,7 +941,9 @@ def report() -> str:
                   f"continued after token={g['continued_after_token']}, cleared<=60 s={g['counts'].get('cleared<=60', 0)}, "
                   f"late clears={g['counts'].get('late-clear', 0)}, Tap before clear={g['counts'].get('tap-before-clear', 0)}, "
                   f"timeout before clear={g['counts'].get('timeout-before-clear', 0)}, "
-                  f"other terminal={g['counts'].get('other-terminal-before-clear', 0)}", "",
+                  f"other terminal={g['counts'].get('other-terminal-before-clear', 0)}, "
+                  f"Bottom exit before clear (not token)={g['counts'].get('bottom-exit-before-clear-not-token', 0)}, "
+                  f"still Exhausted 60 s after entry={g['still_exhausted_at_60']}", "",
                   "| seed | match | entry t | remaining | eligible | entry stamina | result | entry->clear | outcome |",
                   "|---|---|---|---|---|---|---|---|---|"]
         for row in g["rows"]:
@@ -889,6 +961,13 @@ def report() -> str:
                 lines.append(f"| {row['match']} | {row[comparator]} | {row['d3b']} | {row['class']} | "
                              f"{row['d3b_escape_t_since_clear']} |")
         lines += ["", f"## Prediction vs reality — {stalling}", ""] + _fmt(prediction_vs_reality(stalling))
+        cols = ("match", "episode", "entry_t", "remaining_at_entry", "entry_stamina", "entry_kind", "cause",
+                "entry_band", "token", "token_t", "token_free", "token_stamina", "token_action", "token_eff",
+                "token_band", "token_exit", "lockout_holds", "end", "duration", "clear_stamina", "match_outcome")
+        lines += ["", f"## Episode records — {stalling}", "", "| " + " | ".join(cols) + " |",
+                  "|" + "---|" * len(cols)]
+        for row in episode_records(stalling):
+            lines.append("| " + " | ".join(str(row[c]) for c in cols) + " |")
     g = g6()
     lines += ["", "## G6 detail", ""] + _fmt({k if isinstance(k, str) else f"{k[0]}/{k[1]}": v for k, v in g.items()})
     lines += ["", "## Proofs", ""] + _fmt({k: v for k, v in evidence()["proofs"].items()})
