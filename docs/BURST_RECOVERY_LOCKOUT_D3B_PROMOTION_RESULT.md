@@ -84,6 +84,7 @@ Any differing value would have been PROMOTION FAIL. None differed.
 - One verification run from the committed checkpoint `fdfc39e`, frozen seeds 42 and 142, 100 matches, 300 s, OFF + shadow and ON. No new seeds, settings, thresholds or candidates. No scoring fix was needed.
 - The `1b96ffc` reference was computed by running the same reference script against a detached `1b96ffc` worktree (HEAD verified), then the worktree was removed.
 - `tests/test_d3b_promotion_verification.py` re-executes the verification and requires PG1-PG7 and PG9 to equal the committed evidence. PG8 depends on git history and the growing file list, so it is re-checked (0 forbidden, 0 unexpected) only where `1b96ffc` history exists (skipped in CI's shallow checkout).
+- **CI note.** The first result commit `33a9718` failed exact-head CI (run 37354525026, 3.11 and 3.13): 4 pin tests errored because the re-execution also called PG8's `git diff` against `1b96ffc`, which CI's depth-1 checkout lacks (exit 128); the other 500 tests passed. A test-only fix substitutes the committed PG8 record inside the re-execution (PG8 stays excluded from that comparison and checked separately where history exists). No policy, gameplay, diagnostic or evidence change; verified in a local depth-1 clone. The fix commit is the CI-qualified head.
 
 ## 5. Still not done / not authorized
 

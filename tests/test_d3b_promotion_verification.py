@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 import subprocess
 import unittest
+from unittest import mock
 
 from bjj_game.diagnostics import d3b_promotion as promo
 from bjj_game.diagnostics import handoff_d2_v1e as d2
@@ -29,8 +30,12 @@ def _committed() -> dict:
 
 @lru_cache(maxsize=1)
 def _verified() -> dict:
+    """Re-execute PG1-PG7 and PG9. PG8 needs 1b96ffc git history (absent from
+    CI's shallow checkout) and is checked by test_pg8_nothing_bundled instead,
+    so the committed PG8 record stands in for it here."""
     reference = json.loads((EVIDENCE / "reference_1b96ffc.json").read_text())
-    return json.loads(json.dumps(promo.verify(reference), sort_keys=True, default=repr))
+    with mock.patch.object(promo, "pg8", lambda: _committed()["PG8"]):
+        return json.loads(json.dumps(promo.verify(reference), sort_keys=True, default=repr))
 
 
 def _has_history() -> bool:
