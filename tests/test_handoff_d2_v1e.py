@@ -28,7 +28,7 @@ from bjj_game.interfaces.handoff_policy import (
     PostClearHandoffMode,
     reserve_safe,
 )
-from bjj_game.interfaces.production_policy import PRODUCTION_STAMINA_RECOVERY_POLICY
+from bjj_game.interfaces.production_policy import GATE_G_STAMINA_RECOVERY_POLICY
 from bjj_game.interfaces.recovery_policy import RecoveryInitiationMode
 from bjj_game.positions.mount.rules import MAX_AXIS
 
@@ -259,7 +259,7 @@ class ConfigurationTests(unittest.TestCase):
                 run_escape_first_batch(**{**base, **change})
 
     def test_canonical_policy_and_defaults_unchanged(self):
-        settings = PRODUCTION_STAMINA_RECOVERY_POLICY.batch_settings(
+        settings = GATE_G_STAMINA_RECOVERY_POLICY.batch_settings(
             bottom_behavior_mode=BatchBehaviorMode.RECOVER
         )
         self.assertNotIn("post_clear_handoff_mode", settings)

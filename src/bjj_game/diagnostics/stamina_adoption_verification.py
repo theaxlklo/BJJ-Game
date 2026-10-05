@@ -15,7 +15,7 @@ from unittest import mock
 from ..engine.match import MountMatch
 from ..interfaces import batch as batch_module
 from ..interfaces.batch import BatchBehaviorMode, BatchSummary, run_escape_first_batch
-from ..interfaces.production_policy import PRODUCTION_STAMINA_RECOVERY_POLICY
+from ..interfaces.production_policy import GATE_G_STAMINA_RECOVERY_POLICY
 from ..interfaces.recovery_policy import RecoveryInitiationMode
 from .stamina_adoption_candidate import (
     AdoptionGate,
@@ -58,7 +58,7 @@ def canonical_kwargs(name: str) -> dict:
     }
     return {
         **base,
-        **PRODUCTION_STAMINA_RECOVERY_POLICY.batch_settings(
+        **GATE_G_STAMINA_RECOVERY_POLICY.batch_settings(
             bottom_behavior_mode=base.get(
                 "bottom_behavior_mode",
                 BatchBehaviorMode.FIXED,
@@ -161,7 +161,7 @@ def canonical_equivalence() -> tuple[EquivalenceResult, ...]:
 
 def measure_gate_g() -> AdoptionGate:
     results = canonical_equivalence()
-    policy = PRODUCTION_STAMINA_RECOVERY_POLICY
+    policy = GATE_G_STAMINA_RECOVERY_POLICY
     policy_ok = (
         policy.unfunded_responder_cost_waiver is True
         and policy.supplemental_hold_settlement is False

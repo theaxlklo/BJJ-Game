@@ -14,7 +14,7 @@ from unittest.mock import patch
 from ..domain.stamina import StaminaPool, StaminaBand
 from ..engine.match import MountMatch
 from ..interfaces.batch import run_escape_first_batch
-from ..interfaces.production_policy import PRODUCTION_STAMINA_RECOVERY_POLICY
+from ..interfaces.production_policy import GATE_G_STAMINA_RECOVERY_POLICY
 from .stamina_adoption_candidate import _surface_e_prod_kwargs
 from .stamina_adoption_handoff import horizon_counts, match_level_sensitivity
 
@@ -121,7 +121,7 @@ def measure():
     reports = {}
     for seed in (42, 142):
         kwargs = _surface_e_prod_kwargs(stalling=False, shadow=True, base_seed=seed)
-        kwargs.update(PRODUCTION_STAMINA_RECOVERY_POLICY.batch_settings(
+        kwargs.update(GATE_G_STAMINA_RECOVERY_POLICY.batch_settings(
             bottom_behavior_mode=kwargs['bottom_behavior_mode']))
         summary, events = trace_batch(**kwargs)
         reports[str(seed)] = characterize(summary, events)

@@ -1,0 +1,4 @@
+[('enable_stamina_settlement_rules', False), ('enable_supplemental_hold_settlement', False), ('enable_unfunded_responder_cost_waiver', True)]
+fixed [('enable_stamina_settlement_rules', False), ('enable_supplemental_hold_settlement', False), ('enable_unfunded_responder_cost_waiver', True), ('recovery_initiation_mode', <RecoveryInitiationMode.CURRENT: 'CURRENT'>)]
+recover [('enable_stamina_settlement_rules', False), ('enable_supplemental_hold_settlement', False), ('enable_unfunded_responder_cost_waiver', True), ('recovery_initiation_mode', <RecoveryInitiationMode.LOW_WHILE_EXHAUSTED: 'LOW_WHILE_EXHAUSTED'>)]
+True False RecoveryInitiationMode.LOW_WHILE_EXHAUSTED

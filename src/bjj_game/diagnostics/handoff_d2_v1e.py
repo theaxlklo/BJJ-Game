@@ -38,7 +38,7 @@ from ..interfaces.batch import (
     run_escape_first_batch,
 )
 from ..interfaces.handoff_policy import PostClearHandoffMode
-from ..interfaces.production_policy import PRODUCTION_STAMINA_RECOVERY_POLICY
+from ..interfaces.production_policy import GATE_G_STAMINA_RECOVERY_POLICY
 from ..interfaces.recovery_policy import RecoveryInitiationMode, RecoveryPolicyCollector
 from .stamina_adoption_candidate import (
     _surface_ab_kwargs,
@@ -108,7 +108,7 @@ def control_kwargs(seed: int, stalling: str) -> dict:
     }
     return {
         **base,
-        **PRODUCTION_STAMINA_RECOVERY_POLICY.batch_settings(
+        **GATE_G_STAMINA_RECOVERY_POLICY.batch_settings(
             bottom_behavior_mode=base["bottom_behavior_mode"]
         ),
         "measure_post_clear_handoff": True,
