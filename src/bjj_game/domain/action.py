@@ -67,6 +67,21 @@ class AttemptResult:
 
 
 @dataclass(frozen=True, slots=True)
+class RecoveryHoldResult:
+    """A D2 v1e RECOVERY HOLD: Bottom declines to initiate without RESET.
+
+    Spends and grants no stamina, consumes no simulated time, and only
+    passes initiative to the opponent.
+    """
+
+    side: Side
+    next_initiator: Side
+    elapsed_seconds: int
+    clock_seconds: int
+    stamina: int
+
+
+@dataclass(frozen=True, slots=True)
 class ResetWindowResult:
     """A deliberate no-action decision in the modern v0.1/v0.3b flow."""
 

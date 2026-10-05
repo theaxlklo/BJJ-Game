@@ -225,3 +225,5 @@ class RunHistory:
     bottom_initiation_count: int = 0
     clamp_count: int = 0
     escape_threshold_reached: bool = False
+    # D2 v1e opt-in RECOVERY HOLD record; empty on every non-v1e run.
+    recovery_hold_history: list[str] = field(default_factory=list)
