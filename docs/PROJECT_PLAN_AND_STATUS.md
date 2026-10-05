@@ -34,10 +34,10 @@ branch -> freeze DoD / preregistration -> HARD STOP -> review
 
 | Item | SHA / PR | State |
 |---|---|---|
-| `main` | `b59fc7f046d5420e3edc05f3300ad9699473776d` | **stable; D3-B production promotion merged** |
+| R1 base main | `1e2b5e3ffbf6f8a8051775d48c20063cc3abdedd` | stable; CI `37374129845` PASS |
 | Stamina production adoption | PR #10, head `ee6cb6fcebb105e31224bead48a302811b27b59a`, merge `2149925e684d49cea66915495efffec496ef54a5` | **MERGED** |
 | D3-B production promotion | PR #11, head `0aa23db5089476982eb6eaf94d91b316d857cee1`, merge `b59fc7f046d5420e3edc05f3300ad9699473776d` | **MERGED** |
-| Final-main qualification | CI `37370017411` | **PASS** on Python 3.11 and 3.13; 504 tests, 1 skipped; digest exact |
+| D3-B final-main qualification (`b59fc7f`) | CI `37370017411` | **PASS** on Python 3.11 and 3.13; 504 tests, 1 skipped; digest exact |
 | LOW -> MEDIUM handoff oscillation | D3-B design + promotion lineage | **CLOSED IN PRODUCTION** |
 | R1 — response commitment / provisional-hold affordability | branch `review/r1-hold-inclusive-affordability`; DoD `a2e2887` (CI `37382027293`) | **CLOSED BY CHARACTERIZATION — no gameplay change** |
 
@@ -239,8 +239,6 @@ git pull --ff-only origin main
 git rev-parse HEAD
 ```
 
-Expected:
-
-`b59fc7f046d5420e3edc05f3300ad9699473776d`
+Expected: the latest merge commit on `main`. Every frozen checkpoint SHA cited in this document must be an ancestor of it (`git merge-base --is-ancestor <sha> HEAD`).
 
 R1 is closed on `review/r1-hold-inclusive-affordability` (based on `1e2b5e3`; frozen DoD `a2e2887`). Merging that branch needs separate authorization. The next slice is late recovery / match-pacing characterization, starting on a fresh branch after explicit authorization.
