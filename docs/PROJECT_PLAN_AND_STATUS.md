@@ -2,7 +2,7 @@
 
 _Last updated: 2026-10-05. A living overview of where the project stands and what is still missing before the engine is final and frontend work can start._
 
-The authoritative details always live in the per-slice DoD, preregistration and measurement documents linked below. If anything here conflicts with them, they win.
+The authoritative details always live in the per-slice DoD, preregistration, measurement, result and promotion documents linked below. If anything here conflicts with them, they win.
 
 ---
 
@@ -10,130 +10,241 @@ The authoritative details always live in the per-slice DoD, preregistration and 
 
 A **deterministic tactical BJJ roguelike/simulation**. The current engine scope is **Mount-v0**: Top-vs-Bottom exchanges with stamina, commitment levels, setup/Ready, the Americana submission track, v0.3b stalling, and v0.4b Recognition.
 
-Before any frontend work, every remaining engine/design debt must be either **closed** or **explicitly deferred**.
+Before frontend work starts, every remaining engine/design debt must be either **closed** or **explicitly deferred**.
 
 ## 2. How work is done (change control)
 
 Every gameplay or mechanics change follows this sequence:
 
 ```text
-branch -> freeze DoD -> HARD STOP -> review -> explicit authorization
--> implement -> evidence -> review exact SHA -> explicit merge authorization -> squash merge
+branch -> freeze DoD / preregistration -> HARD STOP -> review
+-> explicit implementation authorization -> implement -> evidence
+-> exact-head qualification -> review exact SHA -> explicit merge authorization
+-> merge -> final-main verification -> HARD STOP
 ```
 
 - Criteria are frozen before measurement and never edited afterwards to make gates pass. Failed measurements stay on record.
 - Unit/checker PASS is not the same thing as a design-gate PASS or OPEN.
-- Required qualification: exact-head GitHub CI on **Python 3.11 and 3.13** (unit suite, frozen enumeration digest, semantic checker, legacy entry point). Local runs on system Python are supplementary.
+- Required qualification is exact-head GitHub CI on **Python 3.11 and 3.13** with the unit/regression suite, frozen enumeration digest, semantic checker, and legacy entry point. Local runs are supplementary.
+- When frozen evidence documents cite exact checkpoint SHAs, the merge strategy must preserve those commits in reachable history unless a different method is explicitly reviewed and authorized.
+- No gameplay change goes directly to `main`.
 - Frozen Mount-v0 enumeration digest: `3ee55429434f8f95c592183317292d3e824768135d7834c44bae82a6c1a59ff2`.
 
-## 3. Where things are
+## 3. Current repository state
 
-| Branch / PR | Head | Contents | State |
-|---|---|---|---|
-| `main` | `51ada9c` | everything through PR #9 (recovery-policy amendment) | stable |
-| `review/stamina-production-policy-adoption-dod` / **PR #10** | `ee6cb6f` | stamina production-policy adoption | **ADOPTED, awaiting merge authorization** |
-| `review/handoff-oscillation-d1` (no PR yet) | this branch | D1 characterization + D2 preregistrations + this plan | **D2 not yet authorized** |
+| Item | SHA / PR | State |
+|---|---|---|
+| `main` | `b59fc7f046d5420e3edc05f3300ad9699473776d` | **stable; D3-B production promotion merged** |
+| Stamina production adoption | PR #10, head `ee6cb6fcebb105e31224bead48a302811b27b59a`, merge `2149925e684d49cea66915495efffec496ef54a5` | **MERGED** |
+| D3-B production promotion | PR #11, head `0aa23db5089476982eb6eaf94d91b316d857cee1`, merge `b59fc7f046d5420e3edc05f3300ad9699473776d` | **MERGED** |
+| Final-main qualification | CI `37370017411` | **PASS** on Python 3.11 and 3.13; 504 tests, 1 skipped; digest exact |
+| LOW -> MEDIUM handoff oscillation | D3-B design + promotion lineage | **CLOSED IN PRODUCTION** |
+| Rule 2 double-charge debt | R1 | **OPEN; next controlled engine slice** |
 
-## 4. Completed: stamina production-policy adoption (PR #10)
+The review branches and historical checkpoint commits are intentionally preserved. The final integration kept the full evidence chain reachable from `main`.
 
-Canonical production policy, `bjj_game.interfaces.production_policy.PRODUCTION_STAMINA_RECOVERY_POLICY`:
+## 4. Completed: stamina production-policy adoption
+
+The original production-adoption slice established the baseline policy:
 
 ```text
 Rule 1 ON   (UNFUNDED initiator cannot drain the responder)
 Rule 2 OFF  (deferred)
-Bottom RECOVER + Exhausted initiation = LOW; after clear = baseline MEDIUM
+Bottom RECOVER + Exhausted initiation = LOW
+After an Exhausted clear = baseline MEDIUM
 ```
 
-It is explicit opt-in. Raw defaults are unchanged.
+Key checkpoints:
 
 | Stage | SHA | Result |
 |---|---|---|
 | Frozen DoD | `6068bc9` | reviewed |
-| Stage 1A: read-only A9 observer + inertness | `9a70335` | green |
-| Stage 1B: A9 preregistration | `985002d` | N=10 s, X=0.975034786099515, M=43 |
-| Stage 2: Rule1-only + LOW measurement | `17e2e68` | Gates A-F, H PASS; A1-A10 all CONFIRMED |
-| Canonical promotion + Gate G | `ee6cb6f` | Gates A-H all PASS: **ADOPTED** |
+| Stage 1A | `9a70335` | read-only A9 observer + inertness |
+| Stage 1B | `985002d` | A9 preregistration |
+| Stage 2 | `17e2e68` | Gates A-F, H PASS; A1-A10 CONFIRMED |
+| Canonical promotion + Gate G | `ee6cb6f` | Gates A-H PASS: **ADOPTED** |
+| Merge to `main` | `2149925` | PR #10 merged with a merge commit |
 
-Docs: `docs/STAMINA_PRODUCTION_POLICY_ADOPTION_*` (DoD, preregistration, first measurement, verification).
+Historical Gate-G behavior is now frozen separately as:
 
-## 5. In progress: D1/D2, the LOW -> MEDIUM handoff oscillation (debt 1)
+`GATE_G_STAMINA_RECOVERY_POLICY`
 
-**Problem (D1, `cdb04a0`):** after Bottom clears Exhausted at 35, it immediately spends MEDIUM (-7). ESCAPE then drains 2 over 10 s, and the next MEDIUM re-enters Exhausted:
+so the original adoption evidence remains reproducible after D3-B promotion.
+
+Docs: `docs/STAMINA_PRODUCTION_POLICY_ADOPTION_*`.
+
+## 5. Completed: debt 1 — LOW -> MEDIUM handoff oscillation
+
+### 5.1 Original problem
+
+D1 characterization (`cdb04a0`) showed that after Bottom cleared Exhausted at 35, the adopted handoff commonly followed:
 
 ```text
-35 -> 28 -> 27 -> 26 -> 19
+35 -> MEDIUM spend -> 28
+ESCAPE drain -> 27 -> 26
+next MEDIUM -> 19 -> Exhausted
 ```
 
-About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *relative* gate; absolute stability was never established.
+About 93% of admissible clears re-entered Exhausted at exactly +10 s. The earlier A9 result was only a relative gate and did not establish absolute stability.
 
-**Candidate lineage (all decided before any candidate run):**
+### 5.2 Candidate history
 
-| Rev | SHA | Candidate | Outcome of review |
-|---|---|---|---|
-| D1 | `cdb04a0` | characterization + first proposed D2 DoD | accepted as evidence |
-| v1 | `6230959` | initiation-only reserve: `stamina - cost > 25` | not selected; ledger shows a behavior-drain re-entry path |
-| v1b | `f624db2` | + behavior reserve 2, fallback = forced RESET | not selected; predicted RESET spam vs criterion 5 (<=23) |
-| v1c | `f30ace9` | + behavior reserve 2, fallback = non-RESET RECOVERY HOLD | not selected; predicted 26..31 LOW sawtooth, MEDIUM never returns |
-| v1d | `8dcaabb` | + hold persists as a mode; only reserve-safe MEDIUM (stamina >= 35) releases it; LOW never releases | not selected; one-shot CONSERVE gives ~90 s holds, ~66/82 predicted never to release, and no gate caught it |
-| v1e | `c4a9c33` (impl. `d00c48e`) | + CONSERVE on every normal advance while the mode is active (not through resolution); + post-hold return gate (criterion 16) | **measured: D2 FAIL on criterion 4** (escapes 17 < 25, timeouts 78 > 70). Stability 0/68 at 10 s, return gate 44/44. See `docs/HANDOFF_OSCILLATION_D2_V1E_RESULT.md` |
-| v1f | this branch | + reserve-safe LOW inside the mode (LOW never releases; LOW-safe + no action = genuine RESET, mode stays on); persistent CONSERVE; MEDIUM-only release | **awaiting review**; criterion 4 predicted at risk (the +10 s hold remains), entry-27 cycles predicted to release late (50 s) |
+The failed and superseded candidates remain historical evidence:
 
-**D2 acceptance contract** (criteria 1-16 in `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1E.md`; 1-15 unchanged in substance since v1c, 16 new in v1e):
+| Candidate | Key checkpoint | Status |
+|---|---|---|
+| D2 v1-v1d | `6230959` / `f624db2` / `f30ace9` / `8dcaabb` | preregistered/reviewed, not selected for measurement |
+| D2 v1e | prereg `c4a9c33`, impl `d00c48e`, result `fe229cb` | **DESIGN FAIL**: escapes 17 < 25; timeouts 78 > 70 |
+| D2 v1f | `88a01e9` | preregistered only; never implemented or run |
+| D3-A | `2fb24d5` | preregistered, superseded before implementation/run |
+| D3-B | prereg `dc4fc16`, implementation `f92dc6e`, result `1b96ffc` | **DESIGN PASS** |
+| D3-B promotion | prereg `1eb0a30`, implementation `fdfc39e`, qualified head `0aa23db` | **PROMOTION PASS** |
+| Production integration | PR #11 -> `b59fc7f` | **MERGED; debt closed** |
 
-- Preservation: Surface A 78/1950/0, Surface B Tap 9, Rule 1 exact, Rule 2 OFF, escapes/exits/timeouts/Tap tolerances, stalling exposure, digest.
-- Absolute stability: re-exhaustion **<=20% within 10 s** and **<=35% within 30 s**, with sample size >=43.
-- Anti-gaming: clearing-match floors, first-clear timing, a real return to MEDIUM at the clear window (13) and after recovery hold (16: >=35 eligible first cycles, >=80% release within 40 s).
-- Mandatory diagnostics: holds, passivity, reserve-model violations, v1-vs-candidate attribution.
+### 5.3 Current canonical behavior
 
-**Important prediction already recorded for v1c:** the hold changes *how* Bottom declines an unsafe initiation, but not the stamina ledger. The same 26..31 sawtooth (+1 per 10 s, LOW at 31 back to 26) is predicted, so MEDIUM may still never return after the first hold. The gain is removing the RESET/stalling exposure. Expect the experiment to be decided by the passivity and return criteria (12-15).
+`PRODUCTION_STAMINA_RECOVERY_POLICY` now selects:
 
-**Predictions recorded for v1d:** on the traced path, Bottom holds from 26 up to 35 (+1 per 10 s, 9 holds, about 90 s), then releases to MEDIUM (35 -> 28 -> 26) and holds again. No re-exhaustion on that path. But a release needs a first clear at <=190 s, so only about 16 of 82 pooled clearing matches are predicted to ever release. Criterion 4 (escapes, timeouts) is at risk from fewer post-clear Bottom initiations, and Top-funded responder spend during the long 26-35 band is the remaining re-entry path.
+```text
+Rule 1 ON
+Rule 2 OFF
+LOW while Exhausted under Bottom RECOVER
 
-**Predictions recorded for v1e:** persistent CONSERVE recovers +4 per 10 s. The traced path is a 130 s period of 4 cycles (entry 26/29/28/27, release 38/37/36/35, 20-30 s from entry to release), so recovery is cyclic, not a cure. Criterion 16 is expected to pass on the traced path. Its failure sources are Top-funded responder spend at 26-30 and terminal events during the mode. About 47 pooled matches have a first clear early enough to be eligible (floor 35). CONSERVE also drifts the axis faster toward Top during advances (+0.75 instead of +0.50 per interval). That is inherent to the engine and reported, not changed.
+After the first Exhausted clear:
+- arm D3-B
+- each armed Exhausted episode gets exactly one Exhausted LOW token decision
+- after that token, Bottom initiation is locked out with LOCKOUT_HOLD
+- lockout ends only when the existing Exhausted latch clears
+- clear-window / ordinary non-Exhausted play returns to baseline MEDIUM
+```
 
-## 6. What is missing to finalize
+Raw `MountMatch` and batch defaults remain unchanged. D3-B is selected only through the canonical RECOVER production policy. An unmeasured RECOVER configuration is rejected rather than silently falling back.
 
-### Next actions (in order)
+### 5.4 Frozen D3-B result
 
-1. **Review the D3-B promotion result** (`docs/BURST_RECOVERY_LOCKOUT_D3B_PROMOTION_RESULT.md`, branch `review/d3b-production-promotion`). **D3-B PROMOTION RESULT = PASS** (PG1-PG11): `PRODUCTION_STAMINA_RECOVERY_POLICY` now selects D3-B on RECOVER and reproduces the measured D3-B (`1b96ffc`) exactly; the Gate-G policy is frozen as `GATE_G_STAMINA_RECOVERY_POLICY`. D3-B's P3 median 29 and G7 5/25 remain exactly at their floors. Nothing merged; PR #10 stays open at `ee6cb6f`; no frontend wiring. Decide what, if anything, is authorized next (e.g. merge strategy for PR #10 and the promotion branch).
-2. **D2 implementation + measurement** (only after explicit authorization):
-   - implement the v1e diagnostic mode and `MountMatch.recovery_hold()` (opt-in);
-   - run seeds 42 and 142, OFF + shadow and ON, plus adopted controls;
-   - score criteria 1-16, record the results document, CI on 3.11/3.13, HARD STOP.
-3. **D2 outcome:**
-   - PASS -> a separate authorization to integrate into the canonical production policy;
-   - FAIL/OPEN -> record it, no tuning, and decide the next candidate or an explicit deferral.
-4. **PR #10 merge decision:** squash-merge the adoption checkpoint `ee6cb6f` into `main` when authorized. This is independent of D2 by design.
+Important measured values from `1b96ffc`:
 
-### Remaining engine/design debt before frontend
+```text
+original-100:
+30 escapes
+Half Guard 17
+Open Guard 5
+Reversal 8
+65 timeouts
+Tap 5
+Bottom final median 29
+
+seed 142:
+31 escapes
+65 timeouts
+Tap 4
+
+G3:
+25/25 bounded-recovery successes
+
+G6:
+0 prefix mismatches
+18/18 +10 s MEDIUM escapes preserved
+4/4 token-window escapes preserved
+
+G7:
+5/25 affected-region Bottom escapes
+```
+
+Two values passed exactly at their floors and must remain described that way:
+
+- P3 Bottom final median = **29**, required >=29.
+- G7 = **5/25**, required >=5/25.
+
+The result proves the frozen acceptance contract, not excess tactical margin.
+
+Docs:
+
+- `docs/BURST_RECOVERY_LOCKOUT_D3B_PREREGISTRATION.md`
+- `docs/BURST_RECOVERY_LOCKOUT_D3B_RESULT.md`
+- `docs/BURST_RECOVERY_LOCKOUT_D3B_PROMOTION_PREREGISTRATION.md`
+- `docs/BURST_RECOVERY_LOCKOUT_D3B_PROMOTION_RESULT.md`
+
+## 6. Next actions
+
+### 6.1 Next controlled slice: R1 — Rule 2 double charge
+
+The next engine debt is the deferred Rule 2 interaction between responder commitment and provisional submission-hold charging.
+
+Known starting evidence:
+
+- 179 additive response + provisional-hold cases were observed on E-PROD.
+- Rule 2 remains OFF in production.
+- The earlier Rule2-only path is not acceptable as a production answer; it collapses the public Threat surface from 78 matches to 0.
+- D3-B, Rule 1, raw defaults, stamina costs, setup/submission rules and the current canonical production policy are **not** to be changed as part of characterization.
+
+The R1 sequence is:
+
+1. Create a fresh R1 branch.
+2. **Characterization only:** enumerate every double-charge path, ordering, funded/unfunded case, submission-hold interaction, and any Rule-1 masking.
+3. Freeze the R1 DoD / preregistration and acceptance gates.
+4. HARD STOP for review.
+5. Only after explicit authorization: implement one frozen candidate, measure once, preserve evidence, qualify exact head, review, then decide promotion/deferral.
+
+No Rule 2 implementation is authorized merely by this status document.
+
+### 6.2 Remaining order after R1
+
+After R1 is closed or explicitly deferred:
+
+1. **Late recovery / pacing:** median first clear remains about 240 s of a 300 s match; decide whether this is intended game pacing or a separate mechanics debt.
+2. **Setup-policy debt.**
+3. **Initiator tactical commitment-selection policy:** player/AI choice among LOW / MEDIUM / HIGH rather than a fixed baseline.
+4. **Scoring / timeout meaning** for the first playable ruleset.
+5. **Final player-facing state/input contract.**
+6. Resolve the player-facing meaning/visibility of non-RESET recovery holds if it is still relevant after the above slices.
+
+## 7. Remaining engine/design debt before frontend
 
 | # | Debt | Status |
 |---|---|---|
-| 1 | LOW -> MEDIUM handoff oscillation | **D2 in preregistration** (this branch) |
-| 2 | **R1:** Rule 2 response + provisional-hold double charge (179 cases on E-PROD); Rule 2 redesign vs permanent deferral | open; not started (a separate slice after D2) |
-| 3 | Late recovery: median first clear at 240 s of 300 s; fewer escapes and more timeouts than LOW+BOTH | open; partly addressed by D2 criteria |
+| 1 | LOW -> MEDIUM handoff oscillation | **CLOSED IN PRODUCTION — D3-B** |
+| 2 | **R1:** Rule 2 responder commitment + provisional-hold double charge | **OPEN — NEXT** |
+| 3 | Late recovery / match pacing | open |
 | 4 | Setup-policy debt | open |
 | 5 | Initiator tactical commitment-selection policy | open |
-| 6 | Scoring / timeout meaning for the first playable ruleset | open |
+| 6 | Scoring / timeout meaning | open |
 | 7 | Final player-facing state/input contract | open |
-| 8 | v0.3b stalling visibility of non-RESET holds (raised by v1c, kept by v1d) | design consideration; decide if a hold candidate is ever made player-facing |
+| 8 | Recovery-hold visibility / presentation | design consideration; resolve before exposing relevant state to players |
 
-### Definition of "ready for frontend"
+## 8. Definition of "ready for frontend"
 
-- PR #10 merged.
-- Debt 1 closed (D2 PASS and integrated) or explicitly deferred.
-- Debt 2 (R1) closed or explicitly deferred.
-- Debts 4-7 closed or explicitly deferred, each through its own controlled slice.
-- `main` green on Python 3.11/3.13, with the frozen digest exact.
+Frontend work may start only when:
 
-## 7. Resuming work (checklist)
+- Debt 1 remains closed on `main`.
+- Debt 2 (R1) is closed or explicitly deferred.
+- Debts 3-7 are closed or explicitly deferred through their own controlled slices.
+- Any player-visible recovery-hold semantics needed by the final contract are decided.
+- The canonical production policy and player-facing state/input contract are stable.
+- `main` is green on Python 3.11/3.13 with the frozen digest exact.
+
+Current status: **NOT READY FOR FRONTEND.**
+
+## 9. Resuming work
+
+Start from final integrated `main`:
 
 ```bash
 cd ~/Projects/BJJ-Game
 git fetch origin
-git checkout review/handoff-oscillation-d1
-git log --oneline -6
-PYTHONPATH=src python3 -m unittest discover -s tests
+git switch main
+git pull --ff-only origin main
+git rev-parse HEAD
 ```
 
-Then read `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1E.md` and make the step-1 decision above.
+Expected:
+
+`b59fc7f046d5420e3edc05f3300ad9699473776d`
+
+Then create the next controlled branch for R1, for example:
+
+```bash
+git switch -c review/rule2-double-charge-r1
+```
+
+The first R1 commit should contain characterization / preregistration work only. Do not implement a Rule 2 fix before its acceptance contract is frozen and reviewed.
