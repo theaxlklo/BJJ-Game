@@ -36,7 +36,9 @@ Executable or evidence-affecting changes preserve the existing qualification con
 - Semantic checker.
 - Legacy entry point.
 
-The unit suite is split deterministically across four independent shards per Python version. Test files are sorted and assigned round-robin by file index. Every `tests/test_*.py` file belongs to exactly one shard for each Python version.
+The unit suite is loaded by Python's standard `unittest` discovery, flattened to individual test cases, sorted by stable test ID, then assigned deterministically round-robin across six independent shards per Python version. Every discovered test case belongs to exactly one shard for each Python version.
+
+Test-case sharding is intentional: profiling the first file-sharded prototype showed that a few historical measurement methods dominate runtime, so file-level sharding left one shard carrying most of the wall clock.
 
 Digest/checker/legacy verification runs in parallel with the unit-test shards instead of waiting for the whole unit suite.
 
@@ -50,7 +52,7 @@ A newer push to the same branch cancels obsolete work for the older SHA. Push an
 
 - No gameplay, policy, settlement, stamina, submission or deterministic engine semantics are changed by this slice.
 - No test is deleted or excluded from the full path.
-- Both supported Python versions still execute every test file on the full path.
+- Both supported Python versions still execute every discovered test case exactly once on the full path.
 - The frozen digest remains checked on both Python versions.
 - The semantic checker and legacy entry point remain checked on both Python versions.
 - `CI gate` fails if classification fails or if any applicable full-path job fails.
@@ -58,4 +60,4 @@ A newer push to the same branch cancels obsolete work for the older SHA. Push an
 
 ## Follow-up
 
-After this workflow is qualified, a later ordinary docs-only commit can be used to verify the fast path in seconds. Further test-runtime optimization should be based on measured per-file timings rather than removing coverage.
+After this workflow is qualified, a later ordinary docs-only commit can be used to verify the fast path. Further test-runtime optimization should be based on measured test-case timings rather than removing coverage.

@@ -91,38 +91,59 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.13"]
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Run unit and regression test shard
+      - name: Run deterministic unittest shard
         shell: bash
+        env:
+          SHARD_INDEX: ${{ matrix.shard }}
+          SHARD_COUNT: "6"
         run: |
           set -euo pipefail
-          mapfile -t files < <(
-            find tests -maxdepth 1 -type f -name 'test_*.py' | sort
+          PYTHONPATH=src python - <<'PY'
+          import os
+          import sys
+          import unittest
+
+          shard_index = int(os.environ["SHARD_INDEX"])
+          shard_count = int(os.environ["SHARD_COUNT"])
+
+          def flatten(suite):
+              for item in suite:
+                  if isinstance(item, unittest.TestSuite):
+                      yield from flatten(item)
+                  else:
+                      yield item
+
+          discovered = unittest.defaultTestLoader.discover("tests")
+          tests = sorted(flatten(discovered), key=lambda test: test.id())
+          selected = [
+              test
+              for index, test in enumerate(tests)
+              if index % shard_count == shard_index
+          ]
+
+          print(
+              f"discovered={len(tests)} "
+              f"shard={shard_index}/{shard_count} "
+              f"selected={len(selected)}"
           )
+          for test in selected:
+              print(f"  {test.id()}")
 
-          selected=()
-          for i in "${!files[@]}"; do
-            if (( i % 4 == ${{ matrix.shard }} )); then
-              selected+=("${files[$i]}")
-            fi
-          done
+          if not selected:
+              raise SystemExit(0)
 
-          printf 'Python %s shard %s files:\n' \
-            '${{ matrix.python-version }}' '${{ matrix.shard }}'
-          printf '  %s\n' "${selected[@]}"
-
-          if (( ${#selected[@]} == 0 )); then
-            echo "No test files assigned to this shard."
-            exit 0
-          fi
-
-          PYTHONPATH=src python -m unittest -v "${selected[@]}"
+          result = unittest.TextTestRunner(verbosity=2).run(
+              unittest.TestSuite(selected)
+          )
+          raise SystemExit(0 if result.wasSuccessful() else 1)
+          PY
 
   verification:
     name: verification (${{ matrix.python-version }})
