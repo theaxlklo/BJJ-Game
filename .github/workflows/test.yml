@@ -4,8 +4,130 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
+  classify:
+    name: classify changes
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.changes.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: changes
+        name: Classify changed paths
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            git fetch --no-tags origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
+            mapfile -t changed < <(
+              git diff --name-only "$PR_BASE_SHA...$PR_HEAD_SHA"
+            )
+          elif [[ -n "${BEFORE_SHA:-}" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
+            mapfile -t changed < <(
+              git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA"
+            )
+          else
+            git fetch --no-tags origin "$DEFAULT_BRANCH"
+            base="$(git merge-base "origin/$DEFAULT_BRANCH" "$GITHUB_SHA")"
+            mapfile -t changed < <(
+              git diff --name-only "$base" "$GITHUB_SHA"
+            )
+          fi
+
+          printf 'Changed paths:\n'
+          printf '  %s\n' "${changed[@]:-<none>}"
+
+          docs_only=true
+          if (( ${#changed[@]} == 0 )); then
+            docs_only=false
+          else
+            for path in "${changed[@]}"; do
+              case "$path" in
+                docs/evidence/*)
+                  docs_only=false
+                  break
+                  ;;
+                docs/*|README.md)
+                  ;;
+                *)
+                  docs_only=false
+                  break
+                  ;;
+              esac
+            done
+          fi
+
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "docs_only=$docs_only"
+
+  docs-only:
+    name: docs-only fast path
+    needs: classify
+    if: needs.classify.outputs.docs_only == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Documentation-only change; heavy qualification intentionally skipped."
+
   unit-tests:
+    name: unit-tests (${{ matrix.python-version }}, shard ${{ matrix.shard }})
+    needs: classify
+    if: needs.classify.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run unit and regression test shard
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(
+            find tests -maxdepth 1 -type f -name 'test_*.py' | sort
+          )
+
+          selected=()
+          for i in "${!files[@]}"; do
+            if (( i % 4 == ${{ matrix.shard }} )); then
+              selected+=("${files[$i]}")
+            fi
+          done
+
+          printf 'Python %s shard %s files:\n' \
+            '${{ matrix.python-version }}' '${{ matrix.shard }}'
+          printf '  %s\n' "${selected[@]}"
+
+          if (( ${#selected[@]} == 0 )); then
+            echo "No test files assigned to this shard."
+            exit 0
+          fi
+
+          PYTHONPATH=src python -m unittest -v "${selected[@]}"
+
+  verification:
+    name: verification (${{ matrix.python-version }})
+    needs: classify
+    if: needs.classify.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -16,8 +138,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Run unit and regression tests
-        run: PYTHONPATH=src python -m unittest discover -s tests -v
+
       - name: Verify frozen enumerate digest
         shell: bash
         run: |
@@ -26,7 +147,41 @@ jobs:
           echo "expected=$expected"
           echo "actual=$actual"
           test "$actual" = "$expected"
+
       - name: Run semantic checker
         run: PYTHONPATH=src python -m bjj_game --check
+
       - name: Verify legacy entry point
         run: PYTHONPATH=src python -m mount_v0 --check
+
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs:
+      - classify
+      - docs-only
+      - unit-tests
+      - verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the applicable qualification path
+        shell: bash
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          DOCS_ONLY: ${{ needs.classify.outputs.docs_only }}
+          DOCS_RESULT: ${{ needs.docs-only.result }}
+          UNIT_RESULT: ${{ needs.unit-tests.result }}
+          VERIFY_RESULT: ${{ needs.verification.result }}
+        run: |
+          set -euo pipefail
+
+          test "$CLASSIFY_RESULT" = "success"
+
+          if [[ "$DOCS_ONLY" == "true" ]]; then
+            test "$DOCS_RESULT" = "success"
+            echo "CI gate PASS: docs-only fast path."
+          else
+            test "$UNIT_RESULT" = "success"
+            test "$VERIFY_RESULT" = "success"
+            echo "CI gate PASS: full two-version qualification."
+          fi
