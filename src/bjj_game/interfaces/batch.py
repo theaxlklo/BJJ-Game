@@ -22,6 +22,13 @@ from .recovery_policy import (
     RecoveryPolicyCollector,
     RecoveryPolicyMeasurement,
 )
+from .handoff_policy import (
+    HandoffDecisionKind,
+    PostClearHandoffCollector,
+    PostClearHandoffMeasurement,
+    PostClearHandoffMode,
+    handoff_controller_for,
+)
 from ..positions.mount.catalog import (
     MODERN_ENTITY_BY_ID,
     TOP_AMERICANA_ARM_ISOLATION,
@@ -825,6 +832,7 @@ class BatchSummary:
     stamina_economy: StaminaEconomyMeasurement | None = None
     recovery_policy: RecoveryPolicyMeasurement | None = None
     reexhaustion_handoffs: ReExhaustionHandoffMeasurement | None = None
+    post_clear_handoff: PostClearHandoffMeasurement | None = None
 
     def render(self) -> str:
         ordered_outcomes = [
@@ -1058,6 +1066,8 @@ def run_escape_first_batch(
     measure_recovery_policy: bool = False,
     measure_reexhaustion_handoffs: bool = False,
     shadow_stalling: bool = False,
+    post_clear_handoff_mode: PostClearHandoffMode = PostClearHandoffMode.NONE,
+    measure_post_clear_handoff: bool = False,
 ) -> BatchSummary:
     if matches <= 0:
         raise ValueError("matches must be > 0")
@@ -1103,6 +1113,23 @@ def run_escape_first_batch(
         raise ValueError(
             "shadow stalling requires recovery-policy measurement"
         )
+    candidate_active = post_clear_handoff_mode is not PostClearHandoffMode.NONE
+    if candidate_active and not (
+        bottom_behavior_mode is BatchBehaviorMode.RECOVER
+        and bottom_behavior is BottomBehavior.ESCAPE
+        and enable_v02_setup
+        and enable_v04_commitment_semantics
+        and recovery_initiation_mode is RecoveryInitiationMode.LOW_WHILE_EXHAUSTED
+        and enable_unfunded_responder_cost_waiver
+        and not enable_supplemental_hold_settlement
+        and not enable_stamina_settlement_rules
+        and commitment is Commitment.MEDIUM
+    ):
+        raise ValueError(
+            "D2 v1e / D3-B require Bottom RECOVER (ESCAPE baseline), v0.2 setup, "
+            "v0.4a semantics, LOW_WHILE_EXHAUSTED, Rule 1 ON, Rule 2 OFF, "
+            "no settlement umbrella, and baseline MEDIUM"
+        )
 
     stamina_economy_collector = (
         StaminaEconomyCollector(
@@ -1125,6 +1152,11 @@ def run_escape_first_batch(
     reexhaustion_handoff_observer = (
         ReExhaustionHandoffObserver()
         if measure_reexhaustion_handoffs
+        else None
+    )
+    post_clear_handoff_collector = (
+        PostClearHandoffCollector(mode=post_clear_handoff_mode)
+        if measure_post_clear_handoff
         else None
     )
 
@@ -1238,6 +1270,12 @@ def run_escape_first_batch(
                     match.bottom.stamina.band is StaminaBand.EXHAUSTED
                 ),
             )
+        handoff_controller = handoff_controller_for(post_clear_handoff_mode, match)
+        if post_clear_handoff_collector is not None:
+            post_clear_handoff_collector.start_match(
+                match,
+                match_index=match_index,
+            )
         responder = RandomBlindResponder(base_seed + match_index)
         response_commitment_rng = random.Random(
             base_seed + match_index + 1_000_003
@@ -1278,7 +1316,12 @@ def run_escape_first_batch(
             if free_window is None:
                 # Choose behavior for the upcoming normal-speed interval.
                 next_top = top_policy.choose(match)
-                next_bottom = bottom_policy.choose(match)
+                policy_bottom = bottom_policy.choose(match)
+                next_bottom = (
+                    handoff_controller.pre_advance_bottom_behavior(policy_bottom)
+                    if handoff_controller is not None
+                    else policy_bottom
+                )
                 if next_top is not current_top:
                     top_behavior_switches += 1
                     current_top = next_top
@@ -1299,7 +1342,29 @@ def run_escape_first_batch(
                     if stamina_economy_collector is not None
                     else None
                 )
+                handoff_advance_context = (
+                    post_clear_handoff_collector.before_advance(
+                        match,
+                        bottom_behavior=current_bottom,
+                        rechoice_behavior=policy_bottom,
+                        forced=next_bottom is not policy_bottom,
+                        mode_active=(
+                            handoff_controller is not None
+                            and handoff_controller.recovery_hold_mode
+                        ),
+                    )
+                    if post_clear_handoff_collector is not None
+                    else None
+                )
                 advance_result = match.advance()
+                if handoff_controller is not None:
+                    handoff_controller.observe_advance(match)
+                if post_clear_handoff_collector is not None:
+                    post_clear_handoff_collector.after_advance(
+                        match,
+                        context=handoff_advance_context,
+                        result=advance_result,
+                    )
                 if stamina_economy_collector is not None:
                     stamina_economy_collector.after_advance(
                         match,
@@ -1349,6 +1414,36 @@ def run_escape_first_batch(
                 recovery_policy_collector.record_trajectory(match)
 
             side = match.initiator
+            handoff_decision = (
+                handoff_controller.decide(
+                    match,
+                    armed=bottom_first_exhausted is not None,
+                )
+                if handoff_controller is not None and side is Side.BOTTOM
+                else None
+            )
+            if post_clear_handoff_collector is not None:
+                post_clear_handoff_collector.window(
+                    match,
+                    side=side,
+                    free=free_window is not None,
+                    decision=handoff_decision,
+                    armed=(
+                        handoff_controller.armed_flag(
+                            bottom_first_exhausted is not None
+                        )
+                        if handoff_controller is not None
+                        else bottom_first_exhausted is not None
+                    ),
+                    policy_behavior=bottom_policy.choose(match),
+                    counterfactual_action=(
+                        policy.choose(match).action_id
+                        if handoff_decision is not None
+                        and handoff_decision.kind
+                        is HandoffDecisionKind.LOCKOUT_HOLD
+                        else None
+                    ),
+                )
             bottom_recovery_exhausted_turn = (
                 side is Side.BOTTOM
                 and bottom_behavior_mode is BatchBehaviorMode.RECOVER
@@ -1368,8 +1463,34 @@ def run_escape_first_batch(
                 )
                 else commitment
             )
+            if (
+                handoff_decision is not None
+                and handoff_decision.requested_commitment is not None
+            ):
+                selected_initiator_commitment = (
+                    handoff_decision.requested_commitment
+                )
             recognition_read: CommitmentRecognitionRead | None = None
             if enable_v02_setup:
+                if handoff_decision is not None and handoff_decision.hold:
+                    # D2 v1e RECOVERY HOLD replaces the initiation decision
+                    # before any policy, Recognition or response RNG draw.
+                    hold = match.recovery_hold()
+                    if post_clear_handoff_collector is not None:
+                        post_clear_handoff_collector.after_hold(
+                            match,
+                            result=hold,
+                        )
+                    record_exhaustion()
+                    if reexhaustion_handoff_observer is not None:
+                        reexhaustion_handoff_observer.observe(
+                            elapsed_seconds=match.elapsed_simulated_time,
+                            bottom_exhausted=(
+                                match.bottom.stamina.band
+                                is StaminaBand.EXHAUSTED
+                            ),
+                        )
+                    continue
                 # v0.2 restores established-position ordering:
                 # initiator locks action before responder chooses among legal responses.
                 decision = (
@@ -1395,6 +1516,13 @@ def run_escape_first_batch(
                         recovery_policy_collector.after_reset(
                             match,
                             result=reset,
+                        )
+                    if post_clear_handoff_collector is not None:
+                        post_clear_handoff_collector.after_reset(
+                            match,
+                            side=side,
+                            result=reset,
+                            stamina_before=match.bottom.stamina.current,
                         )
                     if side is Side.TOP:
                         top_resets += 1
@@ -1507,6 +1635,13 @@ def run_escape_first_batch(
                         recovery_policy_collector.after_reset(
                             match,
                             result=reset,
+                        )
+                    if post_clear_handoff_collector is not None:
+                        post_clear_handoff_collector.after_reset(
+                            match,
+                            side=side,
+                            result=reset,
+                            stamina_before=match.bottom.stamina.current,
                         )
                     if side is Side.TOP:
                         top_resets += 1
@@ -1641,6 +1776,11 @@ def run_escape_first_batch(
                 match.top.stamina.band is StaminaBand.EXHAUSTED
                 and match.bottom.stamina.band is StaminaBand.EXHAUSTED
             )
+            handoff_bottom_before = (
+                match.bottom.stamina.current,
+                match.bottom.stamina.band is StaminaBand.EXHAUSTED,
+                match.band.value,
+            )
             attempt_result = match.attempt(
                 action_id=decision.action_id,
                 response_id=response_id,
@@ -1648,6 +1788,17 @@ def run_escape_first_batch(
                 response_commitment=selected_response_commitment,
                 recognition_read=recognition_read,
             )
+            if post_clear_handoff_collector is not None:
+                post_clear_handoff_collector.after_attempt(
+                    match,
+                    side=side,
+                    action_id=decision.action_id,
+                    requested=selected_initiator_commitment,
+                    result=attempt_result,
+                    stamina_before=handoff_bottom_before[0],
+                    exhausted_before=handoff_bottom_before[1],
+                    band_before=handoff_bottom_before[2],
+                )
             if stamina_economy_collector is not None:
                 stamina_economy_collector.after_attempt(
                     match,
@@ -1807,6 +1958,15 @@ def run_escape_first_batch(
                 match,
                 outcome=outcome,
             )
+        if post_clear_handoff_collector is not None:
+            post_clear_handoff_collector.finish_match(
+                match,
+                outcome=outcome,
+                mode_active=(
+                    handoff_controller is not None
+                    and handoff_controller.pending(match)
+                ),
+            )
         if reexhaustion_handoff_observer is not None:
             reexhaustion_handoff_observer.finish_match(
                 elapsed_seconds=match.elapsed_simulated_time,
@@ -1928,6 +2088,11 @@ def run_escape_first_batch(
         reexhaustion_handoffs=(
             reexhaustion_handoff_observer.measurement()
             if reexhaustion_handoff_observer is not None
+            else None
+        ),
+        post_clear_handoff=(
+            post_clear_handoff_collector.measurement()
+            if post_clear_handoff_collector is not None
             else None
         ),
     )

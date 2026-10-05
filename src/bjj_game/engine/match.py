@@ -3,7 +3,13 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass, field, replace
 
-from ..domain.action import ActionAttempt, AttemptResult, Commitment, ResetWindowResult
+from ..domain.action import (
+    ActionAttempt,
+    AttemptResult,
+    Commitment,
+    RecoveryHoldResult,
+    ResetWindowResult,
+)
 from ..domain.competitor import Competitor
 from ..domain.model import (
     Band,
@@ -1272,6 +1278,37 @@ class MountMatch:
         self.history.reset_window_history.append(initiator.value)
         self.initiator = next_initiator
         return result
+
+    def recovery_hold(self) -> RecoveryHoldResult:
+        """Non-RESET Bottom hold (opt-in; only the D2 v1e RECOVERY HOLD and
+        D3-B LOCKOUT_HOLD batch modes call it; valid while Exhausted).
+
+        Bottom declines its decision window without RESET semantics: no
+        stamina spend or grant, no simulated time, no stalling evaluation,
+        progress-opportunity record or engagement, no setup, submission or
+        Recognition change, and no RNG. Initiative passes to the opponent and
+        the hold is recorded only in recovery_hold_history.
+        """
+        if self.clock_seconds <= 0:
+            raise RuntimeError("Cannot hold a decision window after timeout")
+        if self.position.broken:
+            raise RuntimeError("Cannot hold a decision window after Mount is broken")
+        side = self.initiator
+        if side is not Side.BOTTOM:
+            raise RuntimeError("recovery hold is defined for Bottom only")
+        stamina = self.bottom.stamina.current
+        elapsed = self.elapsed_simulated_time
+        self.history.recovery_hold_history.append(
+            f"{side.value}@{elapsed}s:stamina={stamina}"
+        )
+        self.initiator = side.opponent
+        return RecoveryHoldResult(
+            side=side,
+            next_initiator=self.initiator,
+            elapsed_seconds=elapsed,
+            clock_seconds=self.clock_seconds,
+            stamina=stamina,
+        )
 
 
     def attempt(

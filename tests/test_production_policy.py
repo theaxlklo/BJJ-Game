@@ -4,6 +4,7 @@ import unittest
 from bjj_game.engine.match import MountMatch
 from bjj_game.interfaces.batch import BatchBehaviorMode, run_escape_first_batch
 from bjj_game.interfaces.production_policy import (
+    GATE_G_STAMINA_RECOVERY_POLICY,
     PRODUCTION_STAMINA_RECOVERY_POLICY,
     ProductionStaminaRecoveryPolicy,
     production_stamina_recovery_policy,
@@ -12,10 +13,16 @@ from bjj_game.interfaces.recovery_policy import RecoveryInitiationMode
 
 
 class ProductionStaminaRecoveryPolicyTests(unittest.TestCase):
-    policy = PRODUCTION_STAMINA_RECOVERY_POLICY
+    """Gate-G adopted policy, now frozen as GATE_G_STAMINA_RECOVERY_POLICY.
+
+    The canonical policy promoted D3-B on top of it; see
+    tests/test_d3b_promotion.py.
+    """
+
+    policy = GATE_G_STAMINA_RECOVERY_POLICY
 
     def test_single_canonical_instance(self):
-        self.assertIs(production_stamina_recovery_policy(), self.policy)
+        self.assertIs(production_stamina_recovery_policy(), PRODUCTION_STAMINA_RECOVERY_POLICY)
         self.assertEqual(ProductionStaminaRecoveryPolicy(), self.policy)
 
     def test_selects_rule1_on_rule2_off_low(self):
