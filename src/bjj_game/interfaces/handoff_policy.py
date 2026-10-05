@@ -39,6 +39,10 @@ V1E_BEHAVIOR_RESERVE = 2
 class PostClearHandoffMode(str, Enum):
     NONE = "NONE"
     V1E_PERSISTENT_CONSERVE_HOLD = "V1E_PERSISTENT_CONSERVE_HOLD"
+    # D3-B (docs/BURST_RECOVERY_LOCKOUT_D3B_PREREGISTRATION.md, dc4fc16):
+    # one Exhausted LOW token per armed Exhausted episode, then strict
+    # initiation lockout until the Exhausted latch clears.
+    D3B_EXHAUSTED_TOKEN_LOCKOUT = "D3B_EXHAUSTED_TOKEN_LOCKOUT"
 
 
 class HandoffDecisionKind(str, Enum):
@@ -51,10 +55,18 @@ class HandoffDecisionKind(str, Enum):
     ENTER_HOLD = "ENTER_HOLD"
     HOLD = "HOLD"
     RELEASE_MEDIUM = "RELEASE_MEDIUM"
+    # D3-B kinds.
+    ARMED_NORMAL = "ARMED_NORMAL"  # armed, non-Exhausted: adopted decision
+    TOKEN = "TOKEN"  # first armed Exhausted decision: adopted LOW path
+    LOCKOUT_HOLD = "LOCKOUT_HOLD"  # token consumed, still Exhausted
 
     @property
     def is_hold(self) -> bool:
-        return self in {HandoffDecisionKind.ENTER_HOLD, HandoffDecisionKind.HOLD}
+        return self in {
+            HandoffDecisionKind.ENTER_HOLD,
+            HandoffDecisionKind.HOLD,
+            HandoffDecisionKind.LOCKOUT_HOLD,
+        }
 
 
 class ModeTransition(str, Enum):
@@ -96,6 +108,15 @@ class PostClearHandoffController:
     def pre_advance_bottom_behavior(self, chosen: BottomBehavior) -> BottomBehavior:
         """Persistent pre-advance CONSERVE while the mode is active."""
         return BottomBehavior.CONSERVE if self.recovery_hold_mode else chosen
+
+    def observe_advance(self, match: MountMatch) -> None:
+        """v1e keeps no latch history of its own."""
+
+    def armed_flag(self, default: bool) -> bool:
+        return default
+
+    def pending(self, match: MountMatch) -> bool:
+        return self.recovery_hold_mode
 
     def decide(self, match: MountMatch, *, armed: bool) -> HandoffDecision:
         """Bottom decision window. Must be called only when Bottom initiates."""
@@ -179,6 +200,87 @@ class PostClearHandoffController:
             mode_before=False,
             mode_after=True,
         )
+
+
+class D3BTokenLockoutController:
+    """D3-B state machine (frozen at dc4fc16). Behavior is never overridden.
+
+    armed:          True from Bottom's first Exhausted -> non-Exhausted clear.
+    token_consumed: per Exhausted episode; reset whenever the latch clears.
+
+    At a Bottom decision window (normal or free):
+      not armed or not Exhausted -> adopted decision (no override)
+      armed, Exhausted, token unused -> TOKEN: consume it; adopted LOW path
+          (attempt, or genuine RESET if the policy picks no action)
+      armed, Exhausted, token used -> LOCKOUT_HOLD (recovery_hold())
+
+    The latch can clear only inside advance() (behavior recovery), so clears
+    are observed after every advance.
+    """
+
+    def __init__(self, match: MountMatch) -> None:
+        self.armed = False
+        self.token_consumed = False
+        self._exhausted = match.bottom.stamina.band is StaminaBand.EXHAUSTED
+
+    @property
+    def recovery_hold_mode(self) -> bool:
+        """Post-token lockout pending (until the latch clears)."""
+        return self.armed and self.token_consumed
+
+    def pre_advance_bottom_behavior(self, chosen: BottomBehavior) -> BottomBehavior:
+        return chosen
+
+    def observe_advance(self, match: MountMatch) -> None:
+        exhausted = match.bottom.stamina.band is StaminaBand.EXHAUSTED
+        if self._exhausted and not exhausted:
+            self.armed = True
+            self.token_consumed = False
+        self._exhausted = exhausted
+
+    def armed_flag(self, default: bool) -> bool:
+        return self.armed
+
+    def pending(self, match: MountMatch) -> bool:
+        return (
+            self.armed
+            and match.bottom.stamina.band is StaminaBand.EXHAUSTED
+        )
+
+    def decide(self, match: MountMatch, *, armed: bool) -> HandoffDecision:
+        """Bottom decision window. The `armed` argument is ignored (own state)."""
+        if match.initiator is not Side.BOTTOM:
+            raise RuntimeError("D3-B decides only at Bottom decision windows")
+        exhausted = match.bottom.stamina.band is StaminaBand.EXHAUSTED
+        self._exhausted = exhausted
+        if not self.armed:
+            kind = HandoffDecisionKind.UNARMED
+            before = after = False
+        elif not exhausted:
+            kind = HandoffDecisionKind.ARMED_NORMAL
+            before = after = False
+        elif not self.token_consumed:
+            self.token_consumed = True
+            kind = HandoffDecisionKind.TOKEN
+            before, after = False, True
+        else:
+            kind = HandoffDecisionKind.LOCKOUT_HOLD
+            before = after = True
+        return HandoffDecision(
+            kind=kind,
+            requested_commitment=None,
+            transition=None,
+            mode_before=before,
+            mode_after=after,
+        )
+
+
+def handoff_controller_for(mode: PostClearHandoffMode, match: MountMatch):
+    if mode is PostClearHandoffMode.V1E_PERSISTENT_CONSERVE_HOLD:
+        return PostClearHandoffController()
+    if mode is PostClearHandoffMode.D3B_EXHAUSTED_TOKEN_LOCKOUT:
+        return D3BTokenLockoutController(match)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -300,6 +402,7 @@ class PostClearHandoffCollector:
         decision: HandoffDecision | None,
         armed: bool,
         policy_behavior: BottomBehavior,
+        counterfactual_action: str | None = None,
     ) -> None:
         event = {
             "k": "win",
@@ -336,6 +439,9 @@ class PostClearHandoffCollector:
                 ]
                 event["builder_available"] = bool(builders)
                 event["progress_route"] = bool(match.progress_capable_action_ids())
+            if counterfactual_action is not None:
+                # D3-B only: inert adopted counterfactual (deterministic policy).
+                event["cf_action"] = counterfactual_action
         self._events().append(event)
 
     def after_hold(self, match: MountMatch, *, result: RecoveryHoldResult) -> None:

@@ -23,10 +23,11 @@ from .recovery_policy import (
     RecoveryPolicyMeasurement,
 )
 from .handoff_policy import (
+    HandoffDecisionKind,
     PostClearHandoffCollector,
-    PostClearHandoffController,
     PostClearHandoffMeasurement,
     PostClearHandoffMode,
+    handoff_controller_for,
 )
 from ..positions.mount.catalog import (
     MODERN_ENTITY_BY_ID,
@@ -1112,11 +1113,8 @@ def run_escape_first_batch(
         raise ValueError(
             "shadow stalling requires recovery-policy measurement"
         )
-    v1e_active = (
-        post_clear_handoff_mode
-        is PostClearHandoffMode.V1E_PERSISTENT_CONSERVE_HOLD
-    )
-    if v1e_active and not (
+    candidate_active = post_clear_handoff_mode is not PostClearHandoffMode.NONE
+    if candidate_active and not (
         bottom_behavior_mode is BatchBehaviorMode.RECOVER
         and bottom_behavior is BottomBehavior.ESCAPE
         and enable_v02_setup
@@ -1128,7 +1126,7 @@ def run_escape_first_batch(
         and commitment is Commitment.MEDIUM
     ):
         raise ValueError(
-            "D2 v1e requires Bottom RECOVER (ESCAPE baseline), v0.2 setup, "
+            "D2 v1e / D3-B require Bottom RECOVER (ESCAPE baseline), v0.2 setup, "
             "v0.4a semantics, LOW_WHILE_EXHAUSTED, Rule 1 ON, Rule 2 OFF, "
             "no settlement umbrella, and baseline MEDIUM"
         )
@@ -1272,7 +1270,7 @@ def run_escape_first_batch(
                     match.bottom.stamina.band is StaminaBand.EXHAUSTED
                 ),
             )
-        handoff_controller = PostClearHandoffController() if v1e_active else None
+        handoff_controller = handoff_controller_for(post_clear_handoff_mode, match)
         if post_clear_handoff_collector is not None:
             post_clear_handoff_collector.start_match(
                 match,
@@ -1359,6 +1357,8 @@ def run_escape_first_batch(
                     else None
                 )
                 advance_result = match.advance()
+                if handoff_controller is not None:
+                    handoff_controller.observe_advance(match)
                 if post_clear_handoff_collector is not None:
                     post_clear_handoff_collector.after_advance(
                         match,
@@ -1428,8 +1428,21 @@ def run_escape_first_batch(
                     side=side,
                     free=free_window is not None,
                     decision=handoff_decision,
-                    armed=bottom_first_exhausted is not None,
+                    armed=(
+                        handoff_controller.armed_flag(
+                            bottom_first_exhausted is not None
+                        )
+                        if handoff_controller is not None
+                        else bottom_first_exhausted is not None
+                    ),
                     policy_behavior=bottom_policy.choose(match),
+                    counterfactual_action=(
+                        policy.choose(match).action_id
+                        if handoff_decision is not None
+                        and handoff_decision.kind
+                        is HandoffDecisionKind.LOCKOUT_HOLD
+                        else None
+                    ),
                 )
             bottom_recovery_exhausted_turn = (
                 side is Side.BOTTOM
@@ -1951,7 +1964,7 @@ def run_escape_first_batch(
                 outcome=outcome,
                 mode_active=(
                     handoff_controller is not None
-                    and handoff_controller.recovery_hold_mode
+                    and handoff_controller.pending(match)
                 ),
             )
         if reexhaustion_handoff_observer is not None:

@@ -1280,7 +1280,8 @@ class MountMatch:
         return result
 
     def recovery_hold(self) -> RecoveryHoldResult:
-        """D2 v1e RECOVERY HOLD (opt-in; only the v1e batch mode calls it).
+        """Non-RESET Bottom hold (opt-in; only the D2 v1e RECOVERY HOLD and
+        D3-B LOCKOUT_HOLD batch modes call it; valid while Exhausted).
 
         Bottom declines its decision window without RESET semantics: no
         stamina spend or grant, no simulated time, no stalling evaluation,
