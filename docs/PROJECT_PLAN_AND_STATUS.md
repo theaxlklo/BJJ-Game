@@ -74,28 +74,31 @@ About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *
 | v1 | `6230959` | initiation-only reserve: `stamina - cost > 25` | not selected; ledger shows a behavior-drain re-entry path |
 | v1b | `f624db2` | + behavior reserve 2, fallback = forced RESET | not selected; predicted RESET spam vs criterion 5 (<=23) |
 | v1c | `f30ace9` | + behavior reserve 2, fallback = non-RESET RECOVERY HOLD | not selected; predicted 26..31 LOW sawtooth, MEDIUM never returns |
-| v1d | this branch | + hold persists as a mode; only reserve-safe MEDIUM (stamina >= 35) releases it; LOW never releases | **awaiting review** |
+| v1d | `8dcaabb` | + hold persists as a mode; only reserve-safe MEDIUM (stamina >= 35) releases it; LOW never releases | not selected; one-shot CONSERVE gives ~90 s holds, ~66/82 predicted never to release, and no gate caught it |
+| v1e | this branch | + CONSERVE on every normal advance while the mode is active (not through resolution); + post-hold return gate (criterion 16) | **awaiting review** |
 
-**D2 acceptance contract** (criteria 1-15 in `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1D.md`; unchanged in substance since v1c):
+**D2 acceptance contract** (criteria 1-16 in `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1E.md`; 1-15 unchanged in substance since v1c, 16 new in v1e):
 
 - Preservation: Surface A 78/1950/0, Surface B Tap 9, Rule 1 exact, Rule 2 OFF, escapes/exits/timeouts/Tap tolerances, stalling exposure, digest.
 - Absolute stability: re-exhaustion **<=20% within 10 s** and **<=35% within 30 s**, with sample size >=43.
-- Anti-gaming: clearing-match floors, first-clear timing, a real return to MEDIUM.
+- Anti-gaming: clearing-match floors, first-clear timing, a real return to MEDIUM at the clear window (13) and after recovery hold (16: >=35 eligible first cycles, >=80% release within 40 s).
 - Mandatory diagnostics: holds, passivity, reserve-model violations, v1-vs-candidate attribution.
 
 **Important prediction already recorded for v1c:** the hold changes *how* Bottom declines an unsafe initiation, but not the stamina ledger. The same 26..31 sawtooth (+1 per 10 s, LOW at 31 back to 26) is predicted, so MEDIUM may still never return after the first hold. The gain is removing the RESET/stalling exposure. Expect the experiment to be decided by the passivity and return criteria (12-15).
 
 **Predictions recorded for v1d:** on the traced path, Bottom holds from 26 up to 35 (+1 per 10 s, 9 holds, about 90 s), then releases to MEDIUM (35 -> 28 -> 26) and holds again. No re-exhaustion on that path. But a release needs a first clear at <=190 s, so only about 16 of 82 pooled clearing matches are predicted to ever release. Criterion 4 (escapes, timeouts) is at risk from fewer post-clear Bottom initiations, and Top-funded responder spend during the long 26-35 band is the remaining re-entry path.
 
+**Predictions recorded for v1e:** persistent CONSERVE recovers +4 per 10 s. The traced path is a 130 s period of 4 cycles (entry 26/29/28/27, release 38/37/36/35, 20-30 s from entry to release), so recovery is cyclic, not a cure. Criterion 16 is expected to pass on the traced path. Its failure sources are Top-funded responder spend at 26-30 and terminal events during the mode. About 47 pooled matches have a first clear early enough to be eligible (floor 35). CONSERVE also drifts the axis faster toward Top during advances (+0.75 instead of +0.50 per interval). That is inherent to the engine and reported, not changed.
+
 ## 6. What is missing to finalize
 
 ### Next actions (in order)
 
-1. **Review the v1d preregistration SHA** on `review/handoff-oscillation-d1` (v1c was reviewed and not selected). Decide whether to authorize D2 implementation + measurement of v1d as frozen. Before authorizing, decide whether post-hold MEDIUM release should be gated: as frozen, criterion 13 is met at the clear window, and v1d predicts most armed matches never release within 300 s (v1d prediction 7).
+1. **Review the v1e preregistration SHA** on `review/handoff-oscillation-d1` (v1c and v1d were reviewed and not selected). Decide whether to authorize D2 implementation + measurement of v1e as frozen.
 2. **D2 implementation + measurement** (only after explicit authorization):
-   - implement the v1d diagnostic mode and `MountMatch.recovery_hold()` (opt-in);
+   - implement the v1e diagnostic mode and `MountMatch.recovery_hold()` (opt-in);
    - run seeds 42 and 142, OFF + shadow and ON, plus adopted controls;
-   - score criteria 1-15, record the results document, CI on 3.11/3.13, HARD STOP.
+   - score criteria 1-16, record the results document, CI on 3.11/3.13, HARD STOP.
 3. **D2 outcome:**
    - PASS -> a separate authorization to integrate into the canonical production policy;
    - FAIL/OPEN -> record it, no tuning, and decide the next candidate or an explicit deferral.
@@ -132,4 +135,4 @@ git log --oneline -6
 PYTHONPATH=src python3 -m unittest discover -s tests
 ```
 
-Then read `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1D.md` and make the step-1 decision above.
+Then read `docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1E.md` and make the step-1 decision above.
