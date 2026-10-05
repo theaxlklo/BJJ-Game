@@ -95,7 +95,7 @@ About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *
 
 ### Next actions (in order)
 
-1. **Review the D3-B preregistration** (`docs/BURST_RECOVERY_LOCKOUT_D3B_PREREGISTRATION.md`, branch `review/burst-recovery-lockout-d3`). It keeps the clear-window MEDIUM, the +10 s MEDIUM and one Exhausted LOW per Exhausted episode, then locks out Bottom initiations until the latch clears. D3-A (`2fb24d5`) was superseded before any run. Gates are P1-P9 (P5 tightened), G1-G3, G6 and G7 (>=5 escapes in the frozen 25 affected matches). G7 is predicted at material risk. Decide whether to authorize D3-B implementation + measurement.
+1. **Review the D3-B result** (`docs/BURST_RECOVERY_LOCKOUT_D3B_RESULT.md`, branch `review/burst-recovery-lockout-d3`). One frozen run of the authorized D3-B preregistration (`dc4fc16`, implementation `f92dc6e`): **D3-B DESIGN RESULT = PASS**, every mandatory gate PASS, with G7 = 5/25 and P3 median = 29 exactly at their floors. One scoring-only defect (G6 op-trace id reuse) was fixed and rescored on the preserved gameplay; see the result's integrity record. D3-B is not promoted; PR #10 stays open at `ee6cb6f`. Decide what, if anything, is authorized next.
 2. **D2 implementation + measurement** (only after explicit authorization):
    - implement the v1e diagnostic mode and `MountMatch.recovery_hold()` (opt-in);
    - run seeds 42 and 142, OFF + shadow and ON, plus adopted controls;

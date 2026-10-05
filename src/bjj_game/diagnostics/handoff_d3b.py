@@ -18,6 +18,7 @@ from contextlib import ExitStack
 from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
 from functools import lru_cache
+from itertools import permutations, product
 import gzip
 import hashlib
 import json
@@ -103,6 +104,10 @@ def _op_trace_run(kwargs: dict) -> tuple[BatchSummary, list[list[tuple]]]:
     match (draws since the match's first operation).
     """
     counter = [0]
+    # Strong references keep every traced match alive for the whole batch, so
+    # id(match) can never be reused by a later match (the frozen run's tracer
+    # lacked this; see split_op_traces for how its traces were rescored).
+    alive: list[MountMatch] = []
     traces: dict[int, list] = {}
     order: list[int] = []
     base: dict[int, int] = {}
@@ -120,6 +125,7 @@ def _op_trace_run(kwargs: dict) -> tuple[BatchSummary, list[list[tuple]]]:
         def wrapper(match, *a, **k):
             key = id(match)
             if key not in traces:
+                alive.append(match)
                 traces[key] = []
                 order.append(key)
                 base[key] = counter[0]
@@ -150,6 +156,91 @@ def _op_trace_run(kwargs: dict) -> tuple[BatchSummary, list[list[tuple]]]:
             stack.enter_context(mock.patch.object(MountMatch, n, op(n)))
         summary = run_escape_first_batch(**kwargs)
     return summary, [traces[k] for k in order]
+
+
+_OP_EVENT_KIND = {"advance": "adv", "attempt": "att", "reset_window": "reset", "recovery_hold": "hold"}
+
+
+def _op_ended(op: tuple) -> bool:
+    clock, *_rest = op[6]
+    return clock <= 0 or op[6][7] is not None or op[6][8] is not None
+
+
+def _normalized(segment: list[tuple]) -> list[tuple]:
+    """RNG draw counts relative to the segment's first operation."""
+    base = segment[0][4]
+    return [op[:4] + (op[4] - base, op[5] - base) + op[6:] for op in segment]
+
+
+def split_op_traces(traces: list[list[tuple]], summary: BatchSummary) -> list[list[tuple]]:
+    """Per-match op traces, indexed by match_index.
+
+    Scoring fix after the frozen run: its tracer keyed matches by id(match),
+    and CPython reused the ids of finished matches, so several matches'
+    operations were concatenated under one key. Matches run sequentially and
+    end at a terminal operation, so each concatenation splits exactly at
+    terminal ops, and within one key the segments are in chronological order.
+
+    Each segment is matched to the match whose collector event log has the
+    same post-state sequence (event kind, elapsed time, Bottom stamina, axis,
+    band). Matches sharing a sequence (short pre-clear matches differing only
+    in Recognition rolls) are resolved by the only assignment under which
+    match indices increase within every key; anything else raises. Traces
+    from the fixed tracer (one key per match, in match order) are assigned
+    by position after the same event-log check.
+    """
+    records = summary.post_clear_handoff.matches
+    clock0 = records[0].initial_clock
+    by_sig: dict[tuple, list[int]] = {}
+    for m in records:
+        sig = tuple((e["k"], e["t"], e["bs"], e["ax"], e["band"]) for e in m.events
+                    if e["k"] in {"adv", "att", "reset", "hold"})
+        by_sig.setdefault(sig, []).append(m.match_index)
+    keyed: list[list[tuple[tuple[int, ...], list[tuple]]]] = []
+    for trace in traces:
+        current, segments = [], []
+        for op in trace:
+            current.append(op)
+            if _op_ended(op):
+                sig = tuple((_OP_EVENT_KIND[o[0]], clock0 - o[6][0], o[6][3], round(o[6][1], 10), o[6][2])
+                            for o in current)
+                if sig not in by_sig:
+                    raise ValueError("op-trace segment does not map to a match event log")
+                segments.append((tuple(sorted(by_sig[sig])), _normalized(current)))
+                current = []
+        if current:
+            raise ValueError("op trace ends inside a match")
+        keyed.append(segments)
+    if len(keyed) == len(records) and all(len(segs) == 1 for segs in keyed):
+        # Fixed tracer: one key per match, keys in first-seen (= match) order.
+        out = [segs[0][1] for segs in keyed]
+        if any(i not in segs[0][0] for i, segs in enumerate(keyed)):
+            raise ValueError("per-match op trace does not match its event log")
+        return out
+    ambiguous = sorted({c for segs in keyed for c, _ in segs if len(c) > 1})
+    solutions = []
+    for choice in product(*(permutations(g) for g in ambiguous)):
+        pending = {g: list(p) for g, p in zip(ambiguous, choice)}
+        seqs = [[c[0] if len(c) == 1 else pending[c].pop(0) for c, _ in segs] for segs in keyed]
+        if all(seq == sorted(seq) for seq in seqs):
+            solutions.append(seqs)
+    if len(solutions) != 1:
+        raise ValueError(f"op-trace assignment not unique ({len(solutions)} solutions)")
+    out: list = [None] * len(records)
+    for seq, segs in zip(solutions[0], keyed):
+        for index, (_, seg) in zip(seq, segs):
+            if out[index] is not None:
+                raise ValueError("match assigned twice")
+            out[index] = seg
+    if any(seg is None for seg in out):
+        raise ValueError("unmapped match")
+    return out
+
+
+def per_match_traces(key) -> tuple[list[list[tuple]], list[list[tuple]]]:
+    r = runs()
+    return (split_op_traces(r.d3b_traces[key], r.d3b[key]),
+            split_op_traces(r.control_traces[key], d2.runs().control[key]))
 
 
 def token_op_index(trace: list[tuple]) -> int | None:
@@ -432,14 +523,15 @@ def g6() -> dict:
     out = {}
     for key in RUNS:
         mismatches = []
-        for i, (t_d, t_c) in enumerate(zip(r.d3b_traces[key], r.control_traces[key])):
+        d3b_traces, control_traces = per_match_traces(key)
+        for i, (t_d, t_c) in enumerate(zip(d3b_traces, control_traces)):
             cut = token_op_index(t_d)
             if cut is None:
                 if t_d != t_c:
                     mismatches.append(i)
             elif t_d[:cut + 1] != t_c[:cut + 1]:
                 mismatches.append(i)
-        out[key] = {"matches": len(r.d3b_traces[key]), "mismatches": mismatches,
+        out[key] = {"matches": len(d3b_traces), "mismatches": mismatches,
                     "traces_equal_summaries": r.trace_summary_equal[key]}
     # Frozen populations reproduced from the D3-B prefix.
     pops = {}
@@ -880,7 +972,7 @@ def evidence() -> dict:
     out["op_trace_prefix"] = {}
     for key in RUNS:
         rows = []
-        for t_d, t_c in zip(r.d3b_traces[key], r.control_traces[key]):
+        for t_d, t_c in zip(*per_match_traces(key)):
             cut = token_op_index(t_d)
             end = len(t_d) if cut is None else cut + 1
             rows.append({"token_op": cut, "d3b_prefix_sha256": digest(t_d[:end]),
