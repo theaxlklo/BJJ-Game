@@ -8,15 +8,24 @@ production stamina/recovery semantics
     Rule 2 = OFF  (deferred; legacy hold settlement remains)
     Bottom RECOVER + Exhausted initiation = LOW
     Initiation after Exhausted clears     = baseline commitment (MEDIUM)
+    Bottom RECOVER post-clear handoff     = D3-B (one Exhausted LOW token per
+        armed Exhausted episode, then initiation lockout until the latch
+        clears; docs/BURST_RECOVERY_LOCKOUT_D3B_RESULT.md)
 
 Raw MountMatch / batch defaults are unchanged; callers opt in explicitly.
 The policy selects only these stamina/recovery settings. It does not enable
 v0.4a commitment semantics, v0.3b stalling, Recognition, scoring, or any
 initiator commitment choice; those remain separate, composable decisions.
 
-GATE_G_STAMINA_RECOVERY_POLICY is the Gate-G adopted policy, frozen under its
-own name (docs/BURST_RECOVERY_LOCKOUT_D3B_PROMOTION_PREREGISTRATION.md). Its
-output depends only on its own immutable state, so historical controls keep
+D3-B is a batch decision-window controller, not a MountMatch setting, so
+match_settings() is unchanged; it is selected only under Bottom RECOVER, and
+batch validation rejects RECOVER configurations outside the measured E-PROD
+shape (no silent fallback).
+
+GATE_G_STAMINA_RECOVERY_POLICY is the Gate-G adopted policy (no post-clear
+handoff), frozen under its own name
+(docs/BURST_RECOVERY_LOCKOUT_D3B_PROMOTION_PREREGISTRATION.md). Its output
+depends only on its own immutable state, so historical controls keep
 reproducing whatever the canonical policy selects.
 """
 
@@ -93,7 +102,7 @@ GATE_G_STAMINA_RECOVERY_POLICY = ProductionStaminaRecoveryPolicy(
 )
 
 PRODUCTION_STAMINA_RECOVERY_POLICY = ProductionStaminaRecoveryPolicy(
-    post_clear_handoff_mode=PostClearHandoffMode.NONE
+    post_clear_handoff_mode=PostClearHandoffMode.D3B_EXHAUSTED_TOKEN_LOCKOUT
 )
 
 
