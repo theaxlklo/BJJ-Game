@@ -95,7 +95,7 @@ About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *
 
 ### Next actions (in order)
 
-1. **Review the D3-B result** (`docs/BURST_RECOVERY_LOCKOUT_D3B_RESULT.md`, branch `review/burst-recovery-lockout-d3`). One frozen run of the authorized D3-B preregistration (`dc4fc16`, implementation `f92dc6e`): **D3-B DESIGN RESULT = PASS**, every mandatory gate PASS, with G7 = 5/25 and P3 median = 29 exactly at their floors. One scoring-only defect (G6 op-trace id reuse) was fixed and rescored on the preserved gameplay; see the result's integrity record. D3-B is not promoted; PR #10 stays open at `ee6cb6f`. Decide what, if anything, is authorized next.
+1. **Review the D3-B promotion preregistration** (`docs/BURST_RECOVERY_LOCKOUT_D3B_PROMOTION_PREREGISTRATION.md`, branch `review/d3b-production-promotion` from `1b96ffc`). D3-B is a DESIGN PASS (`1b96ffc`; G7 = 5/25 and P3 median = 29 exactly at their floors). The promotion slice would freeze today's canonical policy as a historical constant, promote D3-B into `PRODUCTION_STAMINA_RECOVERY_POLICY` on RECOVER only, and prove canonical-D3B is gameplay-identical to the measured diagnostic (PG1-PG12, with a negative control). No gameplay code change; PR #10 stays open at `ee6cb6f`. Decide whether to authorize the promotion implementation + verification run.
 2. **D2 implementation + measurement** (only after explicit authorization):
    - implement the v1e diagnostic mode and `MountMatch.recovery_hold()` (opt-in);
    - run seeds 42 and 142, OFF + shadow and ON, plus adopted controls;
