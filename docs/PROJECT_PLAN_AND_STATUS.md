@@ -95,7 +95,7 @@ About 93% of admissible clears re-exhaust at exactly 10 s. A9 passed only as a *
 
 ### Next actions (in order)
 
-1. **Review the v1f preregistration** (`docs/HANDOFF_OSCILLATION_D2_PREREGISTRATION_V1F.md`). v1e is recorded as FAIL on criterion 4 (`fe229cb`). v1f keeps v1e's stable recovery but permits reserve-safe LOW attempts while recovering. Decide whether to authorize v1f implementation + measurement.
+1. **Review the D3 preregistration** (`docs/BURST_RECOVERY_LOCKOUT_D3_RESEARCH_AND_PREREGISTRATION.md`, branch `review/burst-recovery-lockout-d3`). D3 reframes the debt: keep the post-clear MEDIUM burst, including the +10 s MEDIUM that re-exhausts Bottom, then lock out Bottom initiations while armed and Exhausted until the latch clears. D2 stays recorded as v1e FAIL; v1f is preregistered and never run. Decide whether to authorize D3 implementation + measurement.
 2. **D2 implementation + measurement** (only after explicit authorization):
    - implement the v1e diagnostic mode and `MountMatch.recovery_hold()` (opt-in);
    - run seeds 42 and 142, OFF + shadow and ON, plus adopted controls;
