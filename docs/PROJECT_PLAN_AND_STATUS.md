@@ -39,7 +39,7 @@ branch -> freeze DoD / preregistration -> HARD STOP -> review
 | D3-B production promotion | PR #11, head `0aa23db5089476982eb6eaf94d91b316d857cee1`, merge `b59fc7f046d5420e3edc05f3300ad9699473776d` | **MERGED** |
 | Final-main qualification | CI `37370017411` | **PASS** on Python 3.11 and 3.13; 504 tests, 1 skipped; digest exact |
 | LOW -> MEDIUM handoff oscillation | D3-B design + promotion lineage | **CLOSED IN PRODUCTION** |
-| Rule 2 double-charge debt | R1 | **OPEN; next controlled engine slice** |
+| R1 — response commitment / provisional-hold affordability | branch `review/r1-hold-inclusive-affordability` | **characterized; DoD frozen for review; outcome not yet selected** |
 
 The review branches and historical checkpoint commits are intentionally preserved. The final integration kept the full evidence chain reachable from `main`.
 
@@ -167,26 +167,19 @@ Docs:
 
 ## 6. Next actions
 
-### 6.1 Next controlled slice: R1 — Rule 2 double charge
+### 6.1 Current slice: R1 — response commitment / provisional-hold affordability
 
-The next engine debt is the deferred Rule 2 interaction between responder commitment and provisional submission-hold charging.
+Renamed from "Rule 2 double charge". Authoritative document: `docs/R1_HOLD_INCLUSIVE_AFFORDABILITY_DOD.md`.
 
-Known starting evidence:
+Frozen premise: settlement semantics A is intentional. Response commitment and the 3-point provisional Contested hold are additive. The hold is a separate cost of surviving a contested lock. Rule 2 / semantics B (the commitment covers the hold) remains rejected: public-MATCH Threat reach 78/100 -> 0/100. The E-PROD "179" counts how often semantics A applies; it is not a defect count.
 
-- 179 additive response + provisional-hold cases were observed on E-PROD.
-- Rule 2 remains OFF in production.
-- The earlier Rule2-only path is not acceptable as a production answer; it collapses the public Threat surface from 78 matches to 0.
-- D3-B, Rule 1, raw defaults, stamina costs, setup/submission rules and the current canonical production policy are **not** to be changed as part of characterization.
+Characterization results (observer only, no gameplay change):
 
-The R1 sequence is:
+- The historical 1,366 "commitment-only fundable, hold not" cases reproduce exactly on the pre-change configuration. Rule 1 alone removes 1,362 of them. Canonical production: E-PROD 0 / 2 (seeds 42 / 142), B-PROD 6, A-PROD 78.
+- A hold shortfall has no mechanical consequence. The Contested result is fixed before stamina is charged.
+- No free hold-aware downgrade exists on any production surface. Every affordable lower commitment turns the predicted Contested into a Top Success.
 
-1. Create a fresh R1 branch.
-2. **Characterization only:** enumerate every double-charge path, ordering, funded/unfunded case, submission-hold interaction, and any Rule-1 masking.
-3. Freeze the R1 DoD / preregistration and acceptance gates.
-4. HARD STOP for review.
-5. Only after explicit authorization: implement one frozen candidate, measure once, preserve evidence, qualify exact head, review, then decide promotion/deferral.
-
-No Rule 2 implementation is authorized merely by this status document.
+Proposed outcome (awaiting user selection): **R1-CLOSE**. Freeze best-effort additive hold semantics and move the projected-burden display requirement into debt 7. Alternative R1-H2 (deliberately more submission pressure) is preregistered but not recommended.
 
 ### 6.2 Remaining order after R1
 
@@ -204,7 +197,7 @@ After R1 is closed or explicitly deferred:
 | # | Debt | Status |
 |---|---|---|
 | 1 | LOW -> MEDIUM handoff oscillation | **CLOSED IN PRODUCTION — D3-B** |
-| 2 | **R1:** Rule 2 responder commitment + provisional-hold double charge | **OPEN — NEXT** |
+| 2 | **R1:** response commitment / provisional-hold affordability | **characterized; DoD at HARD STOP** |
 | 3 | Late recovery / match pacing | open |
 | 4 | Setup-policy debt | open |
 | 5 | Initiator tactical commitment-selection policy | open |
@@ -241,10 +234,4 @@ Expected:
 
 `b59fc7f046d5420e3edc05f3300ad9699473776d`
 
-Then create the next controlled branch for R1, for example:
-
-```bash
-git switch -c review/rule2-double-charge-r1
-```
-
-The first R1 commit should contain characterization / preregistration work only. Do not implement a Rule 2 fix before its acceptance contract is frozen and reviewed.
+R1 work lives on `review/r1-hold-inclusive-affordability` (based on `1e2b5e3`). Read `docs/R1_HOLD_INCLUSIVE_AFFORDABILITY_DOD.md` and make the outcome decision (section 5) before any further R1 work.
