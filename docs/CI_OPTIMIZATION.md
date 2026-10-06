@@ -48,6 +48,28 @@ The workflow uses GitHub Actions concurrency keyed by workflow + source branch, 
 
 A newer push to the same branch cancels obsolete work for the older SHA. Push and pull-request runs for the same source branch also share the concurrency key, avoiding duplicate long qualifications.
 
+## Qualification
+
+The optimized full path was exercised on exact head:
+
+```text
+00cc7934d2adf1c4d56b55a4678c38d8dbf85a5c
+GitHub Actions run 37387768888
+result: SUCCESS
+```
+
+That run exercised the workflow/configuration-change path, so it executed the full qualification rather than the documentation shortcut.
+
+This documentation-only commit is the explicit fast-path probe. Its run must show:
+
+- classifier = docs-only;
+- `docs-only fast path` = success;
+- all unit-test shards = skipped;
+- both verification jobs = skipped;
+- `CI gate` = success.
+
+Do not merge the CI optimization until that probe passes.
+
 ## Invariants
 
 - No gameplay, policy, settlement, stamina, submission or deterministic engine semantics are changed by this slice.
@@ -60,4 +82,4 @@ A newer push to the same branch cancels obsolete work for the older SHA. Push an
 
 ## Follow-up
 
-After this workflow is qualified, a later ordinary docs-only commit can be used to verify the fast path. Further test-runtime optimization should be based on measured test-case timings rather than removing coverage.
+Further test-runtime optimization should be based on measured test-case timings rather than removing coverage.
