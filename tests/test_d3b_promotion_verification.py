@@ -3,14 +3,17 @@
 Re-executes the frozen equivalence verification of
 docs/BURST_RECOVERY_LOCKOUT_D3B_PROMOTION_PREREGISTRATION.md (1eb0a30) and
 requires it to equal the committed evidence. PG5/PG6 use the committed
-1b96ffc reference fingerprints. PG8 (a git diff against 1b96ffc) is checked
-only where that history is available, since its file list grows with later
-commits. See docs/BURST_RECOVERY_LOCKOUT_D3B_PROMOTION_RESULT.md.
+1b96ffc reference fingerprints. PG8 is a git diff over the fixed historical
+promotion interval 1b96ffc -> 0aa23db (independent of HEAD). It needs that
+history: shallow checkouts skip it, and CI's dedicated full-history job sets
+BJJ_REQUIRE_GIT_HISTORY=1 so a missing history fails instead of skipping.
+See docs/BURST_RECOVERY_LOCKOUT_D3B_PROMOTION_RESULT.md.
 """
 
 from functools import lru_cache
 import gzip
 import json
+import os
 from pathlib import Path
 import subprocess
 import unittest
@@ -39,8 +42,11 @@ def _verified() -> dict:
 
 
 def _has_history() -> bool:
-    return subprocess.run(["git", "cat-file", "-e", f"{promo.D3B_RESULT_SHA}^{{commit}}"],
-                          cwd=ROOT, capture_output=True).returncode == 0
+    return all(
+        subprocess.run(["git", "cat-file", "-e", f"{sha}^{{commit}}"],
+                       cwd=ROOT, capture_output=True).returncode == 0
+        for sha in (promo.D3B_RESULT_SHA, promo.PROMOTION_HEAD_SHA)
+    )
 
 
 class D3BPromotionVerificationTests(unittest.TestCase):
@@ -109,9 +115,18 @@ class D3BPromotionVerificationTests(unittest.TestCase):
 
     def test_pg8_nothing_bundled(self):
         if not _has_history():
-            self.skipTest("1b96ffc history unavailable (shallow checkout)")
+            if os.environ.get("BJJ_REQUIRE_GIT_HISTORY") == "1":
+                self.fail("1b96ffc/0aa23db history required but unavailable")
+            self.skipTest("1b96ffc/0aa23db history unavailable (shallow checkout)")
         pg8 = promo.pg8()
-        self.assertEqual((pg8["forbidden"], pg8["unexpected"]), ([], []))
+        self.assertEqual((pg8["status"], pg8["forbidden"], pg8["unexpected"]), ("PASS", [], []))
+        interval = subprocess.run(
+            ["git", "diff", "--name-only", promo.D3B_RESULT_SHA, promo.PROMOTION_HEAD_SHA],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout.split()
+        self.assertEqual(pg8["changed_since_1b96ffc"], interval)
+        # The committed historical record (taken mid-promotion) lies inside the interval.
+        self.assertLessEqual(set(_committed()["PG8"]["changed_since_1b96ffc"]), set(interval))
 
 
 if __name__ == "__main__":

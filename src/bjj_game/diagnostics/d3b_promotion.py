@@ -37,6 +37,9 @@ from .stamina_adoption_verification import _run_captured, effective_settings
 
 PREREGISTRATION_SHA = "1eb0a30ad2896dad53f9248e218c3da9a48ab557"
 D3B_RESULT_SHA = "1b96ffc4ae60307e1c7842ca1d46fea540457c69"
+# Qualified promotion head (PR #11). PG8 reviews the fixed historical interval
+# D3B_RESULT_SHA -> PROMOTION_HEAD_SHA, never the current HEAD.
+PROMOTION_HEAD_SHA = "0aa23db5089476982eb6eaf94d91b316d857cee1"
 RUNS = d3.RUNS
 D3B = PostClearHandoffMode.D3B_EXHAUSTED_TOKEN_LOCKOUT
 
@@ -288,7 +291,8 @@ def pg7() -> dict:
 
 
 def pg8() -> dict:
-    changed = subprocess.run(["git", "diff", "--name-only", D3B_RESULT_SHA, "HEAD"], cwd=_root(),
+    """Nothing bundled between the measured D3-B result and the qualified promotion."""
+    changed = subprocess.run(["git", "diff", "--name-only", D3B_RESULT_SHA, PROMOTION_HEAD_SHA], cwd=_root(),
                              capture_output=True, text=True, check=True).stdout.split()
     forbidden = [p for p in changed if p.startswith(FORBIDDEN_PATHS)]
     unexpected = [p for p in changed if not p.startswith(ALLOWED_PATHS)]
