@@ -42,6 +42,14 @@ Test-case sharding is intentional: profiling the first file-sharded prototype sh
 
 Digest/checker/legacy verification runs in parallel with the unit-test shards instead of waiting for the whole unit suite.
 
+### Historical git invariants
+
+The unit-test shards use a shallow checkout. Tests that need older history skip there.
+
+A small dedicated job, `historical verification (3.11 / 3.13)`, checks out full history (`fetch-depth: 0`) and runs only the history-dependent invariants, currently D3-B promotion PG8 (`test_pg8_nothing_bundled`). It sets `BJJ_REQUIRE_GIT_HISTORY=1`, so a missing history **fails** instead of skipping. `CI gate` requires this job on the full path. The docs-only fast path skips it.
+
+Added by the PG8 maintenance slice (`docs/MAINTENANCE_PG8_ENDPOINT_PIN.md`).
+
 ### Superseded runs
 
 The workflow uses GitHub Actions concurrency keyed by workflow + source branch, with `cancel-in-progress: true`.
@@ -78,6 +86,7 @@ Do not merge the CI optimization until that probe passes.
 - The frozen digest remains checked on both Python versions.
 - The semantic checker and legacy entry point remain checked on both Python versions.
 - `CI gate` fails if classification fails or if any applicable full-path job fails.
+- History-dependent invariants run in the dedicated full-history job and cannot silently skip there.
 - A zero-change/unknown classification is conservative: it takes the full path.
 
 ## Follow-up
