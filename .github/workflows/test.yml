@@ -175,6 +175,30 @@ jobs:
       - name: Verify legacy entry point
         run: PYTHONPATH=src python -m mount_v0 --check
 
+  history-verification:
+    name: historical verification (${{ matrix.python-version }})
+    needs: classify
+    if: needs.classify.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run git-history invariants (fails instead of skipping)
+        env:
+          BJJ_REQUIRE_GIT_HISTORY: "1"
+        run: >-
+          PYTHONPATH=src python -m unittest -v
+          tests.test_d3b_promotion_verification.D3BPromotionVerificationTests.test_pg8_nothing_bundled
+
   ci-gate:
     name: CI gate
     if: always()
@@ -183,6 +207,7 @@ jobs:
       - docs-only
       - unit-tests
       - verification
+      - history-verification
     runs-on: ubuntu-latest
     steps:
       - name: Require the applicable qualification path
@@ -193,6 +218,7 @@ jobs:
           DOCS_RESULT: ${{ needs.docs-only.result }}
           UNIT_RESULT: ${{ needs.unit-tests.result }}
           VERIFY_RESULT: ${{ needs.verification.result }}
+          HISTORY_RESULT: ${{ needs.history-verification.result }}
         run: |
           set -euo pipefail
 
@@ -204,5 +230,6 @@ jobs:
           else
             test "$UNIT_RESULT" = "success"
             test "$VERIFY_RESULT" = "success"
+            test "$HISTORY_RESULT" = "success"
             echo "CI gate PASS: full two-version qualification."
           fi
