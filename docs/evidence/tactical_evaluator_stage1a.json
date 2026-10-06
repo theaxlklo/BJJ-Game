@@ -1,0 +1,1892 @@
+{
+ "gates": {
+  "C1": "PASS",
+  "C2": "PASS",
+  "C3": "FAIL",
+  "C4": "PASS"
+ },
+ "integrity_ok": true,
+ "preregistration": "4e61bada3998e1d97bdeaba975e92aa282c92bfb",
+ "stage_1a": "FAIL",
+ "surfaces": {
+  "A-PROD": {
+   "C1": {
+    "applies": true,
+    "deterministic_predictions": 2384,
+    "exact": 2384,
+    "mismatches": 0,
+    "status": "PASS",
+    "top_exchanges": 2384
+   },
+   "C2": {
+    "progress": {
+     "actual": 78,
+     "deviation": 0.0,
+     "n": 4612,
+     "predicted": 78.0,
+     "predicted_exact": "78",
+     "sigma": 0.0,
+     "variance_exact": "0",
+     "within_3_sigma": true,
+     "z": null
+    },
+    "setup_advance": {
+     "actual": 1133,
+     "deviation": -5.666666666666667,
+     "n": 4612,
+     "predicted": 1138.6666666666667,
+     "predicted_exact": "3416/3",
+     "sigma": 18.826694995257252,
+     "variance_exact": "3190/9",
+     "within_3_sigma": true,
+     "z": -0.3009910485135172
+    },
+    "status": "PASS",
+    "terminal": {
+     "actual": 22,
+     "deviation": 4.0,
+     "n": 4612,
+     "predicted": 18.0,
+     "predicted_exact": "18",
+     "sigma": 2.449489742783178,
+     "variance_exact": "6",
+     "within_3_sigma": true,
+     "z": 1.6329931618554523
+    }
+   },
+   "C3": {
+    "applies": true,
+    "population": 156,
+    "setup_future_positive": 0,
+    "share": 0.0,
+    "status": "FAIL"
+   },
+   "C4": {
+    "applies": false,
+    "population": 356,
+    "setup_future_zero": 356,
+    "share": 1.0,
+    "status": "N/A"
+   },
+   "baseline_reproduction": {
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     78,
+     0,
+     22,
+     78,
+     312
+    ],
+    "observed": [
+     78,
+     0,
+     22,
+     78,
+     312
+    ]
+   },
+   "c0_integrity": {
+    "checked": 4612,
+    "exact": 4612
+   },
+   "decisions": 4690,
+   "exchanges": 4612,
+   "integrity": {
+    "baseline_rng_digest": "32a231b0e295e5d9812ddbdfd40f9739062973834c4b0129e7f9cb91d958c87f",
+    "baseline_rng_digest_reference": "32a231b0e295e5d9812ddbdfd40f9739062973834c4b0129e7f9cb91d958c87f",
+    "baseline_rng_draws": 5626,
+    "baseline_rng_draws_reference": 5626,
+    "d3b_holds": 0,
+    "evaluator_rng_draws": 0,
+    "evaluator_rng_draws_by_method": {},
+    "gameplay_signatures_identical": true,
+    "lockout_hold_counterfactuals_excluded": 0,
+    "replay_identical": true,
+    "rng_sequence_identical": true,
+    "summary_identical_to_reference": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "matches": 100,
+   "outcomes": {
+    "Half Guard": 22,
+    "TIMEOUT \u2014 Mount retained": 78
+   },
+   "reported": {
+    "baseline_vs_te1": {
+     "bottom:baseline=escape:te1=terminal": 27,
+     "bottom:baseline=position:te1=position": 355,
+     "bottom:baseline=reset:te1=reset": 78,
+     "bottom:baseline=setup:te1=reset": 1746,
+     "bottom:baseline=setup:te1=terminal": 100,
+     "bottom:different_action": 1846,
+     "bottom:same_action": 460,
+     "top:baseline=setup:te1=reset": 356,
+     "top:baseline=submission:te1=progress": 78,
+     "top:baseline=submission:te1=reset": 1950,
+     "top:different_action": 2306,
+     "top:same_action": 78
+    },
+    "builder_projections_with_own_stamina_below_low_cost": 0,
+    "calibration_by_side": {
+     "bottom": {
+      "progress": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2228,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "setup_advance": {
+       "actual": 777,
+       "deviation": -5.666666666666667,
+       "n": 2228,
+       "predicted": 782.6666666666666,
+       "predicted_exact": "2348/3",
+       "sigma": 18.826694995257252,
+       "variance_exact": "3190/9",
+       "within_3_sigma": true,
+       "z": -0.3009910485135172
+      },
+      "terminal": {
+       "actual": 22,
+       "deviation": 4.0,
+       "n": 2228,
+       "predicted": 18.0,
+       "predicted_exact": "18",
+       "sigma": 2.449489742783178,
+       "variance_exact": "6",
+       "within_3_sigma": true,
+       "z": 1.6329931618554523
+      }
+     },
+     "top": {
+      "progress": {
+       "actual": 78,
+       "deviation": 0.0,
+       "n": 2384,
+       "predicted": 78.0,
+       "predicted_exact": "78",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "setup_advance": {
+       "actual": 356,
+       "deviation": 0.0,
+       "n": 2384,
+       "predicted": 356.0,
+       "predicted_exact": "356",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "terminal": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2384,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      }
+     }
+    },
+    "chains": {
+     "converted": 78,
+     "total": 156
+    },
+    "ready_conversion_predicted_vs_actual": {
+     "mount.bottom.trap_and_roll_escape": {
+      "actual": 0,
+      "predicted": 0.0,
+      "uses": 355
+     },
+     "mount.top.americana_arm_isolation": {
+      "actual": 78,
+      "predicted": 78.0,
+      "uses": 156
+     }
+    },
+    "setup_future_distribution": {
+     "deciles": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "maximum": 0.0,
+     "median": 0.0,
+     "n": 356,
+     "positive": 0,
+     "zero": 356
+    },
+    "te1_commitment_distribution": {
+     "bottom:position:LOW": 355,
+     "bottom:terminal:HIGH": 127,
+     "top:progress:HIGH": 78
+    },
+    "te1_tier_distribution": {
+     "bottom:position": 355,
+     "bottom:reset": 1824,
+     "bottom:terminal": 127,
+     "top:progress": 78,
+     "top:reset": 2306
+    },
+    "top_high_mount_climb_decisions_by_reason": {
+     "setup": 356
+    },
+    "top_setup_decisions": 356
+   },
+   "threat_matches": 78,
+   "top_completed_setup_builds": 312
+  },
+  "B-PROD": {
+   "C1": {
+    "applies": false,
+    "deterministic_predictions": 1896,
+    "exact": 1896,
+    "mismatches": 592,
+    "status": "N/A",
+    "top_exchanges": 2488
+   },
+   "C2": {
+    "progress": {
+     "actual": 126,
+     "deviation": 4.25,
+     "n": 4860,
+     "predicted": 121.75,
+     "predicted_exact": "487/4",
+     "sigma": 6.332785063987776,
+     "variance_exact": "1925/48",
+     "within_3_sigma": true,
+     "z": 0.6711107288589644
+    },
+    "setup_advance": {
+     "actual": 2053,
+     "deviation": 7.018518518518518,
+     "n": 4860,
+     "predicted": 2045.9814814814815,
+     "predicted_exact": "110483/54",
+     "sigma": 15.2063199806047,
+     "variance_exact": "674273/2916",
+     "within_3_sigma": true,
+     "z": 0.4615527311979803
+    },
+    "status": "PASS",
+    "terminal": {
+     "actual": 21,
+     "deviation": 2.5,
+     "n": 4860,
+     "predicted": 18.5,
+     "predicted_exact": "37/2",
+     "sigma": 2.2474265117965317,
+     "variance_exact": "1091/216",
+     "within_3_sigma": true,
+     "z": 1.1123834247205564
+    }
+   },
+   "C3": {
+    "applies": true,
+    "population": 118,
+    "setup_future_positive": 69,
+    "share": 0.5847457627118644,
+    "status": "FAIL"
+   },
+   "C4": {
+    "applies": false,
+    "population": 900,
+    "setup_future_zero": 742,
+    "share": 0.8244444444444444,
+    "status": "N/A"
+   },
+   "baseline_reproduction": {
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     59,
+     9,
+     12,
+     79,
+     880
+    ],
+    "observed": [
+     59,
+     9,
+     12,
+     79,
+     880
+    ]
+   },
+   "c0_integrity": {
+    "checked": 4860,
+    "exact": 4860
+   },
+   "decisions": 4888,
+   "exchanges": 4860,
+   "integrity": {
+    "baseline_rng_digest": "d6cef3d132766729fe767fbeddc267d2a7540fbd2edc61461158885e9c8c735a",
+    "baseline_rng_digest_reference": "d6cef3d132766729fe767fbeddc267d2a7540fbd2edc61461158885e9c8c735a",
+    "baseline_rng_draws": 38220,
+    "baseline_rng_draws_reference": 38220,
+    "d3b_holds": 0,
+    "evaluator_rng_draws": 0,
+    "evaluator_rng_draws_by_method": {},
+    "gameplay_signatures_identical": true,
+    "lockout_hold_counterfactuals_excluded": 0,
+    "replay_identical": true,
+    "rng_sequence_identical": true,
+    "summary_identical_to_reference": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "matches": 100,
+   "outcomes": {
+    "Half Guard": 8,
+    "Open Guard": 2,
+    "Reversal": 2,
+    "TAP \u2014 Americana": 9,
+    "TIMEOUT \u2014 Mount retained": 79
+   },
+   "reported": {
+    "baseline_vs_te1": {
+     "bottom:baseline=escape:te1=position": 5,
+     "bottom:baseline=escape:te1=terminal": 17,
+     "bottom:baseline=position:te1=position": 514,
+     "bottom:baseline=reset:te1=reset": 28,
+     "bottom:baseline=setup:te1=position": 63,
+     "bottom:baseline=setup:te1=reset": 1691,
+     "bottom:baseline=setup:te1=terminal": 82,
+     "bottom:different_action": 1849,
+     "bottom:same_action": 551,
+     "top:baseline=position:te1=position": 17,
+     "top:baseline=position:te1=reset": 8,
+     "top:baseline=setup:te1=reset": 742,
+     "top:baseline=setup:te1=setup": 158,
+     "top:baseline=submission:te1=progress": 242,
+     "top:baseline=submission:te1=reset": 1309,
+     "top:baseline=submission:te1=setup": 2,
+     "top:baseline=submission:te1=terminal": 10,
+     "top:different_action": 2061,
+     "top:same_action": 427
+    },
+    "builder_projections_with_own_stamina_below_low_cost": 588,
+    "calibration_by_side": {
+     "bottom": {
+      "progress": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2372,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "setup_advance": {
+       "actual": 1153,
+       "deviation": 7.018518518518518,
+       "n": 2372,
+       "predicted": 1145.9814814814815,
+       "predicted_exact": "61883/54",
+       "sigma": 15.2063199806047,
+       "variance_exact": "674273/2916",
+       "within_3_sigma": true,
+       "z": 0.4615527311979803
+      },
+      "terminal": {
+       "actual": 12,
+       "deviation": 1.3333333333333333,
+       "n": 2372,
+       "predicted": 10.666666666666666,
+       "predicted_exact": "32/3",
+       "sigma": 1.9436506316151,
+       "variance_exact": "34/9",
+       "within_3_sigma": true,
+       "z": 0.6859943405700353
+      }
+     },
+     "top": {
+      "progress": {
+       "actual": 126,
+       "deviation": 4.25,
+       "n": 2488,
+       "predicted": 121.75,
+       "predicted_exact": "487/4",
+       "sigma": 6.332785063987776,
+       "variance_exact": "1925/48",
+       "within_3_sigma": true,
+       "z": 0.6711107288589644
+      },
+      "setup_advance": {
+       "actual": 900,
+       "deviation": 0.0,
+       "n": 2488,
+       "predicted": 900.0,
+       "predicted_exact": "900",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "terminal": {
+       "actual": 9,
+       "deviation": 1.1666666666666667,
+       "n": 2488,
+       "predicted": 7.833333333333333,
+       "predicted_exact": "47/6",
+       "sigma": 1.12833866731055,
+       "variance_exact": "275/216",
+       "within_3_sigma": true,
+       "z": 1.0339685242263952
+      }
+     }
+    },
+    "chains": {
+     "converted": 59,
+     "total": 440
+    },
+    "ready_conversion_predicted_vs_actual": {
+     "mount.bottom.trap_and_roll_escape": {
+      "actual": 2,
+      "predicted": 0.6666666666666666,
+      "uses": 521
+     },
+     "mount.top.americana_arm_isolation": {
+      "actual": 59,
+      "predicted": 57.22222222222222,
+      "uses": 440
+     }
+    },
+    "setup_future_distribution": {
+     "deciles": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.3055555555555556
+     ],
+     "maximum": 1.0,
+     "median": 0.0,
+     "n": 900,
+     "positive": 158,
+     "zero": 742
+    },
+    "te1_commitment_distribution": {
+     "bottom:position:HIGH": 9,
+     "bottom:position:LOW": 565,
+     "bottom:position:MEDIUM": 8,
+     "bottom:terminal:HIGH": 89,
+     "bottom:terminal:LOW": 7,
+     "bottom:terminal:MEDIUM": 3,
+     "top:position:LOW": 4,
+     "top:position:MEDIUM": 13,
+     "top:progress:HIGH": 26,
+     "top:progress:LOW": 10,
+     "top:progress:MEDIUM": 206,
+     "top:setup:LOW": 144,
+     "top:setup:MEDIUM": 16,
+     "top:terminal:HIGH": 2,
+     "top:terminal:MEDIUM": 8
+    },
+    "te1_tier_distribution": {
+     "bottom:position": 582,
+     "bottom:reset": 1719,
+     "bottom:terminal": 99,
+     "top:position": 17,
+     "top:progress": 242,
+     "top:reset": 2059,
+     "top:setup": 160,
+     "top:terminal": 10
+    },
+    "top_high_mount_climb_decisions_by_reason": {
+     "setup": 900
+    },
+    "top_setup_decisions": 900
+   },
+   "threat_matches": 59,
+   "top_completed_setup_builds": 880
+  },
+  "E-PROD 142 OFF": {
+   "C1": {
+    "applies": false,
+    "deterministic_predictions": 1807,
+    "exact": 1807,
+    "mismatches": 628,
+    "status": "N/A",
+    "top_exchanges": 2435
+   },
+   "C2": {
+    "progress": {
+     "actual": 108,
+     "deviation": 5.75,
+     "n": 4727,
+     "predicted": 102.25,
+     "predicted_exact": "409/4",
+     "sigma": 6.627489050244528,
+     "variance_exact": "6325/144",
+     "within_3_sigma": true,
+     "z": 0.8675985665774654
+    },
+    "setup_advance": {
+     "actual": 2333,
+     "deviation": -9.12962962962963,
+     "n": 4727,
+     "predicted": 2342.1296296296296,
+     "predicted_exact": "126475/54",
+     "sigma": 6.044530682028241,
+     "variance_exact": "26635/729",
+     "within_3_sigma": true,
+     "z": -1.5103951174859758
+    },
+    "status": "PASS",
+    "terminal": {
+     "actual": 35,
+     "deviation": -1.7222222222222223,
+     "n": 4727,
+     "predicted": 36.72222222222222,
+     "predicted_exact": "661/18",
+     "sigma": 3.6983062523001617,
+     "variance_exact": "8863/648",
+     "within_3_sigma": true,
+     "z": -0.465678639012409
+    }
+   },
+   "C3": {
+    "applies": true,
+    "population": 114,
+    "setup_future_positive": 67,
+    "share": 0.5877192982456141,
+    "status": "FAIL"
+   },
+   "C4": {
+    "applies": false,
+    "population": 886,
+    "setup_future_zero": 726,
+    "share": 0.8194130925507901,
+    "status": "N/A"
+   },
+   "baseline_reproduction": {
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     57,
+     4,
+     31,
+     65,
+     841
+    ],
+    "observed": [
+     57,
+     4,
+     31,
+     65,
+     841
+    ]
+   },
+   "c0_integrity": {
+    "checked": 4727,
+    "exact": 4727
+   },
+   "decisions": 4767,
+   "exchanges": 4727,
+   "integrity": {
+    "baseline_rng_digest": "4cd20afaff88320698785cc0e081c91a02d13a62f63f07fbb8d86f4c99333490",
+    "baseline_rng_digest_reference": "4cd20afaff88320698785cc0e081c91a02d13a62f63f07fbb8d86f4c99333490",
+    "baseline_rng_draws": 37224,
+    "baseline_rng_draws_reference": 37224,
+    "d3b_holds": 34,
+    "evaluator_rng_draws": 0,
+    "evaluator_rng_draws_by_method": {},
+    "gameplay_signatures_identical": true,
+    "lockout_hold_counterfactuals_excluded": 34,
+    "replay_identical": true,
+    "rng_sequence_identical": true,
+    "summary_identical_to_reference": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "matches": 100,
+   "outcomes": {
+    "Half Guard": 24,
+    "Open Guard": 6,
+    "Reversal": 1,
+    "TAP \u2014 Americana": 4,
+    "TIMEOUT \u2014 Mount retained": 65
+   },
+   "reported": {
+    "baseline_vs_te1": {
+     "bottom:baseline=escape:te1=terminal": 53,
+     "bottom:baseline=position:te1=position": 676,
+     "bottom:baseline=reset:te1=reset": 40,
+     "bottom:baseline=setup:te1=position": 1073,
+     "bottom:baseline=setup:te1=reset": 331,
+     "bottom:baseline=setup:te1=setup": 48,
+     "bottom:baseline=setup:te1=terminal": 111,
+     "bottom:different_action": 1522,
+     "bottom:same_action": 810,
+     "top:baseline=position:te1=position": 10,
+     "top:baseline=position:te1=reset": 26,
+     "top:baseline=setup:te1=reset": 726,
+     "top:baseline=setup:te1=setup": 160,
+     "top:baseline=submission:te1=progress": 246,
+     "top:baseline=submission:te1=reset": 1256,
+     "top:baseline=submission:te1=setup": 1,
+     "top:baseline=submission:te1=terminal": 10,
+     "top:different_action": 2009,
+     "top:same_action": 426
+    },
+    "builder_projections_with_own_stamina_below_low_cost": 575,
+    "calibration_by_side": {
+     "bottom": {
+      "progress": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2292,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "setup_advance": {
+       "actual": 1448,
+       "deviation": -9.351851851851851,
+       "n": 2292,
+       "predicted": 1457.351851851852,
+       "predicted_exact": "78697/54",
+       "sigma": 5.973908748372545,
+       "variance_exact": "104065/2916",
+       "within_3_sigma": true,
+       "z": -1.5654493976660675
+      },
+      "terminal": {
+       "actual": 31,
+       "deviation": -2.6666666666666665,
+       "n": 2292,
+       "predicted": 33.666666666666664,
+       "predicted_exact": "101/3",
+       "sigma": 3.39934634239519,
+       "variance_exact": "104/9",
+       "within_3_sigma": true,
+       "z": -0.7844645405527361
+      }
+     },
+     "top": {
+      "progress": {
+       "actual": 108,
+       "deviation": 5.75,
+       "n": 2435,
+       "predicted": 102.25,
+       "predicted_exact": "409/4",
+       "sigma": 6.627489050244528,
+       "variance_exact": "6325/144",
+       "within_3_sigma": true,
+       "z": 0.8675985665774654
+      },
+      "setup_advance": {
+       "actual": 885,
+       "deviation": 0.2222222222222222,
+       "n": 2435,
+       "predicted": 884.7777777777778,
+       "predicted_exact": "7963/9",
+       "sigma": 0.9212846639876111,
+       "variance_exact": "275/324",
+       "within_3_sigma": true,
+       "z": 0.24120907566221086
+      },
+      "terminal": {
+       "actual": 4,
+       "deviation": 0.9444444444444444,
+       "n": 2435,
+       "predicted": 3.0555555555555554,
+       "predicted_exact": "55/18",
+       "sigma": 1.4566789557918771,
+       "variance_exact": "1375/648",
+       "within_3_sigma": true,
+       "z": 0.6483545606870028
+      }
+     }
+    },
+    "chains": {
+     "converted": 57,
+     "total": 420
+    },
+    "ready_conversion_predicted_vs_actual": {
+     "mount.bottom.trap_and_roll_escape": {
+      "actual": 1,
+      "predicted": 3.0,
+      "uses": 683
+     },
+     "mount.top.americana_arm_isolation": {
+      "actual": 57,
+      "predicted": 58.138888888888886,
+      "uses": 420
+     }
+    },
+    "setup_future_distribution": {
+     "deciles": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.3055555555555556
+     ],
+     "maximum": 1.0,
+     "median": 0.0,
+     "n": 886,
+     "positive": 160,
+     "zero": 726
+    },
+    "te1_commitment_distribution": {
+     "bottom:position:LOW": 1749,
+     "bottom:setup:LOW": 48,
+     "bottom:terminal:HIGH": 113,
+     "bottom:terminal:LOW": 51,
+     "top:position:MEDIUM": 10,
+     "top:progress:HIGH": 30,
+     "top:progress:LOW": 5,
+     "top:progress:MEDIUM": 211,
+     "top:setup:LOW": 152,
+     "top:setup:MEDIUM": 9,
+     "top:terminal:MEDIUM": 10
+    },
+    "te1_tier_distribution": {
+     "bottom:position": 1749,
+     "bottom:reset": 371,
+     "bottom:setup": 48,
+     "bottom:terminal": 164,
+     "top:position": 10,
+     "top:progress": 246,
+     "top:reset": 2008,
+     "top:setup": 161,
+     "top:terminal": 10
+    },
+    "top_high_mount_climb_decisions_by_reason": {
+     "setup": 886
+    },
+    "top_setup_decisions": 886
+   },
+   "threat_matches": 57,
+   "top_completed_setup_builds": 841
+  },
+  "E-PROD 142 ON": {
+   "C1": {
+    "applies": false,
+    "deterministic_predictions": 1807,
+    "exact": 1807,
+    "mismatches": 628,
+    "status": "N/A",
+    "top_exchanges": 2435
+   },
+   "C2": {
+    "progress": {
+     "actual": 108,
+     "deviation": 5.75,
+     "n": 4727,
+     "predicted": 102.25,
+     "predicted_exact": "409/4",
+     "sigma": 6.627489050244528,
+     "variance_exact": "6325/144",
+     "within_3_sigma": true,
+     "z": 0.8675985665774654
+    },
+    "setup_advance": {
+     "actual": 2333,
+     "deviation": -9.12962962962963,
+     "n": 4727,
+     "predicted": 2342.1296296296296,
+     "predicted_exact": "126475/54",
+     "sigma": 6.044530682028241,
+     "variance_exact": "26635/729",
+     "within_3_sigma": true,
+     "z": -1.5103951174859758
+    },
+    "status": "PASS",
+    "terminal": {
+     "actual": 35,
+     "deviation": -1.7222222222222223,
+     "n": 4727,
+     "predicted": 36.72222222222222,
+     "predicted_exact": "661/18",
+     "sigma": 3.6983062523001617,
+     "variance_exact": "8863/648",
+     "within_3_sigma": true,
+     "z": -0.465678639012409
+    }
+   },
+   "C3": {
+    "applies": true,
+    "population": 114,
+    "setup_future_positive": 67,
+    "share": 0.5877192982456141,
+    "status": "FAIL"
+   },
+   "C4": {
+    "applies": false,
+    "population": 886,
+    "setup_future_zero": 726,
+    "share": 0.8194130925507901,
+    "status": "N/A"
+   },
+   "baseline_reproduction": {
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     57,
+     4,
+     31,
+     65,
+     841
+    ],
+    "observed": [
+     57,
+     4,
+     31,
+     65,
+     841
+    ]
+   },
+   "c0_integrity": {
+    "checked": 4727,
+    "exact": 4727
+   },
+   "decisions": 4767,
+   "exchanges": 4727,
+   "integrity": {
+    "baseline_rng_digest": "4cd20afaff88320698785cc0e081c91a02d13a62f63f07fbb8d86f4c99333490",
+    "baseline_rng_digest_reference": "4cd20afaff88320698785cc0e081c91a02d13a62f63f07fbb8d86f4c99333490",
+    "baseline_rng_draws": 37224,
+    "baseline_rng_draws_reference": 37224,
+    "d3b_holds": 34,
+    "evaluator_rng_draws": 0,
+    "evaluator_rng_draws_by_method": {},
+    "gameplay_signatures_identical": true,
+    "lockout_hold_counterfactuals_excluded": 34,
+    "replay_identical": true,
+    "rng_sequence_identical": true,
+    "summary_identical_to_reference": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "matches": 100,
+   "outcomes": {
+    "Half Guard": 24,
+    "Open Guard": 6,
+    "Reversal": 1,
+    "TAP \u2014 Americana": 4,
+    "TIMEOUT \u2014 Mount retained": 65
+   },
+   "reported": {
+    "baseline_vs_te1": {
+     "bottom:baseline=escape:te1=terminal": 53,
+     "bottom:baseline=position:te1=position": 676,
+     "bottom:baseline=reset:te1=reset": 40,
+     "bottom:baseline=setup:te1=position": 1073,
+     "bottom:baseline=setup:te1=reset": 331,
+     "bottom:baseline=setup:te1=setup": 48,
+     "bottom:baseline=setup:te1=terminal": 111,
+     "bottom:different_action": 1522,
+     "bottom:same_action": 810,
+     "top:baseline=position:te1=position": 10,
+     "top:baseline=position:te1=reset": 26,
+     "top:baseline=setup:te1=reset": 726,
+     "top:baseline=setup:te1=setup": 160,
+     "top:baseline=submission:te1=progress": 246,
+     "top:baseline=submission:te1=reset": 1256,
+     "top:baseline=submission:te1=setup": 1,
+     "top:baseline=submission:te1=terminal": 10,
+     "top:different_action": 2009,
+     "top:same_action": 426
+    },
+    "builder_projections_with_own_stamina_below_low_cost": 575,
+    "calibration_by_side": {
+     "bottom": {
+      "progress": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2292,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "setup_advance": {
+       "actual": 1448,
+       "deviation": -9.351851851851851,
+       "n": 2292,
+       "predicted": 1457.351851851852,
+       "predicted_exact": "78697/54",
+       "sigma": 5.973908748372545,
+       "variance_exact": "104065/2916",
+       "within_3_sigma": true,
+       "z": -1.5654493976660675
+      },
+      "terminal": {
+       "actual": 31,
+       "deviation": -2.6666666666666665,
+       "n": 2292,
+       "predicted": 33.666666666666664,
+       "predicted_exact": "101/3",
+       "sigma": 3.39934634239519,
+       "variance_exact": "104/9",
+       "within_3_sigma": true,
+       "z": -0.7844645405527361
+      }
+     },
+     "top": {
+      "progress": {
+       "actual": 108,
+       "deviation": 5.75,
+       "n": 2435,
+       "predicted": 102.25,
+       "predicted_exact": "409/4",
+       "sigma": 6.627489050244528,
+       "variance_exact": "6325/144",
+       "within_3_sigma": true,
+       "z": 0.8675985665774654
+      },
+      "setup_advance": {
+       "actual": 885,
+       "deviation": 0.2222222222222222,
+       "n": 2435,
+       "predicted": 884.7777777777778,
+       "predicted_exact": "7963/9",
+       "sigma": 0.9212846639876111,
+       "variance_exact": "275/324",
+       "within_3_sigma": true,
+       "z": 0.24120907566221086
+      },
+      "terminal": {
+       "actual": 4,
+       "deviation": 0.9444444444444444,
+       "n": 2435,
+       "predicted": 3.0555555555555554,
+       "predicted_exact": "55/18",
+       "sigma": 1.4566789557918771,
+       "variance_exact": "1375/648",
+       "within_3_sigma": true,
+       "z": 0.6483545606870028
+      }
+     }
+    },
+    "chains": {
+     "converted": 57,
+     "total": 420
+    },
+    "ready_conversion_predicted_vs_actual": {
+     "mount.bottom.trap_and_roll_escape": {
+      "actual": 1,
+      "predicted": 3.0,
+      "uses": 683
+     },
+     "mount.top.americana_arm_isolation": {
+      "actual": 57,
+      "predicted": 58.138888888888886,
+      "uses": 420
+     }
+    },
+    "setup_future_distribution": {
+     "deciles": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.3055555555555556
+     ],
+     "maximum": 1.0,
+     "median": 0.0,
+     "n": 886,
+     "positive": 160,
+     "zero": 726
+    },
+    "te1_commitment_distribution": {
+     "bottom:position:LOW": 1749,
+     "bottom:setup:LOW": 48,
+     "bottom:terminal:HIGH": 113,
+     "bottom:terminal:LOW": 51,
+     "top:position:MEDIUM": 10,
+     "top:progress:HIGH": 30,
+     "top:progress:LOW": 5,
+     "top:progress:MEDIUM": 211,
+     "top:setup:LOW": 152,
+     "top:setup:MEDIUM": 9,
+     "top:terminal:MEDIUM": 10
+    },
+    "te1_tier_distribution": {
+     "bottom:position": 1749,
+     "bottom:reset": 371,
+     "bottom:setup": 48,
+     "bottom:terminal": 164,
+     "top:position": 10,
+     "top:progress": 246,
+     "top:reset": 2008,
+     "top:setup": 161,
+     "top:terminal": 10
+    },
+    "top_high_mount_climb_decisions_by_reason": {
+     "setup": 886
+    },
+    "top_setup_decisions": 886
+   },
+   "threat_matches": 57,
+   "top_completed_setup_builds": 841
+  },
+  "E-PROD 42 OFF": {
+   "C1": {
+    "applies": false,
+    "deterministic_predictions": 1851,
+    "exact": 1851,
+    "mismatches": 633,
+    "status": "N/A",
+    "top_exchanges": 2484
+   },
+   "C2": {
+    "progress": {
+     "actual": 109,
+     "deviation": 3.0,
+     "n": 4804,
+     "predicted": 106.0,
+     "predicted_exact": "106",
+     "sigma": 6.7700320038633,
+     "variance_exact": "275/6",
+     "within_3_sigma": true,
+     "z": 0.44312936752559784
+    },
+    "setup_advance": {
+     "actual": 2386,
+     "deviation": 2.685185185185185,
+     "n": 4804,
+     "predicted": 2383.314814814815,
+     "predicted_exact": "128699/54",
+     "sigma": 5.783976968726617,
+     "variance_exact": "97553/2916",
+     "within_3_sigma": true,
+     "z": 0.46424548363586365
+    },
+    "status": "PASS",
+    "terminal": {
+     "actual": 35,
+     "deviation": 4.222222222222222,
+     "n": 4804,
+     "predicted": 30.77777777777778,
+     "predicted_exact": "277/9",
+     "sigma": 3.516276088543702,
+     "variance_exact": "2003/162",
+     "within_3_sigma": true,
+     "z": 1.2007652743703905
+    }
+   },
+   "C3": {
+    "applies": true,
+    "population": 122,
+    "setup_future_positive": 68,
+    "share": 0.5573770491803278,
+    "status": "FAIL"
+   },
+   "C4": {
+    "applies": false,
+    "population": 895,
+    "setup_future_zero": 738,
+    "share": 0.8245810055865922,
+    "status": "N/A"
+   },
+   "baseline_reproduction": {
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     61,
+     5,
+     30,
+     65,
+     844
+    ],
+    "observed": [
+     61,
+     5,
+     30,
+     65,
+     844
+    ]
+   },
+   "c0_integrity": {
+    "checked": 4804,
+    "exact": 4804
+   },
+   "decisions": 4835,
+   "exchanges": 4804,
+   "integrity": {
+    "baseline_rng_digest": "34f127a79a69c7c1d0b62177cc5ab3c23f9a5119388a5ca382e90f50c739910a",
+    "baseline_rng_digest_reference": "34f127a79a69c7c1d0b62177cc5ab3c23f9a5119388a5ca382e90f50c739910a",
+    "baseline_rng_draws": 37716,
+    "baseline_rng_draws_reference": 37716,
+    "d3b_holds": 63,
+    "evaluator_rng_draws": 0,
+    "evaluator_rng_draws_by_method": {},
+    "gameplay_signatures_identical": true,
+    "lockout_hold_counterfactuals_excluded": 63,
+    "replay_identical": true,
+    "rng_sequence_identical": true,
+    "summary_identical_to_reference": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "matches": 100,
+   "outcomes": {
+    "Half Guard": 17,
+    "Open Guard": 5,
+    "Reversal": 8,
+    "TAP \u2014 Americana": 5,
+    "TIMEOUT \u2014 Mount retained": 65
+   },
+   "reported": {
+    "baseline_vs_te1": {
+     "bottom:baseline=escape:te1=terminal": 48,
+     "bottom:baseline=position:te1=position": 687,
+     "bottom:baseline=reset:te1=reset": 30,
+     "bottom:baseline=reset:te1=setup": 1,
+     "bottom:baseline=setup:te1=position": 1065,
+     "bottom:baseline=setup:te1=reset": 342,
+     "bottom:baseline=setup:te1=setup": 59,
+     "bottom:baseline=setup:te1=terminal": 119,
+     "bottom:different_action": 1544,
+     "bottom:same_action": 807,
+     "top:baseline=position:te1=position": 13,
+     "top:baseline=position:te1=reset": 21,
+     "top:baseline=setup:te1=reset": 738,
+     "top:baseline=setup:te1=setup": 157,
+     "top:baseline=submission:te1=progress": 255,
+     "top:baseline=submission:te1=reset": 1289,
+     "top:baseline=submission:te1=setup": 2,
+     "top:baseline=submission:te1=terminal": 9,
+     "top:different_action": 2050,
+     "top:same_action": 434
+    },
+    "builder_projections_with_own_stamina_below_low_cost": 582,
+    "calibration_by_side": {
+     "bottom": {
+      "progress": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2320,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "setup_advance": {
+       "actual": 1491,
+       "deviation": 2.685185185185185,
+       "n": 2320,
+       "predicted": 1488.3148148148148,
+       "predicted_exact": "80369/54",
+       "sigma": 5.783976968726617,
+       "variance_exact": "97553/2916",
+       "within_3_sigma": true,
+       "z": 0.46424548363586365
+      },
+      "terminal": {
+       "actual": 30,
+       "deviation": 2.6666666666666665,
+       "n": 2320,
+       "predicted": 27.333333333333332,
+       "predicted_exact": "82/3",
+       "sigma": 3.265986323710904,
+       "variance_exact": "32/3",
+       "within_3_sigma": true,
+       "z": 0.816496580927726
+      }
+     },
+     "top": {
+      "progress": {
+       "actual": 109,
+       "deviation": 3.0,
+       "n": 2484,
+       "predicted": 106.0,
+       "predicted_exact": "106",
+       "sigma": 6.7700320038633,
+       "variance_exact": "275/6",
+       "within_3_sigma": true,
+       "z": 0.44312936752559784
+      },
+      "setup_advance": {
+       "actual": 895,
+       "deviation": 0.0,
+       "n": 2484,
+       "predicted": 895.0,
+       "predicted_exact": "895",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "terminal": {
+       "actual": 5,
+       "deviation": 1.5555555555555556,
+       "n": 2484,
+       "predicted": 3.4444444444444446,
+       "predicted_exact": "31/9",
+       "sigma": 1.3028932666176194,
+       "variance_exact": "275/162",
+       "within_3_sigma": true,
+       "z": 1.1939240115914185
+      }
+     }
+    },
+    "chains": {
+     "converted": 61,
+     "total": 422
+    },
+    "ready_conversion_predicted_vs_actual": {
+     "mount.bottom.trap_and_roll_escape": {
+      "actual": 8,
+      "predicted": 4.666666666666667,
+      "uses": 701
+     },
+     "mount.top.americana_arm_isolation": {
+      "actual": 61,
+      "predicted": 59.138888888888886,
+      "uses": 422
+     }
+    },
+    "setup_future_distribution": {
+     "deciles": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.3055555555555556
+     ],
+     "maximum": 1.0,
+     "median": 0.0,
+     "n": 895,
+     "positive": 157,
+     "zero": 738
+    },
+    "te1_commitment_distribution": {
+     "bottom:position:LOW": 1751,
+     "bottom:position:MEDIUM": 1,
+     "bottom:setup:LOW": 60,
+     "bottom:terminal:HIGH": 88,
+     "bottom:terminal:LOW": 79,
+     "top:position:LOW": 2,
+     "top:position:MEDIUM": 11,
+     "top:progress:HIGH": 23,
+     "top:progress:LOW": 9,
+     "top:progress:MEDIUM": 223,
+     "top:setup:LOW": 144,
+     "top:setup:MEDIUM": 15,
+     "top:terminal:HIGH": 1,
+     "top:terminal:MEDIUM": 8
+    },
+    "te1_tier_distribution": {
+     "bottom:position": 1752,
+     "bottom:reset": 372,
+     "bottom:setup": 60,
+     "bottom:terminal": 167,
+     "top:position": 13,
+     "top:progress": 255,
+     "top:reset": 2048,
+     "top:setup": 159,
+     "top:terminal": 9
+    },
+    "top_high_mount_climb_decisions_by_reason": {
+     "setup": 895
+    },
+    "top_setup_decisions": 895
+   },
+   "threat_matches": 61,
+   "top_completed_setup_builds": 844
+  },
+  "E-PROD 42 ON": {
+   "C1": {
+    "applies": false,
+    "deterministic_predictions": 1851,
+    "exact": 1851,
+    "mismatches": 633,
+    "status": "N/A",
+    "top_exchanges": 2484
+   },
+   "C2": {
+    "progress": {
+     "actual": 109,
+     "deviation": 3.0,
+     "n": 4804,
+     "predicted": 106.0,
+     "predicted_exact": "106",
+     "sigma": 6.7700320038633,
+     "variance_exact": "275/6",
+     "within_3_sigma": true,
+     "z": 0.44312936752559784
+    },
+    "setup_advance": {
+     "actual": 2386,
+     "deviation": 2.685185185185185,
+     "n": 4804,
+     "predicted": 2383.314814814815,
+     "predicted_exact": "128699/54",
+     "sigma": 5.783976968726617,
+     "variance_exact": "97553/2916",
+     "within_3_sigma": true,
+     "z": 0.46424548363586365
+    },
+    "status": "PASS",
+    "terminal": {
+     "actual": 35,
+     "deviation": 4.222222222222222,
+     "n": 4804,
+     "predicted": 30.77777777777778,
+     "predicted_exact": "277/9",
+     "sigma": 3.516276088543702,
+     "variance_exact": "2003/162",
+     "within_3_sigma": true,
+     "z": 1.2007652743703905
+    }
+   },
+   "C3": {
+    "applies": true,
+    "population": 122,
+    "setup_future_positive": 68,
+    "share": 0.5573770491803278,
+    "status": "FAIL"
+   },
+   "C4": {
+    "applies": false,
+    "population": 895,
+    "setup_future_zero": 738,
+    "share": 0.8245810055865922,
+    "status": "N/A"
+   },
+   "baseline_reproduction": {
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     61,
+     5,
+     30,
+     65,
+     844
+    ],
+    "observed": [
+     61,
+     5,
+     30,
+     65,
+     844
+    ]
+   },
+   "c0_integrity": {
+    "checked": 4804,
+    "exact": 4804
+   },
+   "decisions": 4835,
+   "exchanges": 4804,
+   "integrity": {
+    "baseline_rng_digest": "34f127a79a69c7c1d0b62177cc5ab3c23f9a5119388a5ca382e90f50c739910a",
+    "baseline_rng_digest_reference": "34f127a79a69c7c1d0b62177cc5ab3c23f9a5119388a5ca382e90f50c739910a",
+    "baseline_rng_draws": 37716,
+    "baseline_rng_draws_reference": 37716,
+    "d3b_holds": 63,
+    "evaluator_rng_draws": 0,
+    "evaluator_rng_draws_by_method": {},
+    "gameplay_signatures_identical": true,
+    "lockout_hold_counterfactuals_excluded": 63,
+    "replay_identical": true,
+    "rng_sequence_identical": true,
+    "summary_identical_to_reference": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "matches": 100,
+   "outcomes": {
+    "Half Guard": 17,
+    "Open Guard": 5,
+    "Reversal": 8,
+    "TAP \u2014 Americana": 5,
+    "TIMEOUT \u2014 Mount retained": 65
+   },
+   "reported": {
+    "baseline_vs_te1": {
+     "bottom:baseline=escape:te1=terminal": 48,
+     "bottom:baseline=position:te1=position": 687,
+     "bottom:baseline=reset:te1=reset": 30,
+     "bottom:baseline=reset:te1=setup": 1,
+     "bottom:baseline=setup:te1=position": 1065,
+     "bottom:baseline=setup:te1=reset": 342,
+     "bottom:baseline=setup:te1=setup": 59,
+     "bottom:baseline=setup:te1=terminal": 119,
+     "bottom:different_action": 1544,
+     "bottom:same_action": 807,
+     "top:baseline=position:te1=position": 13,
+     "top:baseline=position:te1=reset": 21,
+     "top:baseline=setup:te1=reset": 738,
+     "top:baseline=setup:te1=setup": 157,
+     "top:baseline=submission:te1=progress": 255,
+     "top:baseline=submission:te1=reset": 1289,
+     "top:baseline=submission:te1=setup": 2,
+     "top:baseline=submission:te1=terminal": 9,
+     "top:different_action": 2050,
+     "top:same_action": 434
+    },
+    "builder_projections_with_own_stamina_below_low_cost": 582,
+    "calibration_by_side": {
+     "bottom": {
+      "progress": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2320,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "setup_advance": {
+       "actual": 1491,
+       "deviation": 2.685185185185185,
+       "n": 2320,
+       "predicted": 1488.3148148148148,
+       "predicted_exact": "80369/54",
+       "sigma": 5.783976968726617,
+       "variance_exact": "97553/2916",
+       "within_3_sigma": true,
+       "z": 0.46424548363586365
+      },
+      "terminal": {
+       "actual": 30,
+       "deviation": 2.6666666666666665,
+       "n": 2320,
+       "predicted": 27.333333333333332,
+       "predicted_exact": "82/3",
+       "sigma": 3.265986323710904,
+       "variance_exact": "32/3",
+       "within_3_sigma": true,
+       "z": 0.816496580927726
+      }
+     },
+     "top": {
+      "progress": {
+       "actual": 109,
+       "deviation": 3.0,
+       "n": 2484,
+       "predicted": 106.0,
+       "predicted_exact": "106",
+       "sigma": 6.7700320038633,
+       "variance_exact": "275/6",
+       "within_3_sigma": true,
+       "z": 0.44312936752559784
+      },
+      "setup_advance": {
+       "actual": 895,
+       "deviation": 0.0,
+       "n": 2484,
+       "predicted": 895.0,
+       "predicted_exact": "895",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "terminal": {
+       "actual": 5,
+       "deviation": 1.5555555555555556,
+       "n": 2484,
+       "predicted": 3.4444444444444446,
+       "predicted_exact": "31/9",
+       "sigma": 1.3028932666176194,
+       "variance_exact": "275/162",
+       "within_3_sigma": true,
+       "z": 1.1939240115914185
+      }
+     }
+    },
+    "chains": {
+     "converted": 61,
+     "total": 422
+    },
+    "ready_conversion_predicted_vs_actual": {
+     "mount.bottom.trap_and_roll_escape": {
+      "actual": 8,
+      "predicted": 4.666666666666667,
+      "uses": 701
+     },
+     "mount.top.americana_arm_isolation": {
+      "actual": 61,
+      "predicted": 59.138888888888886,
+      "uses": 422
+     }
+    },
+    "setup_future_distribution": {
+     "deciles": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.3055555555555556
+     ],
+     "maximum": 1.0,
+     "median": 0.0,
+     "n": 895,
+     "positive": 157,
+     "zero": 738
+    },
+    "te1_commitment_distribution": {
+     "bottom:position:LOW": 1751,
+     "bottom:position:MEDIUM": 1,
+     "bottom:setup:LOW": 60,
+     "bottom:terminal:HIGH": 88,
+     "bottom:terminal:LOW": 79,
+     "top:position:LOW": 2,
+     "top:position:MEDIUM": 11,
+     "top:progress:HIGH": 23,
+     "top:progress:LOW": 9,
+     "top:progress:MEDIUM": 223,
+     "top:setup:LOW": 144,
+     "top:setup:MEDIUM": 15,
+     "top:terminal:HIGH": 1,
+     "top:terminal:MEDIUM": 8
+    },
+    "te1_tier_distribution": {
+     "bottom:position": 1752,
+     "bottom:reset": 372,
+     "bottom:setup": 60,
+     "bottom:terminal": 167,
+     "top:position": 13,
+     "top:progress": 255,
+     "top:reset": 2048,
+     "top:setup": 159,
+     "top:terminal": 9
+    },
+    "top_high_mount_climb_decisions_by_reason": {
+     "setup": 895
+    },
+    "top_setup_decisions": 895
+   },
+   "threat_matches": 61,
+   "top_completed_setup_builds": 844
+  },
+  "PROTECT probe": {
+   "C1": {
+    "applies": false,
+    "deterministic_predictions": 2848,
+    "exact": 2848,
+    "mismatches": 0,
+    "status": "N/A",
+    "top_exchanges": 2848
+   },
+   "C2": {
+    "progress": {
+     "actual": 0,
+     "deviation": 0.0,
+     "n": 5696,
+     "predicted": 0.0,
+     "predicted_exact": "0",
+     "sigma": 0.0,
+     "variance_exact": "0",
+     "within_3_sigma": true,
+     "z": null
+    },
+    "setup_advance": {
+     "actual": 3830,
+     "deviation": 1.3333333333333333,
+     "n": 5696,
+     "predicted": 3828.6666666666665,
+     "predicted_exact": "11486/3",
+     "sigma": 5.754225500544023,
+     "variance_exact": "298/9",
+     "within_3_sigma": true,
+     "z": 0.23171377854539688
+    },
+    "status": "PASS",
+    "terminal": {
+     "actual": 2,
+     "deviation": 0.3333333333333333,
+     "n": 5696,
+     "predicted": 1.6666666666666667,
+     "predicted_exact": "5/3",
+     "sigma": 1.0540925533894598,
+     "variance_exact": "10/9",
+     "within_3_sigma": true,
+     "z": 0.3162277660168379
+    }
+   },
+   "C3": {
+    "applies": false,
+    "population": 0,
+    "setup_future_positive": 0,
+    "share": null,
+    "status": "N/A"
+   },
+   "C4": {
+    "applies": true,
+    "population": 1964,
+    "setup_future_zero": 1964,
+    "share": 1.0,
+    "status": "PASS"
+   },
+   "baseline_reproduction": {
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     0,
+     0,
+     2,
+     98,
+     1768
+    ],
+    "observed": [
+     0,
+     0,
+     2,
+     98,
+     1768
+    ]
+   },
+   "c0_integrity": {
+    "checked": 5696,
+    "exact": 5696
+   },
+   "decisions": 5794,
+   "exchanges": 5696,
+   "integrity": {
+    "baseline_rng_digest": "9aaca2a0a90f5f94de1a665c4851293721d50acceeeadf4a33fd56d7f8fb4019",
+    "baseline_rng_digest_reference": "9aaca2a0a90f5f94de1a665c4851293721d50acceeeadf4a33fd56d7f8fb4019",
+    "baseline_rng_draws": 7048,
+    "baseline_rng_draws_reference": 7048,
+    "d3b_holds": 0,
+    "evaluator_rng_draws": 0,
+    "evaluator_rng_draws_by_method": {},
+    "gameplay_signatures_identical": true,
+    "lockout_hold_counterfactuals_excluded": 0,
+    "replay_identical": true,
+    "rng_sequence_identical": true,
+    "summary_identical_to_reference": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "matches": 100,
+   "outcomes": {
+    "Reversal": 2,
+    "TIMEOUT \u2014 Mount retained": 98
+   },
+   "reported": {
+    "baseline_vs_te1": {
+     "bottom:baseline=escape:te1=terminal": 5,
+     "bottom:baseline=position:te1=position": 879,
+     "bottom:baseline=setup:te1=position": 98,
+     "bottom:baseline=setup:te1=reset": 1839,
+     "bottom:baseline=setup:te1=setup": 27,
+     "bottom:different_action": 1937,
+     "bottom:same_action": 911,
+     "top:baseline=position:te1=reset": 5,
+     "top:baseline=reset:te1=reset": 98,
+     "top:baseline=setup:te1=reset": 1964,
+     "top:baseline=submission:te1=reset": 879,
+     "top:different_action": 2848,
+     "top:same_action": 98
+    },
+    "builder_projections_with_own_stamina_below_low_cost": 1568,
+    "calibration_by_side": {
+     "bottom": {
+      "progress": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2848,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "setup_advance": {
+       "actual": 1866,
+       "deviation": 1.3333333333333333,
+       "n": 2848,
+       "predicted": 1864.6666666666667,
+       "predicted_exact": "5594/3",
+       "sigma": 5.754225500544023,
+       "variance_exact": "298/9",
+       "within_3_sigma": true,
+       "z": 0.23171377854539688
+      },
+      "terminal": {
+       "actual": 2,
+       "deviation": 0.3333333333333333,
+       "n": 2848,
+       "predicted": 1.6666666666666667,
+       "predicted_exact": "5/3",
+       "sigma": 1.0540925533894598,
+       "variance_exact": "10/9",
+       "within_3_sigma": true,
+       "z": 0.3162277660168379
+      }
+     },
+     "top": {
+      "progress": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2848,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "setup_advance": {
+       "actual": 1964,
+       "deviation": 0.0,
+       "n": 2848,
+       "predicted": 1964.0,
+       "predicted_exact": "1964",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      },
+      "terminal": {
+       "actual": 0,
+       "deviation": 0.0,
+       "n": 2848,
+       "predicted": 0.0,
+       "predicted_exact": "0",
+       "sigma": 0.0,
+       "variance_exact": "0",
+       "within_3_sigma": true,
+       "z": null
+      }
+     }
+    },
+    "chains": {
+     "converted": 0,
+     "total": 884
+    },
+    "ready_conversion_predicted_vs_actual": {
+     "mount.bottom.trap_and_roll_escape": {
+      "actual": 2,
+      "predicted": 1.6666666666666667,
+      "uses": 884
+     },
+     "mount.top.americana_arm_isolation": {
+      "actual": 0,
+      "predicted": 0.0,
+      "uses": 884
+     }
+    },
+    "setup_future_distribution": {
+     "deciles": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "maximum": 0.0,
+     "median": 0.0,
+     "n": 1964,
+     "positive": 0,
+     "zero": 1964
+    },
+    "te1_commitment_distribution": {
+     "bottom:position:LOW": 977,
+     "bottom:setup:LOW": 27,
+     "bottom:terminal:LOW": 5
+    },
+    "te1_tier_distribution": {
+     "bottom:position": 977,
+     "bottom:reset": 1839,
+     "bottom:setup": 27,
+     "bottom:terminal": 5,
+     "top:reset": 2946
+    },
+    "top_high_mount_climb_decisions_by_reason": {
+     "setup": 1964
+    },
+    "top_setup_decisions": 1964
+   },
+   "threat_matches": 0,
+   "top_completed_setup_builds": 1768
+  }
+ }
+}
