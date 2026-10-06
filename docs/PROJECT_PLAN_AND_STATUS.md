@@ -34,12 +34,12 @@ branch -> freeze DoD / preregistration -> HARD STOP -> review
 
 | Item | SHA / PR | State |
 |---|---|---|
-| `main` | `b59fc7f046d5420e3edc05f3300ad9699473776d` | **stable; D3-B production promotion merged** |
+| R1 base main | `1e2b5e3ffbf6f8a8051775d48c20063cc3abdedd` | stable; CI `37374129845` PASS |
 | Stamina production adoption | PR #10, head `ee6cb6fcebb105e31224bead48a302811b27b59a`, merge `2149925e684d49cea66915495efffec496ef54a5` | **MERGED** |
 | D3-B production promotion | PR #11, head `0aa23db5089476982eb6eaf94d91b316d857cee1`, merge `b59fc7f046d5420e3edc05f3300ad9699473776d` | **MERGED** |
-| Final-main qualification | CI `37370017411` | **PASS** on Python 3.11 and 3.13; 504 tests, 1 skipped; digest exact |
+| D3-B final-main qualification (`b59fc7f`) | CI `37370017411` | **PASS** on Python 3.11 and 3.13; 504 tests, 1 skipped; digest exact |
 | LOW -> MEDIUM handoff oscillation | D3-B design + promotion lineage | **CLOSED IN PRODUCTION** |
-| Rule 2 double-charge debt | R1 | **OPEN; next controlled engine slice** |
+| R1 — response commitment / provisional-hold affordability | branch `review/r1-hold-inclusive-affordability`; DoD `a2e2887` (CI `37382027293`) | **CLOSED BY CHARACTERIZATION — no gameplay change** |
 
 The review branches and historical checkpoint commits are intentionally preserved. The final integration kept the full evidence chain reachable from `main`.
 
@@ -167,32 +167,22 @@ Docs:
 
 ## 6. Next actions
 
-### 6.1 Next controlled slice: R1 — Rule 2 double charge
+### 6.1 Completed: R1 — response commitment / provisional-hold affordability
 
-The next engine debt is the deferred Rule 2 interaction between responder commitment and provisional submission-hold charging.
+**R1 OUTCOME = CLOSE (closed by characterization).** Records: `docs/R1_HOLD_INCLUSIVE_AFFORDABILITY_DOD.md` (frozen at `a2e2887`) and `docs/R1_HOLD_INCLUSIVE_AFFORDABILITY_RESULT.md`.
 
-Known starting evidence:
+Frozen production semantics: response commitment and the provisional Contested hold are additive. The LOW = 3 hold is charged on a best-effort basis. A responder with 0-2 stamina left pays what remains, and the Contested result is not revoked. Rule 1 still waives everything when the initiator is UNFUNDED. Rule 2 stays OFF; semantics B remains rejected (public-MATCH Threat 78/100 -> 0/100).
 
-- 179 additive response + provisional-hold cases were observed on E-PROD.
-- Rule 2 remains OFF in production.
-- The earlier Rule2-only path is not acceptable as a production answer; it collapses the public Threat surface from 78 matches to 0.
-- D3-B, Rule 1, raw defaults, stamina costs, setup/submission rules and the current canonical production policy are **not** to be changed as part of characterization.
-
-The R1 sequence is:
-
-1. Create a fresh R1 branch.
-2. **Characterization only:** enumerate every double-charge path, ordering, funded/unfunded case, submission-hold interaction, and any Rule-1 masking.
-3. Freeze the R1 DoD / preregistration and acceptance gates.
-4. HARD STOP for review.
-5. Only after explicit authorization: implement one frozen candidate, measure once, preserve evidence, qualify exact head, review, then decide promotion/deferral.
-
-No Rule 2 implementation is authorized merely by this status document.
+- H1 not implemented: provably inert on the production surfaces.
+- H2 rejected for R1: it is a submission-balance change, not an affordability fix, and would alter the frozen A-PROD control (78 decisions). It may return later only as a new submission-design slice.
+- Hypothesis not added; `ResponderSettlementPlan` deferred.
+- The projected-burden display requirement moved to debt 7.
 
 ### 6.2 Remaining order after R1
 
-After R1 is closed or explicitly deferred:
+R1 is closed. Next, in order:
 
-1. **Late recovery / pacing:** median first clear remains about 240 s of a 300 s match; decide whether this is intended game pacing or a separate mechanics debt.
+1. **Late recovery / pacing (next slice; characterization first):** median first clear remains about 240 s of a 300 s match; decide whether this is intended game pacing or a separate mechanics debt.
 2. **Setup-policy debt.**
 3. **Initiator tactical commitment-selection policy:** player/AI choice among LOW / MEDIUM / HIGH rather than a fixed baseline.
 4. **Scoring / timeout meaning** for the first playable ruleset.
@@ -204,13 +194,25 @@ After R1 is closed or explicitly deferred:
 | # | Debt | Status |
 |---|---|---|
 | 1 | LOW -> MEDIUM handoff oscillation | **CLOSED IN PRODUCTION — D3-B** |
-| 2 | **R1:** Rule 2 responder commitment + provisional-hold double charge | **OPEN — NEXT** |
+| 2 | **R1:** response commitment / provisional-hold affordability | **CLOSED BY CHARACTERIZATION** (`a2e2887`; result record) |
 | 3 | Late recovery / match pacing | open |
 | 4 | Setup-policy debt | open |
 | 5 | Initiator tactical commitment-selection policy | open |
 | 6 | Scoring / timeout meaning | open |
-| 7 | Final player-facing state/input contract | open |
+| 7 | Final player-facing state/input contract | open; **includes the R1 projected-burden requirement (below)** |
 | 8 | Recovery-hold visibility / presentation | design consideration; resolve before exposing relevant state to players |
+
+### Debt 7 requirement transferred from R1
+
+The player-facing contract must expose the **response-specific projected burden** on hold-eligible response windows:
+
+```text
+response effective commitment cost
++ 3 when the selected response is predicted Contested and the
+  initiator appears funded from responder-visible information
+```
+
+This is advisory and read-only. Actual engine settlement remains authoritative and may differ, because Recognition can be wrong and Rule 1 uses the true funding state. The projected burden must **never** be presented as a guaranteed actual cost.
 
 ## 8. Definition of "ready for frontend"
 
@@ -237,14 +239,6 @@ git pull --ff-only origin main
 git rev-parse HEAD
 ```
 
-Expected:
+Expected: the latest merge commit on `main`. Every frozen checkpoint SHA cited in this document must be an ancestor of it (`git merge-base --is-ancestor <sha> HEAD`).
 
-`b59fc7f046d5420e3edc05f3300ad9699473776d`
-
-Then create the next controlled branch for R1, for example:
-
-```bash
-git switch -c review/rule2-double-charge-r1
-```
-
-The first R1 commit should contain characterization / preregistration work only. Do not implement a Rule 2 fix before its acceptance contract is frozen and reviewed.
+R1 is closed on `review/r1-hold-inclusive-affordability` (based on `1e2b5e3`; frozen DoD `a2e2887`). Merging that branch needs separate authorization. The next slice is late recovery / match-pacing characterization, starting on a fresh branch after explicit authorization.
