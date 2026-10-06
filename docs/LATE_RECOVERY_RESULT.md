@@ -57,7 +57,7 @@ Then re-run `bjj_game.diagnostics.late_recovery` on the then-canonical E-PROD (b
 | ID | Gate | Result |
 |---|---|---|
 | LR-1 | Characterization reproduces exactly; observer inert; unexplained delta 0 | **PASS** (`tests/test_late_recovery_characterization.py`; CI `37405624229`) |
-| LR-2 | No gameplay change; digest exact; full suite, checker and legacy entry point PASS; exact-head CI 3.11 / 3.13 | Blocked at `683e830` only by the pre-existing PG8 defect. That defect is fixed on `main` (`5714748`, merged `cfb3603`) and merged into this branch. Final evidence: this branch's combined-state CI, including the full-history PG8 job. |
+| LR-2 | No gameplay change; digest exact; full suite, checker and legacy entry point PASS; exact-head CI 3.11 / 3.13 | **PASS.** The pre-existing PG8 blocker was repaired on `main` (`5714748`, merged `cfb3603`). Combined-state CI `37450501279` passes all shards, verification and full-history PG8 on Python 3.11 and 3.13. |
 | LR-3 | Status document records debt 3 as characterized and deferred behind debts 4 and 5, with the re-evaluation contract | **PASS** (`docs/PROJECT_PLAN_AND_STATUS.md`) |
 
 ## Next
