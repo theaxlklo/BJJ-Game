@@ -42,6 +42,7 @@ branch -> freeze DoD / preregistration -> HARD STOP -> review
 | R1 — response commitment / provisional-hold affordability | branch `review/r1-hold-inclusive-affordability`; DoD `a2e2887` (CI `37382027293`) | **CLOSED BY CHARACTERIZATION — no gameplay change** |
 | PG8 endpoint pin (maintenance) | PR #14, head `5714748`, merge `cfb3603` (CI `37447498281`) | **MERGED**; PG8 runs in a full-history CI job |
 | Late recovery / match pacing | branch `review/late-recovery-characterization`; characterization `683e830` (CI `37405624229`) | **CHARACTERIZED — CAUSE IDENTIFIED — DEFERRED** behind debts 4 and 5 |
+| Setup policy | branch `review/setup-policy-characterization`; characterization `9908235` (CI `37460433501`) | **SP-JOINT** — debts 4 and 5 merged into one tactical-evaluator slice |
 
 The review branches and historical checkpoint commits are intentionally preserved. The final integration kept the full evidence chain reachable from `main`.
 
@@ -194,13 +195,32 @@ Cause: the fixed-MEDIUM opening burns about 16 stamina per 10 s against +4 recov
 
 The mechanics decision is deferred, because pacing is driven by the fixed-MEDIUM placeholder and the current setup/attack policy. **Re-run the frozen observer after debts 4 and 5**, per the re-evaluation contract in the characterization DoD (section 4). Recovery rates, costs, thresholds, LOW cadence, D3-B and commitment behavior are unchanged.
 
-### 6.3 Remaining order
+### 6.3 Completed: setup-policy characterization (SP-JOINT)
+
+**OUTCOME = SP-JOINT.** Records: `docs/SETUP_POLICY_CHARACTERIZATION.md` (frozen at `9908235`) and `docs/SETUP_POLICY_RESULT.md`.
+
+Setup is not fundamentally broken. Top values its Ready setup against a random-blind defender, while Bottom defends informed:
+- production: about 55% predicted vs about 14% actual;
+- PROTECT probe: 57% vs 0% (982 Readys, 0 conversions).
+
+A setup's value also depends on the stamina/exhaustion state at use time, which commitment choice drives. An informed static gate (S1) would block 99%+ of production Top setups and was rejected.
+
+Debts 4 and 5 are therefore **one slice**: a shared deterministic tactical evaluator. It is bound by requirements E1-E6 and architectural constraints A1-A6 (`docs/SETUP_POLICY_RESULT.md`):
+- bounded and deterministic, with no RNG consumed while evaluating alternatives;
+- one shared `TacticalValue` tuple with no weighted coefficients;
+- `action × {LOW, MEDIUM, HIGH}` commitment comparison;
+- bounded setup projection to the Ready use;
+- Recognition-faithful knowledge;
+- A-PROD Threat 78 as the prominent preservation control.
+
+No anti-loop rule, no S1, no setup or commitment change yet.
+
+### 6.4 Remaining order
 
 R1 is closed and late recovery is deferred. Next, in order:
 
-1. **Setup-policy debt (next).**
-2. **Initiator tactical commitment-selection policy:** player/AI choice among LOW / MEDIUM / HIGH rather than a fixed baseline.
-3. **Re-run the frozen late-recovery characterization** (debt 3 re-evaluation) after 1 and 2.
+1. **Joint tactical evaluator (debts 4 + 5; next):** setup valuation and initiator commitment selection (LOW / MEDIUM / HIGH) through one shared evaluator. It starts with a preregistration/DoD only, on a fresh branch.
+2. **Re-run the frozen late-recovery characterization** (debt 3 re-evaluation) once the joint evaluator qualifies.
 4. **Scoring / timeout meaning** for the first playable ruleset.
 5. **Final player-facing state/input contract.**
 6. Resolve the player-facing meaning/visibility of non-RESET recovery holds if it is still relevant after the above slices.
@@ -212,8 +232,8 @@ R1 is closed and late recovery is deferred. Next, in order:
 | 1 | LOW -> MEDIUM handoff oscillation | **CLOSED IN PRODUCTION — D3-B** |
 | 2 | **R1:** response commitment / provisional-hold affordability | **CLOSED BY CHARACTERIZATION** (`a2e2887`; result record) |
 | 3 | Late recovery / match pacing | **CHARACTERIZED — CAUSE IDENTIFIED — DEFERRED** (`683e830`; re-evaluate after debts 4 and 5) |
-| 4 | Setup-policy debt | open |
-| 5 | Initiator tactical commitment-selection policy | open |
+| 4 | Setup-policy debt | **SP-JOINT** — merged with debt 5 into the joint tactical-evaluator slice (`9908235`) |
+| 5 | Initiator tactical commitment-selection policy | open — **joint tactical-evaluator slice** (with debt 4); requirements E1-E6, A1-A6 |
 | 6 | Scoring / timeout meaning | open |
 | 7 | Final player-facing state/input contract | open; **includes the R1 projected-burden requirement (below)** |
 | 8 | Recovery-hold visibility / presentation | design consideration; resolve before exposing relevant state to players |
@@ -257,4 +277,4 @@ git rev-parse HEAD
 
 Expected: the latest merge commit on `main`. Every frozen checkpoint SHA cited in this document must be an ancestor of it (`git merge-base --is-ancestor <sha> HEAD`).
 
-R1 is closed and merged. Late recovery is deferred (frozen characterization `683e830`). The next slice is the **setup-policy debt**, starting on a fresh branch after explicit authorization.
+R1 is closed and merged. Late recovery is deferred (frozen characterization `683e830`). Setup policy is characterized (`9908235`) and merged with debt 5. The next slice is the **joint tactical-evaluator preregistration**, starting on a fresh branch from `main` after explicit authorization.

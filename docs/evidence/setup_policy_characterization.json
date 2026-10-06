@@ -1,0 +1,389 @@
+{
+ "A-PROD": {
+  "bottom_completed_setup_builds": 1552,
+  "decisions_by_side_and_reason": {
+   "bottom:escape": 27,
+   "bottom:position": 355,
+   "bottom:reset": 78,
+   "bottom:setup": 1846,
+   "top:setup": 356,
+   "top:submission": 2028
+  },
+  "excluded_d3b_counterfactual_choose_calls": 0,
+  "matches": 100,
+  "outcomes": {
+   "Half Guard": 22,
+   "TIMEOUT \u2014 Mount retained": 78
+  },
+  "ready_target_calibration": {
+   "bottom:mount.bottom.trap_and_roll_escape:actual_successes": 0,
+   "bottom:mount.bottom.trap_and_roll_escape:policy_uses": 355,
+   "bottom:mount.bottom.trap_and_roll_escape:predicted_successes_x1000": 0,
+   "top:mount.top.americana_arm_isolation:actual_successes": 78,
+   "top:mount.top.americana_arm_isolation:informed_model_predicted_successes": 78,
+   "top:mount.top.americana_arm_isolation:policy_uses": 156,
+   "top:mount.top.americana_arm_isolation:predicted_successes_x1000": 122538
+  },
+  "ready_target_uses": {
+   "bottom:mount.bottom.trap_and_roll_escape:exit": 0,
+   "bottom:mount.bottom.trap_and_roll_escape:successful": 124,
+   "bottom:mount.bottom.trap_and_roll_escape:uses": 355,
+   "top:mount.top.americana_arm_isolation:exit": 0,
+   "top:mount.top.americana_arm_isolation:successful": 78,
+   "top:mount.top.americana_arm_isolation:threat_entry": 78,
+   "top:mount.top.americana_arm_isolation:uses": 156
+  },
+  "setup_builders": {
+   "bottom:mount.bottom.bridge": 1846,
+   "top:mount.top.high_mount_climb": 356
+  },
+  "setup_decisions": {
+   "bottom:advanced": 777,
+   "bottom:alt_reset": 1846,
+   "bottom:attempts": 1846,
+   "bottom:decisions": 1846,
+   "bottom:expected_realized_axis<0": 251,
+   "bottom:reached_ready": 363,
+   "bottom:realized_axis_x1000": -157700,
+   "bottom:stamina_spent": 2303,
+   "top:S1_block_alt_position": 195,
+   "top:S1_block_alt_reset": 161,
+   "top:S1_informed_gate_would_block": 356,
+   "top:advanced": 356,
+   "top:alt_position": 195,
+   "top:alt_reset": 161,
+   "top:attempts": 356,
+   "top:decisions": 356,
+   "top:expected_realized_axis<0": 161,
+   "top:forgoes_better_position": 100,
+   "top:forgone_expected_axis_x1000": 14300,
+   "top:reached_ready": 178,
+   "top:realized_axis_x1000": -353300,
+   "top:stamina_spent": 2492
+  },
+  "setup_tiers_at_last_attempt": {
+   "mount.bottom.trap_and_roll_escape:tier0": 41,
+   "mount.bottom.trap_and_roll_escape:tier1": 51,
+   "mount.bottom.trap_and_roll_escape:tier2": 8,
+   "mount.top.americana_arm_isolation:tier0": 78,
+   "mount.top.americana_arm_isolation:tier2": 22
+  },
+  "threat_matches": 78,
+  "top_completed_setup_builds": 312
+ },
+ "B-PROD": {
+  "bottom_completed_setup_builds": 1565,
+  "decisions_by_side_and_reason": {
+   "bottom:escape": 22,
+   "bottom:position": 514,
+   "bottom:reset": 28,
+   "bottom:setup": 1836,
+   "top:position": 25,
+   "top:setup": 900,
+   "top:submission": 1563
+  },
+  "excluded_d3b_counterfactual_choose_calls": 0,
+  "matches": 100,
+  "outcomes": {
+   "Half Guard": 8,
+   "Open Guard": 2,
+   "Reversal": 2,
+   "TAP \u2014 Americana": 9,
+   "TIMEOUT \u2014 Mount retained": 79
+  },
+  "ready_target_calibration": {
+   "bottom:mount.bottom.trap_and_roll_escape:actual_successes": 2,
+   "bottom:mount.bottom.trap_and_roll_escape:policy_uses": 521,
+   "bottom:mount.bottom.trap_and_roll_escape:predicted_successes_x1000": 2331,
+   "top:mount.top.americana_arm_isolation:actual_successes": 59,
+   "top:mount.top.americana_arm_isolation:informed_model_predicted_successes": 21,
+   "top:mount.top.americana_arm_isolation:policy_uses": 440,
+   "top:mount.top.americana_arm_isolation:predicted_successes_x1000": 245974
+  },
+  "ready_target_uses": {
+   "bottom:mount.bottom.trap_and_roll_escape:exit": 2,
+   "bottom:mount.bottom.trap_and_roll_escape:successful": 207,
+   "bottom:mount.bottom.trap_and_roll_escape:uses": 521,
+   "top:mount.top.americana_arm_isolation:exit": 0,
+   "top:mount.top.americana_arm_isolation:successful": 68,
+   "top:mount.top.americana_arm_isolation:threat_entry": 59,
+   "top:mount.top.americana_arm_isolation:uses": 440
+  },
+  "setup_builders": {
+   "bottom:mount.bottom.bridge": 1836,
+   "top:mount.top.high_mount_climb": 900
+  },
+  "setup_decisions": {
+   "bottom:advanced": 1153,
+   "bottom:alt_position": 19,
+   "bottom:alt_reset": 1817,
+   "bottom:attempts": 1836,
+   "bottom:decisions": 1836,
+   "bottom:expected_realized_axis<0": 789,
+   "bottom:forgoes_better_position": 19,
+   "bottom:forgone_expected_axis_x1000": 7329,
+   "bottom:reached_ready": 561,
+   "bottom:realized_axis_x1000": -308100,
+   "bottom:stamina_spent": 2901,
+   "top:S1_block_alt_position": 225,
+   "top:S1_block_alt_reset": 674,
+   "top:S1_informed_gate_would_block": 899,
+   "top:advanced": 900,
+   "top:alt_position": 226,
+   "top:alt_reset": 674,
+   "top:attempts": 900,
+   "top:decisions": 900,
+   "top:expected_realized_axis<0": 674,
+   "top:forgoes_better_position": 141,
+   "top:forgone_expected_axis_x1000": 20120,
+   "top:reached_ready": 449,
+   "top:realized_axis_x1000": -768200,
+   "top:stamina_spent": 2464
+  },
+  "setup_tiers_at_last_attempt": {
+   "mount.bottom.trap_and_roll_escape:tier0": 29,
+   "mount.bottom.trap_and_roll_escape:tier1": 31,
+   "mount.bottom.trap_and_roll_escape:tier2": 40,
+   "mount.top.americana_arm_isolation:tier0": 89,
+   "mount.top.americana_arm_isolation:tier1": 2,
+   "mount.top.americana_arm_isolation:tier2": 9
+  },
+  "threat_matches": 59,
+  "top_completed_setup_builds": 880
+ },
+ "E-PROD 142": {
+  "bottom_completed_setup_builds": 1475,
+  "decisions_by_side_and_reason": {
+   "bottom:escape": 53,
+   "bottom:position": 676,
+   "bottom:reset": 40,
+   "bottom:setup": 1563,
+   "top:position": 36,
+   "top:setup": 886,
+   "top:submission": 1513
+  },
+  "excluded_d3b_counterfactual_choose_calls": 34,
+  "matches": 100,
+  "outcomes": {
+   "Half Guard": 24,
+   "Open Guard": 6,
+   "Reversal": 1,
+   "TAP \u2014 Americana": 4,
+   "TIMEOUT \u2014 Mount retained": 65
+  },
+  "ready_target_calibration": {
+   "bottom:mount.bottom.trap_and_roll_escape:actual_successes": 1,
+   "bottom:mount.bottom.trap_and_roll_escape:policy_uses": 683,
+   "bottom:mount.bottom.trap_and_roll_escape:predicted_successes_x1000": 2998,
+   "top:mount.top.americana_arm_isolation:actual_successes": 57,
+   "top:mount.top.americana_arm_isolation:informed_model_predicted_successes": 23,
+   "top:mount.top.americana_arm_isolation:policy_uses": 420,
+   "top:mount.top.americana_arm_isolation:predicted_successes_x1000": 229131
+  },
+  "ready_target_uses": {
+   "bottom:mount.bottom.trap_and_roll_escape:exit": 1,
+   "bottom:mount.bottom.trap_and_roll_escape:successful": 620,
+   "bottom:mount.bottom.trap_and_roll_escape:uses": 683,
+   "top:mount.top.americana_arm_isolation:exit": 0,
+   "top:mount.top.americana_arm_isolation:successful": 62,
+   "top:mount.top.americana_arm_isolation:threat_entry": 57,
+   "top:mount.top.americana_arm_isolation:uses": 420
+  },
+  "setup_builders": {
+   "bottom:mount.bottom.bridge": 1563,
+   "top:mount.top.high_mount_climb": 886
+  },
+  "setup_decisions": {
+   "bottom:advanced": 1448,
+   "bottom:alt_position": 57,
+   "bottom:alt_reset": 1506,
+   "bottom:attempts": 1563,
+   "bottom:decisions": 1563,
+   "bottom:expected_realized_axis<0": 779,
+   "bottom:forgoes_better_position": 57,
+   "bottom:forgone_expected_axis_x1000": 25746,
+   "bottom:reached_ready": 703,
+   "bottom:realized_axis_x1000": 284750,
+   "bottom:stamina_spent": 6135,
+   "top:S1_block_alt_position": 273,
+   "top:S1_block_alt_reset": 607,
+   "top:S1_informed_gate_would_block": 880,
+   "top:advanced": 885,
+   "top:alt_position": 275,
+   "top:alt_reset": 611,
+   "top:attempts": 886,
+   "top:decisions": 886,
+   "top:expected_realized_axis<0": 569,
+   "top:forgoes_better_position": 152,
+   "top:forgone_expected_axis_x1000": 19418,
+   "top:reached_ready": 438,
+   "top:realized_axis_x1000": -778550,
+   "top:stamina_spent": 2471
+  },
+  "setup_tiers_at_last_attempt": {
+   "mount.bottom.trap_and_roll_escape:tier0": 38,
+   "mount.bottom.trap_and_roll_escape:tier1": 42,
+   "mount.bottom.trap_and_roll_escape:tier2": 20,
+   "mount.top.americana_arm_isolation:tier0": 73,
+   "mount.top.americana_arm_isolation:tier1": 9,
+   "mount.top.americana_arm_isolation:tier2": 18
+  },
+  "threat_matches": 57,
+  "top_completed_setup_builds": 841
+ },
+ "E-PROD 42": {
+  "bottom_completed_setup_builds": 1490,
+  "decisions_by_side_and_reason": {
+   "bottom:escape": 48,
+   "bottom:position": 687,
+   "bottom:reset": 31,
+   "bottom:setup": 1585,
+   "top:position": 34,
+   "top:setup": 895,
+   "top:submission": 1555
+  },
+  "excluded_d3b_counterfactual_choose_calls": 63,
+  "matches": 100,
+  "outcomes": {
+   "Half Guard": 17,
+   "Open Guard": 5,
+   "Reversal": 8,
+   "TAP \u2014 Americana": 5,
+   "TIMEOUT \u2014 Mount retained": 65
+  },
+  "ready_target_calibration": {
+   "bottom:mount.bottom.trap_and_roll_escape:actual_successes": 8,
+   "bottom:mount.bottom.trap_and_roll_escape:policy_uses": 701,
+   "bottom:mount.bottom.trap_and_roll_escape:predicted_successes_x1000": 4662,
+   "top:mount.top.americana_arm_isolation:actual_successes": 61,
+   "top:mount.top.americana_arm_isolation:informed_model_predicted_successes": 24,
+   "top:mount.top.americana_arm_isolation:policy_uses": 422,
+   "top:mount.top.americana_arm_isolation:predicted_successes_x1000": 231844
+  },
+  "ready_target_uses": {
+   "bottom:mount.bottom.trap_and_roll_escape:exit": 8,
+   "bottom:mount.bottom.trap_and_roll_escape:successful": 635,
+   "bottom:mount.bottom.trap_and_roll_escape:uses": 701,
+   "top:mount.top.americana_arm_isolation:exit": 0,
+   "top:mount.top.americana_arm_isolation:successful": 67,
+   "top:mount.top.americana_arm_isolation:threat_entry": 61,
+   "top:mount.top.americana_arm_isolation:uses": 422
+  },
+  "setup_builders": {
+   "bottom:mount.bottom.bridge": 1585,
+   "top:mount.top.high_mount_climb": 895
+  },
+  "setup_decisions": {
+   "bottom:advanced": 1491,
+   "bottom:alt_position": 76,
+   "bottom:alt_reset": 1509,
+   "bottom:attempts": 1585,
+   "bottom:decisions": 1585,
+   "bottom:expected_realized_axis<0": 784,
+   "bottom:forgoes_better_position": 76,
+   "bottom:forgone_expected_axis_x1000": 32593,
+   "bottom:reached_ready": 724,
+   "bottom:realized_axis_x1000": 302600,
+   "bottom:stamina_spent": 6353,
+   "top:S1_block_alt_position": 336,
+   "top:S1_block_alt_reset": 557,
+   "top:S1_informed_gate_would_block": 893,
+   "top:advanced": 895,
+   "top:alt_position": 338,
+   "top:alt_reset": 557,
+   "top:attempts": 895,
+   "top:decisions": 895,
+   "top:expected_realized_axis<0": 494,
+   "top:forgoes_better_position": 189,
+   "top:forgone_expected_axis_x1000": 23046,
+   "top:reached_ready": 441,
+   "top:realized_axis_x1000": -776550,
+   "top:stamina_spent": 2462
+  },
+  "setup_tiers_at_last_attempt": {
+   "mount.bottom.trap_and_roll_escape:tier0": 34,
+   "mount.bottom.trap_and_roll_escape:tier1": 43,
+   "mount.bottom.trap_and_roll_escape:tier2": 23,
+   "mount.top.americana_arm_isolation:tier0": 68,
+   "mount.top.americana_arm_isolation:tier1": 13,
+   "mount.top.americana_arm_isolation:tier2": 19
+  },
+  "threat_matches": 61,
+  "top_completed_setup_builds": 844
+ },
+ "v0.3a PROTECT probe (historical debt)": {
+  "bottom_completed_setup_builds": 1865,
+  "decisions_by_side_and_reason": {
+   "bottom:escape": 5,
+   "bottom:position": 879,
+   "bottom:setup": 1964,
+   "top:position": 5,
+   "top:reset": 98,
+   "top:setup": 1964,
+   "top:submission": 879
+  },
+  "excluded_d3b_counterfactual_choose_calls": 0,
+  "matches": 100,
+  "outcomes": {
+   "Reversal": 2,
+   "TIMEOUT \u2014 Mount retained": 98
+  },
+  "ready_target_calibration": {
+   "bottom:mount.bottom.trap_and_roll_escape:actual_successes": 2,
+   "bottom:mount.bottom.trap_and_roll_escape:policy_uses": 884,
+   "bottom:mount.bottom.trap_and_roll_escape:predicted_successes_x1000": 1665,
+   "top:mount.top.americana_arm_isolation:actual_successes": 0,
+   "top:mount.top.americana_arm_isolation:informed_model_predicted_successes": 0,
+   "top:mount.top.americana_arm_isolation:policy_uses": 884,
+   "top:mount.top.americana_arm_isolation:predicted_successes_x1000": 501909
+  },
+  "ready_target_uses": {
+   "bottom:mount.bottom.trap_and_roll_escape:exit": 2,
+   "bottom:mount.bottom.trap_and_roll_escape:successful": 368,
+   "bottom:mount.bottom.trap_and_roll_escape:uses": 884,
+   "top:mount.top.americana_arm_isolation:exit": 0,
+   "top:mount.top.americana_arm_isolation:successful": 0,
+   "top:mount.top.americana_arm_isolation:threat_entry": 0,
+   "top:mount.top.americana_arm_isolation:uses": 884
+  },
+  "setup_builders": {
+   "bottom:mount.bottom.bridge": 1964,
+   "top:mount.top.high_mount_climb": 1964
+  },
+  "setup_decisions": {
+   "bottom:advanced": 1866,
+   "bottom:alt_position": 98,
+   "bottom:alt_reset": 1866,
+   "bottom:attempts": 1964,
+   "bottom:decisions": 1964,
+   "bottom:expected_realized_axis<0": 1784,
+   "bottom:forgoes_better_position": 98,
+   "bottom:forgone_expected_axis_x1000": 37811,
+   "bottom:reached_ready": 884,
+   "bottom:realized_axis_x1000": -390750,
+   "bottom:stamina_spent": 5998,
+   "top:S1_block_alt_position": 130,
+   "top:S1_block_alt_reset": 1834,
+   "top:S1_informed_gate_would_block": 1964,
+   "top:advanced": 1964,
+   "top:alt_position": 130,
+   "top:alt_reset": 1834,
+   "top:attempts": 1964,
+   "top:decisions": 1964,
+   "top:expected_realized_axis<0": 1825,
+   "top:forgoes_better_position": 127,
+   "top:forgone_expected_axis_x1000": 7461,
+   "top:reached_ready": 982,
+   "top:realized_axis_x1000": -1964000,
+   "top:stamina_spent": 5516
+  },
+  "setup_tiers_at_last_attempt": {
+   "mount.bottom.trap_and_roll_escape:tier0": 2,
+   "mount.bottom.trap_and_roll_escape:tier1": 98,
+   "mount.top.americana_arm_isolation:tier0": 2,
+   "mount.top.americana_arm_isolation:tier2": 98
+  },
+  "threat_matches": 0,
+  "top_completed_setup_builds": 1768
+ }
+}
