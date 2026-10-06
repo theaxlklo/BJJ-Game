@@ -2,9 +2,11 @@
 
 ## Status
 
-**PROPOSED PREREGISTRATION — DOCUMENTATION ONLY — NOT BINDING — HARD STOP FOR REVIEW.**
+**PROPOSED PREREGISTRATION — DOCUMENTATION ONLY — REVIEW RULINGS RECORDED (section 9) — HARD STOP FOR FINAL REVIEW.**
 
-Nothing is implemented or run. This document freezes how Stage 1B will be scored **before any wiring**. It becomes binding only after the user reviews this exact SHA, **resolves the decisions in section 9**, and explicitly authorizes Stage 1B. Authorization of this document is not authorization of implementation; Stage 1B is authorized as its own step.
+Nothing is implemented or run. This document freezes how Stage 1B will be scored **before any wiring**. It was proposed at `0fcae3e`; the user's rulings on B1-B8 are recorded in section 9, and this clarification commit applies the two corrections and three wording fixes they required.
+
+**Authorization language.** The user's approval of the corrected preregistration, at the SHA that carries this text, makes **the document** binding. It does **not** authorize implementation, wiring or any measurement. Stage 1B implementation and the candidate run require a **separate, explicit authorization**.
 
 ```text
 branch:                    review/tactical-evaluator-stage1b-preregistration
@@ -19,7 +21,9 @@ frozen digest:              3ee55429434f8f95c592183317292d3e824768135d7834c44bae
 
 **Scope.** Stage 1B of 4e61bad section 3: wire TE-1 (with projection v2) behind an opt-in batch option, run it **once** on the frozen surfaces, and score the preservation gates P1-P6 and the design gates G1-G6.
 
-**P1-P6 and G1-G6 keep their frozen definitions, surfaces, baselines and floors. No gate or threshold changes.** This document adds no gate. It adds only measurement definitions, integrity checks, reported (not gated) measures, and decision rules that 4e61bad left implicit, each marked in section 9 where it needs a ruling.
+**P1-P6 and G1-G6 keep their frozen surfaces, baselines and numerical floors. No threshold changes and no gate is added.** This document adds measurement definitions, integrity checks, reported (not gated) measures, and decision rules that 4e61bad left implicit.
+
+**One of them is an explicit pre-measurement amendment to G4's measurement definition** (section 5.2). It changes how a G4 verdict is obtained, so it is disclosed as an amendment and not described as "not a gate change". The floor (≤ 884) and the PROTECT baseline (1,768) are unchanged.
 
 ---
 
@@ -48,7 +52,7 @@ G1 (submission access) is the gate most likely to fail and the one no existing e
 
 ## 2.1 Seam and invariants
 
-- The default (`ESCAPE_FIRST`) path must be **byte-identical** to today: same code path, same RNG draws, same summaries. This is P1, and it includes every existing pinned surface and both the Stage 1A and Stage 1A-v2 evidence pins.
+- The default `ESCAPE_FIRST` path must be **behaviorally and RNG-identical to the frozen baseline**: same decisions, same RNG draws in the same order, same summaries. The existing decision path remains unchanged apart from the opt-in selection seam. (Adding an option necessarily changes source and bytecode, so literal byte identity is not required.) This is P1, and it includes every existing pinned surface and both the Stage 1A and Stage 1A-v2 evidence pins.
 - `TACTICAL_V1` is selected only by the explicit option. It requires the configuration of 4e61bad (v0.2 setup, v0.3a submissions, v0.4a semantics, informed Bottom responder) and raises `ValueError` on any configuration projection v2 does not model (for example handoff modes other than `NONE` and D3-B). There is **no silent fallback to `ESCAPE_FIRST`**.
 - Both initiators use TE-1 under `TACTICAL_V1` (Top and Bottom), as in 4e61bad section 2.
 - **Order of decisions at a window (unchanged from the runtime):** D3-B controller decision (TOKEN / LOCKOUT_HOLD / unarmed), then force-RESET rules, then the initiator policy. In a LOCKOUT_HOLD window `recovery_hold()` replaces the initiation, and TE-1 never executes. In a Bottom RECOVER window while Exhausted, the commitment stays **LOW** (`LOW_WHILE_EXHAUSTED`) and TE-1 picks only the action (4e61bad 2.6).
@@ -89,7 +93,7 @@ The evaluator remains pure: no RNG draw, no mutation of the live match or of the
 | PROTECT probe | 0 | 0 | 2 | 98 | 1,768 |
 
 **Metric definitions (frozen by reference to existing code; no new definitions):**
-- Threat matches = `summary.matches_reached_submission_threat`; Tap = outcome `TAP — Americana`; timeouts = outcome `TIMEOUT — Mount retained`; escapes = matches − Tap − timeouts; Top completed builds = `summary.top_completed_setup_build_count` (as in `diagnostics/tactical_evaluator.py` baseline reproduction).
+- Threat matches = `summary.matches_reached_submission_threat`; Tap = outcome `TAP — Americana`; timeouts = outcome `TIMEOUT — Mount retained`; escapes = matches − Tap − timeouts; Top completed builds (historical counter) = `summary.top_completed_setup_build_count` (as in `diagnostics/tactical_evaluator.py` baseline reproduction). G4's authoritative measure is the reason-independent count of section 5.2.
 - Bottom first-Exhausted median = `summary.bottom_first_exhausted_time_median`.
 - Bottom Exhausted share = `bottom_exhausted_share_of_match_time` of `diagnostics/late_recovery.py` (Bottom advance-time while Exhausted over total match time; baseline 79.0% seed 42, 79.5% seed 142), computed by the unchanged observer on the candidate run.
 
@@ -117,7 +121,7 @@ The evaluator remains pure: no RNG draw, no mutation of the live match or of the
 | G1 | A-PROD Threat matches **≥ 63**; B-PROD + E-PROD 42 + E-PROD 142 pooled Threat matches **≥ 142** | Pooled sum is taken **per stalling mode** (the B-PROD run counts in both); each of OFF + shadow and ON must reach 142 |
 | G2 | Tap **≤ 20** on every surface | Every gated run |
 | G3 | E-PROD pooled (42 + 142) escapes **≥ 49**; B-PROD escapes **≥ 10** | E-PROD pooled per stalling mode |
-| G4 | PROTECT Top completed builds **≤ 884** | **Both** the frozen counter and the engine-derived count (section 5.2) must be ≤ 884 |
+| G4 | PROTECT Top completed builds **≤ 884** | The **reason-independent completed-chain builder-attempt count** (section 5.2, a pre-measurement amendment to the measurement definition) must be ≤ 884. The historical counter is reported alongside |
 | G5 | E-PROD Bottom first-Exhausted median **≥ 50 s**; Bottom Exhausted share **≤ 80%** | Each seed, each stalling mode (4 runs); metrics as in section 3 |
 | G6 | E-PROD pooled share of HIGH among TE-1-chosen initiations **≤ 50%** | Section 5.3 |
 
@@ -135,21 +139,39 @@ Each E-PROD gate must pass in **both** stalling modes. Percentage floors round u
 
 ## 5.1 Inertness replay (P4c)
 
-After the candidate run, re-run each gated surface with a **replay policy** that returns the recorded TE-1 decisions (action and requested commitment, in order) **without evaluating anything**. The summary, per-match gameplay signatures and RNG digest must be identical to the candidate run. This proves that the evaluator has no side effect on the match, the controller or the RNG under real execution. The evaluator-free baseline comparison of Stage 1A no longer applies, because the gameplay legitimately differs.
+After the candidate run, re-run each gated surface with a **replay policy** that returns the recorded TE-1 results **without evaluating anything**. The summary, per-match gameplay signatures and RNG digest must be identical to the candidate run. This proves that the evaluator has no side effect on the match, the controller or the RNG under real execution. The evaluator-free baseline comparison of Stage 1A no longer applies, because the gameplay legitimately differs.
 
-## 5.2 G4 guard against a labeling loophole
+**The replay tape covers every `policy.choose` invocation, in order.** That includes the D3-B collector's **counterfactual** calls at LOCKOUT_HOLD windows. Each tape entry records the match, the call index, the returned decision (action, reason) and requested commitment, and a flag **`executed` vs `counterfactual`**, so the two kinds are distinguishable. The replay policy consumes the next entry for every call, whichever kind it is. A tape that holds only executed decisions could consume the wrong entry at a collector-only call and desynchronize even though gameplay is pure. A replay that desynchronizes, runs out of entries, or finds an `executed` flag that does not match the call is an integrity failure (OPEN), not a PASS.
 
-The frozen counter credits a Top build only when the decision reason is `"setup"` (`batch.py`: `pending_setup_builds` is incremented only then). A builder chosen through the position tier (reason `position`) would advance the setup tier without being counted, so the frozen counter alone could understate churn under a new policy.
+## 5.2 G4 measurement amendment (pre-measurement)
 
-Therefore G4 is also computed **from the engine**: the number of Top builder exchanges that advanced the setup state (`setup_change_history`) and belong to chains closed by a Ready use (the Stage 1A C3 chain definition). Both counts must be ≤ 884. This tightens measurement; it does not change the floor. It is flagged for ruling as decision B3.
+**What the frozen counter does** (`batch.py`, read at `750ffe8`). `top_completed_setup_build_count` is built from `pending_setup_builds`:
+- it is incremented at **decision time**, before the attempt resolves, for every Top decision whose **reason is `"setup"`** and whose action is a designated builder;
+- the increment does not depend on whether that attempt later advances setup, so failed and cap-absorbed attempts are counted;
+- the accumulated pending attempts are **credited** when Top next attempts the target while it is Ready, and a chain that never completes is never credited.
+
+**The loophole.** The increment depends on the reason **label**. Under TE-1 a builder chosen through the position tier carries reason `position`, so it can advance the chain without being counted, and the frozen counter alone could understate churn.
+
+**The amendment.** G4 is scored on a **reason-independent completed-chain builder-attempt count**:
+- whenever Top attempts a designated setup builder for a target that is **not yet Ready**, the attempt is added to that target's pending chain **regardless of TE-1 tier or reason, and regardless of whether that attempt advances setup**;
+- when Top next attempts the target while it is Ready, the pending attempts are credited **exactly as the frozen counter credits them**;
+- a chain that never completes is not credited.
+
+Counting only attempts that advanced setup is **not** the amendment: it would drop the failed attempts the frozen counter includes, and so measure something different.
+
+**What does not change:** the floor (≤ 884), the PROTECT baseline (1,768) and the surface.
+
+**Equivalence at baseline (premise of the amendment).** Under `ESCAPE_FIRST` the two counts coincide, because every Top builder attempt carries reason `setup`. This was checked read-only on the committed baseline at `750ffe8`: A-PROD 312 = 312, B-PROD 880 = 880, PROTECT 1,768 = 1,768. Stage 1B re-checks it on every baseline run (section 5.4). A difference on any baseline run makes the amendment's premise false and the result **OPEN** pending a ruling.
+
+**Reporting.** The historical counter is reported on every run for continuity. Under TE-1 it counts a subset of the reason-independent count (a `setup`-reason builder always targets a not-yet-Ready target), so the reason-independent count is the authoritative loophole guard and the historical counter cannot exceed it. Flagged and ruled at B3.
 
 ## 5.3 G6 denominator
 
-"TE-1-chosen initiations" = every initiator **exchange** (not resets or holds) on the E-PROD 42 and 142 runs of one stalling mode, **both sides pooled**, whose commitment TE-1 selected. Exchanges whose commitment was **forced by precedence** (LOW while Exhausted in a Bottom RECOVER window, and the D3-B token path) are excluded from the denominator. The numerator is requested commitment HIGH. Excluding forced LOW exchanges is the stricter reading (the share is higher). The count of excluded exchanges is reported. Flagged as decision B4.
+"TE-1-chosen initiations" = every initiator **exchange** (not resets or holds) on the E-PROD 42 and 142 runs of one stalling mode, **both sides pooled**, whose commitment TE-1 selected. Exchanges whose commitment was **forced by precedence** (LOW while Exhausted in a Bottom RECOVER window, and the D3-B token path) are excluded from the denominator. The numerator is requested commitment HIGH. Excluding forced LOW exchanges is the stricter reading (the share is higher), and it is the logical one: TE-1 did not choose those commitments. Pooling both sides matches the fact that `TACTICAL_V1` controls both initiators. The count of excluded exchanges is reported. This interpretation is frozen here, before any candidate result is seen (ruled at B4).
 
 ## 5.4 Baseline reproduction
 
-The ESCAPE_FIRST baseline is re-run on the head under test and must reproduce the section 3 table exactly (as in Stage 1A and 1A-v2) before any candidate comparison is read.
+The ESCAPE_FIRST baseline is re-run on the head under test and must reproduce the section 3 table exactly (as in Stage 1A and 1A-v2) before any candidate comparison is read. On the same runs the reason-independent count of section 5.2 must equal the historical counter exactly.
 
 ## 5.5 Window-ordering regression pins
 
@@ -201,25 +223,32 @@ No change to TE-1, projection v2, commitment tiers or any gate follows from a FA
   The shadow evidence cannot separate these, because it holds the baseline's trajectory fixed.
 - **G5's first-Exhausted floor is a second real risk.** The floor (≥ 50 s) equals the baseline median (50 s). The shadow shows Bottom choosing HIGH on most terminal-tier windows (A-PROD 127 of 127; E-PROD 42: 88 HIGH, 79 LOW). HIGH costs 12 against MEDIUM's 7, so HIGH-heavy Bottom play can pull the first Exhausted entry earlier and fail G5, and also push G6 toward its 50% cap.
 - **G1 and G5 pull against each other.** The shadow also shows tier C/D choices overwhelmingly LOW, which lowers drain and the Exhausted share. Less drain is what G5 wants and what the conversion mechanism above may not.
-- **G4 is expected to pass** by a wide margin: setup_future was 0 on all 1,964 PROTECT builder decisions, so TE-1 should not build there, and the engine-derived count should be near 0.
+- **G4 is expected to pass** by a wide margin: setup_future was 0 on all 1,964 PROTECT builder decisions, so TE-1 should not choose builders there, and the reason-independent count should be near 0.
 - **G2 and G3 are expected to pass** (baseline Tap ≤ 9; HIGH on Bottom terminal windows should raise escape probability).
 - **O-3 fidelity:** expected to be high but not exact; no number is predicted.
 - **P1-P6** are expected to pass if the wiring is default-off by construction.
 
 ---
 
-# 9. Decisions required at review
+# 9. Decisions and review rulings
 
-| # | Decision | Recommendation |
+The user's rulings on the decisions proposed at `0fcae3e`:
+
+| # | Decision | Ruling |
 |---|---|---|
-| B1 | Both initiators use TE-1 under `TACTICAL_V1`, with unsupported configurations rejected and no fallback (2.1) | Yes (4e61bad scope) |
-| B2 | O-3 under `TACTICAL_V1`: opponent windows run TE-1 with the frozen projection as the depth-1 surrogate; fidelity reported, not gated (2.2, 6.3) | Yes (D1 as approved) |
-| B3 | G4 scored on both the frozen counter and the engine-derived count (5.2). This is a measurement guard, not a floor change | **Yes** |
-| B4 | G6 denominator excludes precedence-forced commitments and pools both sides (5.3) | **Yes** (stricter) |
-| B5 | G1 and G3 pooled sums taken per stalling mode (4.2) | Yes (4e61bad: each E-PROD gate must pass in both modes) |
-| B6 | Run the six holdout surfaces once and report ratios only (6.4) | Yes (no verdict, so no new gate and no new risk of a gate change) |
-| B7 | Setup calibration and O-3 fidelity under `TACTICAL_V1` are reported, not gated (6.3) | Yes. Gating them would add gates after seeing Stage 1A-v2 |
-| B8 | Inertness replay (5.1) is a mandatory integrity check | **Yes** |
+| B1 | Both initiators use TE-1 under `TACTICAL_V1`; unsupported configurations rejected, no fallback (2.1) | **APPROVED** |
+| B2 | O-3 under `TACTICAL_V1`: opponent windows run TE-1 with the frozen projection as the depth-1 surrogate; fidelity reported, not gated (2.2, 6.3) | **APPROVED** |
+| B3 | G4 loophole guard (5.2) | **APPROVED WITH CORRECTION.** The guard is the reason-independent completed-chain builder-attempt count, not the count of successful setup advances. It is disclosed as a **pre-measurement amendment to G4's measurement definition**. The historical counter is still reported. Floor and baseline unchanged |
+| B4 | G6 denominator excludes precedence-forced commitments and pools both sides (5.3) | **APPROVED.** Frozen before any candidate result |
+| B5 | G1 and G3 pooled sums taken per stalling mode (4.2) | **APPROVED** |
+| B6 | Run the six holdout surfaces once; report ratios only (6.4) | **APPROVED** |
+| B7 | Setup calibration and O-3 fidelity under `TACTICAL_V1` are reported, not gated (6.3) | **APPROVED** |
+| B8 | Inertness replay is a mandatory integrity check (5.1) | **APPROVED WITH CLARIFICATION.** The replay tape covers every `policy.choose` call in order, including collector counterfactual calls, with executed and counterfactual calls distinguishable |
+
+**Wording fixes required by the review, applied here:**
+- "byte-identical" replaced by behaviorally and RNG-identical (2.1);
+- authorization language clarified (Status): approval makes the document binding and does not authorize implementation or measurement;
+- G4 is described as carrying a measurement amendment, not as unchanged.
 
 ---
 
@@ -227,10 +256,12 @@ No change to TE-1, projection v2, commitment tiers or any gate follows from a FA
 
 Implementation of section 2; the candidate run (once); scoring of P1-P6 and G1-G6 and the section 5 checks; the section 6 reports; a result document and evidence (summary plus per-event records, pinned by tests); exact-head CI on 3.11 and 3.13; then **HARD STOP** with DESIGN PASS / FAIL / OPEN.
 
+**Stage 1B itself is NOT authorized by this document.** Its implementation and the candidate run each require a separate explicit authorization.
+
 **Not authorized by this document:**
 - any implementation or wiring;
 - any candidate run;
-- any change to C1-C5, C3-H, P1-P6, G1-G6 or any threshold;
+- any change to C1-C5, C3-H, P1-P6, G1-G6 or any threshold (the G4 measurement amendment of 5.2 is the only measurement-definition change, and it leaves the floor unchanged);
 - production-policy changes;
 - Stage 2 (promotion) or Stage 3 (debt-3 re-evaluation);
 - merge, squash or force-push.
