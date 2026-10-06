@@ -110,12 +110,31 @@ Applied at every initiator window where 2.6 leaves a choice:
 |---|---|---|---|
 | A — terminal | candidates with terminal > 0 | max terminal | **highest-value**: max terminal (stamina guard applies) |
 | B — progress | progress > 0 | max progress | highest-value: max progress (stamina guard applies) |
-| C — setup | builders with setup_future > 0 | max setup_future | **cheapest** c with setup_future > 0 |
-| D — position | axis_raw > 0 and axis_realized > 0 | max axis_realized | **cheapest** c keeping both > 0 |
+| C — setup | builders with setup_future > 0 at some commitment | max setup_future **of the reduced candidates** | each builder **reduced first** to its cheapest c with setup_future > 0 |
+| D — position | axis_raw > 0 and axis_realized > 0 at some commitment | max axis_realized **of the reduced candidates** | each action **reduced first** to its cheapest c keeping both > 0 |
 | E — RESET | otherwise | RESET | — |
 
 - **Stamina guard** (tiers A and B): a commitment with `enters_exhausted` is admissible only if its tier metric is **strictly greater** than every admissible non-entering commitment of the same action. No tolerance.
 - **Tie-breaks, in order:** tier metric; then axis_realized; then axis_raw; then lower stamina_cost; then catalog order; then LOW < MEDIUM < HIGH. Every comparison is exact on floats produced by identical code paths; no epsilon.
+- **Tiers C and D are reduce-then-compare (frozen at review of `770c0c3`).** Example: LOW gives setup_future 0.20 and MEDIUM gives 0.60. Tier C keeps LOW, because a higher commitment is never bought for setup or position value.
+
+  ```text
+  Tier C — setup
+  1. For each setup action, reduce LOW/MEDIUM/HIGH to the cheapest
+     commitment whose setup_future > 0.
+  2. Compare those reduced action candidates.
+  3. Select the action with maximum setup_future.
+  4. Apply the documented tie-breaks.
+
+  Tier D — position
+  1. For each positional action, reduce LOW/MEDIUM/HIGH to the cheapest
+     commitment for which axis_raw > 0 and axis_realized > 0.
+  2. Compare those reduced action candidates.
+  3. Select the action with maximum axis_realized.
+  4. Apply the documented tie-breaks.
+  ```
+
+- **Tiers A and B** compare all `(action, commitment)` pairs directly, subject to the stamina guard.
 - **Principle** (no coefficients): pay more only for terminal or submission outcomes. Spend the minimum that keeps a setup or positional action worthwhile.
 
 TE-1 deliberately **keeps today's tier order** (setup above position). `9908235` showed that order displaces only 6-28% / 0-5% better positional attacks. Changing it is a separate, later question. TE-1 isolates the two characterized defects (opponent model and use-time valuation) plus the commitment dimension.
@@ -188,7 +207,7 @@ C1-C4 run against the **unchanged** baseline policy. A failure stops the slice b
 | G2 | **Submission not dominant:** Tap ≤ 20 on every surface. | Keeps submission a threat rather than the default ending. |
 | G3 | **Escapes:** E-PROD pooled (42 + 142) **≥ 49** (80% of 61); B-PROD **≥ 10**. | Same 80% preservation principle on the defender's terminal route. |
 | G4 | **Churn:** PROTECT Top completed builds **≤ 884** (50% of 1,768). | E3 design property as a ratio, not an attempt count k. |
-| G5 | **Pacing no-regression:** E-PROD Bottom first-Exhausted median **≥ 50 s**; Bottom Exhausted share **≤ 80%** (each seed, stalling OFF + shadow and ON). | Debt 3 must not get worse. Improvement is reported, not required. |
+| G5 | **Pacing guard:** E-PROD Bottom first-Exhausted median **≥ 50 s**; Bottom Exhausted share **≤ 80%** (each seed, stalling OFF + shadow and ON). | Guards against a material pacing regression. The 80% share allows a small move from the 79.0-79.5% baseline. Improvement is reported, not required. |
 | G6 | **Commitment sanity:** E-PROD pooled share of HIGH among TE-1-chosen initiations **≤ 50%**. | Guards against a HIGH-spam burn. |
 
 Each E-PROD gate must pass in **both** stalling modes. Percentage floors round up to the next integer.
@@ -209,7 +228,7 @@ Each E-PROD gate must pass in **both** stalling modes. Percentage floors round u
 # 5. Predictions (recorded before any implementation)
 
 - **Commitment shifts heavily to LOW.** Tiers C and D (setup and position: most decisions on every surface) take the cheapest qualifying commitment. HIGH appears mainly in tier A (Bottom escape, where Success→Strong Success can cross) and tier B (Top submission, where Bottom cannot fund a matching HIGH response, so undercommitment gives +1).
-- **Pacing improves sharply.** Bottom's own opening initiation spend (about 42% of its burn) falls from 7 to about 3 per window. Under MATCH, Top's responses follow. Expect a later first exhaustion and a lower Exhausted share (G5 is expected to pass with margin).
+- **Pacing improves sharply.** Bottom's own opening initiation spend (about 42% of its burn) falls from 7 to about 3 per window. Under MATCH, Top's responses follow. Expect a later first exhaustion and a lower Exhausted share (the G5 pacing guard is expected to pass with margin).
 - **Submission access is the main risk.** Conversions on production depend largely on Bottom being drained or unable to fund a matching response. Less burn means fewer such states. Tier-B HIGH isolation partly offsets this. **G1 is the gate most likely to fail.** Its outcome cannot be derived from the existing evidence. C3 in Stage 1A is designed to reveal a projection that undervalues production chains before any candidate run.
 - **PROTECT churn falls.** The informed model gives 0 use value against PROTECT in most states (calibration exact there today), so C4 and G4 are expected to pass.
 - **Projection bias.** Ignoring opponent discretionary spends under-predicts opponent drain, so `setup_future` is conservative. If C3 fails for that reason, the remedy is a new preregistration revision, never a tolerance change.
