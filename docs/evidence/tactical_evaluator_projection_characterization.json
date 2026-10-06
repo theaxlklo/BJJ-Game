@@ -1,0 +1,3542 @@
+{
+ "integrity_ok": true,
+ "preregistration": "4e61bada3998e1d97bdeaba975e92aa282c92bfb",
+ "stage1a_head": "2d2778d88205874e30aeda37579dc45d5d9f885e",
+ "surfaces": {
+  "A-PROD": {
+   "builder_decisions": 356,
+   "chains_never_used": 44,
+   "components_converted": {
+    "axis_bottom_initiation": {
+     "max": 1.5,
+     "mean": 0.234,
+     "median": 0.0,
+     "min": -1.0,
+     "n": 156,
+     "p10": 0,
+     "p90": 1.0
+    },
+    "axis_builder": {
+     "max": -1.0,
+     "mean": -1.5,
+     "median": -1.5,
+     "min": -2.0,
+     "n": 156,
+     "p10": -2.0,
+     "p90": -1.0
+    },
+    "axis_drift": {
+     "max": 2.0,
+     "mean": 1.3494,
+     "median": 1.25,
+     "min": 1.0,
+     "n": 156,
+     "p10": 1.0,
+     "p90": 2.0
+    },
+    "axis_stalling": {
+     "max": 0.0,
+     "mean": 0.0,
+     "median": 0.0,
+     "min": 0.0,
+     "n": 156,
+     "p10": 0.0,
+     "p90": 0.0
+    },
+    "axis_top_other": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 156,
+     "p10": 0,
+     "p90": 0
+    },
+    "bottom_builder_response_spend": {
+     "max": -7,
+     "mean": -10.5,
+     "median": -10.5,
+     "min": -14,
+     "n": 156,
+     "p10": -14,
+     "p90": -7
+    },
+    "bottom_flow": {
+     "max": -2,
+     "mean": -3,
+     "median": -3.0,
+     "min": -4,
+     "n": 156,
+     "p10": -4,
+     "p90": -2
+    },
+    "bottom_initiation_spend": {
+     "max": 0,
+     "mean": -3.5,
+     "median": -3.5,
+     "min": -7,
+     "n": 156,
+     "p10": -7,
+     "p90": 0
+    },
+    "bottom_other_response_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 156,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_builder_spend": {
+     "max": -7,
+     "mean": -10.5,
+     "median": -10.5,
+     "min": -14,
+     "n": 156,
+     "p10": -14,
+     "p90": -7
+    },
+    "top_flow": {
+     "max": -2,
+     "mean": -3,
+     "median": -3.0,
+     "min": -4,
+     "n": 156,
+     "p10": -4,
+     "p90": -2
+    },
+    "top_other_initiation_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 156,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_response_spend": {
+     "max": 0,
+     "mean": -3.5,
+     "median": -3.5,
+     "min": -7,
+     "n": 156,
+     "p10": -7,
+     "p90": 0
+    }
+   },
+   "converted_population": 156,
+   "integrity": {
+    "gameplay_signatures_identical": true,
+    "identity_with_stage1a_records": {
+     "attempts": 4612,
+     "decisions": 4690,
+     "exact": true,
+     "matches": 100,
+     "mismatched_matches": []
+    },
+    "p0_reproduces_stage1a_projection": {
+     "n": 312,
+     "positive": 312,
+     "share": 1.0
+    },
+    "p6_equals_realized_use_state": {
+     "n": 312,
+     "positive": 312,
+     "share": 1.0
+    },
+    "p6_use_value_equals_direct_valuation": {
+     "n": 312,
+     "positive": 312,
+     "share": 1.0
+    },
+    "recorder_rng_draws": 0,
+    "rng_sequence_identical": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "nonconverted_used": 156,
+   "p0_use_state_error": {
+    "axis": {
+     "max": -1.0,
+     "mean": -1.5833,
+     "median": -1.0,
+     "min": -3.0,
+     "n": 156,
+     "p10": -2.5,
+     "p90": -1.0
+    },
+    "band_projected_to_actual": {
+     "Locked->Locked": 65,
+     "Stable->Locked": 27,
+     "Stable->Strong": 6,
+     "Strong->Locked": 48,
+     "Strong->Strong": 10
+    },
+    "bottom_exhausted_projected_to_actual": {
+     "notE->E": 156
+    },
+    "bottom_stamina": {
+     "max": 21,
+     "mean": 14,
+     "median": 14.0,
+     "min": 7,
+     "n": 156,
+     "p10": 7,
+     "p90": 21
+    },
+    "elapsed_extra_seconds": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 156,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_stamina": {
+     "max": 7,
+     "mean": 3.5,
+     "median": 3.5,
+     "min": 0,
+     "n": 156,
+     "p10": 0,
+     "p90": 7
+    }
+   },
+   "p0_zero_classes": {
+    "loose_stable": 33,
+    "strong_locked_bottom_not_exhausted": 123
+   },
+   "setup_future_positive_converted": {
+    "P0": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P1": {
+     "n": 156,
+     "positive": 78,
+     "share": 0.5
+    },
+    "P2": {
+     "n": 156,
+     "positive": 123,
+     "share": 0.7885
+    },
+    "P3": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "P4": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "P5": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "P6": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "composite:axis_only": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "composite:own_windows_and_advances": {
+     "n": 156,
+     "positive": 78,
+     "share": 0.5
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "composite:stamina_only": {
+     "n": 156,
+     "positive": 123,
+     "share": 0.7885
+    },
+    "only:builder_axis": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:builder_settlement": {
+     "n": 156,
+     "positive": 78,
+     "share": 0.5
+    },
+    "only:drift": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:intervening_axis": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:intervening_stamina": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:passive_flow": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:path": {
+     "n": 156,
+     "positive": 78,
+     "share": 0.5
+    },
+    "only:stalling_axis": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:builder_axis": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "without:builder_settlement": {
+     "n": 156,
+     "positive": 78,
+     "share": 0.5
+    },
+    "without:drift": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "without:intervening_axis": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "without:intervening_stamina": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "without:passive_flow": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "without:path": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    },
+    "without:stalling_axis": {
+     "n": 156,
+     "positive": 156,
+     "share": 1.0
+    }
+   },
+   "setup_future_positive_nonconverted": {
+    "P0": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P1": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P2": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P3": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P4": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P5": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P6": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:axis_only": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:own_windows_and_advances": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:stamina_only": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:builder_axis": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:builder_settlement": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:drift": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:intervening_axis": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:intervening_stamina": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:passive_flow": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:path": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:stalling_axis": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:builder_axis": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:builder_settlement": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:drift": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:intervening_axis": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:intervening_stamina": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:passive_flow": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:path": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:stalling_axis": {
+     "n": 156,
+     "positive": 0,
+     "share": 0.0
+    }
+   },
+   "use_value_drain_sensitivity": {
+    "both": {
+     "n": 312,
+     "positive": 312,
+     "share": 1.0
+    },
+    "bottom_over_drained": {
+     "n": 312,
+     "positive": 312,
+     "share": 1.0
+    },
+    "realized": {
+     "n": 312,
+     "positive": 156,
+     "share": 0.5
+    },
+    "top_under_drained": {
+     "n": 312,
+     "positive": 156,
+     "share": 0.5
+    }
+   },
+   "windows_converted": {
+    "advance": 468,
+    "bottom_initiation": 78,
+    "bottom_initiation:MEDIUM": 78,
+    "bottom_reset": 156,
+    "intervals": 156,
+    "top_builder": 234,
+    "top_builder:mount.top.high_mount_climb:MEDIUM": 234
+   }
+  },
+  "B-PROD": {
+   "builder_decisions": 900,
+   "chains_never_used": 20,
+   "components_converted": {
+    "axis_bottom_initiation": {
+     "max": 2.5,
+     "mean": 0.6627,
+     "median": 0.5,
+     "min": -1.0,
+     "n": 118,
+     "p10": 0.0,
+     "p90": 2.0
+    },
+    "axis_builder": {
+     "max": 0.0,
+     "mean": -1.0492,
+     "median": -1.0,
+     "min": -3.0,
+     "n": 118,
+     "p10": -2.0,
+     "p90": 0.0
+    },
+    "axis_drift": {
+     "max": 2.0,
+     "mean": 1.0466,
+     "median": 1.0,
+     "min": 0.0,
+     "n": 118,
+     "p10": 0.5,
+     "p90": 2.0
+    },
+    "axis_stalling": {
+     "max": 0,
+     "mean": 0.0,
+     "median": 0.0,
+     "min": 0,
+     "n": 118,
+     "p10": 0,
+     "p90": 0
+    },
+    "axis_top_other": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 118,
+     "p10": 0,
+     "p90": 0
+    },
+    "bottom_builder_response_spend": {
+     "max": 0,
+     "mean": -9.822,
+     "median": -10.0,
+     "min": -24,
+     "n": 118,
+     "p10": -19,
+     "p90": -3
+    },
+    "bottom_flow": {
+     "max": -1,
+     "mean": -2.9831,
+     "median": -2.5,
+     "min": -4,
+     "n": 118,
+     "p10": -4,
+     "p90": -2
+    },
+    "bottom_initiation_spend": {
+     "max": 0,
+     "mean": -9.2797,
+     "median": -7.0,
+     "min": -14,
+     "n": 118,
+     "p10": -14,
+     "p90": -7
+    },
+    "bottom_other_response_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 118,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_builder_spend": {
+     "max": -7,
+     "mean": -10.5,
+     "median": -10.5,
+     "min": -14,
+     "n": 118,
+     "p10": -14,
+     "p90": -7
+    },
+    "top_flow": {
+     "max": -2,
+     "mean": -3,
+     "median": -3.0,
+     "min": -4,
+     "n": 118,
+     "p10": -4,
+     "p90": -2
+    },
+    "top_other_initiation_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 118,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_response_spend": {
+     "max": 0,
+     "mean": -9.1356,
+     "median": -7.0,
+     "min": -24,
+     "n": 118,
+     "p10": -15,
+     "p90": -3
+    }
+   },
+   "converted_population": 118,
+   "integrity": {
+    "gameplay_signatures_identical": true,
+    "identity_with_stage1a_records": {
+     "attempts": 4860,
+     "decisions": 4888,
+     "exact": true,
+     "matches": 100,
+     "mismatched_matches": []
+    },
+    "p0_reproduces_stage1a_projection": {
+     "n": 880,
+     "positive": 880,
+     "share": 1.0
+    },
+    "p6_equals_realized_use_state": {
+     "n": 880,
+     "positive": 880,
+     "share": 1.0
+    },
+    "p6_use_value_equals_direct_valuation": {
+     "n": 880,
+     "positive": 880,
+     "share": 1.0
+    },
+    "recorder_rng_draws": 0,
+    "rng_sequence_identical": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "nonconverted_used": 762,
+   "p0_use_state_error": {
+    "axis": {
+     "max": 0.3055555556,
+     "mean": -1.6887,
+     "median": -1.3888888889,
+     "min": -3.3888888889,
+     "n": 118,
+     "p10": -3.3888888889,
+     "p90": -0.6944444444
+    },
+    "band_projected_to_actual": {
+     "Locked->Locked": 34,
+     "Locked->Strong": 2,
+     "Loose->Locked": 21,
+     "Loose->Strong": 16,
+     "Stable->Locked": 4,
+     "Stable->Strong": 4,
+     "Strong->Locked": 29,
+     "Strong->Strong": 8
+    },
+    "bottom_exhausted_projected_to_actual": {
+     "E->E": 7,
+     "notE->E": 57,
+     "notE->notE": 54
+    },
+    "bottom_stamina": {
+     "max": 33,
+     "mean": 19.0932,
+     "median": 19.0,
+     "min": 0,
+     "n": 118,
+     "p10": 10,
+     "p90": 29
+    },
+    "elapsed_extra_seconds": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 118,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_stamina": {
+     "max": 24,
+     "mean": 9.1356,
+     "median": 7.0,
+     "min": 0,
+     "n": 118,
+     "p10": 3,
+     "p90": 15
+    }
+   },
+   "p0_zero_classes": {
+    "loose_stable": 45,
+    "strong_locked_bottom_not_exhausted": 4
+   },
+   "setup_future_positive_converted": {
+    "P0": {
+     "n": 118,
+     "positive": 69,
+     "share": 0.5847
+    },
+    "P1": {
+     "n": 118,
+     "positive": 69,
+     "share": 0.5847
+    },
+    "P2": {
+     "n": 118,
+     "positive": 73,
+     "share": 0.6186
+    },
+    "P3": {
+     "n": 118,
+     "positive": 96,
+     "share": 0.8136
+    },
+    "P4": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "P5": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "P6": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "composite:axis_only": {
+     "n": 118,
+     "positive": 114,
+     "share": 0.9661
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 118,
+     "positive": 93,
+     "share": 0.7881
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "composite:own_windows_and_advances": {
+     "n": 118,
+     "positive": 89,
+     "share": 0.7542
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 118,
+     "positive": 115,
+     "share": 0.9746
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "composite:stamina_only": {
+     "n": 118,
+     "positive": 73,
+     "share": 0.6186
+    },
+    "only:builder_axis": {
+     "n": 118,
+     "positive": 65,
+     "share": 0.5508
+    },
+    "only:builder_settlement": {
+     "n": 118,
+     "positive": 69,
+     "share": 0.5847
+    },
+    "only:drift": {
+     "n": 118,
+     "positive": 92,
+     "share": 0.7797
+    },
+    "only:intervening_axis": {
+     "n": 118,
+     "positive": 85,
+     "share": 0.7203
+    },
+    "only:intervening_stamina": {
+     "n": 118,
+     "positive": 64,
+     "share": 0.5424
+    },
+    "only:passive_flow": {
+     "n": 118,
+     "positive": 69,
+     "share": 0.5847
+    },
+    "only:path": {
+     "n": 118,
+     "positive": 116,
+     "share": 0.9831
+    },
+    "only:stalling_axis": {
+     "n": 118,
+     "positive": 69,
+     "share": 0.5847
+    },
+    "without:builder_axis": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "without:builder_settlement": {
+     "n": 118,
+     "positive": 116,
+     "share": 0.9831
+    },
+    "without:drift": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "without:intervening_axis": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "without:intervening_stamina": {
+     "n": 118,
+     "positive": 115,
+     "share": 0.9746
+    },
+    "without:passive_flow": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "without:path": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    },
+    "without:stalling_axis": {
+     "n": 118,
+     "positive": 118,
+     "share": 1.0
+    }
+   },
+   "setup_future_positive_nonconverted": {
+    "P0": {
+     "n": 762,
+     "positive": 89,
+     "share": 0.1168
+    },
+    "P1": {
+     "n": 762,
+     "positive": 86,
+     "share": 0.1129
+    },
+    "P2": {
+     "n": 762,
+     "positive": 89,
+     "share": 0.1168
+    },
+    "P3": {
+     "n": 762,
+     "positive": 140,
+     "share": 0.1837
+    },
+    "P4": {
+     "n": 762,
+     "positive": 173,
+     "share": 0.227
+    },
+    "P5": {
+     "n": 762,
+     "positive": 158,
+     "share": 0.2073
+    },
+    "P6": {
+     "n": 762,
+     "positive": 152,
+     "share": 0.1995
+    },
+    "composite:axis_only": {
+     "n": 762,
+     "positive": 162,
+     "share": 0.2126
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 762,
+     "positive": 140,
+     "share": 0.1837
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 762,
+     "positive": 152,
+     "share": 0.1995
+    },
+    "composite:own_windows_and_advances": {
+     "n": 762,
+     "positive": 138,
+     "share": 0.1811
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 762,
+     "positive": 152,
+     "share": 0.1995
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 762,
+     "positive": 158,
+     "share": 0.2073
+    },
+    "composite:stamina_only": {
+     "n": 762,
+     "positive": 89,
+     "share": 0.1168
+    },
+    "only:builder_axis": {
+     "n": 762,
+     "positive": 86,
+     "share": 0.1129
+    },
+    "only:builder_settlement": {
+     "n": 762,
+     "positive": 86,
+     "share": 0.1129
+    },
+    "only:drift": {
+     "n": 762,
+     "positive": 143,
+     "share": 0.1877
+    },
+    "only:intervening_axis": {
+     "n": 762,
+     "positive": 104,
+     "share": 0.1365
+    },
+    "only:intervening_stamina": {
+     "n": 762,
+     "positive": 75,
+     "share": 0.0984
+    },
+    "only:passive_flow": {
+     "n": 762,
+     "positive": 91,
+     "share": 0.1194
+    },
+    "only:path": {
+     "n": 762,
+     "positive": 154,
+     "share": 0.2021
+    },
+    "only:stalling_axis": {
+     "n": 762,
+     "positive": 89,
+     "share": 0.1168
+    },
+    "without:builder_axis": {
+     "n": 762,
+     "positive": 152,
+     "share": 0.1995
+    },
+    "without:builder_settlement": {
+     "n": 762,
+     "positive": 155,
+     "share": 0.2034
+    },
+    "without:drift": {
+     "n": 762,
+     "positive": 152,
+     "share": 0.1995
+    },
+    "without:intervening_axis": {
+     "n": 762,
+     "positive": 152,
+     "share": 0.1995
+    },
+    "without:intervening_stamina": {
+     "n": 762,
+     "positive": 152,
+     "share": 0.1995
+    },
+    "without:passive_flow": {
+     "n": 762,
+     "positive": 152,
+     "share": 0.1995
+    },
+    "without:path": {
+     "n": 762,
+     "positive": 158,
+     "share": 0.2073
+    },
+    "without:stalling_axis": {
+     "n": 762,
+     "positive": 152,
+     "share": 0.1995
+    }
+   },
+   "use_value_drain_sensitivity": {
+    "both": {
+     "n": 880,
+     "positive": 303,
+     "share": 0.3443
+    },
+    "bottom_over_drained": {
+     "n": 880,
+     "positive": 282,
+     "share": 0.3205
+    },
+    "realized": {
+     "n": 880,
+     "positive": 270,
+     "share": 0.3068
+    },
+    "top_under_drained": {
+     "n": 880,
+     "positive": 303,
+     "share": 0.3443
+    }
+   },
+   "windows_converted": {
+    "advance": 354,
+    "bottom_initiation": 159,
+    "bottom_initiation:LOW": 1,
+    "bottom_initiation:MEDIUM": 156,
+    "bottom_initiation:UNFUNDED": 2,
+    "bottom_reset": 18,
+    "intervals": 118,
+    "top_builder": 177,
+    "top_builder:mount.top.high_mount_climb:MEDIUM": 177
+   }
+  },
+  "E-PROD 142 OFF": {
+   "builder_decisions": 886,
+   "chains_never_used": 45,
+   "components_converted": {
+    "axis_bottom_initiation": {
+     "max": 3.0,
+     "mean": 0.6298,
+     "median": 0.5,
+     "min": -1.4,
+     "n": 114,
+     "p10": -0.5,
+     "p90": 2.0
+    },
+    "axis_builder": {
+     "max": 0.75,
+     "mean": -1.1947,
+     "median": -1.0,
+     "min": -3.0,
+     "n": 114,
+     "p10": -2.0,
+     "p90": -0.25
+    },
+    "axis_drift": {
+     "max": 2.75,
+     "mean": 1.2811,
+     "median": 1.25,
+     "min": 0.0,
+     "n": 114,
+     "p10": 0.5,
+     "p90": 2.0
+    },
+    "axis_stalling": {
+     "max": 0,
+     "mean": 0.0,
+     "median": 0.0,
+     "min": 0.0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "axis_top_other": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "bottom_builder_response_spend": {
+     "max": -3,
+     "mean": -10.8421,
+     "median": -10.0,
+     "min": -24,
+     "n": 114,
+     "p10": -19,
+     "p90": -7
+    },
+    "bottom_flow": {
+     "max": 5,
+     "mean": -0.2632,
+     "median": -1.0,
+     "min": -4,
+     "n": 114,
+     "p10": -4,
+     "p90": 4
+    },
+    "bottom_initiation_spend": {
+     "max": 0,
+     "mean": -8.1404,
+     "median": -7.0,
+     "min": -14,
+     "n": 114,
+     "p10": -14,
+     "p90": 0
+    },
+    "bottom_other_response_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_builder_spend": {
+     "max": -7,
+     "mean": -10.5,
+     "median": -10.5,
+     "min": -14,
+     "n": 114,
+     "p10": -14,
+     "p90": -7
+    },
+    "top_flow": {
+     "max": -2,
+     "mean": -3,
+     "median": -3.0,
+     "min": -4,
+     "n": 114,
+     "p10": -4,
+     "p90": -2
+    },
+    "top_other_initiation_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_response_spend": {
+     "max": 0,
+     "mean": -7.6842,
+     "median": -7.0,
+     "min": -19,
+     "n": 114,
+     "p10": -15,
+     "p90": 0
+    }
+   },
+   "converted_population": 114,
+   "integrity": {
+    "gameplay_signatures_identical": true,
+    "identity_with_stage1a_records": {
+     "attempts": 4727,
+     "decisions": 4767,
+     "exact": true,
+     "matches": 100,
+     "mismatched_matches": []
+    },
+    "p0_reproduces_stage1a_projection": {
+     "n": 841,
+     "positive": 841,
+     "share": 1.0
+    },
+    "p6_equals_realized_use_state": {
+     "n": 841,
+     "positive": 841,
+     "share": 1.0
+    },
+    "p6_use_value_equals_direct_valuation": {
+     "n": 841,
+     "positive": 841,
+     "share": 1.0
+    },
+    "recorder_rng_draws": 0,
+    "rng_sequence_identical": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "nonconverted_used": 727,
+   "p0_use_state_error": {
+    "axis": {
+     "max": 0.0555555556,
+     "mean": -1.7301,
+     "median": -1.6944444444,
+     "min": -3.9,
+     "n": 114,
+     "p10": -3.3888888889,
+     "p90": -0.6944444444
+    },
+    "band_projected_to_actual": {
+     "Locked->Locked": 27,
+     "Loose->Locked": 20,
+     "Loose->Strong": 13,
+     "Stable->Locked": 6,
+     "Stable->Strong": 4,
+     "Strong->Locked": 39,
+     "Strong->Strong": 5
+    },
+    "bottom_exhausted_projected_to_actual": {
+     "E->E": 11,
+     "notE->E": 49,
+     "notE->notE": 54
+    },
+    "bottom_stamina": {
+     "max": 33,
+     "mean": 16.4561,
+     "median": 14.5,
+     "min": 1,
+     "n": 114,
+     "p10": 3,
+     "p90": 29
+    },
+    "elapsed_extra_seconds": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_stamina": {
+     "max": 19,
+     "mean": 7.6842,
+     "median": 7.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 15
+    }
+   },
+   "p0_zero_classes": {
+    "loose_stable": 43,
+    "strong_locked_bottom_not_exhausted": 4
+   },
+   "setup_future_positive_converted": {
+    "P0": {
+     "n": 114,
+     "positive": 67,
+     "share": 0.5877
+    },
+    "P1": {
+     "n": 114,
+     "positive": 66,
+     "share": 0.5789
+    },
+    "P2": {
+     "n": 114,
+     "positive": 71,
+     "share": 0.6228
+    },
+    "P3": {
+     "n": 114,
+     "positive": 93,
+     "share": 0.8158
+    },
+    "P4": {
+     "n": 114,
+     "positive": 112,
+     "share": 0.9825
+    },
+    "P5": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "P6": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "composite:axis_only": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 114,
+     "positive": 87,
+     "share": 0.7632
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "composite:own_windows_and_advances": {
+     "n": 114,
+     "positive": 86,
+     "share": 0.7544
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "composite:stamina_only": {
+     "n": 114,
+     "positive": 67,
+     "share": 0.5877
+    },
+    "only:builder_axis": {
+     "n": 114,
+     "positive": 63,
+     "share": 0.5526
+    },
+    "only:builder_settlement": {
+     "n": 114,
+     "positive": 66,
+     "share": 0.5789
+    },
+    "only:drift": {
+     "n": 114,
+     "positive": 89,
+     "share": 0.7807
+    },
+    "only:intervening_axis": {
+     "n": 114,
+     "positive": 81,
+     "share": 0.7105
+    },
+    "only:intervening_stamina": {
+     "n": 114,
+     "positive": 64,
+     "share": 0.5614
+    },
+    "only:passive_flow": {
+     "n": 114,
+     "positive": 65,
+     "share": 0.5702
+    },
+    "only:path": {
+     "n": 114,
+     "positive": 112,
+     "share": 0.9825
+    },
+    "only:stalling_axis": {
+     "n": 114,
+     "positive": 67,
+     "share": 0.5877
+    },
+    "without:builder_axis": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "without:builder_settlement": {
+     "n": 114,
+     "positive": 109,
+     "share": 0.9561
+    },
+    "without:drift": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "without:intervening_axis": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "without:intervening_stamina": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "without:passive_flow": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "without:path": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "without:stalling_axis": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    }
+   },
+   "setup_future_positive_nonconverted": {
+    "P0": {
+     "n": 727,
+     "positive": 93,
+     "share": 0.1279
+    },
+    "P1": {
+     "n": 727,
+     "positive": 88,
+     "share": 0.121
+    },
+    "P2": {
+     "n": 727,
+     "positive": 88,
+     "share": 0.121
+    },
+    "P3": {
+     "n": 727,
+     "positive": 142,
+     "share": 0.1953
+    },
+    "P4": {
+     "n": 727,
+     "positive": 171,
+     "share": 0.2352
+    },
+    "P5": {
+     "n": 727,
+     "positive": 149,
+     "share": 0.205
+    },
+    "P6": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "composite:axis_only": {
+     "n": 727,
+     "positive": 171,
+     "share": 0.2352
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 727,
+     "positive": 113,
+     "share": 0.1554
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "composite:own_windows_and_advances": {
+     "n": 727,
+     "positive": 119,
+     "share": 0.1637
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 727,
+     "positive": 147,
+     "share": 0.2022
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 727,
+     "positive": 149,
+     "share": 0.205
+    },
+    "composite:stamina_only": {
+     "n": 727,
+     "positive": 75,
+     "share": 0.1032
+    },
+    "only:builder_axis": {
+     "n": 727,
+     "positive": 96,
+     "share": 0.132
+    },
+    "only:builder_settlement": {
+     "n": 727,
+     "positive": 88,
+     "share": 0.121
+    },
+    "only:drift": {
+     "n": 727,
+     "positive": 148,
+     "share": 0.2036
+    },
+    "only:intervening_axis": {
+     "n": 727,
+     "positive": 118,
+     "share": 0.1623
+    },
+    "only:intervening_stamina": {
+     "n": 727,
+     "positive": 73,
+     "share": 0.1004
+    },
+    "only:passive_flow": {
+     "n": 727,
+     "positive": 92,
+     "share": 0.1265
+    },
+    "only:path": {
+     "n": 727,
+     "positive": 166,
+     "share": 0.2283
+    },
+    "only:stalling_axis": {
+     "n": 727,
+     "positive": 93,
+     "share": 0.1279
+    },
+    "without:builder_axis": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "without:builder_settlement": {
+     "n": 727,
+     "positive": 144,
+     "share": 0.1981
+    },
+    "without:drift": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "without:intervening_axis": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "without:intervening_stamina": {
+     "n": 727,
+     "positive": 147,
+     "share": 0.2022
+    },
+    "without:passive_flow": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "without:path": {
+     "n": 727,
+     "positive": 149,
+     "share": 0.205
+    },
+    "without:stalling_axis": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    }
+   },
+   "use_value_drain_sensitivity": {
+    "both": {
+     "n": 841,
+     "positive": 314,
+     "share": 0.3734
+    },
+    "bottom_over_drained": {
+     "n": 841,
+     "positive": 289,
+     "share": 0.3436
+    },
+    "realized": {
+     "n": 841,
+     "positive": 277,
+     "share": 0.3294
+    },
+    "top_under_drained": {
+     "n": 841,
+     "positive": 307,
+     "share": 0.365
+    }
+   },
+   "windows_converted": {
+    "advance": 342,
+    "bottom_initiation": 136,
+    "bottom_initiation:LOW": 6,
+    "bottom_initiation:MEDIUM": 130,
+    "bottom_reset": 35,
+    "intervals": 114,
+    "top_builder": 171,
+    "top_builder:mount.top.high_mount_climb:MEDIUM": 171
+   }
+  },
+  "E-PROD 142 ON": {
+   "builder_decisions": 886,
+   "chains_never_used": 45,
+   "components_converted": {
+    "axis_bottom_initiation": {
+     "max": 3.0,
+     "mean": 0.6298,
+     "median": 0.5,
+     "min": -1.4,
+     "n": 114,
+     "p10": -0.5,
+     "p90": 2.0
+    },
+    "axis_builder": {
+     "max": 0.75,
+     "mean": -1.1947,
+     "median": -1.0,
+     "min": -3.0,
+     "n": 114,
+     "p10": -2.0,
+     "p90": -0.25
+    },
+    "axis_drift": {
+     "max": 2.75,
+     "mean": 1.2811,
+     "median": 1.25,
+     "min": 0.0,
+     "n": 114,
+     "p10": 0.5,
+     "p90": 2.0
+    },
+    "axis_stalling": {
+     "max": 0,
+     "mean": 0.0,
+     "median": 0.0,
+     "min": 0.0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "axis_top_other": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "bottom_builder_response_spend": {
+     "max": -3,
+     "mean": -10.8421,
+     "median": -10.0,
+     "min": -24,
+     "n": 114,
+     "p10": -19,
+     "p90": -7
+    },
+    "bottom_flow": {
+     "max": 5,
+     "mean": -0.2632,
+     "median": -1.0,
+     "min": -4,
+     "n": 114,
+     "p10": -4,
+     "p90": 4
+    },
+    "bottom_initiation_spend": {
+     "max": 0,
+     "mean": -8.1404,
+     "median": -7.0,
+     "min": -14,
+     "n": 114,
+     "p10": -14,
+     "p90": 0
+    },
+    "bottom_other_response_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_builder_spend": {
+     "max": -7,
+     "mean": -10.5,
+     "median": -10.5,
+     "min": -14,
+     "n": 114,
+     "p10": -14,
+     "p90": -7
+    },
+    "top_flow": {
+     "max": -2,
+     "mean": -3,
+     "median": -3.0,
+     "min": -4,
+     "n": 114,
+     "p10": -4,
+     "p90": -2
+    },
+    "top_other_initiation_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_response_spend": {
+     "max": 0,
+     "mean": -7.6842,
+     "median": -7.0,
+     "min": -19,
+     "n": 114,
+     "p10": -15,
+     "p90": 0
+    }
+   },
+   "converted_population": 114,
+   "integrity": {
+    "gameplay_signatures_identical": true,
+    "identity_with_stage1a_records": {
+     "attempts": 4727,
+     "decisions": 4767,
+     "exact": true,
+     "matches": 100,
+     "mismatched_matches": []
+    },
+    "p0_reproduces_stage1a_projection": {
+     "n": 841,
+     "positive": 841,
+     "share": 1.0
+    },
+    "p6_equals_realized_use_state": {
+     "n": 841,
+     "positive": 841,
+     "share": 1.0
+    },
+    "p6_use_value_equals_direct_valuation": {
+     "n": 841,
+     "positive": 841,
+     "share": 1.0
+    },
+    "recorder_rng_draws": 0,
+    "rng_sequence_identical": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "nonconverted_used": 727,
+   "p0_use_state_error": {
+    "axis": {
+     "max": 0.0555555556,
+     "mean": -1.7301,
+     "median": -1.6944444444,
+     "min": -3.9,
+     "n": 114,
+     "p10": -3.3888888889,
+     "p90": -0.6944444444
+    },
+    "band_projected_to_actual": {
+     "Locked->Locked": 27,
+     "Loose->Locked": 20,
+     "Loose->Strong": 13,
+     "Stable->Locked": 6,
+     "Stable->Strong": 4,
+     "Strong->Locked": 39,
+     "Strong->Strong": 5
+    },
+    "bottom_exhausted_projected_to_actual": {
+     "E->E": 11,
+     "notE->E": 49,
+     "notE->notE": 54
+    },
+    "bottom_stamina": {
+     "max": 33,
+     "mean": 16.4561,
+     "median": 14.5,
+     "min": 1,
+     "n": 114,
+     "p10": 3,
+     "p90": 29
+    },
+    "elapsed_extra_seconds": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_stamina": {
+     "max": 19,
+     "mean": 7.6842,
+     "median": 7.0,
+     "min": 0,
+     "n": 114,
+     "p10": 0,
+     "p90": 15
+    }
+   },
+   "p0_zero_classes": {
+    "loose_stable": 43,
+    "strong_locked_bottom_not_exhausted": 4
+   },
+   "setup_future_positive_converted": {
+    "P0": {
+     "n": 114,
+     "positive": 67,
+     "share": 0.5877
+    },
+    "P1": {
+     "n": 114,
+     "positive": 66,
+     "share": 0.5789
+    },
+    "P2": {
+     "n": 114,
+     "positive": 71,
+     "share": 0.6228
+    },
+    "P3": {
+     "n": 114,
+     "positive": 93,
+     "share": 0.8158
+    },
+    "P4": {
+     "n": 114,
+     "positive": 112,
+     "share": 0.9825
+    },
+    "P5": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "P6": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "composite:axis_only": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 114,
+     "positive": 87,
+     "share": 0.7632
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "composite:own_windows_and_advances": {
+     "n": 114,
+     "positive": 86,
+     "share": 0.7544
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "composite:stamina_only": {
+     "n": 114,
+     "positive": 67,
+     "share": 0.5877
+    },
+    "only:builder_axis": {
+     "n": 114,
+     "positive": 63,
+     "share": 0.5526
+    },
+    "only:builder_settlement": {
+     "n": 114,
+     "positive": 66,
+     "share": 0.5789
+    },
+    "only:drift": {
+     "n": 114,
+     "positive": 89,
+     "share": 0.7807
+    },
+    "only:intervening_axis": {
+     "n": 114,
+     "positive": 81,
+     "share": 0.7105
+    },
+    "only:intervening_stamina": {
+     "n": 114,
+     "positive": 64,
+     "share": 0.5614
+    },
+    "only:passive_flow": {
+     "n": 114,
+     "positive": 65,
+     "share": 0.5702
+    },
+    "only:path": {
+     "n": 114,
+     "positive": 112,
+     "share": 0.9825
+    },
+    "only:stalling_axis": {
+     "n": 114,
+     "positive": 67,
+     "share": 0.5877
+    },
+    "without:builder_axis": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "without:builder_settlement": {
+     "n": 114,
+     "positive": 109,
+     "share": 0.9561
+    },
+    "without:drift": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "without:intervening_axis": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "without:intervening_stamina": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "without:passive_flow": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    },
+    "without:path": {
+     "n": 114,
+     "positive": 110,
+     "share": 0.9649
+    },
+    "without:stalling_axis": {
+     "n": 114,
+     "positive": 114,
+     "share": 1.0
+    }
+   },
+   "setup_future_positive_nonconverted": {
+    "P0": {
+     "n": 727,
+     "positive": 93,
+     "share": 0.1279
+    },
+    "P1": {
+     "n": 727,
+     "positive": 88,
+     "share": 0.121
+    },
+    "P2": {
+     "n": 727,
+     "positive": 88,
+     "share": 0.121
+    },
+    "P3": {
+     "n": 727,
+     "positive": 142,
+     "share": 0.1953
+    },
+    "P4": {
+     "n": 727,
+     "positive": 171,
+     "share": 0.2352
+    },
+    "P5": {
+     "n": 727,
+     "positive": 149,
+     "share": 0.205
+    },
+    "P6": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "composite:axis_only": {
+     "n": 727,
+     "positive": 171,
+     "share": 0.2352
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 727,
+     "positive": 113,
+     "share": 0.1554
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "composite:own_windows_and_advances": {
+     "n": 727,
+     "positive": 119,
+     "share": 0.1637
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 727,
+     "positive": 147,
+     "share": 0.2022
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 727,
+     "positive": 149,
+     "share": 0.205
+    },
+    "composite:stamina_only": {
+     "n": 727,
+     "positive": 75,
+     "share": 0.1032
+    },
+    "only:builder_axis": {
+     "n": 727,
+     "positive": 96,
+     "share": 0.132
+    },
+    "only:builder_settlement": {
+     "n": 727,
+     "positive": 88,
+     "share": 0.121
+    },
+    "only:drift": {
+     "n": 727,
+     "positive": 148,
+     "share": 0.2036
+    },
+    "only:intervening_axis": {
+     "n": 727,
+     "positive": 118,
+     "share": 0.1623
+    },
+    "only:intervening_stamina": {
+     "n": 727,
+     "positive": 73,
+     "share": 0.1004
+    },
+    "only:passive_flow": {
+     "n": 727,
+     "positive": 92,
+     "share": 0.1265
+    },
+    "only:path": {
+     "n": 727,
+     "positive": 166,
+     "share": 0.2283
+    },
+    "only:stalling_axis": {
+     "n": 727,
+     "positive": 93,
+     "share": 0.1279
+    },
+    "without:builder_axis": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "without:builder_settlement": {
+     "n": 727,
+     "positive": 144,
+     "share": 0.1981
+    },
+    "without:drift": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "without:intervening_axis": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "without:intervening_stamina": {
+     "n": 727,
+     "positive": 147,
+     "share": 0.2022
+    },
+    "without:passive_flow": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    },
+    "without:path": {
+     "n": 727,
+     "positive": 149,
+     "share": 0.205
+    },
+    "without:stalling_axis": {
+     "n": 727,
+     "positive": 163,
+     "share": 0.2242
+    }
+   },
+   "use_value_drain_sensitivity": {
+    "both": {
+     "n": 841,
+     "positive": 314,
+     "share": 0.3734
+    },
+    "bottom_over_drained": {
+     "n": 841,
+     "positive": 289,
+     "share": 0.3436
+    },
+    "realized": {
+     "n": 841,
+     "positive": 277,
+     "share": 0.3294
+    },
+    "top_under_drained": {
+     "n": 841,
+     "positive": 307,
+     "share": 0.365
+    }
+   },
+   "windows_converted": {
+    "advance": 342,
+    "bottom_initiation": 136,
+    "bottom_initiation:LOW": 6,
+    "bottom_initiation:MEDIUM": 130,
+    "bottom_reset": 35,
+    "intervals": 114,
+    "top_builder": 171,
+    "top_builder:mount.top.high_mount_climb:MEDIUM": 171
+   }
+  },
+  "E-PROD 42 OFF": {
+   "builder_decisions": 895,
+   "chains_never_used": 51,
+   "components_converted": {
+    "axis_bottom_initiation": {
+     "max": 2.5,
+     "mean": 0.5836,
+     "median": 0.5,
+     "min": -2.0,
+     "n": 122,
+     "p10": -0.4,
+     "p90": 2.0
+    },
+    "axis_builder": {
+     "max": 0.0,
+     "mean": -1.0967,
+     "median": -1.0,
+     "min": -3.0,
+     "n": 122,
+     "p10": -2.0,
+     "p90": 0.0
+    },
+    "axis_drift": {
+     "max": 2.5,
+     "mean": 1.1537,
+     "median": 1.0,
+     "min": 0.0,
+     "n": 122,
+     "p10": 0.5,
+     "p90": 2.0
+    },
+    "axis_stalling": {
+     "max": 0,
+     "mean": 0.0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "axis_top_other": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "bottom_builder_response_spend": {
+     "max": -3,
+     "mean": -9.918,
+     "median": -10.0,
+     "min": -24,
+     "n": 122,
+     "p10": -15,
+     "p90": -3
+    },
+    "bottom_flow": {
+     "max": 5,
+     "mean": -0.5656,
+     "median": -1.0,
+     "min": -4,
+     "n": 122,
+     "p10": -4,
+     "p90": 4
+    },
+    "bottom_initiation_spend": {
+     "max": 0,
+     "mean": -8.9754,
+     "median": -7.0,
+     "min": -14,
+     "n": 122,
+     "p10": -14,
+     "p90": -3
+    },
+    "bottom_other_response_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_builder_spend": {
+     "max": -7,
+     "mean": -10.5,
+     "median": -10.5,
+     "min": -14,
+     "n": 122,
+     "p10": -14,
+     "p90": -7
+    },
+    "top_flow": {
+     "max": -2,
+     "mean": -3,
+     "median": -3.0,
+     "min": -4,
+     "n": 122,
+     "p10": -4,
+     "p90": -2
+    },
+    "top_other_initiation_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_response_spend": {
+     "max": 0,
+     "mean": -8.6311,
+     "median": -7.0,
+     "min": -24,
+     "n": 122,
+     "p10": -15,
+     "p90": -3
+    }
+   },
+   "converted_population": 122,
+   "integrity": {
+    "gameplay_signatures_identical": true,
+    "identity_with_stage1a_records": {
+     "attempts": 4804,
+     "decisions": 4835,
+     "exact": true,
+     "matches": 100,
+     "mismatched_matches": []
+    },
+    "p0_reproduces_stage1a_projection": {
+     "n": 844,
+     "positive": 844,
+     "share": 1.0
+    },
+    "p6_equals_realized_use_state": {
+     "n": 844,
+     "positive": 844,
+     "share": 1.0
+    },
+    "p6_use_value_equals_direct_valuation": {
+     "n": 844,
+     "positive": 844,
+     "share": 1.0
+    },
+    "recorder_rng_draws": 0,
+    "rng_sequence_identical": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "nonconverted_used": 722,
+   "p0_use_state_error": {
+    "axis": {
+     "max": 0.3611111111,
+     "mean": -1.6807,
+     "median": -1.3888888889,
+     "min": -3.3888888889,
+     "n": 122,
+     "p10": -3.3888888889,
+     "p90": -0.6944444444
+    },
+    "band_projected_to_actual": {
+     "Locked->Locked": 35,
+     "Loose->Locked": 23,
+     "Loose->Strong": 14,
+     "Stable->Locked": 5,
+     "Stable->Strong": 7,
+     "Strong->Locked": 31,
+     "Strong->Strong": 7
+    },
+    "bottom_exhausted_projected_to_actual": {
+     "E->E": 5,
+     "notE->E": 63,
+     "notE->notE": 54
+    },
+    "bottom_stamina": {
+     "max": 33,
+     "mean": 16.5082,
+     "median": 15.0,
+     "min": -3,
+     "n": 122,
+     "p10": 7,
+     "p90": 26
+    },
+    "elapsed_extra_seconds": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_stamina": {
+     "max": 24,
+     "mean": 8.6311,
+     "median": 7.0,
+     "min": 0,
+     "n": 122,
+     "p10": 3,
+     "p90": 15
+    }
+   },
+   "p0_zero_classes": {
+    "loose_stable": 49,
+    "strong_locked_bottom_not_exhausted": 5
+   },
+   "setup_future_positive_converted": {
+    "P0": {
+     "n": 122,
+     "positive": 68,
+     "share": 0.5574
+    },
+    "P1": {
+     "n": 122,
+     "positive": 69,
+     "share": 0.5656
+    },
+    "P2": {
+     "n": 122,
+     "positive": 73,
+     "share": 0.5984
+    },
+    "P3": {
+     "n": 122,
+     "positive": 100,
+     "share": 0.8197
+    },
+    "P4": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "P5": {
+     "n": 122,
+     "positive": 112,
+     "share": 0.918
+    },
+    "P6": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "composite:axis_only": {
+     "n": 122,
+     "positive": 117,
+     "share": 0.959
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 122,
+     "positive": 88,
+     "share": 0.7213
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "composite:own_windows_and_advances": {
+     "n": 122,
+     "positive": 92,
+     "share": 0.7541
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 122,
+     "positive": 115,
+     "share": 0.9426
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 122,
+     "positive": 112,
+     "share": 0.918
+    },
+    "composite:stamina_only": {
+     "n": 122,
+     "positive": 63,
+     "share": 0.5164
+    },
+    "only:builder_axis": {
+     "n": 122,
+     "positive": 64,
+     "share": 0.5246
+    },
+    "only:builder_settlement": {
+     "n": 122,
+     "positive": 69,
+     "share": 0.5656
+    },
+    "only:drift": {
+     "n": 122,
+     "positive": 95,
+     "share": 0.7787
+    },
+    "only:intervening_axis": {
+     "n": 122,
+     "positive": 83,
+     "share": 0.6803
+    },
+    "only:intervening_stamina": {
+     "n": 122,
+     "positive": 62,
+     "share": 0.5082
+    },
+    "only:passive_flow": {
+     "n": 122,
+     "positive": 68,
+     "share": 0.5574
+    },
+    "only:path": {
+     "n": 122,
+     "positive": 119,
+     "share": 0.9754
+    },
+    "only:stalling_axis": {
+     "n": 122,
+     "positive": 68,
+     "share": 0.5574
+    },
+    "without:builder_axis": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "without:builder_settlement": {
+     "n": 122,
+     "positive": 112,
+     "share": 0.918
+    },
+    "without:drift": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "without:intervening_axis": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "without:intervening_stamina": {
+     "n": 122,
+     "positive": 115,
+     "share": 0.9426
+    },
+    "without:passive_flow": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "without:path": {
+     "n": 122,
+     "positive": 112,
+     "share": 0.918
+    },
+    "without:stalling_axis": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    }
+   },
+   "setup_future_positive_nonconverted": {
+    "P0": {
+     "n": 722,
+     "positive": 89,
+     "share": 0.1233
+    },
+    "P1": {
+     "n": 722,
+     "positive": 84,
+     "share": 0.1163
+    },
+    "P2": {
+     "n": 722,
+     "positive": 88,
+     "share": 0.1219
+    },
+    "P3": {
+     "n": 722,
+     "positive": 138,
+     "share": 0.1911
+    },
+    "P4": {
+     "n": 722,
+     "positive": 170,
+     "share": 0.2355
+    },
+    "P5": {
+     "n": 722,
+     "positive": 134,
+     "share": 0.1856
+    },
+    "P6": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "composite:axis_only": {
+     "n": 722,
+     "positive": 162,
+     "share": 0.2244
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 722,
+     "positive": 115,
+     "share": 0.1593
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "composite:own_windows_and_advances": {
+     "n": 722,
+     "positive": 132,
+     "share": 0.1828
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 722,
+     "positive": 148,
+     "share": 0.205
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 722,
+     "positive": 134,
+     "share": 0.1856
+    },
+    "composite:stamina_only": {
+     "n": 722,
+     "positive": 66,
+     "share": 0.0914
+    },
+    "only:builder_axis": {
+     "n": 722,
+     "positive": 86,
+     "share": 0.1191
+    },
+    "only:builder_settlement": {
+     "n": 722,
+     "positive": 84,
+     "share": 0.1163
+    },
+    "only:drift": {
+     "n": 722,
+     "positive": 141,
+     "share": 0.1953
+    },
+    "only:intervening_axis": {
+     "n": 722,
+     "positive": 105,
+     "share": 0.1454
+    },
+    "only:intervening_stamina": {
+     "n": 722,
+     "positive": 70,
+     "share": 0.097
+    },
+    "only:passive_flow": {
+     "n": 722,
+     "positive": 88,
+     "share": 0.1219
+    },
+    "only:path": {
+     "n": 722,
+     "positive": 158,
+     "share": 0.2188
+    },
+    "only:stalling_axis": {
+     "n": 722,
+     "positive": 89,
+     "share": 0.1233
+    },
+    "without:builder_axis": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "without:builder_settlement": {
+     "n": 722,
+     "positive": 140,
+     "share": 0.1939
+    },
+    "without:drift": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "without:intervening_axis": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "without:intervening_stamina": {
+     "n": 722,
+     "positive": 148,
+     "share": 0.205
+    },
+    "without:passive_flow": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "without:path": {
+     "n": 722,
+     "positive": 134,
+     "share": 0.1856
+    },
+    "without:stalling_axis": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    }
+   },
+   "use_value_drain_sensitivity": {
+    "both": {
+     "n": 844,
+     "positive": 314,
+     "share": 0.372
+    },
+    "bottom_over_drained": {
+     "n": 844,
+     "positive": 288,
+     "share": 0.3412
+    },
+    "realized": {
+     "n": 844,
+     "positive": 278,
+     "share": 0.3294
+    },
+    "top_under_drained": {
+     "n": 844,
+     "positive": 305,
+     "share": 0.3614
+    }
+   },
+   "windows_converted": {
+    "advance": 366,
+    "bottom_initiation": 161,
+    "bottom_initiation:LOW": 8,
+    "bottom_initiation:MEDIUM": 153,
+    "bottom_reset": 22,
+    "intervals": 122,
+    "top_builder": 183,
+    "top_builder:mount.top.high_mount_climb:MEDIUM": 183
+   }
+  },
+  "E-PROD 42 ON": {
+   "builder_decisions": 895,
+   "chains_never_used": 51,
+   "components_converted": {
+    "axis_bottom_initiation": {
+     "max": 2.5,
+     "mean": 0.5836,
+     "median": 0.5,
+     "min": -2.0,
+     "n": 122,
+     "p10": -0.4,
+     "p90": 2.0
+    },
+    "axis_builder": {
+     "max": 0.0,
+     "mean": -1.0967,
+     "median": -1.0,
+     "min": -3.0,
+     "n": 122,
+     "p10": -2.0,
+     "p90": 0.0
+    },
+    "axis_drift": {
+     "max": 2.5,
+     "mean": 1.1537,
+     "median": 1.0,
+     "min": 0.0,
+     "n": 122,
+     "p10": 0.5,
+     "p90": 2.0
+    },
+    "axis_stalling": {
+     "max": 0,
+     "mean": 0.0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "axis_top_other": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "bottom_builder_response_spend": {
+     "max": -3,
+     "mean": -9.918,
+     "median": -10.0,
+     "min": -24,
+     "n": 122,
+     "p10": -15,
+     "p90": -3
+    },
+    "bottom_flow": {
+     "max": 5,
+     "mean": -0.5656,
+     "median": -1.0,
+     "min": -4,
+     "n": 122,
+     "p10": -4,
+     "p90": 4
+    },
+    "bottom_initiation_spend": {
+     "max": 0,
+     "mean": -8.9754,
+     "median": -7.0,
+     "min": -14,
+     "n": 122,
+     "p10": -14,
+     "p90": -3
+    },
+    "bottom_other_response_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_builder_spend": {
+     "max": -7,
+     "mean": -10.5,
+     "median": -10.5,
+     "min": -14,
+     "n": 122,
+     "p10": -14,
+     "p90": -7
+    },
+    "top_flow": {
+     "max": -2,
+     "mean": -3,
+     "median": -3.0,
+     "min": -4,
+     "n": 122,
+     "p10": -4,
+     "p90": -2
+    },
+    "top_other_initiation_spend": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_response_spend": {
+     "max": 0,
+     "mean": -8.6311,
+     "median": -7.0,
+     "min": -24,
+     "n": 122,
+     "p10": -15,
+     "p90": -3
+    }
+   },
+   "converted_population": 122,
+   "integrity": {
+    "gameplay_signatures_identical": true,
+    "identity_with_stage1a_records": {
+     "attempts": 4804,
+     "decisions": 4835,
+     "exact": true,
+     "matches": 100,
+     "mismatched_matches": []
+    },
+    "p0_reproduces_stage1a_projection": {
+     "n": 844,
+     "positive": 844,
+     "share": 1.0
+    },
+    "p6_equals_realized_use_state": {
+     "n": 844,
+     "positive": 844,
+     "share": 1.0
+    },
+    "p6_use_value_equals_direct_valuation": {
+     "n": 844,
+     "positive": 844,
+     "share": 1.0
+    },
+    "recorder_rng_draws": 0,
+    "rng_sequence_identical": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "nonconverted_used": 722,
+   "p0_use_state_error": {
+    "axis": {
+     "max": 0.3611111111,
+     "mean": -1.6807,
+     "median": -1.3888888889,
+     "min": -3.3888888889,
+     "n": 122,
+     "p10": -3.3888888889,
+     "p90": -0.6944444444
+    },
+    "band_projected_to_actual": {
+     "Locked->Locked": 35,
+     "Loose->Locked": 23,
+     "Loose->Strong": 14,
+     "Stable->Locked": 5,
+     "Stable->Strong": 7,
+     "Strong->Locked": 31,
+     "Strong->Strong": 7
+    },
+    "bottom_exhausted_projected_to_actual": {
+     "E->E": 5,
+     "notE->E": 63,
+     "notE->notE": 54
+    },
+    "bottom_stamina": {
+     "max": 33,
+     "mean": 16.5082,
+     "median": 15.0,
+     "min": -3,
+     "n": 122,
+     "p10": 7,
+     "p90": 26
+    },
+    "elapsed_extra_seconds": {
+     "max": 0,
+     "mean": 0,
+     "median": 0.0,
+     "min": 0,
+     "n": 122,
+     "p10": 0,
+     "p90": 0
+    },
+    "top_stamina": {
+     "max": 24,
+     "mean": 8.6311,
+     "median": 7.0,
+     "min": 0,
+     "n": 122,
+     "p10": 3,
+     "p90": 15
+    }
+   },
+   "p0_zero_classes": {
+    "loose_stable": 49,
+    "strong_locked_bottom_not_exhausted": 5
+   },
+   "setup_future_positive_converted": {
+    "P0": {
+     "n": 122,
+     "positive": 68,
+     "share": 0.5574
+    },
+    "P1": {
+     "n": 122,
+     "positive": 69,
+     "share": 0.5656
+    },
+    "P2": {
+     "n": 122,
+     "positive": 73,
+     "share": 0.5984
+    },
+    "P3": {
+     "n": 122,
+     "positive": 100,
+     "share": 0.8197
+    },
+    "P4": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "P5": {
+     "n": 122,
+     "positive": 112,
+     "share": 0.918
+    },
+    "P6": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "composite:axis_only": {
+     "n": 122,
+     "positive": 117,
+     "share": 0.959
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 122,
+     "positive": 88,
+     "share": 0.7213
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "composite:own_windows_and_advances": {
+     "n": 122,
+     "positive": 92,
+     "share": 0.7541
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 122,
+     "positive": 115,
+     "share": 0.9426
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 122,
+     "positive": 112,
+     "share": 0.918
+    },
+    "composite:stamina_only": {
+     "n": 122,
+     "positive": 63,
+     "share": 0.5164
+    },
+    "only:builder_axis": {
+     "n": 122,
+     "positive": 64,
+     "share": 0.5246
+    },
+    "only:builder_settlement": {
+     "n": 122,
+     "positive": 69,
+     "share": 0.5656
+    },
+    "only:drift": {
+     "n": 122,
+     "positive": 95,
+     "share": 0.7787
+    },
+    "only:intervening_axis": {
+     "n": 122,
+     "positive": 83,
+     "share": 0.6803
+    },
+    "only:intervening_stamina": {
+     "n": 122,
+     "positive": 62,
+     "share": 0.5082
+    },
+    "only:passive_flow": {
+     "n": 122,
+     "positive": 68,
+     "share": 0.5574
+    },
+    "only:path": {
+     "n": 122,
+     "positive": 119,
+     "share": 0.9754
+    },
+    "only:stalling_axis": {
+     "n": 122,
+     "positive": 68,
+     "share": 0.5574
+    },
+    "without:builder_axis": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "without:builder_settlement": {
+     "n": 122,
+     "positive": 112,
+     "share": 0.918
+    },
+    "without:drift": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "without:intervening_axis": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "without:intervening_stamina": {
+     "n": 122,
+     "positive": 115,
+     "share": 0.9426
+    },
+    "without:passive_flow": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    },
+    "without:path": {
+     "n": 122,
+     "positive": 112,
+     "share": 0.918
+    },
+    "without:stalling_axis": {
+     "n": 122,
+     "positive": 122,
+     "share": 1.0
+    }
+   },
+   "setup_future_positive_nonconverted": {
+    "P0": {
+     "n": 722,
+     "positive": 89,
+     "share": 0.1233
+    },
+    "P1": {
+     "n": 722,
+     "positive": 84,
+     "share": 0.1163
+    },
+    "P2": {
+     "n": 722,
+     "positive": 88,
+     "share": 0.1219
+    },
+    "P3": {
+     "n": 722,
+     "positive": 138,
+     "share": 0.1911
+    },
+    "P4": {
+     "n": 722,
+     "positive": 170,
+     "share": 0.2355
+    },
+    "P5": {
+     "n": 722,
+     "positive": 134,
+     "share": 0.1856
+    },
+    "P6": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "composite:axis_only": {
+     "n": 722,
+     "positive": 162,
+     "share": 0.2244
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 722,
+     "positive": 115,
+     "share": 0.1593
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "composite:own_windows_and_advances": {
+     "n": 722,
+     "positive": 132,
+     "share": 0.1828
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 722,
+     "positive": 148,
+     "share": 0.205
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 722,
+     "positive": 134,
+     "share": 0.1856
+    },
+    "composite:stamina_only": {
+     "n": 722,
+     "positive": 66,
+     "share": 0.0914
+    },
+    "only:builder_axis": {
+     "n": 722,
+     "positive": 86,
+     "share": 0.1191
+    },
+    "only:builder_settlement": {
+     "n": 722,
+     "positive": 84,
+     "share": 0.1163
+    },
+    "only:drift": {
+     "n": 722,
+     "positive": 141,
+     "share": 0.1953
+    },
+    "only:intervening_axis": {
+     "n": 722,
+     "positive": 105,
+     "share": 0.1454
+    },
+    "only:intervening_stamina": {
+     "n": 722,
+     "positive": 70,
+     "share": 0.097
+    },
+    "only:passive_flow": {
+     "n": 722,
+     "positive": 88,
+     "share": 0.1219
+    },
+    "only:path": {
+     "n": 722,
+     "positive": 158,
+     "share": 0.2188
+    },
+    "only:stalling_axis": {
+     "n": 722,
+     "positive": 89,
+     "share": 0.1233
+    },
+    "without:builder_axis": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "without:builder_settlement": {
+     "n": 722,
+     "positive": 140,
+     "share": 0.1939
+    },
+    "without:drift": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "without:intervening_axis": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "without:intervening_stamina": {
+     "n": 722,
+     "positive": 148,
+     "share": 0.205
+    },
+    "without:passive_flow": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    },
+    "without:path": {
+     "n": 722,
+     "positive": 134,
+     "share": 0.1856
+    },
+    "without:stalling_axis": {
+     "n": 722,
+     "positive": 156,
+     "share": 0.2161
+    }
+   },
+   "use_value_drain_sensitivity": {
+    "both": {
+     "n": 844,
+     "positive": 314,
+     "share": 0.372
+    },
+    "bottom_over_drained": {
+     "n": 844,
+     "positive": 288,
+     "share": 0.3412
+    },
+    "realized": {
+     "n": 844,
+     "positive": 278,
+     "share": 0.3294
+    },
+    "top_under_drained": {
+     "n": 844,
+     "positive": 305,
+     "share": 0.3614
+    }
+   },
+   "windows_converted": {
+    "advance": 366,
+    "bottom_initiation": 161,
+    "bottom_initiation:LOW": 8,
+    "bottom_initiation:MEDIUM": 153,
+    "bottom_reset": 22,
+    "intervals": 122,
+    "top_builder": 183,
+    "top_builder:mount.top.high_mount_climb:MEDIUM": 183
+   }
+  },
+  "PROTECT probe": {
+   "builder_decisions": 1964,
+   "chains_never_used": 196,
+   "components_converted": {
+    "axis_bottom_initiation": {
+     "n": 0
+    },
+    "axis_builder": {
+     "n": 0
+    },
+    "axis_drift": {
+     "n": 0
+    },
+    "axis_stalling": {
+     "n": 0
+    },
+    "axis_top_other": {
+     "n": 0
+    },
+    "bottom_builder_response_spend": {
+     "n": 0
+    },
+    "bottom_flow": {
+     "n": 0
+    },
+    "bottom_initiation_spend": {
+     "n": 0
+    },
+    "bottom_other_response_spend": {
+     "n": 0
+    },
+    "top_builder_spend": {
+     "n": 0
+    },
+    "top_flow": {
+     "n": 0
+    },
+    "top_other_initiation_spend": {
+     "n": 0
+    },
+    "top_response_spend": {
+     "n": 0
+    }
+   },
+   "converted_population": 0,
+   "integrity": {
+    "gameplay_signatures_identical": true,
+    "identity_with_stage1a_records": {
+     "attempts": 5696,
+     "decisions": 5794,
+     "exact": true,
+     "matches": 100,
+     "mismatched_matches": []
+    },
+    "p0_reproduces_stage1a_projection": {
+     "n": 1768,
+     "positive": 1768,
+     "share": 1.0
+    },
+    "p6_equals_realized_use_state": {
+     "n": 1768,
+     "positive": 1768,
+     "share": 1.0
+    },
+    "p6_use_value_equals_direct_valuation": {
+     "n": 1768,
+     "positive": 1768,
+     "share": 1.0
+    },
+    "recorder_rng_draws": 0,
+    "rng_sequence_identical": true,
+    "summary_identical_to_uninstrumented": true
+   },
+   "nonconverted_used": 1768,
+   "p0_use_state_error": {
+    "axis": {
+     "n": 0
+    },
+    "band_projected_to_actual": {},
+    "bottom_exhausted_projected_to_actual": {},
+    "bottom_stamina": {
+     "n": 0
+    },
+    "elapsed_extra_seconds": {
+     "n": 0
+    },
+    "top_stamina": {
+     "n": 0
+    }
+   },
+   "p0_zero_classes": {},
+   "setup_future_positive_converted": {},
+   "setup_future_positive_nonconverted": {
+    "P0": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P1": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P2": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P3": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P4": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P5": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "P6": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:axis_only": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:own_windows_advances_opponent_stamina": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:own_windows_advances_opponent_stamina_path": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:own_windows_and_advances": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:own_windows_and_advances_path": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:stamina_and_axis_without_path": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "composite:stamina_only": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:builder_axis": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:builder_settlement": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:drift": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:intervening_axis": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:intervening_stamina": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:passive_flow": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:path": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "only:stalling_axis": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:builder_axis": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:builder_settlement": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:drift": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:intervening_axis": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:intervening_stamina": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:passive_flow": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:path": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "without:stalling_axis": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    }
+   },
+   "use_value_drain_sensitivity": {
+    "both": {
+     "n": 1768,
+     "positive": 582,
+     "share": 0.3292
+    },
+    "bottom_over_drained": {
+     "n": 1768,
+     "positive": 582,
+     "share": 0.3292
+    },
+    "realized": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    },
+    "top_under_drained": {
+     "n": 1768,
+     "positive": 0,
+     "share": 0.0
+    }
+   },
+   "windows_converted": {}
+  }
+ }
+}
