@@ -40,6 +40,8 @@ branch -> freeze DoD / preregistration -> HARD STOP -> review
 | D3-B final-main qualification (`b59fc7f`) | CI `37370017411` | **PASS** on Python 3.11 and 3.13; 504 tests, 1 skipped; digest exact |
 | LOW -> MEDIUM handoff oscillation | D3-B design + promotion lineage | **CLOSED IN PRODUCTION** |
 | R1 — response commitment / provisional-hold affordability | branch `review/r1-hold-inclusive-affordability`; DoD `a2e2887` (CI `37382027293`) | **CLOSED BY CHARACTERIZATION — no gameplay change** |
+| PG8 endpoint pin (maintenance) | PR #14, head `5714748`, merge `cfb3603` (CI `37447498281`) | **MERGED**; PG8 runs in a full-history CI job |
+| Late recovery / match pacing | branch `review/late-recovery-characterization`; characterization `683e830` (CI `37405624229`) | **CHARACTERIZED — CAUSE IDENTIFIED — DEFERRED** behind debts 4 and 5 |
 
 The review branches and historical checkpoint commits are intentionally preserved. The final integration kept the full evidence chain reachable from `main`.
 
@@ -178,13 +180,27 @@ Frozen production semantics: response commitment and the provisional Contested h
 - Hypothesis not added; `ResponderSettlementPlan` deferred.
 - The projected-burden display requirement moved to debt 7.
 
-### 6.2 Remaining order after R1
+### 6.2 Completed: late recovery / match pacing (deferred)
 
-R1 is closed. Next, in order:
+**OUTCOME = LR-DEFER-TO-POLICY.** Records: `docs/LATE_RECOVERY_CHARACTERIZATION.md` (frozen at `683e830`) and `docs/LATE_RECOVERY_RESULT.md`.
 
-1. **Late recovery / pacing (next slice; characterization first):** median first clear remains about 240 s of a 300 s match; decide whether this is intended game pacing or a separate mechanics debt.
-2. **Setup-policy debt.**
-3. **Initiator tactical commitment-selection policy:** player/AI choice among LOW / MEDIUM / HIGH rather than a fixed baseline.
+Observed on canonical E-PROD:
+- Bottom first Exhausted median 50 s;
+- Bottom Exhausted about 79% of match time;
+- first-clear median 240 s;
+- median 20 s left after the clear.
+
+Cause: the fixed-MEDIUM opening burns about 16 stamina per 10 s against +4 recovery. While Exhausted, Bottom's own LOW initiations reinvest 71% of CONSERVE gain, which leaves about +0.45 per 10 s.
+
+The mechanics decision is deferred, because pacing is driven by the fixed-MEDIUM placeholder and the current setup/attack policy. **Re-run the frozen observer after debts 4 and 5**, per the re-evaluation contract in the characterization DoD (section 4). Recovery rates, costs, thresholds, LOW cadence, D3-B and commitment behavior are unchanged.
+
+### 6.3 Remaining order
+
+R1 is closed and late recovery is deferred. Next, in order:
+
+1. **Setup-policy debt (next).**
+2. **Initiator tactical commitment-selection policy:** player/AI choice among LOW / MEDIUM / HIGH rather than a fixed baseline.
+3. **Re-run the frozen late-recovery characterization** (debt 3 re-evaluation) after 1 and 2.
 4. **Scoring / timeout meaning** for the first playable ruleset.
 5. **Final player-facing state/input contract.**
 6. Resolve the player-facing meaning/visibility of non-RESET recovery holds if it is still relevant after the above slices.
@@ -195,7 +211,7 @@ R1 is closed. Next, in order:
 |---|---|---|
 | 1 | LOW -> MEDIUM handoff oscillation | **CLOSED IN PRODUCTION — D3-B** |
 | 2 | **R1:** response commitment / provisional-hold affordability | **CLOSED BY CHARACTERIZATION** (`a2e2887`; result record) |
-| 3 | Late recovery / match pacing | open |
+| 3 | Late recovery / match pacing | **CHARACTERIZED — CAUSE IDENTIFIED — DEFERRED** (`683e830`; re-evaluate after debts 4 and 5) |
 | 4 | Setup-policy debt | open |
 | 5 | Initiator tactical commitment-selection policy | open |
 | 6 | Scoring / timeout meaning | open |
@@ -241,4 +257,4 @@ git rev-parse HEAD
 
 Expected: the latest merge commit on `main`. Every frozen checkpoint SHA cited in this document must be an ancestor of it (`git merge-base --is-ancestor <sha> HEAD`).
 
-R1 is closed on `review/r1-hold-inclusive-affordability` (based on `1e2b5e3`; frozen DoD `a2e2887`). Merging that branch needs separate authorization. The next slice is late recovery / match-pacing characterization, starting on a fresh branch after explicit authorization.
+R1 is closed and merged. Late recovery is deferred (frozen characterization `683e830`). The next slice is the **setup-policy debt**, starting on a fresh branch after explicit authorization.
