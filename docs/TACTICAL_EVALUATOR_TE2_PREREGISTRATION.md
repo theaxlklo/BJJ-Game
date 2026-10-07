@@ -2,7 +2,14 @@
 
 ## Status
 
-**PROPOSED PREREGISTRATION — DOCUMENTATION ONLY — HARD STOP FOR REVIEW.**
+**PROPOSED PREREGISTRATION — AMENDED PER REVIEW — DOCUMENTATION ONLY — NOT YET BINDING — HARD STOP FOR REVIEW.**
+
+**Review amendment (this commit, a direct child of `6df192f`).** The review accepted the architecture in principle. It approved T1, T2, T4, T6, T7 (with pins) and T9, and required amendments to T3, T5 and T8. This commit applies exactly those rulings, plus the consistency edits they need:
+- **T3:** RESET wins Tier R only with strictly greater Q (section 3);
+- **T5:** exact stalling-aware RESET and window steps on a full route branch (section 4.1);
+- **T8:** one TACTICAL_V2 surface process at a time and a 16 GB RSS cap (section 4.2).
+
+The rulings are recorded in section 11. No gate, threshold, seed, horizon or QB definition changed.
 
 Nothing is implemented or run. This document freezes the TE-2 candidate, its supported configurations, its integrity checks and its scoring **before any implementation**.
 
@@ -59,15 +66,18 @@ Precedence, D3-B and force-RESET rules run first, exactly as in Stage 1B. Under 
 3. **Tier R, route.** This tier replaces TE-1's tier C (the setup projection) and the RESET fallback for Top.
    - **R1.** Compute `Q(s, o)` for every o ∈ O(s) (section 4).
    - **R2, stamina guard.** This is TE-1's existing guard rule, applied to the metric Q. An option whose commitment `enters_exhausted` is admissible only if its Q strictly exceeds the Q of every non-entering commitment of the same action. RESET never enters Exhausted.
-   - **R3.** If the maximum admissible Q is 0, Tier R is empty. Go to Tier D.
-   - **R4.** Otherwise choose the admissible option with the highest Q. Ties are broken, in order, by:
-     1. lower stamina cost, where RESET costs 0;
-     2. higher axis_realized, with RESET counted as 0;
-     3. higher axis_raw, with RESET counted as 0;
-     4. catalog order, with RESET last;
-     5. LOW < MEDIUM < HIGH.
+   - **R3.** If the maximum admissible Q over O(s), RESET included, is 0, Tier R is empty. Go to Tier D.
+   - **R4, RESET against actions (amended, T3).** Let `Q*` be the highest Q among admissible **non-RESET** options.
+     - If `Q(RESET) > Q*`, Top chooses **RESET**. RESET wins only with a **strictly** greater route value.
+     - Otherwise, including the tie `Q(RESET) = Q* > 0`, Top chooses a **non-RESET** option with `Q = Q*`.
 
-     This is TE-1's ordering with cost moved ahead of the axis, so that at an exactly equal route value the cheapest commitment and waiting are preferred.
+     This prevents receding-horizon procrastination. Without it, the search could prefer "wait now, attack later" at every window, because a tied RESET would keep moving the planned attack into the future horizon.
+   - **R5, ties among non-RESET options with `Q = Q*`.** TE-1's existing ordering, in this order:
+     1. higher axis_realized;
+     2. higher axis_raw;
+     3. lower stamina cost;
+     4. catalog order;
+     5. LOW < MEDIUM < HIGH.
 4. **Tier D, position.** Identical to TE-1: reduce to the cheapest qualifying commitment, with axis_raw > 0 and axis_realized > 0.
 5. **RESET.**
 
@@ -90,13 +100,15 @@ Precedence, D3-B and force-RESET rules run first, exactly as in Stage 1B. Under 
 
 # 4. Route value Q (frozen; the instrument of the characterization, made normative)
 
-**Normative reference.** The algorithm is `RouteSearch`, `Solver` and `unresolved_qb` in `src/bjj_game/diagnostics/tactical_evaluator_g1_characterization.py` at `3b08cea`. The gameplay implementation must equal it exactly on the characterization states, and a test must pin that equality.
+**Normative reference.** The algorithm is `RouteSearch`, `Solver` and `unresolved_qb` in `src/bjj_game/diagnostics/tactical_evaluator_g1_characterization.py` at `3b08cea`.
+- **With v0.3b stalling off**, the gameplay implementation must equal it exactly on every characterization state, and a test must pin that equality.
+- **With stalling on**, the transitions are the exact stalling-aware steps of section 4.1. That instrument models a RESET as an initiative swap, which is exact only with stalling off, so it is not the reference there. The option set, the opponent's decision contract, QB, success, the horizon and the tie rules are unchanged.
 
 - **Top windows (OR).** Max over O(s'), using the same option construction as section 3.
 - **Chance (exact).** Every exchange expands through `exchange_cases`: the Recognition read, the response commitment and the response, with exact `Fraction` weights.
-- **Bottom windows.** The **O-3 TE-1 contract** of Stage 1B: `Continuation.opponent` under a TACTICAL_V1 context. That means TE-1 tiers whose nested setup valuation is the frozen single-chain projection, with precedence and a copied D3-B controller. The depth is exactly 1, and a Bottom window never starts a route search or a projection-v2 continuation.
-- **Between windows.** `Continuation.advance`: behavior choice, `advance()`, D3-B observation, post-advance re-choice.
-- **RESET in the search.** It passes the initiative, then advances. This is exact when v0.3b stalling is off. With stalling on, the stalling consequences of a reset are not modeled. This is the same declared omission as projection v2 (5b57017, section 2 step 1), and its incidence is reported (section 9).
+- **Bottom windows.** The **decision** is the **O-3 TE-1 contract** of Stage 1B (`Continuation.opponent_decision` under a TACTICAL_V1 context). That means TE-1 tiers whose nested setup valuation is the frozen single-chain projection, with precedence and a copied D3-B controller. The **transition** that follows the decision (exchange, RESET or hold) is taken by the section 4.1 steps. The depth is exactly 1, and a Bottom window never starts a route search or a projection-v2 continuation.
+- **Between windows.** The batch's own window loop (section 4.1): a pending free-initiative window first; otherwise behavior choice, `advance()`, D3-B observation and post-advance re-choice. With stalling off, this is exactly `Continuation.advance`.
+- **RESET in the search (amended, T5).** Every RESET, both Top's RESET option and an opponent RESET, executes the engine's own `reset_window()` on a sandbox loaded with the full route branch. That includes, under stalling, its stalling evaluation, warnings, penalties, axis changes, position resets and free-initiative grants. The window loop then follows. With stalling off, this reduces exactly to an initiative swap.
 - **Success.** The submission stage becomes non-None (Threat entry) or the match taps, checked after every exchange and every advance. **Failure terminals:** exit and timeout.
 - **Horizon: QB-quiescent search.** **Base B = 5** decision windows, **bound M = 13** decision windows, both absolute and counted from the decision being made. A node at depth d (windows taken) is:
   - a **success** leaf, valued 1, if the goal holds;
@@ -111,18 +123,48 @@ Precedence, D3-B and force-RESET rules run first, exactly as in Stage 1B. Under 
 - **Q(s, o)** is the exact value of choosing o first, then optimal Top play within the search.
 - **Optimism (declared).** Q assumes adaptive optimal Top play and an opponent that follows the O-3 contract exactly. It is a route value, not a prediction of TE-2E's own play.
 
-**Exactness and caching.** The memo is keyed on (Branch, d), where d is root-relative. Values depend only on the branch and d, so the memo is exact and may be shared across decisions within a match. The Continuation caches are exact as in Stage 1B. No sampling, pruning, beam, averaging, random cutoff or depth reduction is allowed.
+## 4.1 Exact stalling-aware route steps (amended, T5)
 
-**Budget (frozen).** Exceeding any budget makes the run **OPEN**. It never changes a decision and is never approximated.
+**Route branch.** TE-2 uses its own route branch: the projection-v2 `Branch` plus every piece of match state that `reset_window`, `attempt`, `advance`, `recovery_hold` or `consume_free_initiative_window` reads or writes under v0.3b stalling. That includes:
+- both sides' stalling-tracker state, such as advancement clocks and the offense and consequence-ladder position;
+- the free-initiative pending flag and beneficiary;
+- any other mutable field those methods touch.
+
+The implementation must enumerate these fields from the engine code. With stalling off they are constant, and the route branch reduces to `Branch`. **Projection v2, its `Branch` and its pins are not modified.** These are TE-2's own steps in its own module.
+
+**Steps.** Every step runs the engine's own method on a fresh sandbox loaded with the full route branch, and reads the full route branch back:
+- `attempt()` for each exact chance case;
+- `reset_window()` for every RESET;
+- `recovery_hold()` for D3-B LOCKOUT_HOLD;
+- the window loop of `run_batch` at `fd19dd0`. `consume_free_initiative_window()` is called first. If it returns a side, that window has no behavior choice and no advance. Otherwise: behavior choice, `advance()`, D3-B observation, re-choice.
+
+Caches are keyed on the full route branch, never on `te.State` alone, because under stalling an attempt can change stalling state.
+
+**Determinism.** Every stalling path must draw no RNG given the route branch. A test pins zero draws. If any stalling path drew RNG, that configuration is unsupported, and a gated stalling-ON run would be **OPEN**, never approximated.
+
+**Required exactness tests (before any measurement):**
+- **Field coverage and successor equality.** These run on synthetic stalling-ON matches (seeds 910000 and above). At every real window, load the real pre-window route branch into a fresh sandbox and apply the real decision. A deterministic step must reproduce the real post-window route branch exactly. A chance step must contain the real successor in its exact support.
+- **Coverage of reset consequences.** At least one test each for a reset producing a warning, a penalty, a position reset and a free-initiative window.
+- **Stalling-off equivalence.** Q equals the `3b08cea` instrument on every characterization state.
+
+**Scope of the old omission.** Bottom's frozen TE-1 still values setup through projection v2, and that projection keeps its historical stalling omission (5b57017, section 2 step 1). This is unchanged frozen TE-1 behavior. **TE-2E's Q has no stalling omission.**
+
+**Exactness and caching.** The memo is keyed on (route branch, d), where d is root-relative. Values depend only on the route branch and d, so the memo is exact and may be shared across decisions within a match. No sampling, pruning, beam, averaging, random cutoff or depth reduction is allowed.
+
+## 4.2 Budget, machine safety and purity (amended, T8)
+
+**Budget (frozen).** Whichever limit trips first makes the run **OPEN**. A limit never changes a decision and never leads to an approximation.
 
 | Budget | Limit |
 |---|---|
 | New memo entries per Top decision | ≤ 3,000,000 (deterministic) |
-| Memo entries held per match | ≤ 20,000,000 |
-| Resident memory per measurement process | ≤ 24 GB |
+| Memo entries held per match | ≤ 20,000,000 (deterministic) |
+| Resident memory (RSS) of the route-search process | **≤ 16 GB** (on the 32 GB measurement machine) |
 | Wall time per surface for the authoritative run, on the measurement machine | ≤ 48 h |
 
-The node budget is deterministic. The memory and wall-time limits decide only feasibility (OPEN), never a decision.
+**Concurrency (frozen).** The authoritative measurement runs **one TACTICAL_V2 surface process at a time**. This covers the candidate run, the second run, the inertness replay and the uninstrumented run of every gated and fresh-holdout surface. ESCAPE_FIRST baseline runs perform no route search and may run separately.
+
+The node limits are deterministic. The memory and wall-time limits decide only feasibility (OPEN), never a decision. The RSS cap is enforced by the measurement driver's own monitor, which stops the run and records OPEN.
 
 **Purity.** The route search draws no RNG and never mutates the live match or the live D3-B controller. It runs on sandboxes only and does no I/O, as in Stage 1B section 2.3.
 
@@ -132,7 +174,12 @@ The node budget is deterministic. The memory and wall-time limits decide only fe
 
 These are the same as TACTICAL_V1 (ae786af section 2.1 and section 9.1): v0.2 setup, v0.3a submissions, v0.4a semantics, the informed Bottom responder, handoff NONE or D3-B, and an interval that is a whole number of quanta. There is no fallback, and unsupported configurations raise `ValueError`.
 
-**v0.4a-off exception.** The frozen PROTECT probe envelope is admitted exactly. It is admitted at base_seed 42 and at the fresh PROTECT holdout seed 685800 (section 7), with every other argument equal. This is the already-qualified valuation envelope; the seed changes no configuration. Every other v0.4a-off configuration raises `ValueError`.
+**v0.4a-off exception.** The frozen PROTECT probe envelope is admitted exactly, at **base_seed 42 and base_seed 685800 only** (the fresh PROTECT holdout seed of section 7), with every other argument equal. This is the already-qualified valuation envelope; the seed changes no configuration. Every other v0.4a-off configuration raises `ValueError`.
+
+**Required pins (T7):**
+- positive tests for exactly those two seeds;
+- negative tests for every single-argument perturbation of the envelope;
+- a negative test for a third, arbitrary base_seed.
 
 ---
 
@@ -168,7 +215,7 @@ The fresh-holdout surfaces of section 7 are scored with the G-gate principles, a
 ## 6.3 Decision rule
 
 - **DESIGN PASS:** P1-P6, G1-G6 and HG1-HG6 all pass, and every integrity check holds.
-- **DESIGN FAIL:** any gate fails with valid evidence. Record it and STOP. No tuning, no re-run, no change to B, M, QB, the tie-breaks or any gate.
+- **DESIGN FAIL:** any gate fails with valid evidence. Record it and STOP. No tuning, no re-run, no change to B, M, QB, the Tier R rules or any gate.
 - **OPEN:** an integrity failure, a baseline that does not reproduce, a budget exceeded, or missing evidence. OPEN is never relabeled.
 
 ---
@@ -211,8 +258,11 @@ These carry over from ae786af section 5, applied to TACTICAL_V2:
 - the Stage 1B window-ordering pins stay green.
 
 Also new for TE-2:
-- the **route-search equivalence pin**: the implementation's Q equals the 3b08cea diagnostic instrument on every characterization state, at B = 5 and M = 13, under QB;
-- a budget-overflow test showing OPEN, not approximation;
+- the **route-search equivalence pin**: with stalling off, the implementation's Q equals the 3b08cea diagnostic instrument on every characterization state, at B = 5 and M = 13, under QB;
+- the **stalling exactness tests** of section 4.1 (field coverage and successor equality, coverage of reset consequences, zero RNG on stalling paths);
+- the **Tier R tie tests** (T3): a positive tie between RESET and an action chooses the action, and RESET with strictly greater Q than every action chooses RESET;
+- the **PROTECT envelope pins** (T7, section 5);
+- budget-overflow tests (node limits and the RSS monitor) showing OPEN, not approximation;
 - purity tests.
 
 ---
@@ -222,7 +272,7 @@ Also new for TE-2:
 - Everything Stage 1B reported (ae786af section 6).
 - **TE-2E route tier.** Choices by option type (builder, other action, RESET) and by commitment. The distribution of Q at choices. How often Tier R was empty, and how often RESET won Tier R. Route-search nodes, frontier, wall time and memory per decision.
 - **O-3 fidelity, both directions.** First, Top's route search models Bottom by the O-3 TE-1 surrogate, while the real Bottom uses TE-1 with projection v2. Second, Bottom's projection models Top by the TE-1 surrogate, while the real Top uses TE-2E. Both are reported by side and tier.
-- **Stalling-ON incidence.** Real Top RESETs whose stalling consequence the route search did not model.
+- **Stalling-ON resets.** The stalling consequences produced by real Top RESETs: warnings, penalties, position resets and free windows. All are modeled by the route search.
 - **Calibration.** Σ Q at Tier-R choices against realized Threat entries within the next 13 windows (±3σ, reported).
 - **Holdouts.** The seen holdouts (4242, 4342) as ratios to their committed ESCAPE_FIRST baselines.
 
@@ -234,24 +284,24 @@ Also new for TE-2:
 - **G4 is expected to pass.** PROTECT had no route at any horizon in the characterization.
 - **G5 and G6 are the main risks.** Route-seeking Top play drains Bottom through exchanges. The commitment mix it selects was measured only at the opening state, where LOW was best or tied.
 - **G3 is a risk on Recognition surfaces.** More Top exchanges give Bottom more terminal windows; the direction is uncertain.
-- **Runtime.** Feasible on A-PROD and PROTECT (≤ 0.4 s per decision under QB in the characterization). Recognition surfaces were not characterized and could exceed the budget, which would be OPEN.
+- **Runtime.** Feasible on A-PROD and PROTECT (≤ 0.4 s per decision under QB in the characterization). The Recognition surfaces were not characterized. On stalling-ON surfaces the route branch also carries stalling state, which reduces merging. Either could exceed the budget, which would be OPEN. Running one surface at a time (T8) lengthens the measurement.
 - **The HG gates are the real test** of whether the 13-window finding generalizes.
 
 ---
 
-# 11. Decisions for review
+# 11. Decisions and review rulings
 
-| # | Decision | Proposed |
+| # | Decision | Ruling |
 |---|---|---|
-| T1 | Top TE-2E; Bottom frozen TE-1 | as the review required |
-| T2 | B = 5, M = 13, absolute windows; QB exactly as in section 4 | as the review required |
-| T3 | Tier R tie-breaks: Q, then cost (RESET = 0), then axis_realized, axis_raw, catalog order, commitment rank | proposed here |
-| T4 | Stamina guard applied to Q in Tier R (the TE-1 rule with the Tier-R metric) | proposed here |
-| T5 | RESET's stalling consequence not modeled in the route search under stalling ON (the projection-v2 omission), with incidence reported | proposed here |
-| T6 | HG1-HG6 gated and required for PASS | proposed here; it could instead be report-only |
-| T7 | The PROTECT envelope also admitted at the fresh seed H1 | proposed here |
-| T8 | Budgets: 3M nodes per decision; 20M per match; 24 GB; 48 h per surface | proposed here |
-| T9 | Uninstrumented-run identity becomes a required integrity check | proposed here |
+| T1 | Top TE-2E; Bottom frozen TE-1 | **APPROVED** |
+| T2 | B = 5, M = 13, absolute windows; QB exactly as in section 4 | **APPROVED**; no tuning after measurement |
+| T3 | Tier R choice between RESET and actions | **AMENDED (section 3, R4-R5).** RESET wins only with strictly greater Q. A positive tie goes to the non-RESET option. Among tied non-RESET options: axis_realized, axis_raw, cost, catalog order, commitment rank. Tie tests are required. |
+| T4 | Stamina guard applied to Q in Tier R | **APPROVED**; RESET stays outside commitment guarding |
+| T5 | RESET semantics in the route search under stalling ON | **AMENDED (section 4.1).** The engine's real `reset_window()` runs on a route branch that carries every stalling field, with exactness tests. The proposed omission is withdrawn. |
+| T6 | HG1-HG6 gated and required for PASS | **APPROVED** |
+| T7 | PROTECT envelope at seeds 42 and 685800 only | **APPROVED WITH PINS (section 5)** |
+| T8 | Budgets and machine safety | **AMENDED (section 4.2).** One TACTICAL_V2 surface process at a time; RSS ≤ 16 GB; deterministic node limits and 48 h kept; first limit tripped = OPEN. |
+| T9 | Uninstrumented-run identity required | **APPROVED** |
 
 ---
 
