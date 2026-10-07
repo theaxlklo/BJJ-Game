@@ -6,6 +6,8 @@
 
 Nothing is implemented or run. This document freezes how Stage 1B will be scored **before any wiring**. It was proposed at `0fcae3e`; the user's rulings on B1-B8 are recorded in section 9, and this clarification commit applies the two corrections and three wording fixes they required.
 
+**Pre-implementation contract clarification (section 9.1).** `3494fa5` was made binding and an implementation authorization was issued against it. Before any implementation was committed, that attempt stopped on a conflict inside this document: section 2.1 requires v0.4a semantics for `TACTICAL_V1`, but G4's only surface, the frozen PROTECT probe, runs with v0.4a off. The user ruled a hard stop, and this docs-only commit records the narrow exception that resolves it. It is **not** a gate or threshold change and **not** a broadening of supported configurations. No Stage 1B code was committed and `TACTICAL_V1` was never run.
+
 **Authorization language.** The user's approval of the corrected preregistration, at the SHA that carries this text, makes **the document** binding. It does **not** authorize implementation, wiring or any measurement. Stage 1B implementation and the candidate run require a **separate, explicit authorization**.
 
 ```text
@@ -54,6 +56,7 @@ G1 (submission access) is the gate most likely to fail and the one no existing e
 
 - The default `ESCAPE_FIRST` path must be **behaviorally and RNG-identical to the frozen baseline**: same decisions, same RNG draws in the same order, same summaries. The existing decision path remains unchanged apart from the opt-in selection seam. (Adding an option necessarily changes source and bytecode, so literal byte identity is not required.) This is P1, and it includes every existing pinned surface and both the Stage 1A and Stage 1A-v2 evidence pins.
 - `TACTICAL_V1` is selected only by the explicit option. It requires the configuration of 4e61bad (v0.2 setup, v0.3a submissions, v0.4a semantics, informed Bottom responder) and raises `ValueError` on any configuration projection v2 does not model (for example handoff modes other than `NONE` and D3-B). There is **no silent fallback to `ESCAPE_FIRST`**.
+  - **Single exception (section 9.1):** the exact frozen G4 PROTECT probe is admitted with v0.4a off. Every other configuration with v0.4a off still raises `ValueError`.
 - Both initiators use TE-1 under `TACTICAL_V1` (Top and Bottom), as in 4e61bad section 2.
 - **Order of decisions at a window (unchanged from the runtime):** D3-B controller decision (TOKEN / LOCKOUT_HOLD / unarmed), then force-RESET rules, then the initiator policy. In a LOCKOUT_HOLD window `recovery_hold()` replaces the initiation, and TE-1 never executes. In a Bottom RECOVER window while Exhausted, the commitment stays **LOW** (`LOW_WHILE_EXHAUSTED`) and TE-1 picks only the action (4e61bad 2.6).
 - The D3-B collector calls `policy.choose(match)` at LOCKOUT_HOLD windows as a **counterfactual**. Under `TACTICAL_V1` that call must be pure: it may not change match state, controller state or any RNG, and its result is recorded only.
@@ -249,6 +252,34 @@ The user's rulings on the decisions proposed at `0fcae3e`:
 - "byte-identical" replaced by behaviorally and RNG-identical (2.1);
 - authorization language clarified (Status): approval makes the document binding and does not authorize implementation or measurement;
 - G4 is described as carrying a measurement amendment, not as unchanged.
+
+## 9.1 Pre-implementation contract clarification: PROTECT probe and v0.4a
+
+**The conflict (found before any implementation was committed).** Section 2.1 says `TACTICAL_V1` requires v0.4a semantics and raises `ValueError` otherwise. Sections 3 and 4.2 score G4 on the frozen PROTECT probe, whose kwargs run with v0.4a **off**. Read literally, `TACTICAL_V1` would raise on G4's only surface, and G4 could never be measured. The user ruled a hard stop and asked for this clarification before implementation resumes.
+
+**The rule.**
+- `TACTICAL_V1` still requires v0.4a commitment semantics, as written in section 2.1.
+- **One exception:** the exact frozen G4 PROTECT probe is admitted with v0.4a off. "Exact" means every keyword argument of the batch call equals the frozen probe, apart from `initiator_policy=TACTICAL_V1`. The frozen probe is `diagnostics/setup_policy.py: historical_protect_probe_kwargs()` at `3494fa5`:
+
+  ```text
+  matches=100, base_seed=42,
+  top_behavior=PRESSURE, bottom_behavior=PROTECT, commitment=MEDIUM,
+  initial_clock=300, starting_axis=1.50, interval_seconds=5,
+  top_stamina=100, bottom_stamina=100,
+  bottom_behavior_mode=FIXED, bottom_responder_mode=INFORMED,
+  enable_v02_setup=True, enable_v03_submissions=True
+  ```
+
+  Every other batch option keeps its default: v0.3b stalling off, v0.4a off, v0.4b Recognition off, response commitment `FIXED_MEDIUM`, Rule 1 waiver off, settlement rules and supplemental hold off, recovery initiation `CURRENT`, Top behavior mode `FIXED`, post-clear handoff `NONE`, shadow stalling off, and every `measure_*` flag off.
+- **Every other configuration with v0.4a off raises `ValueError`**, including the PROTECT probe with any single argument changed (seed, match count, behavior, responder, clock, stamina or any other flag). There is no fallback to `ESCAPE_FIRST`. Tests must pin both sides of this: the exact envelope is accepted, and a perturbation of each argument is rejected.
+
+**Why this envelope is admissible.** Projection v2 and TE-1 were already qualified on exactly this configuration in Stage 1A-v2 (`750ffe8`): C4 1,964 / 1,964, C5 exact (Σp 0.00, observed 0), C0 5,696 / 5,696, and O-3 2,848 / 2,848. With v0.4a off, the engine applies no commitment grade transform and still charges the initiator's funded commitment cost. The frozen evaluator models it the same way (`tactical_evaluator.resolve` returns the post-exhaustion grade, and `evaluate` costs the funded commitment). The exception admits a configuration that is already modeled and qualified. It adds nothing new.
+
+**What this is not.**
+- It is not a gate or threshold change. The G4 baseline (1,768), the floor (≤ 884), the G4 measurement amendment (section 5.2), the PROTECT surface and its seed are unchanged, and so are P1-P6, G1-G6, every other surface, baseline, seed and floor.
+- It is not a broadening of supported configurations. Section 2.1 still rejects everything it rejected, apart from this one already-qualified envelope.
+- It does not change TE-1, projection v2, precedence, D3-B, production policy or any gameplay default.
+- It does not authorize implementation or any run. Stage 1B implementation needs a fresh authorization against the SHA that carries this text, and the candidate measurement needs its own separate authorization after that.
 
 ---
 
