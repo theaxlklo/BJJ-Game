@@ -62,6 +62,19 @@ class BatchResponseCommitmentMode(str, Enum):
     RECOGNITION_ALWAYS_HIGH = "recognition-always-high"
 
 
+class BatchInitiatorPolicy(str, Enum):
+    """Initiator policy option of run_batch (Stage 1B,
+    docs/TACTICAL_EVALUATOR_STAGE1B_PREREGISTRATION.md section 2).
+
+    ESCAPE_FIRST is the default and the only policy of run_escape_first_batch.
+    TACTICAL_V1 (TE-1 with projection v2, both initiators) is explicit opt-in;
+    unsupported configurations raise ValueError, never fall back.
+    """
+
+    ESCAPE_FIRST = "ESCAPE_FIRST"
+    TACTICAL_V1 = "TACTICAL_V1"
+
+
 @dataclass(frozen=True, slots=True)
 class AdaptiveBehaviorPolicy:
     """Batch-only behavior switching around the existing Exhausted latch.
@@ -942,6 +955,31 @@ class BatchSummary:
         return "\n".join(lines)
 
 
+@dataclass(frozen=True, slots=True)
+class BatchRun:
+    """run_batch result: the unchanged BatchSummary plus Stage 1B instrumentation.
+
+    BatchSummary itself is not extended: its repr is pinned by committed
+    fingerprints (D3-B promotion PG6), so new measures live here.
+
+    top_completed_setup_builder_attempt_count is the reason-independent G4
+    measure (Stage 1B section 5.2): every Top attempt of a designated builder
+    whose target is not Ready joins that target's pending chain, whatever the
+    decision reason and whether or not it advances setup; the chain is
+    credited when Top next attempts the target while Ready, and an incomplete
+    chain is never credited. The historical counter stays
+    summary.top_completed_setup_build_count.
+
+    tactical is the TACTICAL_V1 record (replay tape and initiator exchanges);
+    None under ESCAPE_FIRST.
+    """
+
+    summary: BatchSummary
+    initiator_policy: BatchInitiatorPolicy
+    top_completed_setup_builder_attempt_count: int
+    tactical: object | None = None
+
+
 def _render_counts(counts: dict[str, int]) -> str:
     if not counts:
         return "none"
@@ -1069,6 +1107,81 @@ def run_escape_first_batch(
     post_clear_handoff_mode: PostClearHandoffMode = PostClearHandoffMode.NONE,
     measure_post_clear_handoff: bool = False,
 ) -> BatchSummary:
+    """The ESCAPE_FIRST batch. Its signature and defaults are pinned (D3-B
+    promotion PG5), so the Stage 1B option lives on run_batch only."""
+    return run_batch(
+        matches=matches,
+        base_seed=base_seed,
+        top_behavior=top_behavior,
+        bottom_behavior=bottom_behavior,
+        commitment=commitment,
+        initial_clock=initial_clock,
+        starting_axis=starting_axis,
+        interval_seconds=interval_seconds,
+        top_stamina=top_stamina,
+        bottom_stamina=bottom_stamina,
+        top_behavior_mode=top_behavior_mode,
+        bottom_behavior_mode=bottom_behavior_mode,
+        bottom_responder_mode=bottom_responder_mode,
+        response_commitment_mode=response_commitment_mode,
+        enable_v02_setup=enable_v02_setup,
+        enable_v03_submissions=enable_v03_submissions,
+        enable_v03b_stalling=enable_v03b_stalling,
+        enable_v04_commitment_semantics=enable_v04_commitment_semantics,
+        enable_v04b_recognition=enable_v04b_recognition,
+        enable_stamina_settlement_rules=enable_stamina_settlement_rules,
+        enable_unfunded_responder_cost_waiver=enable_unfunded_responder_cost_waiver,
+        enable_supplemental_hold_settlement=enable_supplemental_hold_settlement,
+        recovery_initiation_mode=recovery_initiation_mode,
+        measure_stamina_economy=measure_stamina_economy,
+        measure_recovery_policy=measure_recovery_policy,
+        measure_reexhaustion_handoffs=measure_reexhaustion_handoffs,
+        shadow_stalling=shadow_stalling,
+        post_clear_handoff_mode=post_clear_handoff_mode,
+        measure_post_clear_handoff=measure_post_clear_handoff,
+        initiator_policy=BatchInitiatorPolicy.ESCAPE_FIRST,
+    ).summary
+
+
+def run_batch(
+    *,
+    matches: int,
+    base_seed: int,
+    top_behavior: TopBehavior,
+    bottom_behavior: BottomBehavior,
+    commitment: Commitment,
+    initial_clock: int,
+    starting_axis: float,
+    interval_seconds: int,
+    top_stamina: int,
+    bottom_stamina: int,
+    top_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
+    bottom_behavior_mode: BatchBehaviorMode = BatchBehaviorMode.FIXED,
+    bottom_responder_mode: BatchResponderMode = BatchResponderMode.RANDOM,
+    response_commitment_mode: BatchResponseCommitmentMode = (
+        BatchResponseCommitmentMode.FIXED_MEDIUM
+    ),
+    enable_v02_setup: bool = False,
+    enable_v03_submissions: bool = False,
+    enable_v03b_stalling: bool = False,
+    enable_v04_commitment_semantics: bool = False,
+    enable_v04b_recognition: bool = False,
+    enable_stamina_settlement_rules: bool = False,
+    enable_unfunded_responder_cost_waiver: bool = False,
+    enable_supplemental_hold_settlement: bool = False,
+    recovery_initiation_mode: RecoveryInitiationMode = (
+        RecoveryInitiationMode.CURRENT
+    ),
+    measure_stamina_economy: bool = False,
+    measure_recovery_policy: bool = False,
+    measure_reexhaustion_handoffs: bool = False,
+    shadow_stalling: bool = False,
+    post_clear_handoff_mode: PostClearHandoffMode = PostClearHandoffMode.NONE,
+    measure_post_clear_handoff: bool = False,
+    initiator_policy: BatchInitiatorPolicy = BatchInitiatorPolicy.ESCAPE_FIRST,
+) -> BatchRun:
+    if not isinstance(initiator_policy, BatchInitiatorPolicy):
+        raise ValueError(f"unknown initiator policy {initiator_policy!r}")
     if matches <= 0:
         raise ValueError("matches must be > 0")
     if enable_v03_submissions and not enable_v02_setup:
@@ -1130,6 +1243,48 @@ def run_escape_first_batch(
             "v0.4a semantics, LOW_WHILE_EXHAUSTED, Rule 1 ON, Rule 2 OFF, "
             "no settlement umbrella, and baseline MEDIUM"
         )
+    tactical = None
+    if initiator_policy is BatchInitiatorPolicy.TACTICAL_V1:
+        # Deferred import: the TE-1 modules import this one.
+        from . import tactical_policy
+
+        settings = dict(
+            matches=matches,
+            base_seed=base_seed,
+            top_behavior=top_behavior,
+            bottom_behavior=bottom_behavior,
+            commitment=commitment,
+            initial_clock=initial_clock,
+            starting_axis=starting_axis,
+            interval_seconds=interval_seconds,
+            top_stamina=top_stamina,
+            bottom_stamina=bottom_stamina,
+            top_behavior_mode=top_behavior_mode,
+            bottom_behavior_mode=bottom_behavior_mode,
+            bottom_responder_mode=bottom_responder_mode,
+            response_commitment_mode=response_commitment_mode,
+            enable_v02_setup=enable_v02_setup,
+            enable_v03_submissions=enable_v03_submissions,
+            enable_v03b_stalling=enable_v03b_stalling,
+            enable_v04_commitment_semantics=enable_v04_commitment_semantics,
+            enable_v04b_recognition=enable_v04b_recognition,
+            enable_stamina_settlement_rules=enable_stamina_settlement_rules,
+            enable_unfunded_responder_cost_waiver=(
+                enable_unfunded_responder_cost_waiver
+            ),
+            enable_supplemental_hold_settlement=(
+                enable_supplemental_hold_settlement
+            ),
+            recovery_initiation_mode=recovery_initiation_mode,
+            measure_stamina_economy=measure_stamina_economy,
+            measure_recovery_policy=measure_recovery_policy,
+            measure_reexhaustion_handoffs=measure_reexhaustion_handoffs,
+            shadow_stalling=shadow_stalling,
+            post_clear_handoff_mode=post_clear_handoff_mode,
+            measure_post_clear_handoff=measure_post_clear_handoff,
+        )
+        tactical_policy.validate_tactical_v1(settings)
+        tactical = tactical_policy.create_policy(settings)
 
     stamina_economy_collector = (
         StaminaEconomyCollector(
@@ -1214,6 +1369,7 @@ def run_escape_first_batch(
     top_completed_setup_builds = 0
     bottom_completed_setup_builds = 0
     top_followup_completed_setup_builds = 0
+    top_completed_setup_builder_attempts = 0
     top_behavior_windows: Counter[str] = Counter()
     bottom_behavior_windows: Counter[str] = Counter()
     top_behavior_switches = 0
@@ -1276,6 +1432,12 @@ def run_escape_first_batch(
                 match,
                 match_index=match_index,
             )
+        if tactical is not None:
+            tactical.start_match(
+                match_index=match_index,
+                match=match,
+                controller=handoff_controller,
+            )
         responder = RandomBlindResponder(base_seed + match_index)
         response_commitment_rng = random.Random(
             base_seed + match_index + 1_000_003
@@ -1306,6 +1468,7 @@ def run_escape_first_batch(
         top_has_initiated_action = False
         pending_setup_builds: Counter[tuple[Side, str]] = Counter()
         pending_top_followup_setup_builds: Counter[str] = Counter()
+        pending_top_builder_attempts: Counter[str] = Counter()
 
         while not match.ended:
             free_window = (
@@ -1437,7 +1600,15 @@ def run_escape_first_batch(
                     ),
                     policy_behavior=bottom_policy.choose(match),
                     counterfactual_action=(
-                        policy.choose(match).action_id
+                        (
+                            policy.choose(match)
+                            if tactical is None
+                            else tactical.choose(
+                                match,
+                                handoff_decision=handoff_decision,
+                                executed=False,
+                            ).decision
+                        ).action_id
                         if handoff_decision is not None
                         and handoff_decision.kind
                         is HandoffDecisionKind.LOCKOUT_HOLD
@@ -1493,8 +1664,8 @@ def run_escape_first_batch(
                     continue
                 # v0.2 restores established-position ordering:
                 # initiator locks action before responder chooses among legal responses.
-                decision = (
-                    BatchDecision(
+                if force_recovery_reset:
+                    decision = BatchDecision(
                         action_id=None,
                         reason="recovery-reset",
                         escape_probability=0.0,
@@ -1502,9 +1673,26 @@ def run_escape_first_batch(
                         expected_raw_axis=0.0,
                         expected_realized_axis=0.0,
                     )
-                    if force_recovery_reset
-                    else policy.choose(match)
-                )
+                elif tactical is None:
+                    decision = policy.choose(match)
+                else:
+                    # TACTICAL_V1, after D3-B and the force-RESET rules. A
+                    # precedence-forced commitment (LOW_WHILE_EXHAUSTED, the
+                    # D3-B token path) is never replaced: TE-1 then chooses
+                    # the action only, among candidates at that commitment.
+                    selection = tactical.choose(
+                        match,
+                        handoff_decision=handoff_decision,
+                        executed=True,
+                    )
+                    decision = selection.decision
+                    if selection.forced_by is not None:
+                        if selection.allowed != (selected_initiator_commitment,):
+                            raise RuntimeError(
+                                "TACTICAL_V1 precedence disagrees with the batch"
+                            )
+                    elif decision.action_id is not None:
+                        selected_initiator_commitment = selection.requested
                 if decision.action_id is None:
                     if recovery_policy_collector is not None:
                         recovery_policy_collector.before_reset(
@@ -1609,6 +1797,9 @@ def run_escape_first_batch(
                     )
                     response_id = hidden.response_id
             else:
+                if tactical is not None:
+                    # Unreachable: validation requires v0.2 for TACTICAL_V1.
+                    raise RuntimeError("TACTICAL_V1 has no v0.1 path")
                 # v0.1 blind harness preserves historical responder-first sampling.
                 hidden = responder.choose(side.opponent)
                 response_id = hidden.response_id
@@ -1709,6 +1900,15 @@ def run_escape_first_batch(
                 and action.id in match.setup_policy.target_action_ids
                 and match.setup_state.is_ready(action.id)
             )
+
+            if (
+                side is Side.TOP
+                and setup_target is not None
+                and not match.setup_state.is_ready(setup_target)
+            ):
+                # G4 (Stage 1B 5.2): reason-independent, counted at decision
+                # time whether or not the attempt advances setup.
+                pending_top_builder_attempts[setup_target] += 1
 
             if side is Side.TOP:
                 top_actions[action.short_name] += 1
@@ -1924,6 +2124,10 @@ def run_escape_first_batch(
                 credited = pending_setup_builds[(side, action.id)]
                 pending_setup_builds[(side, action.id)] = 0
                 if side is Side.TOP:
+                    top_completed_setup_builder_attempts += (
+                        pending_top_builder_attempts[action.id]
+                    )
+                    pending_top_builder_attempts[action.id] = 0
                     top_completed_setup_chains += 1
                     top_completed_setup_builds += credited
                     top_followup_completed_setup_builds += (
@@ -1986,7 +2190,7 @@ def run_escape_first_batch(
             matches_both_ever_exhausted += 1
         final_axes.append(match.axis)
 
-    return BatchSummary(
+    summary = BatchSummary(
         matches=matches,
         base_seed=base_seed,
         bottom_responder_mode=bottom_responder_mode,
@@ -2095,6 +2299,14 @@ def run_escape_first_batch(
             if post_clear_handoff_collector is not None
             else None
         ),
+    )
+    return BatchRun(
+        summary=summary,
+        initiator_policy=initiator_policy,
+        top_completed_setup_builder_attempt_count=(
+            top_completed_setup_builder_attempts
+        ),
+        tactical=tactical.finish() if tactical is not None else None,
     )
 
 

@@ -17,10 +17,14 @@ windows, recovery_hold() for D3-B LOCKOUT_HOLD. The window ordering is
 therefore the runtime ordering by construction. MountMatch holds no RNG, and
 the live match is never touched.
 
-Opponent windows use O-3: the opponent's declared initiator policy (here the
-batch EscapeFirstInitiatorPolicy, which has no setup projection) evaluated on
-the branch state, with the batch's commitment selection, recovery precedence
-and a copied D3-B controller.
+Opponent windows use O-3: the opponent's declared initiator policy evaluated
+on the branch state, with recovery precedence and a copied D3-B controller.
+Under ESCAPE_FIRST (Stage 1A-v2) that is the batch EscapeFirstInitiatorPolicy
+at the batch commitment. Under TACTICAL_V1 (Stage 1B, ae786af section 2.2) it
+is TE-1 (tiers, tie-breaks, stamina guard, precedence) whose nested setup
+valuation is the frozen single-chain projection (te.project_setup), never this
+continuation: nesting depth is exactly 1, and Continuation.project refuses
+re-entry.
 """
 from __future__ import annotations
 
@@ -38,6 +42,7 @@ from . import tactical_evaluator as te
 from .batch import (
     AdaptiveBehaviorPolicy,
     BatchBehaviorMode,
+    BatchInitiatorPolicy,
     BatchResponderMode,
     BatchResponseCommitmentMode,
     EscapeFirstInitiatorPolicy,
@@ -70,6 +75,9 @@ class Context:
     bottom_behavior_mode: BatchBehaviorMode
     recovery_initiation_mode: RecoveryInitiationMode
     d3b: bool
+    # The declared opponent initiator contract (O-3). Both initiators use the
+    # batch's initiator policy, so the opponent's contract is that policy.
+    initiator_policy: BatchInitiatorPolicy = BatchInitiatorPolicy.ESCAPE_FIRST
 
     @classmethod
     def from_batch_kwargs(cls, kwargs: dict) -> "Context":
@@ -96,6 +104,8 @@ class Context:
             recovery_initiation_mode=kwargs.get(
                 "recovery_initiation_mode", RecoveryInitiationMode.CURRENT),
             d3b=mode is PostClearHandoffMode.D3B_EXHAUSTED_TOKEN_LOCKOUT,
+            initiator_policy=BatchInitiatorPolicy(kwargs.get(
+                "initiator_policy", BatchInitiatorPolicy.ESCAPE_FIRST)),
         )
 
 
@@ -277,6 +287,7 @@ class Continuation:
         self._advance: dict = {}
         self._opponent: dict = {}
         self._use: dict = {}
+        self._projecting = False
 
     # -- one exchange (W1/W3 builder, or the opponent's chosen action) ---------
 
@@ -348,8 +359,21 @@ class Continuation:
         if exhausted_recover and (self.context.recovery_initiation_mode
                                   is RecoveryInitiationMode.RESET_WHILE_EXHAUSTED):
             return kind, None, None, controller
-        requested = (Commitment.LOW if exhausted_recover and self.context.recovery_initiation_mode
-                     is RecoveryInitiationMode.LOW_WHILE_EXHAUSTED else self.context.commitment)
+        low_forced = (exhausted_recover and self.context.recovery_initiation_mode
+                      is RecoveryInitiationMode.LOW_WHILE_EXHAUSTED)
+        if self.context.initiator_policy is BatchInitiatorPolicy.TACTICAL_V1:
+            # O-3 under TACTICAL_V1: TE-1 on the branch state, with the frozen
+            # single-chain projection as the nested setup surrogate (te.evaluate
+            # projects through te.project_setup, never through this
+            # continuation). Precedence as in play: a forced LOW leaves TE-1
+            # the action only.
+            allowed = (Commitment.LOW,) if low_forced else te.COMMITMENTS
+            choice = te.choose_te1(
+                m, te.candidates(m, self.context.model, branch.state, allowed))
+            if choice.value is None:
+                return kind, None, None, controller
+            return kind, choice.value.action_id, choice.value.requested, controller
+        requested = Commitment.LOW if low_forced else self.context.commitment
         decision = self.policy.choose(m)
         return kind, decision.action_id, requested, controller
 
@@ -397,6 +421,19 @@ class Continuation:
 
     def project(self, branch: Branch, action_id: str, requested: Commitment
                 ) -> ContinuationProjection | None:
+        """Section 2, at nesting depth exactly 1: a continuation started from
+        inside another continuation (for example by an opponent window) is a
+        contract violation, not an approximation."""
+        if self._projecting:
+            raise RuntimeError("nested continuation: projection v2 depth is exactly 1")
+        self._projecting = True
+        try:
+            return self._project(branch, action_id, requested)
+        finally:
+            self._projecting = False
+
+    def _project(self, branch: Branch, action_id: str, requested: Commitment
+                 ) -> ContinuationProjection | None:
         m = self.live
         state = branch.state
         target = m.setup_policy.target_for_builder(action_id)
