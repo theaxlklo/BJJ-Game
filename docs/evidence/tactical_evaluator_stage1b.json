@@ -1,0 +1,5012 @@
+{
+ "design_gates": {
+  "G1": {
+   "a_prod": 0,
+   "pooled_off": 80,
+   "pooled_on": 80,
+   "status": "FAIL"
+  },
+  "G2": {
+   "status": "PASS",
+   "tap": {
+    "A-PROD": 0,
+    "B-PROD": 8,
+    "E-PROD 142 OFF": 5,
+    "E-PROD 142 ON": 5,
+    "E-PROD 42 OFF": 3,
+    "E-PROD 42 ON": 3,
+    "PROTECT probe": 0
+   }
+  },
+  "G3": {
+   "b_prod": 73,
+   "e_pooled_off": 143,
+   "e_pooled_on": 145,
+   "status": "PASS"
+  },
+  "G4": {
+   "baseline": 1768,
+   "floor": 884,
+   "historical_counter": 0,
+   "reason_independent": 0,
+   "status": "PASS"
+  },
+  "G5": {
+   "runs": {
+    "E-PROD 142 OFF": {
+     "exhausted_share": 0.6224877783813145,
+     "first_exhausted_median": 75,
+     "median_ok": true,
+     "share_ok": true
+    },
+    "E-PROD 142 ON": {
+     "exhausted_share": 0.6206331877729258,
+     "first_exhausted_median": 75,
+     "median_ok": true,
+     "share_ok": true
+    },
+    "E-PROD 42 OFF": {
+     "exhausted_share": 0.6243127672571778,
+     "first_exhausted_median": 75.0,
+     "median_ok": true,
+     "share_ok": true
+    },
+    "E-PROD 42 ON": {
+     "exhausted_share": 0.624384236453202,
+     "first_exhausted_median": 75.0,
+     "median_ok": true,
+     "share_ok": true
+    }
+   },
+   "status": "PASS"
+  },
+  "G6": {
+   "modes": {
+    "OFF": {
+     "excluded_forced": {
+      "D3B_TOKEN": 25,
+      "LOW_WHILE_EXHAUSTED": 758
+     },
+     "high": 243,
+     "ok": true,
+     "share": 0.22541743970315398,
+     "te1_chosen": 1078
+    },
+    "ON": {
+     "excluded_forced": {
+      "D3B_TOKEN": 24,
+      "LOW_WHILE_EXHAUSTED": 758
+     },
+     "high": 243,
+     "ok": true,
+     "share": 0.22667910447761194,
+     "te1_chosen": 1072
+    }
+   },
+   "status": "PASS"
+  }
+ },
+ "holdouts_reported": {
+  "A-PROD 4242": {
+   "escapes": {
+    "baseline": 23,
+    "candidate": 0,
+    "ratio": 0.0
+   },
+   "tap": {
+    "baseline": 0,
+    "candidate": 0,
+    "ratio": null
+   },
+   "threat_matches": {
+    "baseline": 77,
+    "candidate": 0,
+    "ratio": 0.0
+   },
+   "timeouts": {
+    "baseline": 77,
+    "candidate": 100,
+    "ratio": 1.2987012987012987
+   },
+   "top_completed_builder_attempts": 0,
+   "top_completed_builds": {
+    "baseline": 308,
+    "candidate": 0,
+    "ratio": 0.0
+   }
+  },
+  "B-PROD 4242": {
+   "escapes": {
+    "baseline": 21,
+    "candidate": 65,
+    "ratio": 3.0952380952380953
+   },
+   "tap": {
+    "baseline": 8,
+    "candidate": 15,
+    "ratio": 1.875
+   },
+   "threat_matches": {
+    "baseline": 49,
+    "candidate": 34,
+    "ratio": 0.6938775510204082
+   },
+   "timeouts": {
+    "baseline": 71,
+    "candidate": 20,
+    "ratio": 0.28169014084507044
+   },
+   "top_completed_builder_attempts": 152,
+   "top_completed_builds": {
+    "baseline": 824,
+    "candidate": 152,
+    "ratio": 0.18446601941747573
+   }
+  },
+  "E-PROD 4242 OFF": {
+   "bottom_exhausted_share": 0.5728587319243604,
+   "bottom_first_exhausted_median": 75,
+   "escapes": {
+    "baseline": 42,
+    "candidate": 65,
+    "ratio": 1.5476190476190477
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 100,
+      "te1_chosen": 178
+     },
+     "top": {
+      "high": 14,
+      "te1_chosen": 423
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 21,
+     "LOW_WHILE_EXHAUSTED": 332
+    },
+    "high": 114,
+    "te1_chosen": 601
+   },
+   "tap": {
+    "baseline": 2,
+    "candidate": 10,
+    "ratio": 5.0
+   },
+   "threat_matches": {
+    "baseline": 49,
+    "candidate": 31,
+    "ratio": 0.6326530612244898
+   },
+   "timeouts": {
+    "baseline": 56,
+    "candidate": 25,
+    "ratio": 0.44642857142857145
+   },
+   "top_completed_builder_attempts": 152,
+   "top_completed_builds": {
+    "baseline": 790,
+    "candidate": 152,
+    "ratio": 0.19240506329113924
+   }
+  },
+  "E-PROD 4242 ON": {
+   "bottom_exhausted_share": 0.5718294051627385,
+   "bottom_first_exhausted_median": 75,
+   "escapes": {
+    "baseline": 42,
+    "candidate": 66,
+    "ratio": 1.5714285714285714
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 100,
+      "te1_chosen": 176
+     },
+     "top": {
+      "high": 14,
+      "te1_chosen": 423
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 19,
+     "LOW_WHILE_EXHAUSTED": 332
+    },
+    "high": 114,
+    "te1_chosen": 599
+   },
+   "tap": {
+    "baseline": 2,
+    "candidate": 10,
+    "ratio": 5.0
+   },
+   "threat_matches": {
+    "baseline": 49,
+    "candidate": 31,
+    "ratio": 0.6326530612244898
+   },
+   "timeouts": {
+    "baseline": 56,
+    "candidate": 24,
+    "ratio": 0.42857142857142855
+   },
+   "top_completed_builder_attempts": 152,
+   "top_completed_builds": {
+    "baseline": 790,
+    "candidate": 152,
+    "ratio": 0.19240506329113924
+   }
+  },
+  "E-PROD 4342 OFF": {
+   "bottom_exhausted_share": 0.5801652892561984,
+   "bottom_first_exhausted_median": 75.0,
+   "escapes": {
+    "baseline": 42,
+    "candidate": 68,
+    "ratio": 1.619047619047619
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 101,
+      "te1_chosen": 177
+     },
+     "top": {
+      "high": 15,
+      "te1_chosen": 424
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 22,
+     "LOW_WHILE_EXHAUSTED": 318
+    },
+    "high": 116,
+    "te1_chosen": 601
+   },
+   "tap": {
+    "baseline": 1,
+    "candidate": 7,
+    "ratio": 7.0
+   },
+   "threat_matches": {
+    "baseline": 57,
+    "candidate": 28,
+    "ratio": 0.49122807017543857
+   },
+   "timeouts": {
+    "baseline": 57,
+    "candidate": 25,
+    "ratio": 0.43859649122807015
+   },
+   "top_completed_builder_attempts": 162,
+   "top_completed_builds": {
+    "baseline": 725,
+    "candidate": 162,
+    "ratio": 0.22344827586206897
+   }
+  },
+  "E-PROD 4342 ON": {
+   "bottom_exhausted_share": 0.5808416389811739,
+   "bottom_first_exhausted_median": 75.0,
+   "escapes": {
+    "baseline": 42,
+    "candidate": 69,
+    "ratio": 1.6428571428571428
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 101,
+      "te1_chosen": 178
+     },
+     "top": {
+      "high": 15,
+      "te1_chosen": 424
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 22,
+     "LOW_WHILE_EXHAUSTED": 318
+    },
+    "high": 116,
+    "te1_chosen": 602
+   },
+   "tap": {
+    "baseline": 1,
+    "candidate": 7,
+    "ratio": 7.0
+   },
+   "threat_matches": {
+    "baseline": 57,
+    "candidate": 28,
+    "ratio": 0.49122807017543857
+   },
+   "timeouts": {
+    "baseline": 57,
+    "candidate": 24,
+    "ratio": 0.42105263157894735
+   },
+   "top_completed_builder_attempts": 162,
+   "top_completed_builds": {
+    "baseline": 725,
+    "candidate": 162,
+    "ratio": 0.22344827586206897
+   }
+  }
+ },
+ "implementation": "fd19dd0f6220753d4e135e98db2abd1f03963a3b",
+ "integrity_ok": true,
+ "preregistration": "ae786af483d109785f172cb10a17170ece2ed241",
+ "preservation": {
+  "P1": {
+   "local_baselines_exact": true,
+   "note": "full suite, digest and both checkers on exact-head CI (3.11, 3.13)",
+   "status": "CI"
+  },
+  "P2": {
+   "protected_paths_changed": [],
+   "status": "PASS"
+  },
+  "P3": {
+   "status": "PASS"
+  },
+  "P4": {
+   "status": "PASS"
+  },
+  "P5": {
+   "status": "PASS"
+  },
+  "P6": {
+   "status": "CI"
+  }
+ },
+ "stage_1b": "FAIL",
+ "surfaces": {
+  "A-PROD": {
+   "baseline": {
+    "evaluator_rng_draws": 0,
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     78,
+     0,
+     22,
+     78,
+     312
+    ],
+    "g4_equivalence": true,
+    "observed": [
+     78,
+     0,
+     22,
+     78,
+     312
+    ],
+    "reason_independent_builder_attempts": 312
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 0,
+      "te1_chosen": 0
+     },
+     "top": {
+      "high": 0,
+      "te1_chosen": 0
+     }
+    },
+    "excluded_forced": {},
+    "high": 0,
+    "te1_chosen": 0
+   },
+   "gated": true,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 0,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 0,
+     "d3b_decisions": {},
+     "holds_executed": 0,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 0,
+     "recovery_hold_history": 0
+    },
+    "p3_ok": true,
+    "p4b_second_run_identical": true,
+    "p4c_replay_identical": true,
+    "p5": {
+     "checked": 5900
+    },
+    "p5_ok": true,
+    "tape_entries": 5900,
+    "tape_executed": 5900
+   },
+   "outcomes": {
+    "escapes": 0,
+    "tap": 0,
+    "threat_matches": 0,
+    "timeouts": 100,
+    "top_completed_builder_attempts": 0,
+    "top_completed_builds": 0
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 0,
+     "bottom_position": 0,
+     "bottom_reset": 2900,
+     "bottom_setup": 0,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 3000,
+     "top_setup": 0,
+     "top_submission": 0
+    },
+    "builder_attempts_per_threat_entry": null,
+    "calibration": {
+     "progress": {
+      "actual": 0,
+      "deviation": 0.0,
+      "n": 0,
+      "predicted": 0.0,
+      "predicted_exact": "0",
+      "sigma": 0.0,
+      "variance_exact": "0",
+      "within_3_sigma": true,
+      "z": null
+     },
+     "setup_advance": {
+      "actual": 0,
+      "deviation": 0.0,
+      "n": 0,
+      "predicted": 0.0,
+      "predicted_exact": "0",
+      "sigma": 0.0,
+      "variance_exact": "0",
+      "within_3_sigma": true,
+      "z": null
+     },
+     "terminal": {
+      "actual": 0,
+      "deviation": 0.0,
+      "n": 0,
+      "predicted": 0.0,
+      "predicted_exact": "0",
+      "sigma": 0.0,
+      "variance_exact": "0",
+      "within_3_sigma": true,
+      "z": null
+     }
+    },
+    "commitment_distribution": {},
+    "counterfactual_calls": 0,
+    "exchanges": 0,
+    "executed_decisions": 5900,
+    "forgone_better_position": 0,
+    "free_initiative_windows": 0,
+    "horizon": {},
+    "matches_reaching_top_ready": 0,
+    "mean_time_to_first_top_ready": null,
+    "o3_fidelity": {
+     "bottom:reset": {
+      "action_commitment_exact": 2900,
+      "action_exact": 2900,
+      "checked": 2900
+     },
+     "top:reset": {
+      "action_commitment_exact": 3000,
+      "action_exact": 3000,
+      "checked": 3000
+     }
+    },
+    "precedence_forced_exchanges": {},
+    "ready_conversion_top": {
+     "actual": 0,
+     "predicted": 0.0,
+     "predicted_exact": "0",
+     "uses": 0
+    },
+    "resets_per_match": {
+     "bottom": 29.0,
+     "top": 30.0
+    },
+    "setup_calibration_chains": {
+     "actual": 0,
+     "deviation": 0.0,
+     "n": 0,
+     "predicted": 0.0,
+     "predicted_exact": "0",
+     "sigma": 0.0,
+     "variance_exact": "0",
+     "within_3_sigma": true,
+     "z": null
+    },
+    "setup_decisions_per_threat_entry": null,
+    "te1_tier_distribution": {
+     "bottom:reset": 2900,
+     "top:reset": 3000
+    },
+    "time_by_initiative_band": {
+     "bottom|Fresh|Fresh": 6000,
+     "bottom|Tired|Tired": 2500,
+     "bottom|Working|Working": 6500,
+     "top|Fresh|Fresh": 6500,
+     "top|Tired|Tired": 2500,
+     "top|Working|Working": 6000
+    },
+    "top_setup_tier_decisions": 0
+   },
+   "rng": {
+    "baseline_draws": 400,
+    "digest": "f563b29d9ea6816e5482e75c6db0b40b58033bfad5e3b807d34569efbb5c3292"
+   },
+   "summary": {
+    "bottom_action_counts": {},
+    "bottom_escape_priority_count": 0,
+    "bottom_final_stamina_mean": 40,
+    "bottom_final_stamina_median": 40.0,
+    "bottom_first_exhausted_time_median": null,
+    "bottom_position_attack_count": 0,
+    "bottom_reset_count": 2900,
+    "bottom_setup_action_count": 0,
+    "final_axis_mean": 4.0,
+    "free_initiative_window_count": 0,
+    "matches_both_ever_exhausted": 0,
+    "matches_bottom_ever_exhausted": 0,
+    "matches_reached_submission_control": 0,
+    "matches_reached_submission_finish": 0,
+    "matches_reached_submission_threat": 0,
+    "matches_top_ever_exhausted": 0,
+    "outcome_counts": {
+     "TIMEOUT \u2014 Mount retained": 100
+    },
+    "response_requested_commitment_counts": {},
+    "top_action_counts": {},
+    "top_completed_setup_build_count": 0,
+    "top_completed_setup_chain_count": 0,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 40,
+    "top_final_stamina_median": 40.0,
+    "top_first_exhausted_time_median": null,
+    "top_position_attack_count": 0,
+    "top_reset_count": 3000,
+    "top_setup_action_count": 0,
+    "top_submission_attempt_count": 0,
+    "top_submission_priority_count": 0
+   }
+  },
+  "A-PROD 4242": {
+   "baseline": {
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     77,
+     0,
+     23,
+     77,
+     308
+    ],
+    "source": "Stage 1A-v2 committed evidence"
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 0,
+      "te1_chosen": 0
+     },
+     "top": {
+      "high": 0,
+      "te1_chosen": 0
+     }
+    },
+    "excluded_forced": {},
+    "high": 0,
+    "te1_chosen": 0
+   },
+   "gated": false,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 0,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 0,
+     "d3b_decisions": {},
+     "holds_executed": 0,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 0,
+     "recovery_hold_history": 0
+    },
+    "p3_ok": true,
+    "p5": {
+     "checked": 5900
+    },
+    "p5_ok": true,
+    "tape_entries": 5900,
+    "tape_executed": 5900
+   },
+   "outcomes": {
+    "escapes": 0,
+    "tap": 0,
+    "threat_matches": 0,
+    "timeouts": 100,
+    "top_completed_builder_attempts": 0,
+    "top_completed_builds": 0
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 0,
+     "bottom_position": 0,
+     "bottom_reset": 2900,
+     "bottom_setup": 0,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 3000,
+     "top_setup": 0,
+     "top_submission": 0
+    },
+    "builder_attempts_per_threat_entry": null,
+    "calibration": {
+     "progress": {
+      "actual": 0,
+      "deviation": 0.0,
+      "n": 0,
+      "predicted": 0.0,
+      "predicted_exact": "0",
+      "sigma": 0.0,
+      "variance_exact": "0",
+      "within_3_sigma": true,
+      "z": null
+     },
+     "setup_advance": {
+      "actual": 0,
+      "deviation": 0.0,
+      "n": 0,
+      "predicted": 0.0,
+      "predicted_exact": "0",
+      "sigma": 0.0,
+      "variance_exact": "0",
+      "within_3_sigma": true,
+      "z": null
+     },
+     "terminal": {
+      "actual": 0,
+      "deviation": 0.0,
+      "n": 0,
+      "predicted": 0.0,
+      "predicted_exact": "0",
+      "sigma": 0.0,
+      "variance_exact": "0",
+      "within_3_sigma": true,
+      "z": null
+     }
+    },
+    "commitment_distribution": {},
+    "counterfactual_calls": 0,
+    "exchanges": 0,
+    "executed_decisions": 5900,
+    "forgone_better_position": 0,
+    "free_initiative_windows": 0,
+    "horizon": {},
+    "matches_reaching_top_ready": 0,
+    "mean_time_to_first_top_ready": null,
+    "o3_fidelity": {
+     "bottom:reset": {
+      "action_commitment_exact": 2900,
+      "action_exact": 2900,
+      "checked": 2900
+     },
+     "top:reset": {
+      "action_commitment_exact": 3000,
+      "action_exact": 3000,
+      "checked": 3000
+     }
+    },
+    "precedence_forced_exchanges": {},
+    "ready_conversion_top": {
+     "actual": 0,
+     "predicted": 0.0,
+     "predicted_exact": "0",
+     "uses": 0
+    },
+    "resets_per_match": {
+     "bottom": 29.0,
+     "top": 30.0
+    },
+    "setup_calibration_chains": {
+     "actual": 0,
+     "deviation": 0.0,
+     "n": 0,
+     "predicted": 0.0,
+     "predicted_exact": "0",
+     "sigma": 0.0,
+     "variance_exact": "0",
+     "within_3_sigma": true,
+     "z": null
+    },
+    "setup_decisions_per_threat_entry": null,
+    "te1_tier_distribution": {
+     "bottom:reset": 2900,
+     "top:reset": 3000
+    },
+    "time_by_initiative_band": {
+     "bottom|Fresh|Fresh": 6000,
+     "bottom|Tired|Tired": 2500,
+     "bottom|Working|Working": 6500,
+     "top|Fresh|Fresh": 6500,
+     "top|Tired|Tired": 2500,
+     "top|Working|Working": 6000
+    },
+    "top_setup_tier_decisions": 0
+   },
+   "rng": {
+    "baseline_draws": 400,
+    "digest": "f563b29d9ea6816e5482e75c6db0b40b58033bfad5e3b807d34569efbb5c3292"
+   },
+   "summary": {
+    "bottom_action_counts": {},
+    "bottom_escape_priority_count": 0,
+    "bottom_final_stamina_mean": 40,
+    "bottom_final_stamina_median": 40.0,
+    "bottom_first_exhausted_time_median": null,
+    "bottom_position_attack_count": 0,
+    "bottom_reset_count": 2900,
+    "bottom_setup_action_count": 0,
+    "final_axis_mean": 4.0,
+    "free_initiative_window_count": 0,
+    "matches_both_ever_exhausted": 0,
+    "matches_bottom_ever_exhausted": 0,
+    "matches_reached_submission_control": 0,
+    "matches_reached_submission_finish": 0,
+    "matches_reached_submission_threat": 0,
+    "matches_top_ever_exhausted": 0,
+    "outcome_counts": {
+     "TIMEOUT \u2014 Mount retained": 100
+    },
+    "response_requested_commitment_counts": {},
+    "top_action_counts": {},
+    "top_completed_setup_build_count": 0,
+    "top_completed_setup_chain_count": 0,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 40,
+    "top_final_stamina_median": 40.0,
+    "top_first_exhausted_time_median": null,
+    "top_position_attack_count": 0,
+    "top_reset_count": 3000,
+    "top_setup_action_count": 0,
+    "top_submission_attempt_count": 0,
+    "top_submission_priority_count": 0
+   }
+  },
+  "B-PROD": {
+   "baseline": {
+    "evaluator_rng_draws": 0,
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     59,
+     9,
+     12,
+     79,
+     880
+    ],
+    "g4_equivalence": true,
+    "observed": [
+     59,
+     9,
+     12,
+     79,
+     880
+    ],
+    "reason_independent_builder_attempts": 880
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 100,
+      "te1_chosen": 121
+     },
+     "top": {
+      "high": 22,
+      "te1_chosen": 363
+     }
+    },
+    "excluded_forced": {},
+    "high": 122,
+    "te1_chosen": 484
+   },
+   "gated": true,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 0,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 0,
+     "d3b_decisions": {},
+     "holds_executed": 0,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 0,
+     "recovery_hold_history": 0
+    },
+    "p3_ok": true,
+    "p4b_second_run_identical": true,
+    "p4c_replay_identical": true,
+    "p5": {
+     "checked": 1417
+    },
+    "p5_ok": true,
+    "tape_entries": 1417,
+    "tape_executed": 1417
+   },
+   "outcomes": {
+    "escapes": 73,
+    "tap": 8,
+    "threat_matches": 27,
+    "timeouts": 19,
+    "top_completed_builder_attempts": 130,
+    "top_completed_builds": 130
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 100,
+     "bottom_position": 4,
+     "bottom_reset": 574,
+     "bottom_setup": 17,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 359,
+     "top_setup": 203,
+     "top_submission": 160
+    },
+    "builder_attempts_per_threat_entry": 4.814814814814815,
+    "calibration": {
+     "progress": {
+      "actual": 74,
+      "deviation": -8.25,
+      "n": 484,
+      "predicted": 82.25,
+      "predicted_exact": "329/4",
+      "sigma": 4.583333333333333,
+      "variance_exact": "3025/144",
+      "within_3_sigma": true,
+      "z": -1.8
+     },
+     "setup_advance": {
+      "actual": 208,
+      "deviation": -2.0,
+      "n": 484,
+      "predicted": 210.0,
+      "predicted_exact": "210",
+      "sigma": 1.8257418583505538,
+      "variance_exact": "10/3",
+      "within_3_sigma": true,
+      "z": -1.0954451150103321
+     },
+     "terminal": {
+      "actual": 81,
+      "deviation": 7.416666666666667,
+      "n": 484,
+      "predicted": 73.58333333333333,
+      "predicted_exact": "883/12",
+      "sigma": 4.781087355016251,
+      "variance_exact": "9875/432",
+      "within_3_sigma": true,
+      "z": 1.5512510263769186
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 3,
+     "bottom:position:MEDIUM": 1,
+     "bottom:setup:MEDIUM": 17,
+     "bottom:terminal:HIGH": 100,
+     "top:progress:HIGH": 22,
+     "top:progress:LOW": 7,
+     "top:progress:MEDIUM": 122,
+     "top:setup:LOW": 203,
+     "top:terminal:MEDIUM": 9
+    },
+    "counterfactual_calls": 0,
+    "exchanges": 484,
+    "executed_decisions": 1417,
+    "forgone_better_position": 1,
+    "free_initiative_windows": 0,
+    "horizon": {
+     "closed_chains_with_r": 65,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 27,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 4,
+      "action_exact": 4,
+      "checked": 4
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 574,
+      "action_exact": 574,
+      "checked": 574
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 0,
+      "action_exact": 0,
+      "checked": 17
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 100,
+      "action_exact": 100,
+      "checked": 100
+     },
+     "top:progress": {
+      "action_commitment_exact": 151,
+      "action_exact": 151,
+      "checked": 151
+     },
+     "top:reset": {
+      "action_commitment_exact": 359,
+      "action_exact": 359,
+      "checked": 359
+     },
+     "top:setup": {
+      "action_commitment_exact": 100,
+      "action_exact": 103,
+      "checked": 203
+     },
+     "top:terminal": {
+      "action_commitment_exact": 9,
+      "action_exact": 9,
+      "checked": 9
+     }
+    },
+    "precedence_forced_exchanges": {},
+    "ready_conversion_top": {
+     "actual": 27,
+     "predicted": 27.5,
+     "predicted_exact": "55/2",
+     "uses": 65
+    },
+    "resets_per_match": {
+     "bottom": 5.74,
+     "top": 3.59
+    },
+    "setup_calibration_chains": {
+     "actual": 27,
+     "deviation": -2.6264789094650207,
+     "n": 138,
+     "predicted": 29.62647890946502,
+     "predicted_exact": "460751/15552",
+     "sigma": 3.8657633687555912,
+     "variance_exact": "32530110425/2176782336",
+     "within_3_sigma": true,
+     "z": -0.6794205073939892
+    },
+    "setup_decisions_per_threat_entry": 7.518518518518518,
+    "te1_tier_distribution": {
+     "bottom:position": 4,
+     "bottom:reset": 574,
+     "bottom:setup": 17,
+     "bottom:terminal": 100,
+     "top:progress": 151,
+     "top:reset": 359,
+     "top:setup": 203,
+     "top:terminal": 9
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2080,
+     "bottom|Fresh|Fresh": 625,
+     "bottom|Fresh|Working": 10,
+     "bottom|Tired|Exhausted": 180,
+     "bottom|Tired|Tired": 240,
+     "bottom|Tired|Working": 5,
+     "bottom|Working|Tired": 155,
+     "bottom|Working|Working": 275,
+     "top|Exhausted|Exhausted": 1995,
+     "top|Fresh|Fresh": 760,
+     "top|Fresh|Working": 10,
+     "top|Tired|Exhausted": 190,
+     "top|Tired|Tired": 235,
+     "top|Tired|Working": 5,
+     "top|Working|Tired": 155,
+     "top|Working|Working": 260
+    },
+    "top_setup_tier_decisions": 203
+   },
+   "rng": {
+    "baseline_draws": 3883,
+    "digest": "f3d1ae03fcb5c10d59977c353c7f99e940703f9ddfd63042887382eb36602579"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 17,
+     "Elbow-Knee Escape": 102,
+     "Trap-and-Roll": 2
+    },
+    "bottom_escape_priority_count": 100,
+    "bottom_final_stamina_mean": 61.04,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75.0,
+    "bottom_position_attack_count": 4,
+    "bottom_reset_count": 574,
+    "bottom_setup_action_count": 17,
+    "final_axis_mean": 0.715,
+    "free_initiative_window_count": 0,
+    "matches_both_ever_exhausted": 26,
+    "matches_bottom_ever_exhausted": 26,
+    "matches_reached_submission_control": 27,
+    "matches_reached_submission_finish": 20,
+    "matches_reached_submission_threat": 27,
+    "matches_top_ever_exhausted": 26,
+    "outcome_counts": {
+     "Half Guard": 73,
+     "TAP \u2014 Americana": 8,
+     "TIMEOUT \u2014 Mount retained": 19
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 124,
+     "LOW": 239,
+     "MEDIUM": 121
+    },
+    "top_action_counts": {
+     "Americana Finish": 95,
+     "Americana Isolation": 65,
+     "Climb High": 203
+    },
+    "top_completed_setup_build_count": 130,
+    "top_completed_setup_chain_count": 65,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 61.85,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 85.0,
+    "top_position_attack_count": 0,
+    "top_reset_count": 359,
+    "top_setup_action_count": 203,
+    "top_submission_attempt_count": 160,
+    "top_submission_priority_count": 160
+   }
+  },
+  "B-PROD 4242": {
+   "baseline": {
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     49,
+     8,
+     21,
+     71,
+     824
+    ],
+    "source": "Stage 1A-v2 committed evidence"
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 100,
+      "te1_chosen": 131
+     },
+     "top": {
+      "high": 20,
+      "te1_chosen": 421
+     }
+    },
+    "excluded_forced": {},
+    "high": 120,
+    "te1_chosen": 552
+   },
+   "gated": false,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 0,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 0,
+     "d3b_decisions": {},
+     "holds_executed": 0,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 0,
+     "recovery_hold_history": 0
+    },
+    "p3_ok": true,
+    "p5": {
+     "checked": 1573
+    },
+    "p5_ok": true,
+    "tape_entries": 1573,
+    "tape_executed": 1573
+   },
+   "outcomes": {
+    "escapes": 65,
+    "tap": 15,
+    "threat_matches": 34,
+    "timeouts": 20,
+    "top_completed_builder_attempts": 152,
+    "top_completed_builds": 152
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 100,
+     "bottom_position": 12,
+     "bottom_reset": 638,
+     "bottom_setup": 19,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 383,
+     "top_setup": 218,
+     "top_submission": 203
+    },
+    "builder_attempts_per_threat_entry": 4.470588235294118,
+    "calibration": {
+     "progress": {
+      "actual": 89,
+      "deviation": 9.055555555555555,
+      "n": 552,
+      "predicted": 79.94444444444444,
+      "predicted_exact": "1439/18",
+      "sigma": 5.332320505681241,
+      "variance_exact": "18425/648",
+      "within_3_sigma": true,
+      "z": 1.6982391710902316
+     },
+     "setup_advance": {
+      "actual": 226,
+      "deviation": 0.3333333333333333,
+      "n": 552,
+      "predicted": 225.66666666666666,
+      "predicted_exact": "677/3",
+      "sigma": 1.9436506316151,
+      "variance_exact": "34/9",
+      "within_3_sigma": true,
+      "z": 0.17149858514250882
+     },
+     "terminal": {
+      "actual": 80,
+      "deviation": -0.6944444444444444,
+      "n": 552,
+      "predicted": 80.69444444444444,
+      "predicted_exact": "2905/36",
+      "sigma": 5.206018003886475,
+      "variance_exact": "35125/1296",
+      "within_3_sigma": true,
+      "z": -0.13339263212805205
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 11,
+     "bottom:position:MEDIUM": 1,
+     "bottom:setup:MEDIUM": 19,
+     "bottom:terminal:HIGH": 100,
+     "top:progress:HIGH": 20,
+     "top:progress:LOW": 3,
+     "top:progress:MEDIUM": 150,
+     "top:setup:LOW": 218,
+     "top:terminal:MEDIUM": 30
+    },
+    "counterfactual_calls": 0,
+    "exchanges": 552,
+    "executed_decisions": 1573,
+    "forgone_better_position": 0,
+    "free_initiative_windows": 0,
+    "horizon": {
+     "closed_chains_with_r": 76,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 35,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 12,
+      "action_exact": 12,
+      "checked": 12
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 638,
+      "action_exact": 638,
+      "checked": 638
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 0,
+      "action_exact": 0,
+      "checked": 19
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 100,
+      "action_exact": 100,
+      "checked": 100
+     },
+     "top:progress": {
+      "action_commitment_exact": 173,
+      "action_exact": 173,
+      "checked": 173
+     },
+     "top:reset": {
+      "action_commitment_exact": 383,
+      "action_exact": 383,
+      "checked": 383
+     },
+     "top:setup": {
+      "action_commitment_exact": 115,
+      "action_exact": 117,
+      "checked": 218
+     },
+     "top:terminal": {
+      "action_commitment_exact": 30,
+      "action_exact": 30,
+      "checked": 30
+     }
+    },
+    "precedence_forced_exchanges": {},
+    "ready_conversion_top": {
+     "actual": 34,
+     "predicted": 31.555555555555557,
+     "predicted_exact": "284/9",
+     "uses": 76
+    },
+    "resets_per_match": {
+     "bottom": 6.38,
+     "top": 3.83
+    },
+    "setup_calibration_chains": {
+     "actual": 34,
+     "deviation": 2.828939471879287,
+     "n": 142,
+     "predicted": 31.171060528120712,
+     "predicted_exact": "1454317/46656",
+     "sigma": 3.9179899946905135,
+     "variance_exact": "33415014185/2176782336",
+     "within_3_sigma": true,
+     "z": 0.7220384625057594
+    },
+    "setup_decisions_per_threat_entry": 6.411764705882353,
+    "te1_tier_distribution": {
+     "bottom:position": 12,
+     "bottom:reset": 638,
+     "bottom:setup": 19,
+     "bottom:terminal": 100,
+     "top:progress": 173,
+     "top:reset": 383,
+     "top:setup": 218,
+     "top:terminal": 30
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2200,
+     "bottom|Exhausted|Tired": 25,
+     "bottom|Fresh|Fresh": 665,
+     "bottom|Fresh|Working": 10,
+     "bottom|Tired|Exhausted": 145,
+     "bottom|Tired|Tired": 330,
+     "bottom|Tired|Working": 25,
+     "bottom|Working|Tired": 120,
+     "bottom|Working|Working": 425,
+     "top|Exhausted|Exhausted": 2140,
+     "top|Exhausted|Tired": 5,
+     "top|Fresh|Fresh": 840,
+     "top|Fresh|Working": 10,
+     "top|Tired|Exhausted": 140,
+     "top|Tired|Tired": 340,
+     "top|Tired|Working": 25,
+     "top|Working|Tired": 110,
+     "top|Working|Working": 410
+    },
+    "top_setup_tier_decisions": 218
+   },
+   "rng": {
+    "baseline_draws": 4352,
+    "digest": "032b4013bf06569488c04553d7be47dcd8c8c4348f2d2d847786d6ad1f2be44a"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 19,
+     "Elbow-Knee Escape": 110,
+     "Trap-and-Roll": 2
+    },
+    "bottom_escape_priority_count": 100,
+    "bottom_final_stamina_mean": 56.12,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75,
+    "bottom_position_attack_count": 12,
+    "bottom_reset_count": 638,
+    "bottom_setup_action_count": 19,
+    "final_axis_mean": 1.07,
+    "free_initiative_window_count": 0,
+    "matches_both_ever_exhausted": 31,
+    "matches_bottom_ever_exhausted": 31,
+    "matches_reached_submission_control": 31,
+    "matches_reached_submission_finish": 24,
+    "matches_reached_submission_threat": 34,
+    "matches_top_ever_exhausted": 33,
+    "outcome_counts": {
+     "Half Guard": 65,
+     "TAP \u2014 Americana": 15,
+     "TIMEOUT \u2014 Mount retained": 20
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 128,
+     "LOW": 295,
+     "MEDIUM": 129
+    },
+    "top_action_counts": {
+     "Americana Finish": 127,
+     "Americana Isolation": 76,
+     "Climb High": 218
+    },
+    "top_completed_setup_build_count": 152,
+    "top_completed_setup_chain_count": 76,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 56.46,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 85,
+    "top_position_attack_count": 0,
+    "top_reset_count": 383,
+    "top_setup_action_count": 218,
+    "top_submission_attempt_count": 203,
+    "top_submission_priority_count": 203
+   }
+  },
+  "E-PROD 142 OFF": {
+   "baseline": {
+    "evaluator_rng_draws": 0,
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     57,
+     4,
+     31,
+     65,
+     841
+    ],
+    "g4_equivalence": true,
+    "observed": [
+     57,
+     4,
+     31,
+     65,
+     841
+    ],
+    "reason_independent_builder_attempts": 841
+   },
+   "bottom_exhausted_share_exact": {
+    "exhausted_seconds": 5730,
+    "match_seconds": 9205
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 101,
+      "te1_chosen": 150
+     },
+     "top": {
+      "high": 20,
+      "te1_chosen": 415
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 11,
+     "LOW_WHILE_EXHAUSTED": 405
+    },
+    "high": 121,
+    "te1_chosen": 565
+   },
+   "gated": true,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 416,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 19,
+     "d3b_decisions": {
+      "ARMED_NORMAL": 30,
+      "LOCKOUT_HOLD": 19,
+      "TOKEN": 11,
+      "UNARMED": 832
+     },
+     "holds_executed": 19,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 19,
+     "recovery_hold_history": 19
+    },
+    "p3_ok": true,
+    "p4b_second_run_identical": true,
+    "p4c_replay_identical": true,
+    "p5": {
+     "checked": 1815
+    },
+    "p5_ok": true,
+    "tape_entries": 1815,
+    "tape_executed": 1796
+   },
+   "late_recovery": {
+    "after_first_clear_totals": {
+     "attempts_Exhausted_LOW": 11,
+     "attempts_non-Exhausted_LOW": 29,
+     "attempts_non-Exhausted_MEDIUM": 1
+    },
+    "bottom_exhausted_share_of_match_time": 0.6225,
+    "bottom_first_clear": {
+     "max": 300,
+     "median": 260,
+     "min": 160,
+     "n": 11,
+     "p10": 160,
+     "p90": 300
+    },
+    "bottom_first_exhausted": {
+     "max": 90,
+     "median": 75,
+     "min": 50,
+     "n": 31,
+     "p10": 65,
+     "p90": 85
+    },
+    "bottom_stamina_at_first_exhausted": {
+     "max": 25,
+     "median": 23,
+     "min": 11,
+     "n": 31,
+     "p10": 16,
+     "p90": 24
+    },
+    "escapes_by_commitment_and_state": {
+     "HIGH/non-Exhausted": 68,
+     "LOW/Exhausted": 1
+    },
+    "escapes_by_phase": {
+     "after first clear": 1,
+     "before first Exhausted entry": 68
+    },
+    "first_episode_duration_cleared": {
+     "max": 235,
+     "median": 185,
+     "min": 85,
+     "n": 11,
+     "p10": 85,
+     "p90": 220
+    },
+    "first_episode_totals": {
+     "behavior_drain": 0,
+     "bottom_attempts": 405,
+     "bottom_attempts_LOW": 405,
+     "bottom_initiation_spend": 1215,
+     "bottom_resets": 126,
+     "conserve_gain": 2176,
+     "hold_spend": 86,
+     "response_spend": 575,
+     "seconds": 5440,
+     "top_attempts": 83,
+     "top_attempts_funded": 83
+    },
+    "matches": 100,
+    "opening_totals_entered_matches": {
+     "behavior_drain": 473,
+     "behavior_gain": 0,
+     "bottom_attempts_HIGH": 32,
+     "bottom_attempts_LOW": 2,
+     "bottom_attempts_MEDIUM": 17,
+     "bottom_initiation_spend": 509,
+     "hold_spend": 258,
+     "response_spend": 1238,
+     "seconds": 2365,
+     "top_attempts_LOW": 137,
+     "top_attempts_MEDIUM": 113,
+     "top_initiation_spend": 1202
+    },
+    "outcome_by_first_clear": {
+     "Exhausted, never cleared": {
+      "escape": 1,
+      "tap": 3,
+      "timeout": 16
+     },
+     "cleared 151-200 s": {
+      "timeout": 3
+     },
+     "cleared 201-250 s": {
+      "escape": 1
+     },
+     "cleared 251-300 s": {
+      "timeout": 7
+     },
+     "cleared <= 150 s": {},
+     "never Exhausted": {
+      "escape": 67,
+      "tap": 2
+     }
+    },
+    "outcomes": {
+     "Half Guard": 69,
+     "TAP \u2014 Americana": 5,
+     "TIMEOUT \u2014 Mount retained": 26
+    },
+    "remaining_after_first_clear": {
+     "max": 140,
+     "median": 40,
+     "min": 0,
+     "n": 11,
+     "p10": 0,
+     "p90": 140
+    },
+    "top_first_exhausted": {
+     "max": 115,
+     "median": 85,
+     "min": 75,
+     "n": 30,
+     "p10": 75,
+     "p90": 105
+    },
+    "unexplained_bottom_delta": 0
+   },
+   "outcomes": {
+    "escapes": 69,
+    "tap": 5,
+    "threat_matches": 28,
+    "timeouts": 26,
+    "top_completed_builder_attempts": 152,
+    "top_completed_builds": 152
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 103,
+     "bottom_position": 435,
+     "bottom_reset": 307,
+     "bottom_setup": 28,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 508,
+     "top_setup": 221,
+     "top_submission": 194
+    },
+    "builder_attempts_per_threat_entry": 5.428571428571429,
+    "calibration": {
+     "progress": {
+      "actual": 71,
+      "deviation": -6.527777777777778,
+      "n": 981,
+      "predicted": 77.52777777777777,
+      "predicted_exact": "2791/36",
+      "sigma": 5.622856244443656,
+      "variance_exact": "40975/1296",
+      "within_3_sigma": true,
+      "z": -1.1609362740205815
+     },
+     "setup_advance": {
+      "actual": 241,
+      "deviation": 1.0,
+      "n": 981,
+      "predicted": 240.0,
+      "predicted_exact": "240",
+      "sigma": 1.8257418583505538,
+      "variance_exact": "10/3",
+      "within_3_sigma": true,
+      "z": 0.5477225575051661
+     },
+     "terminal": {
+      "actual": 74,
+      "deviation": 1.3611111111111112,
+      "n": 981,
+      "predicted": 72.63888888888889,
+      "predicted_exact": "2615/36",
+      "sigma": 5.064323897936414,
+      "variance_exact": "33239/1296",
+      "within_3_sigma": true,
+      "z": 0.2687646245663177
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 434,
+     "bottom:position:MEDIUM": 1,
+     "bottom:setup:LOW": 11,
+     "bottom:setup:MEDIUM": 17,
+     "bottom:terminal:HIGH": 101,
+     "bottom:terminal:LOW": 2,
+     "top:progress:HIGH": 20,
+     "top:progress:LOW": 5,
+     "top:progress:MEDIUM": 156,
+     "top:setup:LOW": 221,
+     "top:terminal:MEDIUM": 13
+    },
+    "counterfactual_calls": 19,
+    "exchanges": 981,
+    "executed_decisions": 1796,
+    "forgone_better_position": 11,
+    "free_initiative_windows": 0,
+    "horizon": {
+     "closed_chains_with_r": 76,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 33,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 435,
+      "action_exact": 435,
+      "checked": 435
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 307,
+      "action_exact": 307,
+      "checked": 307
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 1,
+      "action_exact": 1,
+      "checked": 28
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 103,
+      "action_exact": 103,
+      "checked": 103
+     },
+     "top:progress": {
+      "action_commitment_exact": 181,
+      "action_exact": 181,
+      "checked": 181
+     },
+     "top:reset": {
+      "action_commitment_exact": 508,
+      "action_exact": 508,
+      "checked": 508
+     },
+     "top:setup": {
+      "action_commitment_exact": 117,
+      "action_exact": 120,
+      "checked": 221
+     },
+     "top:terminal": {
+      "action_commitment_exact": 13,
+      "action_exact": 13,
+      "checked": 13
+     }
+    },
+    "precedence_forced_exchanges": {
+     "bottom:D3B_TOKEN": 11,
+     "bottom:LOW_WHILE_EXHAUSTED": 405
+    },
+    "ready_conversion_top": {
+     "actual": 28,
+     "predicted": 28.77777777777778,
+     "predicted_exact": "259/9",
+     "uses": 76
+    },
+    "resets_per_match": {
+     "bottom": 3.07,
+     "top": 5.08
+    },
+    "setup_calibration_chains": {
+     "actual": 28,
+     "deviation": -1.4150591563786008,
+     "n": 144,
+     "predicted": 29.4150591563786,
+     "predicted_exact": "457463/15552",
+     "sigma": 4.106994571523722,
+     "variance_exact": "4079629775/241864704",
+     "within_3_sigma": true,
+     "z": -0.34454858211648537
+    },
+    "setup_decisions_per_threat_entry": 7.892857142857143,
+    "te1_tier_distribution": {
+     "bottom:position": 435,
+     "bottom:reset": 307,
+     "bottom:setup": 28,
+     "bottom:terminal": 103,
+     "top:progress": 181,
+     "top:reset": 508,
+     "top:setup": 221,
+     "top:terminal": 13
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2745,
+     "bottom|Exhausted|Tired": 160,
+     "bottom|Fresh|Fresh": 655,
+     "bottom|Fresh|Working": 10,
+     "bottom|Tired|Exhausted": 170,
+     "bottom|Tired|Tired": 305,
+     "bottom|Working|Tired": 170,
+     "bottom|Working|Working": 375,
+     "top|Exhausted|Exhausted": 2635,
+     "top|Exhausted|Tired": 140,
+     "top|Fresh|Fresh": 820,
+     "top|Fresh|Working": 10,
+     "top|Tired|Exhausted": 180,
+     "top|Tired|Tired": 315,
+     "top|Working|Tired": 160,
+     "top|Working|Working": 355
+    },
+    "top_setup_tier_decisions": 221
+   },
+   "rng": {
+    "baseline_draws": 8228,
+    "digest": "6442a0c610b9eb8563e3eac02293f87388e5e9f20fa4f68fbcc1edffe9a90db1"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 29,
+     "Elbow-Knee Escape": 534,
+     "Trap-and-Roll": 3
+    },
+    "bottom_escape_priority_count": 103,
+    "bottom_final_stamina_mean": 64.76,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75,
+    "bottom_position_attack_count": 435,
+    "bottom_reset_count": 307,
+    "bottom_setup_action_count": 28,
+    "final_axis_mean": 0.855,
+    "free_initiative_window_count": 0,
+    "matches_both_ever_exhausted": 30,
+    "matches_bottom_ever_exhausted": 31,
+    "matches_reached_submission_control": 26,
+    "matches_reached_submission_finish": 17,
+    "matches_reached_submission_threat": 28,
+    "matches_top_ever_exhausted": 30,
+    "outcome_counts": {
+     "Half Guard": 69,
+     "TAP \u2014 Americana": 5,
+     "TIMEOUT \u2014 Mount retained": 26
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 134,
+     "LOW": 701,
+     "MEDIUM": 146
+    },
+    "top_action_counts": {
+     "Americana Finish": 118,
+     "Americana Isolation": 76,
+     "Climb High": 221
+    },
+    "top_completed_setup_build_count": 152,
+    "top_completed_setup_chain_count": 76,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 57.27,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 90.0,
+    "top_position_attack_count": 0,
+    "top_reset_count": 508,
+    "top_setup_action_count": 221,
+    "top_submission_attempt_count": 194,
+    "top_submission_priority_count": 194
+   }
+  },
+  "E-PROD 142 ON": {
+   "baseline": {
+    "evaluator_rng_draws": 0,
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     57,
+     4,
+     31,
+     65,
+     841
+    ],
+    "g4_equivalence": true,
+    "observed": [
+     57,
+     4,
+     31,
+     65,
+     841
+    ],
+    "reason_independent_builder_attempts": 841
+   },
+   "bottom_exhausted_share_exact": {
+    "exhausted_seconds": 5685,
+    "match_seconds": 9160
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 101,
+      "te1_chosen": 147
+     },
+     "top": {
+      "high": 20,
+      "te1_chosen": 415
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 11,
+     "LOW_WHILE_EXHAUSTED": 405
+    },
+    "high": 121,
+    "te1_chosen": 562
+   },
+   "gated": true,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 416,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 18,
+     "d3b_decisions": {
+      "ARMED_NORMAL": 27,
+      "LOCKOUT_HOLD": 18,
+      "TOKEN": 11,
+      "UNARMED": 833
+     },
+     "holds_executed": 18,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 18,
+     "recovery_hold_history": 18
+    },
+    "p3_ok": true,
+    "p4b_second_run_identical": true,
+    "p4c_replay_identical": true,
+    "p5": {
+     "checked": 1808
+    },
+    "p5_ok": true,
+    "tape_entries": 1808,
+    "tape_executed": 1790
+   },
+   "late_recovery": {
+    "after_first_clear_totals": {
+     "attempts_Exhausted_LOW": 11,
+     "attempts_non-Exhausted_LOW": 26,
+     "attempts_non-Exhausted_MEDIUM": 1
+    },
+    "bottom_exhausted_share_of_match_time": 0.6206,
+    "bottom_first_clear": {
+     "max": 300,
+     "median": 260,
+     "min": 160,
+     "n": 11,
+     "p10": 160,
+     "p90": 300
+    },
+    "bottom_first_exhausted": {
+     "max": 90,
+     "median": 75,
+     "min": 50,
+     "n": 31,
+     "p10": 65,
+     "p90": 85
+    },
+    "bottom_stamina_at_first_exhausted": {
+     "max": 25,
+     "median": 23,
+     "min": 11,
+     "n": 31,
+     "p10": 16,
+     "p90": 24
+    },
+    "escapes_by_commitment_and_state": {
+     "HIGH/non-Exhausted": 68,
+     "LOW/Exhausted": 2
+    },
+    "escapes_by_phase": {
+     "after first clear": 2,
+     "before first Exhausted entry": 68
+    },
+    "first_episode_duration_cleared": {
+     "max": 235,
+     "median": 185,
+     "min": 85,
+     "n": 11,
+     "p10": 85,
+     "p90": 220
+    },
+    "first_episode_totals": {
+     "behavior_drain": 0,
+     "bottom_attempts": 405,
+     "bottom_attempts_LOW": 405,
+     "bottom_initiation_spend": 1215,
+     "bottom_resets": 127,
+     "conserve_gain": 2176,
+     "hold_spend": 86,
+     "response_spend": 575,
+     "seconds": 5440,
+     "top_attempts": 83,
+     "top_attempts_funded": 83
+    },
+    "matches": 100,
+    "opening_totals_entered_matches": {
+     "behavior_drain": 473,
+     "behavior_gain": 0,
+     "bottom_attempts_HIGH": 32,
+     "bottom_attempts_LOW": 2,
+     "bottom_attempts_MEDIUM": 17,
+     "bottom_initiation_spend": 509,
+     "hold_spend": 258,
+     "response_spend": 1238,
+     "seconds": 2365,
+     "top_attempts_LOW": 137,
+     "top_attempts_MEDIUM": 113,
+     "top_initiation_spend": 1202
+    },
+    "outcome_by_first_clear": {
+     "Exhausted, never cleared": {
+      "escape": 1,
+      "tap": 3,
+      "timeout": 16
+     },
+     "cleared 151-200 s": {
+      "escape": 1,
+      "timeout": 2
+     },
+     "cleared 201-250 s": {
+      "escape": 1
+     },
+     "cleared 251-300 s": {
+      "timeout": 7
+     },
+     "cleared <= 150 s": {},
+     "never Exhausted": {
+      "escape": 67,
+      "tap": 2
+     }
+    },
+    "outcomes": {
+     "Half Guard": 70,
+     "TAP \u2014 Americana": 5,
+     "TIMEOUT \u2014 Mount retained": 25
+    },
+    "remaining_after_first_clear": {
+     "max": 140,
+     "median": 40,
+     "min": 0,
+     "n": 11,
+     "p10": 0,
+     "p90": 140
+    },
+    "top_first_exhausted": {
+     "max": 115,
+     "median": 85,
+     "min": 75,
+     "n": 30,
+     "p10": 75,
+     "p90": 105
+    },
+    "unexplained_bottom_delta": 0
+   },
+   "outcomes": {
+    "escapes": 70,
+    "tap": 5,
+    "threat_matches": 28,
+    "timeouts": 25,
+    "top_completed_builder_attempts": 152,
+    "top_completed_builds": 152
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 105,
+     "bottom_position": 428,
+     "bottom_reset": 308,
+     "bottom_setup": 30,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 504,
+     "top_setup": 221,
+     "top_submission": 194
+    },
+    "builder_attempts_per_threat_entry": 5.428571428571429,
+    "calibration": {
+     "progress": {
+      "actual": 71,
+      "deviation": -6.527777777777778,
+      "n": 978,
+      "predicted": 77.52777777777777,
+      "predicted_exact": "2791/36",
+      "sigma": 5.622856244443656,
+      "variance_exact": "40975/1296",
+      "within_3_sigma": true,
+      "z": -1.1609362740205815
+     },
+     "setup_advance": {
+      "actual": 242,
+      "deviation": 1.0,
+      "n": 978,
+      "predicted": 241.0,
+      "predicted_exact": "241",
+      "sigma": 1.8257418583505538,
+      "variance_exact": "10/3",
+      "within_3_sigma": true,
+      "z": 0.5477225575051661
+     },
+     "terminal": {
+      "actual": 75,
+      "deviation": 1.0277777777777777,
+      "n": 978,
+      "predicted": 73.97222222222223,
+      "predicted_exact": "2663/36",
+      "sigma": 5.108015366818537,
+      "variance_exact": "33815/1296",
+      "within_3_sigma": true,
+      "z": 0.20120882651492805
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 428,
+     "bottom:setup:LOW": 13,
+     "bottom:setup:MEDIUM": 17,
+     "bottom:terminal:HIGH": 101,
+     "bottom:terminal:LOW": 3,
+     "bottom:terminal:MEDIUM": 1,
+     "top:progress:HIGH": 20,
+     "top:progress:LOW": 5,
+     "top:progress:MEDIUM": 156,
+     "top:setup:LOW": 221,
+     "top:terminal:MEDIUM": 13
+    },
+    "counterfactual_calls": 18,
+    "exchanges": 978,
+    "executed_decisions": 1790,
+    "forgone_better_position": 13,
+    "free_initiative_windows": 1,
+    "horizon": {
+     "closed_chains_with_r": 76,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 33,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 427,
+      "action_exact": 427,
+      "checked": 428
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 308,
+      "action_exact": 308,
+      "checked": 308
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 2,
+      "action_exact": 2,
+      "checked": 30
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 105,
+      "action_exact": 105,
+      "checked": 105
+     },
+     "top:progress": {
+      "action_commitment_exact": 181,
+      "action_exact": 181,
+      "checked": 181
+     },
+     "top:reset": {
+      "action_commitment_exact": 504,
+      "action_exact": 504,
+      "checked": 504
+     },
+     "top:setup": {
+      "action_commitment_exact": 117,
+      "action_exact": 120,
+      "checked": 221
+     },
+     "top:terminal": {
+      "action_commitment_exact": 13,
+      "action_exact": 13,
+      "checked": 13
+     }
+    },
+    "precedence_forced_exchanges": {
+     "bottom:D3B_TOKEN": 11,
+     "bottom:LOW_WHILE_EXHAUSTED": 405
+    },
+    "ready_conversion_top": {
+     "actual": 28,
+     "predicted": 28.77777777777778,
+     "predicted_exact": "259/9",
+     "uses": 76
+    },
+    "resets_per_match": {
+     "bottom": 3.08,
+     "top": 5.04
+    },
+    "setup_calibration_chains": {
+     "actual": 28,
+     "deviation": -1.4150591563786008,
+     "n": 144,
+     "predicted": 29.4150591563786,
+     "predicted_exact": "457463/15552",
+     "sigma": 4.106994571523722,
+     "variance_exact": "4079629775/241864704",
+     "within_3_sigma": true,
+     "z": -0.34454858211648537
+    },
+    "setup_decisions_per_threat_entry": 7.892857142857143,
+    "te1_tier_distribution": {
+     "bottom:position": 428,
+     "bottom:reset": 308,
+     "bottom:setup": 30,
+     "bottom:terminal": 105,
+     "top:progress": 181,
+     "top:reset": 504,
+     "top:setup": 221,
+     "top:terminal": 13
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2720,
+     "bottom|Exhausted|Tired": 165,
+     "bottom|Fresh|Fresh": 655,
+     "bottom|Fresh|Working": 10,
+     "bottom|Tired|Exhausted": 170,
+     "bottom|Tired|Tired": 305,
+     "bottom|Working|Tired": 170,
+     "bottom|Working|Working": 375,
+     "top|Exhausted|Exhausted": 2615,
+     "top|Exhausted|Tired": 135,
+     "top|Fresh|Fresh": 820,
+     "top|Fresh|Working": 10,
+     "top|Tired|Exhausted": 180,
+     "top|Tired|Tired": 315,
+     "top|Working|Tired": 160,
+     "top|Working|Working": 355
+    },
+    "top_setup_tier_decisions": 221
+   },
+   "rng": {
+    "baseline_draws": 8201,
+    "digest": "6a5938322155726401ad6a9a5ad8adc6c524a79cbd8538d3f04d644f4a9cdfdc"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 30,
+     "Elbow-Knee Escape": 530,
+     "Trap-and-Roll": 3
+    },
+    "bottom_escape_priority_count": 105,
+    "bottom_final_stamina_mean": 64.67,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75,
+    "bottom_position_attack_count": 428,
+    "bottom_reset_count": 308,
+    "bottom_setup_action_count": 30,
+    "final_axis_mean": 0.805,
+    "free_initiative_window_count": 1,
+    "matches_both_ever_exhausted": 30,
+    "matches_bottom_ever_exhausted": 31,
+    "matches_reached_submission_control": 26,
+    "matches_reached_submission_finish": 17,
+    "matches_reached_submission_threat": 28,
+    "matches_top_ever_exhausted": 30,
+    "outcome_counts": {
+     "Half Guard": 70,
+     "TAP \u2014 Americana": 5,
+     "TIMEOUT \u2014 Mount retained": 25
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 134,
+     "LOW": 699,
+     "MEDIUM": 145
+    },
+    "top_action_counts": {
+     "Americana Finish": 118,
+     "Americana Isolation": 76,
+     "Climb High": 221
+    },
+    "top_completed_setup_build_count": 152,
+    "top_completed_setup_chain_count": 76,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 57.27,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 90.0,
+    "top_position_attack_count": 0,
+    "top_reset_count": 504,
+    "top_setup_action_count": 221,
+    "top_submission_attempt_count": 194,
+    "top_submission_priority_count": 194
+   }
+  },
+  "E-PROD 42 OFF": {
+   "baseline": {
+    "evaluator_rng_draws": 0,
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     61,
+     5,
+     30,
+     65,
+     844
+    ],
+    "g4_equivalence": true,
+    "observed": [
+     61,
+     5,
+     30,
+     65,
+     844
+    ],
+    "reason_independent_builder_attempts": 844
+   },
+   "bottom_exhausted_share_exact": {
+    "exhausted_seconds": 5110,
+    "match_seconds": 8185
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 100,
+      "te1_chosen": 153
+     },
+     "top": {
+      "high": 22,
+      "te1_chosen": 360
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 14,
+     "LOW_WHILE_EXHAUSTED": 353
+    },
+    "high": 122,
+    "te1_chosen": 513
+   },
+   "gated": true,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 367,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 25,
+     "d3b_decisions": {
+      "ARMED_NORMAL": 33,
+      "LOCKOUT_HOLD": 25,
+      "TOKEN": 14,
+      "UNARMED": 722
+     },
+     "holds_executed": 25,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 25,
+     "recovery_hold_history": 25
+    },
+    "p3_ok": true,
+    "p4b_second_run_identical": true,
+    "p4c_replay_identical": true,
+    "p5": {
+     "checked": 1614
+    },
+    "p5_ok": true,
+    "tape_entries": 1614,
+    "tape_executed": 1589
+   },
+   "late_recovery": {
+    "after_first_clear_totals": {
+     "attempts_Exhausted_LOW": 14,
+     "attempts_non-Exhausted_LOW": 33
+    },
+    "bottom_exhausted_share_of_match_time": 0.6243,
+    "bottom_first_clear": {
+     "max": 270,
+     "median": 230,
+     "min": 170,
+     "n": 10,
+     "p10": 200,
+     "p90": 270
+    },
+    "bottom_first_exhausted": {
+     "max": 95,
+     "median": 75,
+     "min": 55,
+     "n": 26,
+     "p10": 65,
+     "p90": 85
+    },
+    "bottom_stamina_at_first_exhausted": {
+     "max": 25,
+     "median": 23,
+     "min": 11,
+     "n": 26,
+     "p10": 13,
+     "p90": 25
+    },
+    "escapes_by_commitment_and_state": {
+     "HIGH/non-Exhausted": 73,
+     "LOW/Exhausted": 1
+    },
+    "escapes_by_phase": {
+     "after first clear": 1,
+     "before first Exhausted entry": 73
+    },
+    "first_episode_duration_cleared": {
+     "max": 205,
+     "median": 155,
+     "min": 85,
+     "n": 10,
+     "p10": 125,
+     "p90": 185
+    },
+    "first_episode_totals": {
+     "behavior_drain": 0,
+     "bottom_attempts": 353,
+     "bottom_attempts_LOW": 353,
+     "bottom_initiation_spend": 1059,
+     "bottom_resets": 110,
+     "conserve_gain": 1896,
+     "hold_spend": 65,
+     "response_spend": 527,
+     "seconds": 4740,
+     "top_attempts": 75,
+     "top_attempts_funded": 75
+    },
+    "matches": 100,
+    "opening_totals_entered_matches": {
+     "behavior_drain": 388,
+     "behavior_gain": 0,
+     "bottom_attempts_HIGH": 26,
+     "bottom_attempts_LOW": 3,
+     "bottom_attempts_MEDIUM": 17,
+     "bottom_initiation_spend": 440,
+     "hold_spend": 219,
+     "response_spend": 1017,
+     "seconds": 1940,
+     "top_attempts_LOW": 115,
+     "top_attempts_MEDIUM": 90,
+     "top_initiation_spend": 975
+    },
+    "outcome_by_first_clear": {
+     "Exhausted, never cleared": {
+      "tap": 2,
+      "timeout": 14
+     },
+     "cleared 151-200 s": {
+      "timeout": 2
+     },
+     "cleared 201-250 s": {
+      "escape": 1,
+      "timeout": 5
+     },
+     "cleared 251-300 s": {
+      "timeout": 2
+     },
+     "cleared <= 150 s": {},
+     "never Exhausted": {
+      "escape": 73,
+      "tap": 1
+     }
+    },
+    "outcomes": {
+     "Half Guard": 74,
+     "TAP \u2014 Americana": 3,
+     "TIMEOUT \u2014 Mount retained": 23
+    },
+    "remaining_after_first_clear": {
+     "max": 130,
+     "median": 70,
+     "min": 30,
+     "n": 10,
+     "p10": 30,
+     "p90": 100
+    },
+    "top_first_exhausted": {
+     "max": 115,
+     "median": 85,
+     "min": 75,
+     "n": 26,
+     "p10": 75,
+     "p90": 95
+    },
+    "unexplained_bottom_delta": 0
+   },
+   "outcomes": {
+    "escapes": 74,
+    "tap": 3,
+    "threat_matches": 25,
+    "timeouts": 23,
+    "top_completed_builder_attempts": 130,
+    "top_completed_builds": 130
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 102,
+     "bottom_position": 384,
+     "bottom_reset": 249,
+     "bottom_setup": 34,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 460,
+     "top_setup": 203,
+     "top_submission": 157
+    },
+    "builder_attempts_per_threat_entry": 5.2,
+    "calibration": {
+     "progress": {
+      "actual": 58,
+      "deviation": -8.277777777777779,
+      "n": 880,
+      "predicted": 66.27777777777777,
+      "predicted_exact": "1193/18",
+      "sigma": 5.087960856670612,
+      "variance_exact": "16775/648",
+      "within_3_sigma": true,
+      "z": -1.62693424948919
+     },
+     "setup_advance": {
+      "actual": 225,
+      "deviation": -2.0,
+      "n": 880,
+      "predicted": 227.0,
+      "predicted_exact": "227",
+      "sigma": 1.8257418583505538,
+      "variance_exact": "10/3",
+      "within_3_sigma": true,
+      "z": -1.0954451150103321
+     },
+     "terminal": {
+      "actual": 77,
+      "deviation": 6.472222222222222,
+      "n": 880,
+      "predicted": 70.52777777777777,
+      "predicted_exact": "2539/36",
+      "sigma": 4.871100846501756,
+      "variance_exact": "30751/1296",
+      "within_3_sigma": true,
+      "z": 1.328698055362646
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 384,
+     "bottom:setup:LOW": 17,
+     "bottom:setup:MEDIUM": 17,
+     "bottom:terminal:HIGH": 100,
+     "bottom:terminal:LOW": 2,
+     "top:progress:HIGH": 21,
+     "top:progress:LOW": 5,
+     "top:progress:MEDIUM": 125,
+     "top:setup:LOW": 203,
+     "top:terminal:HIGH": 1,
+     "top:terminal:MEDIUM": 5
+    },
+    "counterfactual_calls": 25,
+    "exchanges": 880,
+    "executed_decisions": 1589,
+    "forgone_better_position": 17,
+    "free_initiative_windows": 0,
+    "horizon": {
+     "closed_chains_with_r": 65,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 27,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 383,
+      "action_exact": 383,
+      "checked": 384
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 249,
+      "action_exact": 249,
+      "checked": 249
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 0,
+      "action_exact": 0,
+      "checked": 34
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 102,
+      "action_exact": 102,
+      "checked": 102
+     },
+     "top:progress": {
+      "action_commitment_exact": 151,
+      "action_exact": 151,
+      "checked": 151
+     },
+     "top:reset": {
+      "action_commitment_exact": 460,
+      "action_exact": 460,
+      "checked": 460
+     },
+     "top:setup": {
+      "action_commitment_exact": 100,
+      "action_exact": 103,
+      "checked": 203
+     },
+     "top:terminal": {
+      "action_commitment_exact": 6,
+      "action_exact": 6,
+      "checked": 6
+     }
+    },
+    "precedence_forced_exchanges": {
+     "bottom:D3B_TOKEN": 14,
+     "bottom:LOW_WHILE_EXHAUSTED": 353
+    },
+    "ready_conversion_top": {
+     "actual": 25,
+     "predicted": 25.416666666666668,
+     "predicted_exact": "305/12",
+     "uses": 65
+    },
+    "resets_per_match": {
+     "bottom": 2.49,
+     "top": 4.6
+    },
+    "setup_calibration_chains": {
+     "actual": 25,
+     "deviation": -2.543681412894376,
+     "n": 138,
+     "predicted": 27.543681412894376,
+     "predicted_exact": "642539/23328",
+     "sigma": 3.947265964072966,
+     "variance_exact": "4239530825/272097792",
+     "within_3_sigma": true,
+     "z": -0.6444160175793402
+    },
+    "setup_decisions_per_threat_entry": 8.12,
+    "te1_tier_distribution": {
+     "bottom:position": 384,
+     "bottom:reset": 249,
+     "bottom:setup": 34,
+     "bottom:terminal": 102,
+     "top:progress": 151,
+     "top:reset": 460,
+     "top:setup": 203,
+     "top:terminal": 6
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2410,
+     "bottom|Exhausted|Tired": 185,
+     "bottom|Fresh|Fresh": 625,
+     "bottom|Fresh|Working": 10,
+     "bottom|Tired|Exhausted": 180,
+     "bottom|Tired|Tired": 240,
+     "bottom|Tired|Working": 5,
+     "bottom|Working|Tired": 155,
+     "bottom|Working|Working": 275,
+     "top|Exhausted|Exhausted": 2330,
+     "top|Exhausted|Tired": 155,
+     "top|Fresh|Fresh": 760,
+     "top|Fresh|Working": 10,
+     "top|Tired|Exhausted": 190,
+     "top|Tired|Tired": 235,
+     "top|Tired|Working": 5,
+     "top|Working|Tired": 155,
+     "top|Working|Working": 260
+    },
+    "top_setup_tier_decisions": 203
+   },
+   "rng": {
+    "baseline_draws": 7460,
+    "digest": "3f71ec8b843d839068381797a05e6c0c9916998ddf74510c9fc9c7d842b30d65"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 34,
+     "Elbow-Knee Escape": 480,
+     "Trap-and-Roll": 6
+    },
+    "bottom_escape_priority_count": 102,
+    "bottom_final_stamina_mean": 68.14,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75.0,
+    "bottom_position_attack_count": 384,
+    "bottom_reset_count": 249,
+    "bottom_setup_action_count": 34,
+    "final_axis_mean": 0.63,
+    "free_initiative_window_count": 0,
+    "matches_both_ever_exhausted": 26,
+    "matches_bottom_ever_exhausted": 26,
+    "matches_reached_submission_control": 22,
+    "matches_reached_submission_finish": 11,
+    "matches_reached_submission_threat": 25,
+    "matches_top_ever_exhausted": 26,
+    "outcome_counts": {
+     "Half Guard": 74,
+     "TAP \u2014 Americana": 3,
+     "TIMEOUT \u2014 Mount retained": 23
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 125,
+     "LOW": 627,
+     "MEDIUM": 128
+    },
+    "top_action_counts": {
+     "Americana Finish": 92,
+     "Americana Isolation": 65,
+     "Climb High": 203
+    },
+    "top_completed_setup_build_count": 130,
+    "top_completed_setup_chain_count": 65,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 61.61,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 85.0,
+    "top_position_attack_count": 0,
+    "top_reset_count": 460,
+    "top_setup_action_count": 203,
+    "top_submission_attempt_count": 157,
+    "top_submission_priority_count": 157
+   }
+  },
+  "E-PROD 42 ON": {
+   "baseline": {
+    "evaluator_rng_draws": 0,
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     61,
+     5,
+     30,
+     65,
+     844
+    ],
+    "g4_equivalence": true,
+    "observed": [
+     61,
+     5,
+     30,
+     65,
+     844
+    ],
+    "reason_independent_builder_attempts": 844
+   },
+   "bottom_exhausted_share_exact": {
+    "exhausted_seconds": 5070,
+    "match_seconds": 8120
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 100,
+      "te1_chosen": 150
+     },
+     "top": {
+      "high": 22,
+      "te1_chosen": 360
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 13,
+     "LOW_WHILE_EXHAUSTED": 353
+    },
+    "high": 122,
+    "te1_chosen": 510
+   },
+   "gated": true,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 366,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 23,
+     "d3b_decisions": {
+      "ARMED_NORMAL": 30,
+      "LOCKOUT_HOLD": 23,
+      "TOKEN": 13,
+      "UNARMED": 723
+     },
+     "holds_executed": 23,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 23,
+     "recovery_hold_history": 23
+    },
+    "p3_ok": true,
+    "p4b_second_run_identical": true,
+    "p4c_replay_identical": true,
+    "p5": {
+     "checked": 1603
+    },
+    "p5_ok": true,
+    "tape_entries": 1603,
+    "tape_executed": 1580
+   },
+   "late_recovery": {
+    "after_first_clear_totals": {
+     "attempts_Exhausted_LOW": 13,
+     "attempts_non-Exhausted_LOW": 29,
+     "attempts_non-Exhausted_MEDIUM": 1
+    },
+    "bottom_exhausted_share_of_match_time": 0.6244,
+    "bottom_first_clear": {
+     "max": 270,
+     "median": 230,
+     "min": 170,
+     "n": 10,
+     "p10": 200,
+     "p90": 270
+    },
+    "bottom_first_exhausted": {
+     "max": 95,
+     "median": 75,
+     "min": 55,
+     "n": 26,
+     "p10": 65,
+     "p90": 85
+    },
+    "bottom_stamina_at_first_exhausted": {
+     "max": 25,
+     "median": 23,
+     "min": 11,
+     "n": 26,
+     "p10": 13,
+     "p90": 25
+    },
+    "escapes_by_commitment_and_state": {
+     "HIGH/non-Exhausted": 73,
+     "LOW/Exhausted": 1,
+     "LOW/non-Exhausted": 1
+    },
+    "escapes_by_phase": {
+     "after first clear": 2,
+     "before first Exhausted entry": 73
+    },
+    "first_episode_duration_cleared": {
+     "max": 205,
+     "median": 155,
+     "min": 85,
+     "n": 10,
+     "p10": 125,
+     "p90": 185
+    },
+    "first_episode_totals": {
+     "behavior_drain": 0,
+     "bottom_attempts": 353,
+     "bottom_attempts_LOW": 353,
+     "bottom_initiation_spend": 1059,
+     "bottom_resets": 111,
+     "conserve_gain": 1896,
+     "hold_spend": 65,
+     "response_spend": 527,
+     "seconds": 4740,
+     "top_attempts": 75,
+     "top_attempts_funded": 75
+    },
+    "matches": 100,
+    "opening_totals_entered_matches": {
+     "behavior_drain": 388,
+     "behavior_gain": 0,
+     "bottom_attempts_HIGH": 26,
+     "bottom_attempts_LOW": 3,
+     "bottom_attempts_MEDIUM": 17,
+     "bottom_initiation_spend": 440,
+     "hold_spend": 219,
+     "response_spend": 1017,
+     "seconds": 1940,
+     "top_attempts_LOW": 115,
+     "top_attempts_MEDIUM": 90,
+     "top_initiation_spend": 975
+    },
+    "outcome_by_first_clear": {
+     "Exhausted, never cleared": {
+      "tap": 2,
+      "timeout": 14
+     },
+     "cleared 151-200 s": {
+      "escape": 1,
+      "timeout": 1
+     },
+     "cleared 201-250 s": {
+      "escape": 1,
+      "timeout": 5
+     },
+     "cleared 251-300 s": {
+      "timeout": 2
+     },
+     "cleared <= 150 s": {},
+     "never Exhausted": {
+      "escape": 73,
+      "tap": 1
+     }
+    },
+    "outcomes": {
+     "Half Guard": 74,
+     "Reversal": 1,
+     "TAP \u2014 Americana": 3,
+     "TIMEOUT \u2014 Mount retained": 22
+    },
+    "remaining_after_first_clear": {
+     "max": 100,
+     "median": 65,
+     "min": 30,
+     "n": 10,
+     "p10": 30,
+     "p90": 90
+    },
+    "top_first_exhausted": {
+     "max": 115,
+     "median": 85,
+     "min": 75,
+     "n": 26,
+     "p10": 75,
+     "p90": 95
+    },
+    "unexplained_bottom_delta": 0
+   },
+   "outcomes": {
+    "escapes": 75,
+    "tap": 3,
+    "threat_matches": 25,
+    "timeouts": 22,
+    "top_completed_builder_attempts": 130,
+    "top_completed_builds": 130
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 103,
+     "bottom_position": 379,
+     "bottom_reset": 250,
+     "bottom_setup": 34,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 454,
+     "top_setup": 203,
+     "top_submission": 157
+    },
+    "builder_attempts_per_threat_entry": 5.2,
+    "calibration": {
+     "progress": {
+      "actual": 58,
+      "deviation": -8.277777777777779,
+      "n": 876,
+      "predicted": 66.27777777777777,
+      "predicted_exact": "1193/18",
+      "sigma": 5.087960856670612,
+      "variance_exact": "16775/648",
+      "within_3_sigma": true,
+      "z": -1.62693424948919
+     },
+     "setup_advance": {
+      "actual": 226,
+      "deviation": -2.0,
+      "n": 876,
+      "predicted": 228.0,
+      "predicted_exact": "228",
+      "sigma": 1.8257418583505538,
+      "variance_exact": "10/3",
+      "within_3_sigma": true,
+      "z": -1.0954451150103321
+     },
+     "terminal": {
+      "actual": 78,
+      "deviation": 6.472222222222222,
+      "n": 876,
+      "predicted": 71.52777777777777,
+      "predicted_exact": "2575/36",
+      "sigma": 4.871100846501756,
+      "variance_exact": "30751/1296",
+      "within_3_sigma": true,
+      "z": 1.328698055362646
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 378,
+     "bottom:position:MEDIUM": 1,
+     "bottom:setup:LOW": 17,
+     "bottom:setup:MEDIUM": 17,
+     "bottom:terminal:HIGH": 100,
+     "bottom:terminal:LOW": 3,
+     "top:progress:HIGH": 21,
+     "top:progress:LOW": 5,
+     "top:progress:MEDIUM": 125,
+     "top:setup:LOW": 203,
+     "top:terminal:HIGH": 1,
+     "top:terminal:MEDIUM": 5
+    },
+    "counterfactual_calls": 23,
+    "exchanges": 876,
+    "executed_decisions": 1580,
+    "forgone_better_position": 17,
+    "free_initiative_windows": 1,
+    "horizon": {
+     "closed_chains_with_r": 65,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 27,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 379,
+      "action_exact": 379,
+      "checked": 379
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 250,
+      "action_exact": 250,
+      "checked": 250
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 1,
+      "action_exact": 1,
+      "checked": 34
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 103,
+      "action_exact": 103,
+      "checked": 103
+     },
+     "top:progress": {
+      "action_commitment_exact": 151,
+      "action_exact": 151,
+      "checked": 151
+     },
+     "top:reset": {
+      "action_commitment_exact": 454,
+      "action_exact": 454,
+      "checked": 454
+     },
+     "top:setup": {
+      "action_commitment_exact": 100,
+      "action_exact": 103,
+      "checked": 203
+     },
+     "top:terminal": {
+      "action_commitment_exact": 6,
+      "action_exact": 6,
+      "checked": 6
+     }
+    },
+    "precedence_forced_exchanges": {
+     "bottom:D3B_TOKEN": 13,
+     "bottom:LOW_WHILE_EXHAUSTED": 353
+    },
+    "ready_conversion_top": {
+     "actual": 25,
+     "predicted": 25.416666666666668,
+     "predicted_exact": "305/12",
+     "uses": 65
+    },
+    "resets_per_match": {
+     "bottom": 2.5,
+     "top": 4.54
+    },
+    "setup_calibration_chains": {
+     "actual": 25,
+     "deviation": -2.543681412894376,
+     "n": 138,
+     "predicted": 27.543681412894376,
+     "predicted_exact": "642539/23328",
+     "sigma": 3.947265964072966,
+     "variance_exact": "4239530825/272097792",
+     "within_3_sigma": true,
+     "z": -0.6444160175793402
+    },
+    "setup_decisions_per_threat_entry": 8.12,
+    "te1_tier_distribution": {
+     "bottom:position": 379,
+     "bottom:reset": 250,
+     "bottom:setup": 34,
+     "bottom:terminal": 103,
+     "top:progress": 151,
+     "top:reset": 454,
+     "top:setup": 203,
+     "top:terminal": 6
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2390,
+     "bottom|Exhausted|Tired": 175,
+     "bottom|Fresh|Fresh": 625,
+     "bottom|Fresh|Working": 10,
+     "bottom|Tired|Exhausted": 180,
+     "bottom|Tired|Tired": 240,
+     "bottom|Tired|Working": 5,
+     "bottom|Working|Tired": 155,
+     "bottom|Working|Working": 275,
+     "top|Exhausted|Exhausted": 2310,
+     "top|Exhausted|Tired": 140,
+     "top|Fresh|Fresh": 760,
+     "top|Fresh|Working": 10,
+     "top|Tired|Exhausted": 190,
+     "top|Tired|Tired": 235,
+     "top|Tired|Working": 5,
+     "top|Working|Tired": 155,
+     "top|Working|Working": 260
+    },
+    "top_setup_tier_decisions": 203
+   },
+   "rng": {
+    "baseline_draws": 7422,
+    "digest": "531be9bee28397a4d4a87a9837f95d5b5a91e4350af8d97fb673d490fa02fe1c"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 35,
+     "Elbow-Knee Escape": 474,
+     "Trap-and-Roll": 7
+    },
+    "bottom_escape_priority_count": 103,
+    "bottom_final_stamina_mean": 68.11,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75.0,
+    "bottom_position_attack_count": 379,
+    "bottom_reset_count": 250,
+    "bottom_setup_action_count": 34,
+    "final_axis_mean": 0.5925,
+    "free_initiative_window_count": 1,
+    "matches_both_ever_exhausted": 26,
+    "matches_bottom_ever_exhausted": 26,
+    "matches_reached_submission_control": 22,
+    "matches_reached_submission_finish": 11,
+    "matches_reached_submission_threat": 25,
+    "matches_top_ever_exhausted": 26,
+    "outcome_counts": {
+     "Half Guard": 74,
+     "Reversal": 1,
+     "TAP \u2014 Americana": 3,
+     "TIMEOUT \u2014 Mount retained": 22
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 125,
+     "LOW": 622,
+     "MEDIUM": 129
+    },
+    "top_action_counts": {
+     "Americana Finish": 92,
+     "Americana Isolation": 65,
+     "Climb High": 203
+    },
+    "top_completed_setup_build_count": 130,
+    "top_completed_setup_chain_count": 65,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 61.61,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 85.0,
+    "top_position_attack_count": 0,
+    "top_reset_count": 454,
+    "top_setup_action_count": 203,
+    "top_submission_attempt_count": 157,
+    "top_submission_priority_count": 157
+   }
+  },
+  "E-PROD 4242 OFF": {
+   "baseline": {
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     49,
+     2,
+     42,
+     56,
+     790
+    ],
+    "source": "Stage 1A-v2 committed evidence"
+   },
+   "bottom_exhausted_share_exact": {
+    "exhausted_seconds": 5150,
+    "match_seconds": 8990
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 100,
+      "te1_chosen": 178
+     },
+     "top": {
+      "high": 14,
+      "te1_chosen": 423
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 21,
+     "LOW_WHILE_EXHAUSTED": 332
+    },
+    "high": 114,
+    "te1_chosen": 601
+   },
+   "gated": false,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 353,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 36,
+     "d3b_decisions": {
+      "ARMED_NORMAL": 49,
+      "LOCKOUT_HOLD": 36,
+      "TOKEN": 21,
+      "UNARMED": 763
+     },
+     "holds_executed": 36,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 36,
+     "recovery_hold_history": 36
+    },
+    "p3_ok": true,
+    "p5": {
+     "checked": 1773
+    },
+    "p5_ok": true,
+    "tape_entries": 1773,
+    "tape_executed": 1737
+   },
+   "late_recovery": {
+    "after_first_clear_totals": {
+     "attempts_Exhausted_LOW": 21,
+     "attempts_non-Exhausted_LOW": 47,
+     "attempts_non-Exhausted_MEDIUM": 2
+    },
+    "bottom_exhausted_share_of_match_time": 0.5729,
+    "bottom_first_clear": {
+     "max": 300,
+     "median": 220,
+     "min": 140,
+     "n": 15,
+     "p10": 155,
+     "p90": 300
+    },
+    "bottom_first_exhausted": {
+     "max": 90,
+     "median": 75,
+     "min": 65,
+     "n": 31,
+     "p10": 65,
+     "p90": 85
+    },
+    "bottom_stamina_at_first_exhausted": {
+     "max": 24,
+     "median": 23,
+     "min": 11,
+     "n": 31,
+     "p10": 16,
+     "p90": 24
+    },
+    "escapes_by_commitment_and_state": {
+     "HIGH/non-Exhausted": 65
+    },
+    "escapes_by_phase": {
+     "before first Exhausted entry": 65
+    },
+    "first_episode_duration_cleared": {
+     "max": 235,
+     "median": 135,
+     "min": 70,
+     "n": 15,
+     "p10": 75,
+     "p90": 220
+    },
+    "first_episode_totals": {
+     "behavior_drain": 0,
+     "bottom_attempts": 332,
+     "bottom_attempts_LOW": 332,
+     "bottom_initiation_spend": 996,
+     "bottom_resets": 111,
+     "conserve_gain": 1834,
+     "hold_spend": 83,
+     "response_spend": 501,
+     "seconds": 4585,
+     "top_attempts": 75,
+     "top_attempts_funded": 75
+    },
+    "matches": 100,
+    "opening_totals_entered_matches": {
+     "behavior_drain": 480,
+     "behavior_gain": 0,
+     "bottom_attempts_HIGH": 31,
+     "bottom_attempts_LOW": 10,
+     "bottom_attempts_MEDIUM": 18,
+     "bottom_initiation_spend": 528,
+     "hold_spend": 252,
+     "response_spend": 1181,
+     "seconds": 2400,
+     "top_attempts_LOW": 130,
+     "top_attempts_MEDIUM": 122,
+     "top_initiation_spend": 1244
+    },
+    "outcome_by_first_clear": {
+     "Exhausted, never cleared": {
+      "tap": 6,
+      "timeout": 10
+     },
+     "cleared 151-200 s": {
+      "timeout": 3
+     },
+     "cleared 201-250 s": {
+      "timeout": 5
+     },
+     "cleared 251-300 s": {
+      "timeout": 6
+     },
+     "cleared <= 150 s": {
+      "timeout": 1
+     },
+     "never Exhausted": {
+      "escape": 65,
+      "tap": 4
+     }
+    },
+    "outcomes": {
+     "Half Guard": 65,
+     "TAP \u2014 Americana": 10,
+     "TIMEOUT \u2014 Mount retained": 25
+    },
+    "remaining_after_first_clear": {
+     "max": 160,
+     "median": 80,
+     "min": 0,
+     "n": 15,
+     "p10": 0,
+     "p90": 145
+    },
+    "top_first_exhausted": {
+     "max": 115,
+     "median": 85,
+     "min": 65,
+     "n": 33,
+     "p10": 75,
+     "p90": 95
+    },
+    "unexplained_bottom_delta": 0
+   },
+   "outcomes": {
+    "escapes": 65,
+    "tap": 10,
+    "threat_matches": 31,
+    "timeouts": 25,
+    "top_completed_builder_attempts": 152,
+    "top_completed_builds": 152
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 101,
+     "bottom_position": 396,
+     "bottom_reset": 302,
+     "bottom_setup": 34,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 481,
+     "top_setup": 218,
+     "top_submission": 205
+    },
+    "builder_attempts_per_threat_entry": 4.903225806451613,
+    "calibration": {
+     "progress": {
+      "actual": 78,
+      "deviation": 10.333333333333334,
+      "n": 954,
+      "predicted": 67.66666666666667,
+      "predicted_exact": "203/3",
+      "sigma": 5.753420882557772,
+      "variance_exact": "3575/108",
+      "within_3_sigma": true,
+      "z": 1.7960329244571955
+     },
+     "setup_advance": {
+      "actual": 243,
+      "deviation": 0.3333333333333333,
+      "n": 954,
+      "predicted": 242.66666666666666,
+      "predicted_exact": "728/3",
+      "sigma": 1.9436506316151,
+      "variance_exact": "34/9",
+      "within_3_sigma": true,
+      "z": 0.17149858514250882
+     },
+     "terminal": {
+      "actual": 75,
+      "deviation": -1.8888888888888888,
+      "n": 954,
+      "predicted": 76.88888888888889,
+      "predicted_exact": "692/9",
+      "sigma": 5.3278328116726605,
+      "variance_exact": "9197/324",
+      "within_3_sigma": true,
+      "z": -0.3545323127915263
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 394,
+     "bottom:position:MEDIUM": 2,
+     "bottom:setup:LOW": 15,
+     "bottom:setup:MEDIUM": 19,
+     "bottom:terminal:HIGH": 100,
+     "bottom:terminal:LOW": 1,
+     "top:progress:HIGH": 13,
+     "top:progress:LOW": 3,
+     "top:progress:MEDIUM": 160,
+     "top:setup:LOW": 218,
+     "top:terminal:HIGH": 1,
+     "top:terminal:MEDIUM": 28
+    },
+    "counterfactual_calls": 36,
+    "exchanges": 954,
+    "executed_decisions": 1737,
+    "forgone_better_position": 15,
+    "free_initiative_windows": 0,
+    "horizon": {
+     "closed_chains_with_r": 76,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 35,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 394,
+      "action_exact": 394,
+      "checked": 396
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 302,
+      "action_exact": 302,
+      "checked": 302
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 0,
+      "action_exact": 0,
+      "checked": 34
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 101,
+      "action_exact": 101,
+      "checked": 101
+     },
+     "top:progress": {
+      "action_commitment_exact": 176,
+      "action_exact": 176,
+      "checked": 176
+     },
+     "top:reset": {
+      "action_commitment_exact": 481,
+      "action_exact": 481,
+      "checked": 481
+     },
+     "top:setup": {
+      "action_commitment_exact": 112,
+      "action_exact": 114,
+      "checked": 218
+     },
+     "top:terminal": {
+      "action_commitment_exact": 29,
+      "action_exact": 29,
+      "checked": 29
+     }
+    },
+    "precedence_forced_exchanges": {
+     "bottom:D3B_TOKEN": 21,
+     "bottom:LOW_WHILE_EXHAUSTED": 332
+    },
+    "ready_conversion_top": {
+     "actual": 31,
+     "predicted": 27.38888888888889,
+     "predicted_exact": "493/18",
+     "uses": 76
+    },
+    "resets_per_match": {
+     "bottom": 3.02,
+     "top": 4.81
+    },
+    "setup_calibration_chains": {
+     "actual": 31,
+     "deviation": 3.7073259602194786,
+     "n": 142,
+     "predicted": 27.292674039780522,
+     "predicted_exact": "1273367/46656",
+     "sigma": 4.101717230175818,
+     "variance_exact": "36622369385/2176782336",
+     "within_3_sigma": true,
+     "z": 0.9038472796089276
+    },
+    "setup_decisions_per_threat_entry": 7.032258064516129,
+    "te1_tier_distribution": {
+     "bottom:position": 396,
+     "bottom:reset": 302,
+     "bottom:setup": 34,
+     "bottom:terminal": 101,
+     "top:progress": 176,
+     "top:reset": 481,
+     "top:setup": 218,
+     "top:terminal": 29
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2450,
+     "bottom|Exhausted|Tired": 300,
+     "bottom|Fresh|Fresh": 665,
+     "bottom|Fresh|Working": 10,
+     "bottom|Tired|Exhausted": 145,
+     "bottom|Tired|Tired": 330,
+     "bottom|Tired|Working": 25,
+     "bottom|Working|Tired": 120,
+     "bottom|Working|Working": 425,
+     "top|Exhausted|Exhausted": 2415,
+     "top|Exhausted|Tired": 230,
+     "top|Fresh|Fresh": 840,
+     "top|Fresh|Working": 10,
+     "top|Tired|Exhausted": 140,
+     "top|Tired|Tired": 340,
+     "top|Tired|Working": 25,
+     "top|Working|Tired": 110,
+     "top|Working|Working": 410
+    },
+    "top_setup_tier_decisions": 218
+   },
+   "rng": {
+    "baseline_draws": 7931,
+    "digest": "7cb1c50bcb5f984d184d1a60d7be6fd9382cffd9b84b038834e45d64c19ed4c8"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 36,
+     "Elbow-Knee Escape": 486,
+     "Trap-and-Roll": 9
+    },
+    "bottom_escape_priority_count": 101,
+    "bottom_final_stamina_mean": 63.59,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75,
+    "bottom_position_attack_count": 396,
+    "bottom_reset_count": 302,
+    "bottom_setup_action_count": 34,
+    "final_axis_mean": 1.0425,
+    "free_initiative_window_count": 0,
+    "matches_both_ever_exhausted": 31,
+    "matches_bottom_ever_exhausted": 31,
+    "matches_reached_submission_control": 28,
+    "matches_reached_submission_finish": 19,
+    "matches_reached_submission_threat": 31,
+    "matches_top_ever_exhausted": 33,
+    "outcome_counts": {
+     "Half Guard": 65,
+     "TAP \u2014 Americana": 10,
+     "TIMEOUT \u2014 Mount retained": 25
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 126,
+     "LOW": 693,
+     "MEDIUM": 135
+    },
+    "top_action_counts": {
+     "Americana Finish": 129,
+     "Americana Isolation": 76,
+     "Climb High": 218
+    },
+    "top_completed_setup_build_count": 152,
+    "top_completed_setup_chain_count": 76,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 56.16,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 85,
+    "top_position_attack_count": 0,
+    "top_reset_count": 481,
+    "top_setup_action_count": 218,
+    "top_submission_attempt_count": 205,
+    "top_submission_priority_count": 205
+   }
+  },
+  "E-PROD 4242 ON": {
+   "baseline": {
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     49,
+     2,
+     42,
+     56,
+     790
+    ],
+    "source": "Stage 1A-v2 committed evidence"
+   },
+   "bottom_exhausted_share_exact": {
+    "exhausted_seconds": 5095,
+    "match_seconds": 8910
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 100,
+      "te1_chosen": 176
+     },
+     "top": {
+      "high": 14,
+      "te1_chosen": 423
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 19,
+     "LOW_WHILE_EXHAUSTED": 332
+    },
+    "high": 114,
+    "te1_chosen": 599
+   },
+   "gated": false,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 351,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 33,
+     "d3b_decisions": {
+      "ARMED_NORMAL": 47,
+      "LOCKOUT_HOLD": 33,
+      "TOKEN": 19,
+      "UNARMED": 764
+     },
+     "holds_executed": 33,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 33,
+     "recovery_hold_history": 33
+    },
+    "p3_ok": true,
+    "p5": {
+     "checked": 1759
+    },
+    "p5_ok": true,
+    "tape_entries": 1759,
+    "tape_executed": 1726
+   },
+   "late_recovery": {
+    "after_first_clear_totals": {
+     "attempts_Exhausted_LOW": 19,
+     "attempts_non-Exhausted_LOW": 46,
+     "attempts_non-Exhausted_MEDIUM": 1
+    },
+    "bottom_exhausted_share_of_match_time": 0.5718,
+    "bottom_first_clear": {
+     "max": 300,
+     "median": 220,
+     "min": 140,
+     "n": 15,
+     "p10": 155,
+     "p90": 300
+    },
+    "bottom_first_exhausted": {
+     "max": 90,
+     "median": 75,
+     "min": 65,
+     "n": 31,
+     "p10": 65,
+     "p90": 85
+    },
+    "bottom_stamina_at_first_exhausted": {
+     "max": 24,
+     "median": 23,
+     "min": 11,
+     "n": 31,
+     "p10": 16,
+     "p90": 24
+    },
+    "escapes_by_commitment_and_state": {
+     "HIGH/non-Exhausted": 65,
+     "LOW/non-Exhausted": 1
+    },
+    "escapes_by_phase": {
+     "after first clear": 1,
+     "before first Exhausted entry": 65
+    },
+    "first_episode_duration_cleared": {
+     "max": 235,
+     "median": 135,
+     "min": 70,
+     "n": 15,
+     "p10": 75,
+     "p90": 220
+    },
+    "first_episode_totals": {
+     "behavior_drain": 0,
+     "bottom_attempts": 332,
+     "bottom_attempts_LOW": 332,
+     "bottom_initiation_spend": 996,
+     "bottom_resets": 112,
+     "conserve_gain": 1834,
+     "hold_spend": 83,
+     "response_spend": 501,
+     "seconds": 4585,
+     "top_attempts": 75,
+     "top_attempts_funded": 75
+    },
+    "matches": 100,
+    "opening_totals_entered_matches": {
+     "behavior_drain": 480,
+     "behavior_gain": 0,
+     "bottom_attempts_HIGH": 31,
+     "bottom_attempts_LOW": 10,
+     "bottom_attempts_MEDIUM": 18,
+     "bottom_initiation_spend": 528,
+     "hold_spend": 252,
+     "response_spend": 1181,
+     "seconds": 2400,
+     "top_attempts_LOW": 130,
+     "top_attempts_MEDIUM": 122,
+     "top_initiation_spend": 1244
+    },
+    "outcome_by_first_clear": {
+     "Exhausted, never cleared": {
+      "tap": 6,
+      "timeout": 10
+     },
+     "cleared 151-200 s": {
+      "escape": 1,
+      "timeout": 2
+     },
+     "cleared 201-250 s": {
+      "timeout": 5
+     },
+     "cleared 251-300 s": {
+      "timeout": 6
+     },
+     "cleared <= 150 s": {
+      "timeout": 1
+     },
+     "never Exhausted": {
+      "escape": 65,
+      "tap": 4
+     }
+    },
+    "outcomes": {
+     "Half Guard": 65,
+     "Reversal": 1,
+     "TAP \u2014 Americana": 10,
+     "TIMEOUT \u2014 Mount retained": 24
+    },
+    "remaining_after_first_clear": {
+     "max": 160,
+     "median": 70,
+     "min": 0,
+     "n": 15,
+     "p10": 0,
+     "p90": 120
+    },
+    "top_first_exhausted": {
+     "max": 115,
+     "median": 85,
+     "min": 65,
+     "n": 33,
+     "p10": 75,
+     "p90": 95
+    },
+    "unexplained_bottom_delta": 0
+   },
+   "outcomes": {
+    "escapes": 66,
+    "tap": 10,
+    "threat_matches": 31,
+    "timeouts": 24,
+    "top_completed_builder_attempts": 152,
+    "top_completed_builds": 152
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 102,
+     "bottom_position": 388,
+     "bottom_reset": 303,
+     "bottom_setup": 37,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 473,
+     "top_setup": 218,
+     "top_submission": 205
+    },
+    "builder_attempts_per_threat_entry": 4.903225806451613,
+    "calibration": {
+     "progress": {
+      "actual": 78,
+      "deviation": 10.333333333333334,
+      "n": 950,
+      "predicted": 67.66666666666667,
+      "predicted_exact": "203/3",
+      "sigma": 5.753420882557772,
+      "variance_exact": "3575/108",
+      "within_3_sigma": true,
+      "z": 1.7960329244571955
+     },
+     "setup_advance": {
+      "actual": 245,
+      "deviation": 0.3333333333333333,
+      "n": 950,
+      "predicted": 244.66666666666666,
+      "predicted_exact": "734/3",
+      "sigma": 1.9436506316151,
+      "variance_exact": "34/9",
+      "within_3_sigma": true,
+      "z": 0.17149858514250882
+     },
+     "terminal": {
+      "actual": 76,
+      "deviation": -1.8888888888888888,
+      "n": 950,
+      "predicted": 77.88888888888889,
+      "predicted_exact": "701/9",
+      "sigma": 5.3278328116726605,
+      "variance_exact": "9197/324",
+      "within_3_sigma": true,
+      "z": -0.3545323127915263
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 387,
+     "bottom:position:MEDIUM": 1,
+     "bottom:setup:LOW": 18,
+     "bottom:setup:MEDIUM": 19,
+     "bottom:terminal:HIGH": 100,
+     "bottom:terminal:LOW": 2,
+     "top:progress:HIGH": 13,
+     "top:progress:LOW": 3,
+     "top:progress:MEDIUM": 160,
+     "top:setup:LOW": 218,
+     "top:terminal:HIGH": 1,
+     "top:terminal:MEDIUM": 28
+    },
+    "counterfactual_calls": 33,
+    "exchanges": 950,
+    "executed_decisions": 1726,
+    "forgone_better_position": 18,
+    "free_initiative_windows": 1,
+    "horizon": {
+     "closed_chains_with_r": 76,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 35,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 384,
+      "action_exact": 384,
+      "checked": 388
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 303,
+      "action_exact": 303,
+      "checked": 303
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 5,
+      "action_exact": 5,
+      "checked": 37
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 102,
+      "action_exact": 102,
+      "checked": 102
+     },
+     "top:progress": {
+      "action_commitment_exact": 176,
+      "action_exact": 176,
+      "checked": 176
+     },
+     "top:reset": {
+      "action_commitment_exact": 473,
+      "action_exact": 473,
+      "checked": 473
+     },
+     "top:setup": {
+      "action_commitment_exact": 112,
+      "action_exact": 114,
+      "checked": 218
+     },
+     "top:terminal": {
+      "action_commitment_exact": 29,
+      "action_exact": 29,
+      "checked": 29
+     }
+    },
+    "precedence_forced_exchanges": {
+     "bottom:D3B_TOKEN": 19,
+     "bottom:LOW_WHILE_EXHAUSTED": 332
+    },
+    "ready_conversion_top": {
+     "actual": 31,
+     "predicted": 27.38888888888889,
+     "predicted_exact": "493/18",
+     "uses": 76
+    },
+    "resets_per_match": {
+     "bottom": 3.03,
+     "top": 4.73
+    },
+    "setup_calibration_chains": {
+     "actual": 31,
+     "deviation": 3.7073259602194786,
+     "n": 142,
+     "predicted": 27.292674039780522,
+     "predicted_exact": "1273367/46656",
+     "sigma": 4.101717230175818,
+     "variance_exact": "36622369385/2176782336",
+     "within_3_sigma": true,
+     "z": 0.9038472796089276
+    },
+    "setup_decisions_per_threat_entry": 7.032258064516129,
+    "te1_tier_distribution": {
+     "bottom:position": 388,
+     "bottom:reset": 303,
+     "bottom:setup": 37,
+     "bottom:terminal": 102,
+     "top:progress": 176,
+     "top:reset": 473,
+     "top:setup": 218,
+     "top:terminal": 29
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2425,
+     "bottom|Exhausted|Tired": 285,
+     "bottom|Fresh|Fresh": 665,
+     "bottom|Fresh|Working": 10,
+     "bottom|Tired|Exhausted": 145,
+     "bottom|Tired|Tired": 330,
+     "bottom|Tired|Working": 25,
+     "bottom|Working|Tired": 120,
+     "bottom|Working|Working": 425,
+     "top|Exhausted|Exhausted": 2385,
+     "top|Exhausted|Tired": 220,
+     "top|Fresh|Fresh": 840,
+     "top|Fresh|Working": 10,
+     "top|Tired|Exhausted": 140,
+     "top|Tired|Tired": 340,
+     "top|Tired|Working": 25,
+     "top|Working|Tired": 110,
+     "top|Working|Working": 410
+    },
+    "top_setup_tier_decisions": 218
+   },
+   "rng": {
+    "baseline_draws": 7897,
+    "digest": "45d2f6dc384005d285b5e6c9fa35d4a4ee8edd3ce88bbc48e929555674551be1"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 38,
+     "Elbow-Knee Escape": 478,
+     "Trap-and-Roll": 11
+    },
+    "bottom_escape_priority_count": 102,
+    "bottom_final_stamina_mean": 63.58,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75,
+    "bottom_position_attack_count": 388,
+    "bottom_reset_count": 303,
+    "bottom_setup_action_count": 37,
+    "final_axis_mean": 0.99,
+    "free_initiative_window_count": 1,
+    "matches_both_ever_exhausted": 31,
+    "matches_bottom_ever_exhausted": 31,
+    "matches_reached_submission_control": 28,
+    "matches_reached_submission_finish": 19,
+    "matches_reached_submission_threat": 31,
+    "matches_top_ever_exhausted": 33,
+    "outcome_counts": {
+     "Half Guard": 65,
+     "Reversal": 1,
+     "TAP \u2014 Americana": 10,
+     "TIMEOUT \u2014 Mount retained": 24
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 126,
+     "LOW": 690,
+     "MEDIUM": 134
+    },
+    "top_action_counts": {
+     "Americana Finish": 129,
+     "Americana Isolation": 76,
+     "Climb High": 218
+    },
+    "top_completed_setup_build_count": 152,
+    "top_completed_setup_chain_count": 76,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 56.16,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 85,
+    "top_position_attack_count": 0,
+    "top_reset_count": 473,
+    "top_setup_action_count": 218,
+    "top_submission_attempt_count": 205,
+    "top_submission_priority_count": 205
+   }
+  },
+  "E-PROD 4342 OFF": {
+   "baseline": {
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     57,
+     1,
+     42,
+     57,
+     725
+    ],
+    "source": "Stage 1A-v2 committed evidence"
+   },
+   "bottom_exhausted_share_exact": {
+    "exhausted_seconds": 5265,
+    "match_seconds": 9075
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 101,
+      "te1_chosen": 177
+     },
+     "top": {
+      "high": 15,
+      "te1_chosen": 424
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 22,
+     "LOW_WHILE_EXHAUSTED": 318
+    },
+    "high": 116,
+    "te1_chosen": 601
+   },
+   "gated": false,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 340,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 39,
+     "d3b_decisions": {
+      "ARMED_NORMAL": 57,
+      "LOCKOUT_HOLD": 39,
+      "TOKEN": 22,
+      "UNARMED": 761
+     },
+     "holds_executed": 39,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 39,
+     "recovery_hold_history": 39
+    },
+    "p3_ok": true,
+    "p5": {
+     "checked": 1790
+    },
+    "p5_ok": true,
+    "tape_entries": 1790,
+    "tape_executed": 1751
+   },
+   "late_recovery": {
+    "after_first_clear_totals": {
+     "attempts_Exhausted_LOW": 22,
+     "attempts_non-Exhausted_LOW": 56,
+     "attempts_non-Exhausted_MEDIUM": 1
+    },
+    "bottom_exhausted_share_of_match_time": 0.5802,
+    "bottom_first_clear": {
+     "max": 300,
+     "median": 250,
+     "min": 170,
+     "n": 18,
+     "p10": 170,
+     "p90": 280
+    },
+    "bottom_first_exhausted": {
+     "max": 85,
+     "median": 75,
+     "min": 55,
+     "n": 30,
+     "p10": 65,
+     "p90": 85
+    },
+    "bottom_stamina_at_first_exhausted": {
+     "max": 25,
+     "median": 23,
+     "min": 11,
+     "n": 30,
+     "p10": 16,
+     "p90": 24
+    },
+    "escapes_by_commitment_and_state": {
+     "HIGH/non-Exhausted": 67,
+     "LOW/Exhausted": 1
+    },
+    "escapes_by_phase": {
+     "after first clear": 1,
+     "before first Exhausted entry": 67
+    },
+    "first_episode_duration_cleared": {
+     "max": 220,
+     "median": 175,
+     "min": 85,
+     "n": 18,
+     "p10": 85,
+     "p90": 205
+    },
+    "first_episode_totals": {
+     "behavior_drain": 0,
+     "bottom_attempts": 318,
+     "bottom_attempts_LOW": 318,
+     "bottom_initiation_spend": 954,
+     "bottom_resets": 137,
+     "conserve_gain": 1868,
+     "hold_spend": 87,
+     "response_spend": 530,
+     "seconds": 4670,
+     "top_attempts": 87,
+     "top_attempts_funded": 87
+    },
+    "matches": 100,
+    "opening_totals_entered_matches": {
+     "behavior_drain": 461,
+     "behavior_gain": 0,
+     "bottom_attempts_HIGH": 30,
+     "bottom_attempts_LOW": 2,
+     "bottom_attempts_MEDIUM": 15,
+     "bottom_initiation_spend": 471,
+     "hold_spend": 249,
+     "response_spend": 1172,
+     "seconds": 2305,
+     "top_attempts_LOW": 135,
+     "top_attempts_MEDIUM": 108,
+     "top_initiation_spend": 1161
+    },
+    "outcome_by_first_clear": {
+     "Exhausted, never cleared": {
+      "tap": 4,
+      "timeout": 8
+     },
+     "cleared 151-200 s": {
+      "timeout": 5
+     },
+     "cleared 201-250 s": {
+      "escape": 1,
+      "timeout": 3
+     },
+     "cleared 251-300 s": {
+      "timeout": 9
+     },
+     "cleared <= 150 s": {},
+     "never Exhausted": {
+      "escape": 67,
+      "tap": 3
+     }
+    },
+    "outcomes": {
+     "Half Guard": 68,
+     "TAP \u2014 Americana": 7,
+     "TIMEOUT \u2014 Mount retained": 25
+    },
+    "remaining_after_first_clear": {
+     "max": 130,
+     "median": 40,
+     "min": 0,
+     "n": 18,
+     "p10": 20,
+     "p90": 130
+    },
+    "top_first_exhausted": {
+     "max": 115,
+     "median": 95,
+     "min": 75,
+     "n": 32,
+     "p10": 75,
+     "p90": 115
+    },
+    "unexplained_bottom_delta": 0
+   },
+   "outcomes": {
+    "escapes": 68,
+    "tap": 7,
+    "threat_matches": 28,
+    "timeouts": 25,
+    "top_completed_builder_attempts": 162,
+    "top_completed_builds": 162
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 103,
+     "bottom_position": 374,
+     "bottom_reset": 323,
+     "bottom_setup": 40,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 487,
+     "top_setup": 230,
+     "top_submission": 194
+    },
+    "builder_attempts_per_threat_entry": 5.785714285714286,
+    "calibration": {
+     "progress": {
+      "actual": 69,
+      "deviation": -0.5277777777777778,
+      "n": 941,
+      "predicted": 69.52777777777777,
+      "predicted_exact": "2503/36",
+      "sigma": 5.622856244443656,
+      "variance_exact": "40975/1296",
+      "within_3_sigma": true,
+      "z": -0.0938629327931534
+     },
+     "setup_advance": {
+      "actual": 260,
+      "deviation": -0.3333333333333333,
+      "n": 941,
+      "predicted": 260.3333333333333,
+      "predicted_exact": "781/3",
+      "sigma": 1.8856180831641267,
+      "variance_exact": "32/9",
+      "within_3_sigma": true,
+      "z": -0.17677669529663687
+     },
+     "terminal": {
+      "actual": 75,
+      "deviation": -0.08333333333333333,
+      "n": 941,
+      "predicted": 75.08333333333333,
+      "predicted_exact": "901/12",
+      "sigma": 5.229235833982572,
+      "variance_exact": "11813/432",
+      "within_3_sigma": true,
+      "z": -0.015936044190584323
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 373,
+     "bottom:position:MEDIUM": 1,
+     "bottom:setup:LOW": 23,
+     "bottom:setup:MEDIUM": 17,
+     "bottom:terminal:HIGH": 101,
+     "bottom:terminal:LOW": 2,
+     "top:progress:HIGH": 15,
+     "top:progress:LOW": 8,
+     "top:progress:MEDIUM": 150,
+     "top:setup:LOW": 230,
+     "top:terminal:MEDIUM": 21
+    },
+    "counterfactual_calls": 39,
+    "exchanges": 941,
+    "executed_decisions": 1751,
+    "forgone_better_position": 23,
+    "free_initiative_windows": 0,
+    "horizon": {
+     "closed_chains_with_r": 81,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 34,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 371,
+      "action_exact": 371,
+      "checked": 374
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 323,
+      "action_exact": 323,
+      "checked": 323
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 0,
+      "action_exact": 0,
+      "checked": 40
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 103,
+      "action_exact": 103,
+      "checked": 103
+     },
+     "top:progress": {
+      "action_commitment_exact": 173,
+      "action_exact": 173,
+      "checked": 173
+     },
+     "top:reset": {
+      "action_commitment_exact": 487,
+      "action_exact": 487,
+      "checked": 487
+     },
+     "top:setup": {
+      "action_commitment_exact": 127,
+      "action_exact": 129,
+      "checked": 230
+     },
+     "top:terminal": {
+      "action_commitment_exact": 21,
+      "action_exact": 21,
+      "checked": 21
+     }
+    },
+    "precedence_forced_exchanges": {
+     "bottom:D3B_TOKEN": 22,
+     "bottom:LOW_WHILE_EXHAUSTED": 318
+    },
+    "ready_conversion_top": {
+     "actual": 28,
+     "predicted": 30.305555555555557,
+     "predicted_exact": "1091/36",
+     "uses": 81
+    },
+    "resets_per_match": {
+     "bottom": 3.23,
+     "top": 4.87
+    },
+    "setup_calibration_chains": {
+     "actual": 28,
+     "deviation": -2.676397462277092,
+     "n": 148,
+     "predicted": 30.67639746227709,
+     "predicted_exact": "715619/23328",
+     "sigma": 4.210692781663942,
+     "variance_exact": "3216183875/181398528",
+     "within_3_sigma": true,
+     "z": -0.6356192676729691
+    },
+    "setup_decisions_per_threat_entry": 8.214285714285714,
+    "te1_tier_distribution": {
+     "bottom:position": 374,
+     "bottom:reset": 323,
+     "bottom:setup": 40,
+     "bottom:terminal": 103,
+     "top:progress": 173,
+     "top:reset": 487,
+     "top:setup": 230,
+     "top:terminal": 21
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2450,
+     "bottom|Exhausted|Tired": 325,
+     "bottom|Fresh|Fresh": 655,
+     "bottom|Fresh|Working": 15,
+     "bottom|Tired|Exhausted": 210,
+     "bottom|Tired|Tired": 295,
+     "bottom|Tired|Working": 10,
+     "bottom|Working|Tired": 185,
+     "bottom|Working|Working": 375,
+     "top|Exhausted|Exhausted": 2385,
+     "top|Exhausted|Tired": 265,
+     "top|Fresh|Fresh": 825,
+     "top|Fresh|Working": 15,
+     "top|Tired|Exhausted": 220,
+     "top|Tired|Tired": 305,
+     "top|Tired|Working": 10,
+     "top|Working|Tired": 165,
+     "top|Working|Working": 365
+    },
+    "top_setup_tier_decisions": 230
+   },
+   "rng": {
+    "baseline_draws": 7921,
+    "digest": "e816c6326939fd2826f84ad6675bcce9ea62d525bc95241e5fade13fcde77b6d"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 41,
+     "Elbow-Knee Escape": 468,
+     "Trap-and-Roll": 8
+    },
+    "bottom_escape_priority_count": 103,
+    "bottom_final_stamina_mean": 64.29,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75.0,
+    "bottom_position_attack_count": 374,
+    "bottom_reset_count": 323,
+    "bottom_setup_action_count": 40,
+    "final_axis_mean": 0.86,
+    "free_initiative_window_count": 0,
+    "matches_both_ever_exhausted": 30,
+    "matches_bottom_ever_exhausted": 30,
+    "matches_reached_submission_control": 26,
+    "matches_reached_submission_finish": 15,
+    "matches_reached_submission_threat": 28,
+    "matches_top_ever_exhausted": 32,
+    "outcome_counts": {
+     "Half Guard": 68,
+     "TAP \u2014 Americana": 7,
+     "TIMEOUT \u2014 Mount retained": 25
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 123,
+     "LOW": 668,
+     "MEDIUM": 150
+    },
+    "top_action_counts": {
+     "Americana Finish": 113,
+     "Americana Isolation": 81,
+     "Climb High": 230
+    },
+    "top_completed_setup_build_count": 162,
+    "top_completed_setup_chain_count": 81,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 56.86,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 95.0,
+    "top_position_attack_count": 0,
+    "top_reset_count": 487,
+    "top_setup_action_count": 230,
+    "top_submission_attempt_count": 194,
+    "top_submission_priority_count": 194
+   }
+  },
+  "E-PROD 4342 ON": {
+   "baseline": {
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     57,
+     1,
+     42,
+     57,
+     725
+    ],
+    "source": "Stage 1A-v2 committed evidence"
+   },
+   "bottom_exhausted_share_exact": {
+    "exhausted_seconds": 5245,
+    "match_seconds": 9030
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 101,
+      "te1_chosen": 178
+     },
+     "top": {
+      "high": 15,
+      "te1_chosen": 424
+     }
+    },
+    "excluded_forced": {
+     "D3B_TOKEN": 22,
+     "LOW_WHILE_EXHAUSTED": 318
+    },
+    "high": 116,
+    "te1_chosen": 602
+   },
+   "gated": false,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 340,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 35,
+     "d3b_decisions": {
+      "ARMED_NORMAL": 58,
+      "LOCKOUT_HOLD": 35,
+      "TOKEN": 22,
+      "UNARMED": 763
+     },
+     "holds_executed": 35,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 35,
+     "recovery_hold_history": 35
+    },
+    "p3_ok": true,
+    "p5": {
+     "checked": 1785
+    },
+    "p5_ok": true,
+    "tape_entries": 1785,
+    "tape_executed": 1750
+   },
+   "late_recovery": {
+    "after_first_clear_totals": {
+     "attempts_Exhausted_LOW": 22,
+     "attempts_non-Exhausted_LOW": 55,
+     "attempts_non-Exhausted_MEDIUM": 3
+    },
+    "bottom_exhausted_share_of_match_time": 0.5808,
+    "bottom_first_clear": {
+     "max": 300,
+     "median": 250,
+     "min": 170,
+     "n": 18,
+     "p10": 170,
+     "p90": 280
+    },
+    "bottom_first_exhausted": {
+     "max": 85,
+     "median": 75,
+     "min": 55,
+     "n": 30,
+     "p10": 65,
+     "p90": 85
+    },
+    "bottom_stamina_at_first_exhausted": {
+     "max": 25,
+     "median": 23,
+     "min": 11,
+     "n": 30,
+     "p10": 16,
+     "p90": 24
+    },
+    "escapes_by_commitment_and_state": {
+     "HIGH/non-Exhausted": 67,
+     "LOW/Exhausted": 2
+    },
+    "escapes_by_phase": {
+     "after first clear": 2,
+     "before first Exhausted entry": 67
+    },
+    "first_episode_duration_cleared": {
+     "max": 220,
+     "median": 175,
+     "min": 85,
+     "n": 18,
+     "p10": 85,
+     "p90": 205
+    },
+    "first_episode_totals": {
+     "behavior_drain": 0,
+     "bottom_attempts": 318,
+     "bottom_attempts_LOW": 318,
+     "bottom_initiation_spend": 954,
+     "bottom_resets": 139,
+     "conserve_gain": 1868,
+     "hold_spend": 87,
+     "response_spend": 530,
+     "seconds": 4670,
+     "top_attempts": 87,
+     "top_attempts_funded": 87
+    },
+    "matches": 100,
+    "opening_totals_entered_matches": {
+     "behavior_drain": 461,
+     "behavior_gain": 0,
+     "bottom_attempts_HIGH": 30,
+     "bottom_attempts_LOW": 2,
+     "bottom_attempts_MEDIUM": 15,
+     "bottom_initiation_spend": 471,
+     "hold_spend": 249,
+     "response_spend": 1172,
+     "seconds": 2305,
+     "top_attempts_LOW": 135,
+     "top_attempts_MEDIUM": 108,
+     "top_initiation_spend": 1161
+    },
+    "outcome_by_first_clear": {
+     "Exhausted, never cleared": {
+      "tap": 4,
+      "timeout": 8
+     },
+     "cleared 151-200 s": {
+      "escape": 1,
+      "timeout": 4
+     },
+     "cleared 201-250 s": {
+      "escape": 1,
+      "timeout": 3
+     },
+     "cleared 251-300 s": {
+      "timeout": 9
+     },
+     "cleared <= 150 s": {},
+     "never Exhausted": {
+      "escape": 67,
+      "tap": 3
+     }
+    },
+    "outcomes": {
+     "Half Guard": 69,
+     "TAP \u2014 Americana": 7,
+     "TIMEOUT \u2014 Mount retained": 24
+    },
+    "remaining_after_first_clear": {
+     "max": 130,
+     "median": 40,
+     "min": 0,
+     "n": 18,
+     "p10": 20,
+     "p90": 130
+    },
+    "top_first_exhausted": {
+     "max": 115,
+     "median": 95,
+     "min": 75,
+     "n": 32,
+     "p10": 75,
+     "p90": 115
+    },
+    "unexplained_bottom_delta": 0
+   },
+   "outcomes": {
+    "escapes": 69,
+    "tap": 7,
+    "threat_matches": 28,
+    "timeouts": 24,
+    "top_completed_builder_attempts": 162,
+    "top_completed_builds": 162
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 105,
+     "bottom_position": 368,
+     "bottom_reset": 325,
+     "bottom_setup": 45,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 483,
+     "top_setup": 230,
+     "top_submission": 194
+    },
+    "builder_attempts_per_threat_entry": 5.785714285714286,
+    "calibration": {
+     "progress": {
+      "actual": 69,
+      "deviation": -0.5277777777777778,
+      "n": 942,
+      "predicted": 69.52777777777777,
+      "predicted_exact": "2503/36",
+      "sigma": 5.622856244443656,
+      "variance_exact": "40975/1296",
+      "within_3_sigma": true,
+      "z": -0.0938629327931534
+     },
+     "setup_advance": {
+      "actual": 267,
+      "deviation": -0.3333333333333333,
+      "n": 942,
+      "predicted": 267.3333333333333,
+      "predicted_exact": "802/3",
+      "sigma": 1.8856180831641267,
+      "variance_exact": "32/9",
+      "within_3_sigma": true,
+      "z": -0.17677669529663687
+     },
+     "terminal": {
+      "actual": 76,
+      "deviation": -0.4166666666666667,
+      "n": 942,
+      "predicted": 76.41666666666667,
+      "predicted_exact": "917/12",
+      "sigma": 5.271560665671206,
+      "variance_exact": "12005/432",
+      "within_3_sigma": true,
+      "z": -0.07904047645321259
+     }
+    },
+    "commitment_distribution": {
+     "bottom:position:LOW": 365,
+     "bottom:position:MEDIUM": 3,
+     "bottom:setup:LOW": 28,
+     "bottom:setup:MEDIUM": 17,
+     "bottom:terminal:HIGH": 101,
+     "bottom:terminal:LOW": 4,
+     "top:progress:HIGH": 15,
+     "top:progress:LOW": 8,
+     "top:progress:MEDIUM": 150,
+     "top:setup:LOW": 230,
+     "top:terminal:MEDIUM": 21
+    },
+    "counterfactual_calls": 35,
+    "exchanges": 942,
+    "executed_decisions": 1750,
+    "forgone_better_position": 28,
+    "free_initiative_windows": 3,
+    "horizon": {
+     "closed_chains_with_r": 81,
+     "real_horizon_differs_from_2r": 0
+    },
+    "matches_reaching_top_ready": 34,
+    "mean_time_to_first_top_ready": 15.0,
+    "o3_fidelity": {
+     "bottom:position": {
+      "action_commitment_exact": 367,
+      "action_exact": 367,
+      "checked": 368
+     },
+     "bottom:reset": {
+      "action_commitment_exact": 325,
+      "action_exact": 325,
+      "checked": 325
+     },
+     "bottom:setup": {
+      "action_commitment_exact": 8,
+      "action_exact": 8,
+      "checked": 45
+     },
+     "bottom:terminal": {
+      "action_commitment_exact": 105,
+      "action_exact": 105,
+      "checked": 105
+     },
+     "top:progress": {
+      "action_commitment_exact": 173,
+      "action_exact": 173,
+      "checked": 173
+     },
+     "top:reset": {
+      "action_commitment_exact": 483,
+      "action_exact": 483,
+      "checked": 483
+     },
+     "top:setup": {
+      "action_commitment_exact": 127,
+      "action_exact": 129,
+      "checked": 230
+     },
+     "top:terminal": {
+      "action_commitment_exact": 21,
+      "action_exact": 21,
+      "checked": 21
+     }
+    },
+    "precedence_forced_exchanges": {
+     "bottom:D3B_TOKEN": 22,
+     "bottom:LOW_WHILE_EXHAUSTED": 318
+    },
+    "ready_conversion_top": {
+     "actual": 28,
+     "predicted": 30.305555555555557,
+     "predicted_exact": "1091/36",
+     "uses": 81
+    },
+    "resets_per_match": {
+     "bottom": 3.25,
+     "top": 4.83
+    },
+    "setup_calibration_chains": {
+     "actual": 28,
+     "deviation": -2.676397462277092,
+     "n": 148,
+     "predicted": 30.67639746227709,
+     "predicted_exact": "715619/23328",
+     "sigma": 4.210692781663942,
+     "variance_exact": "3216183875/181398528",
+     "within_3_sigma": true,
+     "z": -0.6356192676729691
+    },
+    "setup_decisions_per_threat_entry": 8.214285714285714,
+    "te1_tier_distribution": {
+     "bottom:position": 368,
+     "bottom:reset": 325,
+     "bottom:setup": 45,
+     "bottom:terminal": 105,
+     "top:progress": 173,
+     "top:reset": 483,
+     "top:setup": 230,
+     "top:terminal": 21
+    },
+    "time_by_initiative_band": {
+     "bottom|Exhausted|Exhausted": 2450,
+     "bottom|Exhausted|Tired": 305,
+     "bottom|Fresh|Fresh": 655,
+     "bottom|Fresh|Working": 15,
+     "bottom|Tired|Exhausted": 210,
+     "bottom|Tired|Tired": 295,
+     "bottom|Tired|Working": 10,
+     "bottom|Working|Tired": 185,
+     "bottom|Working|Working": 375,
+     "top|Exhausted|Exhausted": 2365,
+     "top|Exhausted|Tired": 260,
+     "top|Fresh|Fresh": 825,
+     "top|Fresh|Working": 15,
+     "top|Tired|Exhausted": 220,
+     "top|Tired|Tired": 305,
+     "top|Tired|Working": 10,
+     "top|Working|Tired": 165,
+     "top|Working|Working": 365
+    },
+    "top_setup_tier_decisions": 230
+   },
+   "rng": {
+    "baseline_draws": 7929,
+    "digest": "a08abbbf76db8996f0474c4461afebed48ec7f82e12e533322bfdbf25a41ea5d"
+   },
+   "summary": {
+    "bottom_action_counts": {
+     "Bridge": 48,
+     "Elbow-Knee Escape": 458,
+     "Trap-and-Roll": 12
+    },
+    "bottom_escape_priority_count": 105,
+    "bottom_final_stamina_mean": 64.15,
+    "bottom_final_stamina_median": 83.0,
+    "bottom_first_exhausted_time_median": 75.0,
+    "bottom_position_attack_count": 368,
+    "bottom_reset_count": 325,
+    "bottom_setup_action_count": 45,
+    "final_axis_mean": 0.778,
+    "free_initiative_window_count": 3,
+    "matches_both_ever_exhausted": 30,
+    "matches_bottom_ever_exhausted": 30,
+    "matches_reached_submission_control": 26,
+    "matches_reached_submission_finish": 15,
+    "matches_reached_submission_threat": 28,
+    "matches_top_ever_exhausted": 32,
+    "outcome_counts": {
+     "Half Guard": 69,
+     "TAP \u2014 Americana": 7,
+     "TIMEOUT \u2014 Mount retained": 24
+    },
+    "response_requested_commitment_counts": {
+     "HIGH": 123,
+     "LOW": 669,
+     "MEDIUM": 150
+    },
+    "top_action_counts": {
+     "Americana Finish": 113,
+     "Americana Isolation": 81,
+     "Climb High": 230
+    },
+    "top_completed_setup_build_count": 162,
+    "top_completed_setup_chain_count": 81,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 56.86,
+    "top_final_stamina_median": 83.0,
+    "top_first_exhausted_time_median": 95.0,
+    "top_position_attack_count": 0,
+    "top_reset_count": 483,
+    "top_setup_action_count": 230,
+    "top_submission_attempt_count": 194,
+    "top_submission_priority_count": 194
+   }
+  },
+  "PROTECT probe": {
+   "baseline": {
+    "evaluator_rng_draws": 0,
+    "exact": true,
+    "fields": [
+     "threat_matches",
+     "tap",
+     "escapes",
+     "timeouts",
+     "top_completed_builds"
+    ],
+    "frozen": [
+     0,
+     0,
+     2,
+     98,
+     1768
+    ],
+    "g4_equivalence": true,
+    "observed": [
+     0,
+     0,
+     2,
+     98,
+     1768
+    ],
+    "reason_independent_builder_attempts": 1768
+   },
+   "g6": {
+    "by_side": {
+     "bottom": {
+      "high": 0,
+      "te1_chosen": 0
+     },
+     "top": {
+      "high": 0,
+      "te1_chosen": 0
+     }
+    },
+    "excluded_forced": {},
+    "high": 0,
+    "te1_chosen": 0
+   },
+   "gated": true,
+   "integrity": {
+    "evaluator_rng_draws": 0,
+    "historical_counter_le_reason_independent": true,
+    "p3": {
+     "attempts_in_lockout_hold_window": 0,
+     "bottom_recover_exhausted_initiations": 0,
+     "bottom_recover_exhausted_not_low": 0,
+     "counterfactual_tape_entries": 0,
+     "d3b_decisions": {},
+     "holds_executed": 0,
+     "holds_without_lockout_decision": 0,
+     "lockout_hold_decisions": 0,
+     "recovery_hold_history": 0
+    },
+    "p3_ok": true,
+    "p4b_second_run_identical": true,
+    "p4c_replay_identical": true,
+    "p5": {
+     "checked": 5900
+    },
+    "p5_ok": true,
+    "tape_entries": 5900,
+    "tape_executed": 5900
+   },
+   "outcomes": {
+    "escapes": 0,
+    "tap": 0,
+    "threat_matches": 0,
+    "timeouts": 100,
+    "top_completed_builder_attempts": 0,
+    "top_completed_builds": 0
+   },
+   "reported": {
+    "baseline_reason_counters_candidate": {
+     "bottom_escape": 0,
+     "bottom_position": 0,
+     "bottom_reset": 2900,
+     "bottom_setup": 0,
+     "top_escape": 0,
+     "top_position": 0,
+     "top_reset": 3000,
+     "top_setup": 0,
+     "top_submission": 0
+    },
+    "builder_attempts_per_threat_entry": null,
+    "calibration": {
+     "progress": {
+      "actual": 0,
+      "deviation": 0.0,
+      "n": 0,
+      "predicted": 0.0,
+      "predicted_exact": "0",
+      "sigma": 0.0,
+      "variance_exact": "0",
+      "within_3_sigma": true,
+      "z": null
+     },
+     "setup_advance": {
+      "actual": 0,
+      "deviation": 0.0,
+      "n": 0,
+      "predicted": 0.0,
+      "predicted_exact": "0",
+      "sigma": 0.0,
+      "variance_exact": "0",
+      "within_3_sigma": true,
+      "z": null
+     },
+     "terminal": {
+      "actual": 0,
+      "deviation": 0.0,
+      "n": 0,
+      "predicted": 0.0,
+      "predicted_exact": "0",
+      "sigma": 0.0,
+      "variance_exact": "0",
+      "within_3_sigma": true,
+      "z": null
+     }
+    },
+    "commitment_distribution": {},
+    "counterfactual_calls": 0,
+    "exchanges": 0,
+    "executed_decisions": 5900,
+    "forgone_better_position": 0,
+    "free_initiative_windows": 0,
+    "horizon": {},
+    "matches_reaching_top_ready": 0,
+    "mean_time_to_first_top_ready": null,
+    "o3_fidelity": {
+     "bottom:reset": {
+      "action_commitment_exact": 2900,
+      "action_exact": 2900,
+      "checked": 2900
+     },
+     "top:reset": {
+      "action_commitment_exact": 3000,
+      "action_exact": 3000,
+      "checked": 3000
+     }
+    },
+    "precedence_forced_exchanges": {},
+    "ready_conversion_top": {
+     "actual": 0,
+     "predicted": 0.0,
+     "predicted_exact": "0",
+     "uses": 0
+    },
+    "resets_per_match": {
+     "bottom": 29.0,
+     "top": 30.0
+    },
+    "setup_calibration_chains": {
+     "actual": 0,
+     "deviation": 0.0,
+     "n": 0,
+     "predicted": 0.0,
+     "predicted_exact": "0",
+     "sigma": 0.0,
+     "variance_exact": "0",
+     "within_3_sigma": true,
+     "z": null
+    },
+    "setup_decisions_per_threat_entry": null,
+    "te1_tier_distribution": {
+     "bottom:reset": 2900,
+     "top:reset": 3000
+    },
+    "time_by_initiative_band": {
+     "bottom|Fresh|Fresh": 6000,
+     "bottom|Tired|Fresh": 2500,
+     "bottom|Working|Fresh": 6500,
+     "top|Fresh|Fresh": 6500,
+     "top|Tired|Fresh": 2500,
+     "top|Working|Fresh": 6000
+    },
+    "top_setup_tier_decisions": 0
+   },
+   "rng": {
+    "baseline_draws": 400,
+    "digest": "f563b29d9ea6816e5482e75c6db0b40b58033bfad5e3b807d34569efbb5c3292"
+   },
+   "summary": {
+    "bottom_action_counts": {},
+    "bottom_escape_priority_count": 0,
+    "bottom_final_stamina_mean": 100,
+    "bottom_final_stamina_median": 100.0,
+    "bottom_first_exhausted_time_median": null,
+    "bottom_position_attack_count": 0,
+    "bottom_reset_count": 2900,
+    "bottom_setup_action_count": 0,
+    "final_axis_mean": 4.0,
+    "free_initiative_window_count": 0,
+    "matches_both_ever_exhausted": 0,
+    "matches_bottom_ever_exhausted": 0,
+    "matches_reached_submission_control": 0,
+    "matches_reached_submission_finish": 0,
+    "matches_reached_submission_threat": 0,
+    "matches_top_ever_exhausted": 0,
+    "outcome_counts": {
+     "TIMEOUT \u2014 Mount retained": 100
+    },
+    "response_requested_commitment_counts": {},
+    "top_action_counts": {},
+    "top_completed_setup_build_count": 0,
+    "top_completed_setup_chain_count": 0,
+    "top_escape_priority_count": 0,
+    "top_final_stamina_mean": 40,
+    "top_final_stamina_median": 40.0,
+    "top_first_exhausted_time_median": null,
+    "top_position_attack_count": 0,
+    "top_reset_count": 3000,
+    "top_setup_action_count": 0,
+    "top_submission_attempt_count": 0,
+    "top_submission_priority_count": 0
+   }
+  }
+ }
+}
