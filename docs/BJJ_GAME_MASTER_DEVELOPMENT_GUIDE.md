@@ -1,5 +1,5 @@
-# BJJ Game — Master Game Development Guide v10.3
-## Merged Post-Mount Source of Truth — Decision Timers and Technique Memories Addendum
+# BJJ Game — Master Game Development Guide v10.4
+## Reconciled Production Decisions — Godot, No-Gi, IBJJF, 3D and Persistent Career
 
 **Status:** Active master design + development roadmap  
 **Supersedes:** `BJJ Game Concept — Current Design Recap v9 — Mount v0 CODE-READY FREEZE` as the project-wide planning document  
@@ -10,6 +10,10 @@
 **v10.2 design blueprint (2026-10-08):** v10.1 includes Dual-clock decision windows; memory-inspired technique presentation and roguelike rewards. These are design direction and provisional defaults, **not implemented gameplay**. The timing/session layer and memory presentation must not override the deterministic simulation core. The choice to port Python to Godot/GDScript is under evaluation, not approved or completed.
 
 **v10.3 persistent-career adoption (2026-10-08):** One persistent fighter, belt-promotion runs, permanent belt/mastered-memory retention, discovered-impression retention, defeat-triggered Memory Fracture, and success-protected unfinished progress are accepted *design rules*. Exact balance, match counts, belt requirements, and Godot migration remain unimplemented/open. Section 58C controls where earlier memory-persistence language differs.
+
+**v10.4 accepted owner decisions (2026-10-08):** Use **Godot + typed GDScript** with mandatory Mount parity against frozen Python behavior; **No-Gi first**; both **IBJJF rules-based points** and **custom Submission-Only** modes (points mode first for production-rule verification, both in the game plan); **3D greybox grapplers and contextual position-dependent cameras** rather than a 2D-first prototype; **PC keyboard/mouse → multiplayer → mobile → controller** as the preferred rollout order; one decision event/exchange with sealed simultaneous decisions in neutral states and sequential initiative/response when a side has authority; eligible **white-belt submissions per the pinned IBJJF age/belt/attire table**; emergency response expiry allows the attack to continue without a chosen counter, subject to legal resolver and referee stoppage (never invent a Tap/Refuse choice); a **three-match road plus promotion challenge** prototype, incomplete competency awarding an earned **stripe/degree** instead of automatic promotion; deliberate repeated run abandonment may remove stripes or promotion standing **but never an earned belt**. The accepted rules of §58C remain authoritative. IBJJF rule-accuracy qualifications are in §40. Several tuning and enforcement thresholds remain open.
+
+**Version precedence:** §0A (v10.4) and specifically updated sections supersede contradictory older provisional language; historical v10.1–v10.3 status notes remain provenance, not current instructions. Nothing in this document claims these newly approved systems are implemented.
 
 ---
 
@@ -36,6 +40,34 @@ When a system is completed, update its status here.
 - ⚪ **Important but still needs design**
 - ⏸ **Intentionally deferred**
 - ❌ **Do not pursue right now**
+
+---
+
+# 0A. v10.4 Pre-Implementation Freeze — Normative Decision Register
+
+**Status: Owner-approved product and architecture design, NOT implemented code.** The following are binding direction for the next implementation phase, except numerical or policy details explicitly designated **OPEN**.
+
+| Domain | Frozen direction | Qualification / follow-up |
+|---|---|---|
+| Production engine | Godot 4 + typed GDScript | Pin tested Godot patch version; Mount parity gates port completion. |
+| Determinism | Python Mount and frozen production policy are reference oracles | Preserve behavior on matched input traces; no refactor/tuning during parity slice. |
+| Attire | No-Gi first | Design controls/grips/legality for future Gi; no Gi-specific content required now. |
+| Match modes | Both points and submission-only are in scope | IBJJF-rule-based No-Gi points first; Submission-Only is a separate **custom** mode. Do not require both finished before first headless match. |
+| Points rules | Pin an IBJJF rules edition and adult belt/age division | Correct points, advantages, penalties, time and referee decisions; no default overtime. |
+| Presentation | 3D greybox with position-specific cameras | Simulation remains authoritative, not animation/physics; polished assets deferred. |
+| Input/release | PC keyboard+mouse, then multiplayer, mobile, controller | Order is owner preference, not promise of shipping dates. Common input abstraction from day one. |
+| Choices | One meaningful decision event per exchange | Sequential initiator→responder or simultaneous sealed choices; emergency submission window is an explicit exception. |
+| Initiative | Established positional authority grants default first action | Physical TOP is *not* a universal synonym for advantage (especially Back Control/Guard). |
+| Axis | Signed control/advantage oriented to a stable role or fighter ID | Mount convention preserved; no global top/bottom polarity assumptions. |
+| White-belt attack legality | Allow rule-legal white-belt submissions | Gate by pinned ruleset + age + belt + attire + technique execution, not a blanket ban. |
+| Emergency missed defense | Attack proceeds without active counter | It still must pass normal legal/deterministic finish conditions. Never auto-select Tap or Refuse; referee stoppage resolves secure finishes. |
+| Promotion road | 3 ordinary matches + a promotion challenge (first prototype) | Exact narrative, challenge requirements and balance can be tested. |
+| Won road, incomplete competency | Stripe/degree or promotion standing rather than premature belt | Bounded cap and explicit competency path, not automatic promotion. |
+| Deliberate repeated abandonment | May reduce earned stripes or promotion standing | Never remove belt, mastered memories or discovery records; save/quit/crash are not abandonment. |
+
+**Unfrozen essentials:** exact Godot version, exact verified no-gi technique legality inventory, custom Submission-Only timeout winner rule, deterministic virtual-referee tie metrics, stripe award/penalty caps and abandonment frequency thresholds, technical competency requirements, UI usability under PvP deadlines, optional hardcore systems (not approved), complete multiplayer fairness/security.
+
+**Rules sources and limitations:** Official source directory https://ibjjf.com/books-videos (currently labels rulebook v6.0 while its linked June 2024 download is version 6.1); archived June 2024 IBJJF Rule Book v6.1 https://www.ligabjj.com/ibjjfrules/2024JUN_IBJJF_Rules_EN.pdf ; https://ibjjf.com/graduation-system for graduation background. The game uses an **IBJJF rules-based model**, not an IBJJF-certified referee or an official IBJJF promotion mechanism; actual publication/amendment and technique legality must be rechecked/pinned at implementation. Do not conflate the game's earned stripes and belt-road system with official real-world graduation practice.
 
 ---
 
@@ -113,15 +145,14 @@ Mount has already proven the engine can represent:
 ### AI
 🟡 The AI/evaluator infrastructure is considerably more mature than the rest of the playable game.
 
-Current direction:
+Current direction (updated v10.4):
 
-- finish the currently selected fourth TE-2 authoritative surface;
-- stop the campaign at 4 completed surfaces;
-- preserve the partial evidence;
-- close TE-2 as **OPEN / INCOMPLETE**;
-- do not promote TACTICAL_V2;
+- **TE-2 already closed OPEN / INCOMPLETE** with three completed candidate surfaces (the selected fourth remained incomplete); do **not** restart measurement, rerun the campaign, or promote `TACTICAL_V2`;
+- preserve the frozen partial evidence and historical behavior;
 - pause advanced tactical-AI research;
 - use a simpler stable opponent policy while game breadth is built.
+
+Treat older Phase 0 instructions as historical. The upcoming work is the GDScript parity spike, not another TE-2 campaign.
 
 ---
 
@@ -145,7 +176,8 @@ Mount
 ## New pattern
 
 ```text
-Generalize Mount
+Pin Godot and verify Python→typed GDScript Mount parity
+→ Generalize Mount
 → build the 10-position graph
 → connect transitions
 → play a full human-controlled match
@@ -176,37 +208,23 @@ Do **not** spend months perfecting one position before the complete graph exists
 
 # 4. Match Structure
 
-The default match is:
+The initial complete headless match uses **five minutes of simulated BJJ time**. This is a *development baseline*, not a permanent all-belt rule. There is no fixed number of turns; human decision events pause the simulated clock.
 
-```text
-5:00 GAME TIME
-```
+The final IBJJF-rule-based **adult** points mode configures regulation duration by belt from the pinned June 2024 IBJJF rules table:
 
-This is **simulated grappling time**, not necessarily five real-world minutes.
+| Adult belt | Regulation time |
+|---|---|
+| White | 5 minutes |
+| Blue | 6 minutes |
+| Purple | 7 minutes |
+| Brown | 8 minutes |
+| Black | 10 minutes |
 
-There is no fixed number of turns.
+These durations are **for the adult division**, not universal to juveniles or masters. Time is a ruleset configuration; do not hardcode five minutes across progression. See §40 for result resolution and mode separation.
 
-A full match should be capable of flowing through:
+A full match must flow through Standing, takedown entries, Closed/Open/Half Guard, Side Control, Mount, Back Control, Turtle, Front Headlock, Leg Entanglement, sweeps, passes, reversals, scrambles, threats, escapes and transitions.
 
-- Standing;
-- takedown entries;
-- Guard;
-- Half Guard;
-- Side Control;
-- Mount;
-- Back Control;
-- Turtle;
-- Front Headlock;
-- Leg Entanglement;
-- sweeps;
-- passes;
-- reversals;
-- scrambles;
-- submission threats;
-- escapes;
-- transitions.
-
-The player should lose because of BJJ decisions and match conditions—not because an arbitrary turn counter expired.
+The player loses or wins through BJJ actions and valid match rules, not an exchange-count cap. The clock pauses during one meaningful decision event per exchange; actions are not free instant turns. Manual Read/Act cannot grant unlimited pause opportunities.
 
 ---
 
@@ -270,7 +288,7 @@ The player should not be punished for thinking slowly.
 
 Two fundamentally different clocks must never be conflated:
 
-1. **Match clock:** simulated BJJ time (normally 5:00), which advances during grappling simulation and remains **paused during player decision windows**.
+1. **Match clock:** configurable simulated BJJ time (5:00 in the initial headless test; belt- and division-specific periods in IBJJF mode); it advances during grappling simulation and remains **paused during player decision windows**.
 2. **Decision deadline:** real-world wall-clock budget to lock a choice in a human decision window. It counts down while match simulation is paused, and it does **not** deduct simulated match seconds.
 
 Provisional mode policy (subject to playtesting):
@@ -297,7 +315,18 @@ The **30-second figure is for competitive multiplayer**, not a universal timer f
 
 **Architecture:** define a proposed `DecisionTimerPolicy` / `DecisionDeadline` at the player-session boundary, **not** in `PositionContract`, `MountMatch`, or rendering code. The simulation consumes a resolved legal player command; it must not read wall-clock time to calculate positional outcomes. Deadline timing, server timestamps, and timeout commands are recorded in session/replay metadata when necessary. The deterministic core replays the final resolved commands, not wall-clock scheduling.
 
-**Player-facing UX:** show an always-legible 5:00 simulated match clock and a separate contextual decision countdown; communicate locked/awaiting/timeout states clearly. Timeout does not spend simulated match time. Do not turn this into a reflex game; expose technique details efficiently and test whether 30 seconds is fair with real players.
+**Player-facing UX:** show an always-legible remaining simulated match clock and a separate contextual decision countdown; communicate locked/awaiting/timeout states clearly. Timeout does not spend simulated match time. Do not turn this into a reflex game; expose technique details efficiently and test whether 30 seconds is fair with real players.
+
+## 5.2b One Decision Event Per Exchange — v10.4
+
+The owner's phrase **"one window per turn"** means a single coherent **meaningful decision event** per exchange, **not** a fixed discrete-turn match or a limit of one fighter making one decision when a response is required.
+
+- **Established authority:** the initiating fighter chooses and locks a move/commitment, then the responding fighter chooses a legal answer; both are phases of the same exchange event, each with their own applicable player deadline.
+- **Neutral/equal authority:** both fighters make hidden choices against the same snapshot and reveal together; neither gains priority by clicking earlier.
+- **Mandatory emergency submission response:** explicitly permitted as a new interrupting defensive opportunity, even when a normal exchange decision was already used. Otherwise a flash finish could bypass informed defense.
+- **Manual Read/Act:** may use the remaining eligible interaction opportunity or its own cost/rate limitation but must not generate repeated free windows, stop the clock forever, or reset online deadlines. Exact cadence/cost is OPEN.
+
+Simulation time advances between decision events; actions resolve deterministically from committed choices, not UI event ordering or frame rate.
 
 ## 5.3 Manual Read / Act
 
@@ -311,7 +340,7 @@ A manual window may:
 
 Manual windows must have an in-game cost or constraint so the player cannot pause every simulated instant.
 
-The exact current cost remains tunable.
+The exact current cost remains tunable. This ability is constrained by §5.2b; a player cannot repeatedly summon new free decision events during the same exchange.
 
 ## 5.4 Fast-forward
 
@@ -395,6 +424,12 @@ stalling_rules
 scoring_hooks
 transition_rules
 ```
+
+### v10.4 role/authority modeling requirement
+
+Do not encode every positional actor as permanently `TOP` or `BOTTOM`. Use stable fighter IDs plus **physical roles** (e.g. top, bottom, back attacker, back defender), **positional control authority**, and **current initiative** as distinct state concepts. Back Control's dominant **attacker** can occupy the positive/control side of a signed axis even without being physically "top". In Guard, bottom is often offensively dangerous; a qualifying setup/counter may transfer initiative without a physical reversal. Mount's existing top/bottom axis conventions remain unchanged for parity.
+
+Use role-mapping tables or position-local adapters at the boundary rather than globally reinterpreting existing Mount sign logic. An initiative change is not automatically a reversal, position change or score.
 
 ## Position Contract Definition of Done
 
@@ -795,6 +830,10 @@ Mount-specific numeric edge rules remain regression details in the Mount impleme
 
 ---
 
+**v10.4 axis clarification:** The universal axis represents tactical control of a *specific contest*, not necessarily who is vertically on top. For pin positions (Mount/Side Control), positive may correspond to the established top controller. For Back Control, map positive to **back attacker** and negative to **back defender** (without claiming back attacker is physically TOP). For Guard and neutral grappling, define the named objective/contesting sides and sign convention in each position's contract. Only valid deliberate transitions change physical fighter roles; changing advantage/initiative alone does not automatically score or swap roles. Keep historical Mount numerical definitions exactly intact through the port.
+
+---
+
 # 13. Behavior Drift
 
 Broad behavior should have mechanical purpose.
@@ -905,6 +944,10 @@ It does not monopolize the right to initiate.
 
 ---
 
+**v10.4 authority rule:** In top-dominant established positions the controlling top player ordinarily acts first; in Back Control the controlling *back attacker* ordinarily acts first; in Guard a bottom fighter with a valid attacking opening can initiate. The initiative holder is an explicit fighter ID, not permanently `TOP`. The noninitiating fighter always receives a legal response phase. Equal authority uses §17 sealed simultaneous choices. Control-axis sign, physical elevation and temporary initiative must not be collapsed into a single field.
+
+---
+
 # 16. Established Position: Initiator → Responder
 
 Established positions generally use:
@@ -947,7 +990,8 @@ When neither fighter has established positional authority, both can act simultan
 Applies to:
 
 - Standing Neutral;
-- open scrambles;- loose transition states;
+- open scrambles;
+- loose transition states;
 - some neutral guard situations;
 - moments immediately after a position breaks.
 
@@ -960,7 +1004,7 @@ P1: Single Leg
 P2: Snapdown
 ```
 
-Both choices lock before resolution.
+Both choices lock before resolution. **Equal / neutral authority, not simply a particular posture, triggers simultaneous selection**; a transient favorable setup can create an established initiative event without converting the entire guard/standing position to a pin.
 
 Near-simultaneous meaningful events may be grouped into the same decision window.
 
@@ -1370,6 +1414,10 @@ Their core advantage is:
 
 ---
 
+**v10.4 white-belt legality clarification:** Belt limits *knowledge availability and technical depth* but **does not ban white-belt submissions as a category**. Adult white-belt fighters may use submissions permitted by the pinned IBJJF No-Gi rules (e.g. appropriate arm attacks and chokes). Some holds/variants are forbidden by belt, age, attire or execution (e.g. heel hooks for white belts). The implementation must use explicit per-technique legality reviewed against the official technical-fouls matrix; avoid declaring all leg locks legal or all leg locks illegal. Technique discovery/memory mastery alone never overrides official legality.
+
+---
+
 # 26. Recognition
 
 Recognition must add information—not hide basic tactical truth.
@@ -1692,6 +1740,10 @@ They are never denied the chance to react.
 
 ---
 
+**v10.4 expired emergency decision:** The timer/session layer records `DEFENSE_TIMEOUT` and submits **no active defensive counter**; the attack proceeds through normal legal deterministic FINISH resolution. The existing defender must have been offered a real emergency window. A timeout is **neither TAP nor REFUSE TAP**, and the game must never infer a voluntary injury decision. If the legal uncontested submission finish is secure, resolve as submission loss/referee stoppage; if the mechanical requirements were not met, do not award a guaranteed finish. Configure offline solo deadlines as unlimited by default; the timeout rule applies only where a finite timer is enabled. The rules remain subject to dedicated tests before online play.
+
+---
+
 # 35. Submission Consequences
 
 ## Joint Lock
@@ -1847,6 +1899,10 @@ Possible permanent unlocks:
 
 ---
 
+**v10.4 graduation mechanic:** First prototype road contains three normal matches plus a promotion challenge. Competitive success and technical competence are both required for promotion; a fighter who wins the road but lacks required competency **keeps the victory and can earn one capped belt stripe/degree or promotion-standing credit**, remaining at the current belt. Requirements must be broad, explicit and possible through multiple genuine styles (not a single rare move). Stripes are game progression, not an IBJJF-certified real-world belt award. Deliberate repeated abandonment may later deduct stripes/standing, **never an earned belt**; see §58C.4. Do not lose masteries or permanent discovery on abandonment.
+
+---
+
 # 39. Traits / Abilities
 
 Status: 🔵
@@ -1894,60 +1950,37 @@ Avoid hundreds of tiny stat modifiers.
 
 # 40. Match Rulesets
 
-The same grappling engine should eventually support:
+**v10.4 accepted:** The game supports **both** IBJJF rules-based No-Gi **Points** and custom **Submission-Only**. Build the shared grappling engine once; implement and verify points mode first for the complete headless match, then add the second ruleset without rewriting techniques, positions or submissions.
 
-- Points;- No-Points;
-- Submission-Only.
+## 40.1 IBJJF rules-based points mode
 
-## Points mode
+Use the official source directory at https://ibjjf.com/books-videos and pin the exact technical rulebook; the archived **June 2024 IBJJF Rules v6.1** is an initial research reference: https://www.ligabjj.com/ibjjfrules/2024JUN_IBJJF_Rules_EN.pdf . Re-verify the current edition and updates at implementation; this game is **not** automatically IBJJF-certified. Configure age division, belt and attire explicitly (first target: adult No-Gi).
 
-Potential scoring events:
+Verified basic scoring structure in that reference:
 
-- takedown;
-- sweep;
-- pass;
-- Mount;
-- Back Control;
-- advantages;
-- penalties.
+| Eligible scoring situation | Points |
+|---|---:|
+| Takedown | 2 |
+| Sweep | 2 |
+| Knee-on-Belly | 2 |
+| Guard Pass | 3 |
+| Mount / Back Control (eligible variants) | 4 |
 
-Preferred scoring concept:
+Award eligible positional points only when the rule's **three simulated seconds** of stabilization and all other context requirements are met. A mere position-label transition does not award points. Track advantages and penalties separately, including stalling, fouls and the rule-specific exceptions; implement scoring-event eligibility and non-duplication as tests rather than crude `on_enter(position)` bonuses.
 
-```text
-Reach scoring position at Stable
-↓
-Hold 3 simulated seconds
-↓
-Score
-```
+**At end of regulation:** winner by points; if tied, by advantages; if still tied, by fewer penalties; if all tied, the IBJJF rules call for a **referee decision** based on offensive effort and closest scoring/submission achievements. **No automatic overtime in standard IBJJF points mode.** For a deterministic video game, a virtual-referee decision must use explicit logged, reviewable evidence and a stable deterministic tie ordering; its *metric and exact policy are OPEN and must be designed before claiming faithful completion*. An optional overtime house rule can be implemented only as a clearly distinct **custom** setting.
 
-A positional entry scores once.
+Adult regulation duration is **White 5 / Blue 6 / Purple 7 / Brown 8 / Black 10 minutes**. The first headless prototype may remain five minutes for all test fixtures, provided production config correctly sets belt-specific duration.
 
-Leaving and later genuinely re-entering can score again.
+White-belt submissions are permitted **when legal for the specified age/belt/attire/technical execution**; white-belt submission access is not globally disabled. Confirm every planned technique against the published technical-fouls/illegal-moves matrix, including No-Gi-specific restrictions for higher belts.
 
-Exact point values remain open.
+## 40.2 Custom Submission-Only mode
 
-## Submission-Only
+No positional match points are awarded. Submissions remain legal only according to the configured technique/attire/age/belt policy (or separately documented house-rule changes). The same grappling engine and emergency-defense requirements apply. Stalling may have a different policy. **Timeout/winner rule is OPEN**: draw, timed sudden-death/overtime, decision, or explicit other rule requires later owner approval. Do not import IBJJF referee criteria silently into this mode.
 
-No positional points.
+## 40.3 Architectural boundary
 
-Submission is the normal win condition.
-
-Timeout result remains unresolved:
-
-- Draw?
-- Overtime?
-- Judges?
-- Dominance tiebreak?
-- Tournament rule?
-
-This must be resolved before a final production ruleset is frozen.
-
-## First playable rule
-
-Do **not** implement every ruleset before human play.
-
-Choose one initial full-match ruleset first.
+A `RulesetPolicy` (conceptual only) owns durations, eligibility, scoring/advantages/penalties, time-result selection, and submission legality. The positional resolver emits domain events that policies interpret; no UI, animation or rendered frame may directly credit score. One complete production ruleset is sufficient for the first headless milestone, even though both modes are accepted for the game.
 
 ---
 
@@ -2057,7 +2090,7 @@ A fighter behind may increase commitment/risk.
 
 # 44. Gi vs No-Gi
 
-Status: ⚪ **Important unresolved product decision.**
+Status: ✅ **No-Gi first — v10.4 owner decision; not implemented.**
 
 This changes:
 
@@ -2070,14 +2103,7 @@ This changes:
 - animation/visual requirements;
 - style balance.
 
-Options:
-
-- No-Gi first;
-- Gi first;
-- both eventually;
-- separate rulesets.
-
-**This decision should be made before deep Guard technique tables are frozen.**
+**Implementation direction:** Build **No-Gi first**; support wrist/head/underhook/overhook/body-lock and other No-Gi controls from the start. Gi-specific collar/sleeve/lapel grips and attire-dependent techniques can come in a later expansion. Model required controls, attire and technique legality as data/policies rather than hard-coded universal No-Gi assumptions. Deep Guard tables use No-Gi first, but keep Gi extension points. The initial 3D characters use No-Gi clothing; Gi cloth simulation is not a prerequisite.
 
 ---
 
@@ -2180,6 +2206,8 @@ Armbar Chain
 Choose one.
 ```
 
+**v10.4 precedence:** Training is **optional event/reward UI**, not a mandatory playable gym mode or dependency for mastery. Meaningful match observation and use provide the core learning path; §58C.6 controls. Any figures below are open balance questions.
+
 Still missing:
 
 ⚪ training-node frequency  
@@ -2266,24 +2294,20 @@ Potential events:
 
 # 51. Run Finale
 
-Status: ⚪
+**First prototype run structure is now accepted:** three normal belt-road matches, then **one promotion challenge**. This is a career promotion road, not necessarily a literal sanctioned IBJJF tournament bracket. The challenge can take the form of a rival/champion match plus transparent broad technical-competency assessment; exact narrative structure, opponent pool and competency metrics remain OPEN.
 
-Choose one first-run structure.
+- **Win road + satisfy competency:** earn next belt; retain incomplete progress as fragile carryover per §58C.
+- **Win road + competency incomplete:** remain at current belt; receive a bounded stripe/degree or promotion-standing reward; do not erase competitive victory; exact incomplete-progress carryover policy after such a win is provisionally treated as non-defeat and retained, pending balancing confirmation in §58C.
+- **Lose mandatory match/challenge:** run defeat and Memory Fracture; belt unchanged.
+- **Deliberately abandon:** run closure and fracture, possible repeated-offense loss of stripes/standing, never belt demotion.
 
-Options:
-
-- tournament bracket;
-- gym challenge ladder;
-- promotion test;
-- rival finale.
-
-Do not build multiple run structures initially.
+Do not build multiple run structures or an AI tournament system before first headless full-match completion.
 
 ---
 
 # 52. Run Length and Pacing
 
-Five simulated minutes can become long in wall-clock time.
+Even the first five simulated minutes (and later belt-specific longer IBJJF regulation periods) can become long in wall-clock time.
 
 Possible pacing tools:
 
@@ -2445,7 +2469,9 @@ Do not reopen major AI qualification until:
 
 # 57. Frontend Threshold
 
-Frontend begins after:
+The **polished, player-facing frontend** begins after the complete headless match. A minimal 3D greybox/debug camera viewer is explicitly allowed earlier for validation, but it is never authoritative game logic.
+
+Full frontend begins after:
 
 - Position Contract exists;
 - all ten position nodes have minimal playable content;
@@ -2461,8 +2487,8 @@ The initial frontend needs:
 - axis/band;
 - stamina;
 - setup/submission danger;
-- action buttons;
-- response buttons;
+- accessible, variable-length contextual technique/memory choices (not a four-button cap);
+- legal response choices;
 - commitment controls;
 - Recognition information;
 - score/stalling;
@@ -2472,7 +2498,7 @@ The initial frontend needs:
 
 # 58. Visual Representation
 
-Status: ⏸
+Status: 🔵 **3D greybox presentation approved v10.4; polished visual systems deferred.**
 
 Later visual systems may include:
 
@@ -2489,6 +2515,10 @@ Later visual systems may include:
 **Game state remains authoritative.**
 
 Do not use full-body physics to decide whether BJJ techniques are legal.
+
+---
+
+**v10.4 presentation decision:** use **3D greybox fighter representations and dynamically selected position-dependent camera presets** for the playable prototype, while keeping a clean, screen-space tactical HUD and Memory Constellation/Recall panel. The engine remains authoritative: cameras, models and animation never determine transitions or submission success. Suggested initial camera families: Standing three-quarter, Guard elevated diagonal, Side/Mount elevated control view, Back Control attacker-relative rear view, Turtle/Front Headlock side, Leg Entanglement lower oblique. Each preset preserves fighter visibility and spatial orientation; players may inspect/rotate safely when permitted, without resetting decision timers. Test occlusion, readable grips/limbs, snap motion and accessibility. Full body contact animation/IK and Blender asset library are later-phase polish; placeholder mannequins are acceptable in early playtests.
 
 ---
 
@@ -2592,7 +2622,7 @@ MemoryViewModel (shape, text, icon, readiness, connection previews)
 Godot visual component / input navigation
 ```
 
-This is deliberately a **data-flow concept**, not a commitment to a specific class hierarchy or an approved language migration. Presentation must not mutate rules directly; after a legal choice, the engine receives stable technique IDs plus commitment and any relevant validated modifiers. A future GDScript port must parity-test Python Mount behavior before expanding the position system.
+This remains a **data-flow concept**, not a frozen class hierarchy. Typed GDScript / Godot are now approved as the production direction, **with mandatory Mount behavioral parity first**. Presentation must not mutate rules directly; after a legal choice, the engine receives stable technique IDs plus commitment and validated modifiers. Never use the 3D camera, animations or mesh contacts to decide BJJ mechanics.
 
 ## 58A.7 Scope, implementation order, and open decisions
 
@@ -2775,7 +2805,7 @@ TransitionResult:
   cause_technique_id, result_grade, state_carryover
 ```
 
-The actual GDScript/Python/C# implementation should follow existing project conventions after code inspection. Data filenames/classes listed here are not frozen APIs. All content IDs must be stable and versioned; saves must retain definitions and compatible migration behavior.
+The approved production implementation is **typed GDScript** in Godot, following reviewed project conventions and the Python parity oracle; alternatives are not simultaneously approved. Data filenames/classes listed here are not frozen APIs. All content IDs must be stable and versioned; saves must retain definitions and compatible migration behavior.
 
 ## 58B.12 UI flow and input interactions
 
@@ -2799,7 +2829,7 @@ A sample screen at 12+ actions should offer filters by tactical intent (Defend, 
 
 ## 58B.14 Phase sequencing, avoiding another architecture detour
 
-**Design baseline now:** agree on vocabulary, invariant boundaries, reward prototypes and UI concepts. **Phase 1 engine foundation:** position contract and variable-length legal-action API; stable fighter identity and typed transitions; provide effect slots but **no** full memory reward economy. If Godot migration is adopted, perform Mount parity first. **Complete match milestone:** prove multiple positions and manually chosen moves/commitments without memory upgrades. **Roguelike prototype:** implement one short run with three representative memory types and deterministic reward offers; test differences across two builds. **Frontend phase:** refine silhouettes, inspect animations, accessibility, constellation interactions, and visual polish. **Later:** rarity economies, elaborate mastery layers, persistent gym/coach upgrades, multiplayer and speculative chain effects.
+**Design baseline now:** v10.4 approves Godot with typed GDScript; **perform and verify the Mount-parity spike before Phase 1**. **Phase 1 engine foundation:** position contract and variable-length legal-action API; stable fighter identity and typed transitions; provide effect slots but **no** full memory reward economy. **Complete match milestone:** prove multiple positions and manually chosen moves/commitments without memory upgrades. **Roguelike prototype:** implement one short run with three representative memory types and deterministic reward offers; test differences across two builds. **Frontend phase:** refine silhouettes, inspect animations, accessibility, constellation interactions, and visual polish. **Later:** rarity economies, elaborate mastery layers, persistent gym/coach upgrades, multiplayer and speculative chain effects.
 
 ## 58B.15 Decision register — recommended baseline vs intentionally not frozen
 
@@ -2819,11 +2849,11 @@ A sample screen at 12+ actions should offer filters by tactical intent (Defend, 
 | Unfinished technique progress at defeat? | Reset to discovery baseline unless already mastered | Accepted v10.3 design |
 | Unfinished technique progress after promotion? | Protected, but still vulnerable to a later fracture | Accepted v10.3 design |
 | Training minigame required? | No; learning works through matches; training event optional | Accepted v10.3 direction |
-| First ruleset Gi or No-Gi? | Decide before deep Guard/leg-lock catalogs | OPEN owner decision |
-| Godot language? | Typed GDScript a candidate, parity spike required | OPEN owner decision |
+| First ruleset Gi or No-Gi? | No-Gi first, future Gi extension points | **Accepted v10.4** |
+| Godot language? | Godot + typed GDScript, mandatory Mount parity | **Accepted v10.4, parity pending** |
 | Solo time limit? | Unlimited by default | Proposed baseline |
 | PvP deadlines? | Ranked 30s; casual 45s | Provisional, PvP deferred |
-| Emergency submission timeout? | Never auto-consent; dedicated conservative policy required | OPEN design/safety gate |
+| Emergency submission timeout? | No active counter; legal attack resolves; secure finish may trigger referee stoppage, not invented Tap/Refuse | **Accepted v10.4, testing pending** |
 
 **Boundary:** Design can be frozen conceptually before implementation, but no claim of gameplay balance, BJJ technique correctness, complete position catalogs, official ruleset legality, or art feasibility is made merely by writing this guide.
 
@@ -2839,20 +2869,21 @@ A sample screen at 12+ actions should offer filters by tactical intent (Defend, 
 > **One fighter, one career, many attempts at the next belt. What is discovered remains remembered; what is mastered becomes durable; what is still developing can fracture after defeat.**
 
 1. A **single persistent fighter** continues across normal promotion runs. Restarting a run does not create a replacement fighter.
-2. A **run is a road toward the next belt**: a short sequence of opponents, match rewards and a suitable promotion milestone/challenge.
-3. **A lost run never demotes the fighter**. Reattempt progression from the current earned belt.
+2. A **run is a road toward the next belt**: the accepted **prototype** consists of three normal fights plus a promotion challenge, with match rewards between them.
+3. **A lost or intentionally abandoned run never demotes the fighter**. Reattempt progression from the current earned belt. Repeated deliberate abandonment can remove stripes or promotion standing only, subject to transparent thresholds.
 4. Earned belts, career record, eligible foundational techniques, permanent discovery records, and fully mastered technique knowledge survive run failure.
 5. Unmastered, unprotected technique-development progress resets to its **discovered baseline** on defeat (Memory Fracture); the technique's existence is not forgotten.
 6. Completing a promotion run **protects current unfinished technique progress**. This progress carries to the next run but remains susceptible to a subsequent Memory Fracture until mastered. Promotion protection is *not* equivalent to permanent mastery.
 7. Temporary run refinements, trait buffs, scouting bonuses, and Drilled exceptions expire according to their explicit run scope, even after a successful promotion. Do not confuse these with retained technique-development progress.
-8. All technique legality, belt access, position constraints, submission safety and deterministic resolution remain authoritative independently of memory ownership.9. Career history remains visible after both victory and defeat. An earned promotion is permanent.
+8. All technique legality, belt access, position constraints, submission safety and deterministic resolution remain authoritative independently of memory ownership.
+9. Career history remains visible after both victory and defeat. An earned promotion is permanent.
 10. No training minigame is required. Meaningful matches can supply exposure, recognition, execution experience and mastery evidence. Optional training events can be designed later.
 
 ### Persistence taxonomy
 
 | Data | Scope | After defeat | After promotion |
 |---|---|---|---|
-| Fighter identity, career record, earned belt | Career | Keep | Keep, advance earned belt |
+| Fighter identity, career record, earned belt | Career | Keep; **never demote** | Keep, advance earned belt only on qualification |
 | Fundamental techniques and earned belt knowledge | Career | Keep | Keep |
 | Encountered/discovered technique IDs, source/history | Career | Keep | Keep |
 | Fully mastered technique knowledge/proficiency | Career | Keep | Keep |
@@ -2861,7 +2892,8 @@ A sample screen at 12+ actions should offer filters by tactical intent (Defend, 
 | Temporary refinements, chain buffs, conditioning/scouting bonuses | Run | Expire | Expire |
 | Drilled next-belt exception | Run | Expire | Expire unless normally learned independently |
 | Run injuries and recovery conditions | Separate run/career injury policy, not yet finalized | Resolve per future injury design | Resolve per future injury design |
-| Completed promotion milestone | Career | Cannot be undone | Persist |
+| Earned stripe/degree or promotion standing | Career, but abandon-penalizable | May be reduced only after repeated explicit deliberate abandonment; not ordinary match loss | Award/advance for competitive success without complete qualification (capped) |
+| Completed earned belt | Career | Cannot be undone even after abandonment | Persist |
 
 **Important:** *Protected carryover* describes progress surviving a **successful** run boundary. It does **not** shield unfinished progress against the **next defeated run**. A later defeat fractures all then-unmastered progress unless a separately and explicitly approved mechanic changes this rule. This prevents an accidental permanent bank for unmastered techniques.
 
@@ -2869,7 +2901,7 @@ A sample screen at 12+ actions should offer filters by tactical intent (Defend, 
 
 The principal progression is **White → Blue → Purple → Brown → Black**, using belt-appropriate opponents and challenges. Belt colors represent BJJ knowledge and option access, not a direct raw-stat multiplier. All belts remain earned permanently.
 
-A prototype road might consist of **three matches plus a promotion challenge**, but that count is *illustrative*, not a frozen game rule. Each belt road should offer different tactical demands rather than the same sequence with larger statistics.
+The **first prototype road is three matches plus a promotion challenge (accepted v10.4)**. Later belt-road lengths may vary after playtesting. Each belt road should offer different tactical demands rather than the same sequence with larger statistics.
 
 | Road | Design emphasis | Illustrative competency evidence (not fixed move checklist) |
 |---|---|---|
@@ -2881,10 +2913,11 @@ A prototype road might consist of **three matches plus a promotion challenge**, 
 
 ### Promotion outcomes
 
-- **Road success + required demonstrated competency:** award the next belt; retain mastered knowledge and the current incomplete development values as *protected carryover*; clear run-only modifiers; save career history; unlock the next road.
+- **Road success + required demonstrated competency:** award the next belt; retain mastered knowledge and current incomplete development as *protected carryover*; clear run-only modifiers; save career history; unlock the next road.
+- **Road victory with incomplete demonstrated competency:** do not give the next belt yet. Award a **stripe/degree or promotion standing** at the current belt, respecting a bounded cap; offer a clear follow-up technical route. **Provisional policy:** this counts as non-defeat for partial memory retention, but that exact retention behavior remains to be confirmed in balance/design review.
 - **Road failure or promotion-challenge failure:** do not demote; record defeat and opponent/rival history; apply Memory Fracture to incomplete technique development; clear run-only modifiers; offer a new attempt from the current belt.
-- **Competency missing despite match success:** do *not* automatically grant a belt. The eventual design must provide transparent ways to fulfill broadly defined competency criteria rather than forcing a single exact technique or random encounter. Whether an additional challenge is offered or the road counts as failed is **open**.
-- **Player voluntarily abandons/restarts a run:** propose the same fracture treatment as defeat to prevent free rerolls, **but this is not yet frozen**. Suspend/save-and-resume must never count as abandonment.
+- **Competency missing despite match success:** award the bounded stripe/standing result above, never a premature belt; the missing competency must be explained with a transparent next objective, not one specific move or a random encounter. The exact reward cap and whether a separate remedial challenge appears are **OPEN**.
+- **Player explicitly abandons/forfeits a run:** treat the current run as closed and apply ordinary unfinished-progress fracture and run reward expiry. **Repeated deliberate abandonment can additionally deduct stripes/degree or promotion standing, but NEVER earned belt, mastered memory, permanent discovery or career records.** Require explicit deliberate confirmation, thresholded counting, visible warnings, an auditable ledger and idempotent resolution. **Save/resume, closing the application, crash, accessibility pause, network interruption and forced disconnect do not count as voluntary abandonment.** Exact thresholds, penalty ladder and how long abandonment strikes persist are **OPEN**. Do not implement punitive automatic demotion.
 
 Winning alone is not guaranteed promotion; the run should require competitive achievement **and** appropriate knowledge milestones, without demanding one arbitrary move.
 
@@ -2930,16 +2963,17 @@ The memory's apparent **clarity** may combine these for presentation, but a sing
 
 ## 58C.4 Memory Fracture and return to the next run
 
-**Trigger:** normal promotion-road defeat. The game ends the run, not the fighter's career.
+**Trigger:** normal promotion-road defeat **or confirmed explicit run abandonment**. The game ends the run, not the fighter's career. Repeated abandonment may *separately* reduce stripes/standing after fracture; earned belt is invariant.
 
 **Atomic resolution order (design target):**
-1. Finalize match and run record, distinguishing loss from network/session disconnection.
+1. Finalize match and run record, distinguishing match loss, explicit player-confirmed run abandonment, save/resume, crash and network/session disconnection. No false abandonment from normal exits.
 2. Commit any legitimately earned mastery *before* processing the fracture.
 3. Retain discoveries, permanent fundamentals, earned belt, mastered technique data, and career history.
 4. Reset **all remaining unmastered** development to that technique's discovery baseline, including progress carried forward from a previous successful promotion.
 5. Expire scoped run-only modifiers/grants.
 6. Generate a post-run summary: retained, fractured, newly discovered, newly mastered, and belt unchanged.
-7. Start a new road at the same belt only at the player's explicit next-run selection.
+7. On confirmed **repeated deliberate abandonment only**, apply the separately configured capped stripe/standing penalty with an explicit ledger; the earned belt never changes.
+8. Start a new road at the same belt only at the player's explicit next-run selection.
 
 The proposed **Memory Fracture** animation shows incomplete artifact shapes splintering into faded silhouettes while fully mastered memories remain intact. This is a visual metaphor for interrupted consolidation, **not** a claim that the fighter suffers literal brain damage or amnesia.
 
@@ -2985,7 +3019,8 @@ The end-of-run interface shows a retained-versus-fractured comparison and curren
 
 ```text
 CareerProfile:
-  fighter_id, earned_belt, career_history,
+  fighter_id, earned_belt, earned_stripes_or_degrees,
+  promotion_standing, explicit_abandonment_strikes, career_history,
   permanent_technique_knowledge, discovered_technique_ids,
   mastery_records, unlocked_career_options
 
@@ -3002,6 +3037,7 @@ PromotionRun:
 
 RunClosure:
   run_id, cause, belt_before, belt_after,
+  stripe_before, stripe_after, abandonment_penalty_reason,
   newly_discovered, newly_mastered, fractured_progress,
   preserved_carryover, expired_run_effects
 ```
@@ -3010,7 +3046,10 @@ This is a **data model sketch**, not approval to implement all the fields before
 
 ## 58C.9 Test obligations and safety against exploits
 
-- Losing any promotion-road run leaves `earned_belt` unchanged.
+- Losing or explicitly abandoning any promotion-road run leaves `earned_belt` unchanged, even with repeated abandonment strikes.
+- Ordinary save/quit, crash, disconnection and offline pause do **not** create abandonment strikes or fracture; explicit confirmation is required.
+- Stripe/standing penalties are bounded, auditable, idempotent and cannot underflow or touch mastery/discovery.
+- An earned stripe/degree from a won road missing competency cannot grant a new belt by itself; technical eligibility remains required.
 - Successful authorized promotion advances exactly one valid belt step and persists through save/load.
 - Discovered ID remains after fracture; its unfinished learning values reset, while mastery is unchanged.
 - Success carries unfinished progress forward, but a later defeat fractures it if still unfinished.
@@ -3044,9 +3083,12 @@ This is a **data model sketch**, not approval to implement all the fields before
 | Technical competency plus competitive achievement for promotion | **Accepted direction**, criteria open |
 | Learning through matches; no mandatory training minigame | **Accepted direction** |
 | Exact number of matches, mastery thresholds, learning rates, encounter rewards | **OPEN — balance/prototype** |
-| Voluntary abandonment penalty, incomplete-competency road handling, long-term injury persistence | **OPEN — design** |
+| Repeated voluntary abandonment removes stripes/standing but **never earned belt** | **Accepted v10.4; numeric thresholds OPEN** |
+| Road victory missing competency earns stripe/degree or standing credit | **Accepted v10.4; caps/remedial path OPEN** |
+| First prototype road: 3 normal matches + promotion challenge | **Accepted v10.4** |
+| Whether incomplete progress carries after stripe-only road victory, long-term injury persistence | **Provisional/OPEN** |
 | Black Belt specialist/rival endgame | **Planned direction**, content deferred |
-| Godot / typed GDScript migration | **Still open; require Mount parity spike** |
+| Godot / typed GDScript migration | **Accepted v10.4; parity and pinned engine version required** |
 
 **Development guardrail:** Do not begin this career implementation before a complete headless human-play BJJ match. This is a concrete roadmap, not permission to restart an architecture-first or AI-first detour.
 
@@ -3063,7 +3105,7 @@ Still required eventually:
 - career/meta persistence;
 - settings;
 - accessibility;
-- key/controller support;
+- keyboard/mouse first, then multiplayer, mobile, and controller support in the owner's preferred product order;
 - audio;
 - results/history screen;
 - character screen;
@@ -3089,6 +3131,10 @@ Future issues:
 - anti-stalling;
 - dual-clock decision deadlines, server-authoritative wall-clock enforcement, timeout fallback and consecutive-miss policy;
 - fairness.
+
+---
+
+**v10.4 rollout order:** PC keyboard/mouse is the first player interface; after stable single-player, multiplayer is next in the owner's preferred feature plan; mobile follows, then controller. These are **not** dependencies for the first headless full match. Even though controller is last, implement device-neutral action commands and focusable UI navigation paths from the start. Multiplayer remains a separately gated engineering milestone requiring authoritative clocks, reconnect handling, latency fairness, anti-cheat and replay consistency. Do not couple current simulation to network or mobile frameworks prematurely.
 
 ---
 
@@ -3159,17 +3205,25 @@ Avoid:
 # 63. Master Development Roadmap
 
 ## Phase 0 — Close TE-2
-🟡 Current
+✅ **Historical closure completed, OPEN / INCOMPLETE**
 
-- finish selected fourth surface;
-- stop after four completed surfaces;
-- preserve partial evidence;
-- close as OPEN / INCOMPLETE;
-- no rerun;
-- no promotion;
-- pause advanced AI.
+- Three candidate surfaces completed; selected fourth incomplete.
+- Preserve partial evidence, no rerun, no `TACTICAL_V2` promotion, advanced AI research paused.
+- This phase is a closed historical checkpoint, **not a task for Codex to restart**.
 
 **Exit:** AI no longer blocks game development.
+
+### Phase 0B — Godot typed-GDScript parity spike (NEW; next gate)
+🔵 **Approved technical direction, not yet implemented**
+
+- Pin an exact Godot 4 patch version; create a headless typed-GDScript domain test harness.
+- Freeze Python Mount reference vectors and baseline digests, including production-policy opt-in and negative controls.
+- Port the smallest complete authoritative Mount slice: action/response, commitment, grade, drift/bands, stamina/recovery, setups, submission emergency and exit.
+- Compare deterministic replay event logs and state/output traces for matched inputs; enumerate floating point / PRNG differences explicitly rather than quietly changing mechanics.
+- Do **not** rewrite Python engine, historical policy, frozen tests or evidence to manufacture parity.
+- A parity failure blocks further GDScript generalization until reconciled. Godot animation and physics may only render resolved state.
+
+**Exit:** reviewed parity report + green reproducible Godot headless tests + documented semantics; only then Phase 1.
 
 ---
 
@@ -3318,7 +3372,7 @@ Implement:
 - run generation;
 - opponents;
 - scouting;
-- training;
+- optional training/event rewards (no mandatory gym minigame);
 - technique drafts;
 - Drilled techniques;
 - traits;
@@ -3504,39 +3558,48 @@ Only after breadth:
 
 # 65. Critical Open Decisions
 
-These are real missing decisions—not reasons to restart architecture research.
+The v10.4 owner decisions in §0A supersede older unmade-choice checklists. Remaining genuine questions should be answered **at the first phase where they block correct code**, not as a new months-long design project.
 
-## Before deep Guard implementation
-- [ ] **Gi or No-Gi first?**
+## Before Godot parity spike
+- [x] Production engine: Godot + typed GDScript approved.
+- [x] Existing Python deterministic behavior remains authority for parity.
+- [ ] Pin exact Godot 4 patch version and headless test runner.
+- [ ] Freeze reference trace set, serializer/float/RNG comparators, and acceptance criteria.
 
-## Before first complete production match
-- [ ] Which ruleset is first?
-- [ ] Points values if Points
-- [ ] Timeout/end rule
-- [ ] exact Standing neutral/stalling behavior
+## Before deeper No-Gi Guard implementation
+- [x] No-Gi first; Gi extensibility maintained.
+- [ ] Approve first ten-position legal technique set and contact/control requirements.
+- [ ] Establish adapter semantics for axis/controller and role-independent initiative; Back Control maps dominant attacker without lying about physical TOP.
 
-## Before Belt system implementation
-- [ ] exact technique-by-belt pool
-- [ ] Chain Depth per belt
-- [ ] belt-specific Recognition detail
-- [ ] promotion milestones
-- [ ] illegal/restricted submissions by belt/ruleset
+## Before fully faithful IBJJF rules-based points production match
+- [x] Points and custom Submission-Only both in game; Points first to verify.
+- [x] Adult belt-dependent durations, three-second scoring hold, points/advantages/penalties/referee-decision structure.
+- [ ] Pin checked rulebook revision + amendments and reviewed per-age/belt/attire submission matrix.
+- [ ] Build deterministic referee metric for complete scoreboard ties and special cases; **no standard overtime**.
+- [ ] Model legal scoring event prerequisites, advantage/penalty stalling, and mat-boundary resets.
+- [ ] Establish explicit Submission-Only time expiry/winner rule later (custom mode).
+- [ ] Test missed emergency response on finite session clock: no auto Tap/Refuse, attack legally resolves or referee stops.
 
-## Before Roguelike implementation
-- [ ] run finale structure
-- [ ] technique loadout/capacity
-- [ ] memory reward stacking, rarity and acquisition
-- [ ] advanced-memory capacity without restricting fundamentals
-- [ ] permanent vs temporary technique learning
-- [ ] injury severity/recovery model
-- [ ] event frequency
-- [ ] promotion/meta reward balance
+## Before 3D greybox playtesting
+- [x] 3D positioning with position-sensitive cameras instead of 2D-first.
+- [ ] Select placeholder rig convention, orientation / camera occlusion criteria, HUD and memory navigation design.
+- [ ] Support keyboard/mouse first; device-neutral choice API, no frame-driven rules.
 
-## Before Frontend art production
-- [ ] 2D-first vs early 3D representation
-- [ ] visual style
-- [ ] animation scope
-- [ ] memory silhouette/shape and technique-library navigation
+## Before career and belt/stripe implementation
+- [x] One persistent fighter, five belt ranks, memory persistence and fracture model.
+- [x] First prototype 3 matches + promotion challenge.
+- [x] Insufficient technical competency after competitive road victory earns bounded stripes/degrees/standing rather than automatic promotion.
+- [x] Repeated explicit abandonment can cost stripes/standing but never an earned belt.
+- [ ] Define belt competency and per-technique legal knowledge pools, recognition and chain depth.
+- [ ] Define stripe cap, exact abandonment threshold/penalty decay, explicit confirmation and safe save/resume.
+- [ ] Confirm carryover policy when road is won but awards stripe rather than belt.
+- [ ] Define mastery evidence, learning rates, injury recovery, event frequencies, run bonuses and capacity.
+
+## Later product phases
+- [ ] Multiplayer clock fairness, reconnect, anti-cheat, server authority (after PC solo).
+- [ ] Mobile UI/platform requirements after multiplayer.
+- [ ] Controller focus/accessibility support after mobile in preferred rollout order (design for portable navigation now).
+- [ ] Final visual style, complete character animation, Memory Constellation art, wider content and balance.
 
 ---
 
@@ -3545,14 +3608,14 @@ These are real missing decisions—not reasons to restart architecture research.
 The following are not required for the first complete playable game:
 
 ⏸ perfect AI  
-⏸ completing TE-2  
+⏸ restarting or completing the already-closed TE-2 campaign  
 ⏸ every BJJ technique  
 ⏸ every Guard subtype  
 ⏸ every ruleset  
 ⏸ multiplayer  
 ⏸ perfect balance  
 ⏸ advanced career mode  
-⏸ full 3D animation  
+⏸ full polished 3D contact animation and Blender library (3D greybox itself is approved)  
 ⏸ giant Blender pose library  
 ⏸ exhaustive technique database  
 ⏸ complex physics-driven grappling  
@@ -3575,7 +3638,7 @@ The following are not required for the first complete playable game:
 12. **Feints are real low-commitment threats, not fake UI information.**
 13. **Stalling is measured by progress, not button presses.**
 14. **The roguelike layer must create meaningful build decisions.**
-15. **Frontend starts after a complete headless match.**
+15. **Polished frontend starts after a complete headless match; a minimal 3D greybox harness may be used earlier for spatial comprehension without becoming game authority.**
 16. **Backend perfection must not delay the actual game again.**
 17. **AI must support gameplay—not dictate the roadmap.**
 18. **The game must feel like BJJ, not a generic UFC grappling game.**
