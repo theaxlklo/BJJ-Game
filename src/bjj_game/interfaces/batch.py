@@ -68,11 +68,14 @@ class BatchInitiatorPolicy(str, Enum):
 
     ESCAPE_FIRST is the default and the only policy of run_escape_first_batch.
     TACTICAL_V1 (TE-1 with projection v2, both initiators) is explicit opt-in;
+    TACTICAL_V2 (TE-2E for Top, TE-1 for Bottom; docs/TACTICAL_EVALUATOR_TE2_
+    PREREGISTRATION.md at 218f1c0) is explicit opt-in;
     unsupported configurations raise ValueError, never fall back.
     """
 
     ESCAPE_FIRST = "ESCAPE_FIRST"
     TACTICAL_V1 = "TACTICAL_V1"
+    TACTICAL_V2 = "TACTICAL_V2"
 
 
 @dataclass(frozen=True, slots=True)
@@ -1244,9 +1247,9 @@ def run_batch(
             "no settlement umbrella, and baseline MEDIUM"
         )
     tactical = None
-    if initiator_policy is BatchInitiatorPolicy.TACTICAL_V1:
-        # Deferred import: the TE-1 modules import this one.
-        from . import tactical_policy
+    if initiator_policy is not BatchInitiatorPolicy.ESCAPE_FIRST:
+        # Deferred imports: the TE-1 / TE-2 modules import this one.
+        from . import tactical_policy, tactical_policy_v2
 
         settings = dict(
             matches=matches,
@@ -1283,8 +1286,12 @@ def run_batch(
             post_clear_handoff_mode=post_clear_handoff_mode,
             measure_post_clear_handoff=measure_post_clear_handoff,
         )
-        tactical_policy.validate_tactical_v1(settings)
-        tactical = tactical_policy.create_policy(settings)
+        if initiator_policy is BatchInitiatorPolicy.TACTICAL_V1:
+            tactical_policy.validate_tactical_v1(settings)
+            tactical = tactical_policy.create_policy(settings)
+        else:
+            tactical_policy_v2.validate_tactical_v2(settings)
+            tactical = tactical_policy_v2.create_policy(settings)
 
     stamina_economy_collector = (
         StaminaEconomyCollector(
@@ -1676,7 +1683,7 @@ def run_batch(
                 elif tactical is None:
                     decision = policy.choose(match)
                 else:
-                    # TACTICAL_V1, after D3-B and the force-RESET rules. A
+                    # TACTICAL_V1 / V2, after D3-B and the force-RESET rules. A
                     # precedence-forced commitment (LOW_WHILE_EXHAUSTED, the
                     # D3-B token path) is never replaced: TE-1 then chooses
                     # the action only, among candidates at that commitment.
@@ -1689,7 +1696,7 @@ def run_batch(
                     if selection.forced_by is not None:
                         if selection.allowed != (selected_initiator_commitment,):
                             raise RuntimeError(
-                                "TACTICAL_V1 precedence disagrees with the batch"
+                                "tactical precedence disagrees with the batch"
                             )
                     elif decision.action_id is not None:
                         selected_initiator_commitment = selection.requested
@@ -1798,8 +1805,8 @@ def run_batch(
                     response_id = hidden.response_id
             else:
                 if tactical is not None:
-                    # Unreachable: validation requires v0.2 for TACTICAL_V1.
-                    raise RuntimeError("TACTICAL_V1 has no v0.1 path")
+                    # Unreachable: validation requires v0.2 for TACTICAL_V1/V2.
+                    raise RuntimeError("tactical policies have no v0.1 path")
                 # v0.1 blind harness preserves historical responder-first sampling.
                 hidden = responder.choose(side.opponent)
                 response_id = hidden.response_id
