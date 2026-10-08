@@ -2,9 +2,13 @@
 
 ## Status
 
-**PROPOSED PREREGISTRATION — AMENDED PER REVIEW — DOCUMENTATION ONLY — NOT YET BINDING — HARD STOP FOR REVIEW.**
+**BINDING AT `218f1c0` — PROPOSED PRE-MEASUREMENT AMENDMENT A1 PENDING REVIEW (section 4.3) — HARD STOP FOR REVIEW.**
 
-**Review amendment (this commit, a direct child of `6df192f`).** The review accepted the architecture in principle. It approved T1, T2, T4, T6, T7 (with pins) and T9, and required amendments to T3, T5 and T8. This commit applies exactly those rulings, plus the consistency edits they need:
+**Binding text: `218f1c0`.** Sections 1-12 as approved at `218f1c0` are binding.
+
+**Proposed pre-measurement amendment A1 (this commit, section 4.3): exact cross-match transposition cache.** It is not binding until reviewed. It changes no value, decision, gate, seed, horizon, QB definition or limit. It was proposed after the qualified harness preflight (`eae5780`, synthetic only) projected that E-PROD stalling-ON surfaces would exceed the frozen 48 h limit. No G or HG outcome has been seen.
+
+**Earlier review amendment (`218f1c0`, a direct child of `6df192f`).** The review accepted the architecture in principle. It approved T1, T2, T4, T6, T7 (with pins) and T9, and required amendments to T3, T5 and T8. This commit applies exactly those rulings, plus the consistency edits they need:
 - **T3:** RESET wins Tier R only with strictly greater Q (section 3);
 - **T5:** exact stalling-aware RESET and window steps on a full route branch (section 4.1);
 - **T8:** one TACTICAL_V2 surface process at a time and a 16 GB RSS cap (section 4.2).
@@ -149,7 +153,7 @@ Caches are keyed on the full route branch, never on `te.State` alone, because un
 
 **Scope of the old omission.** Bottom's frozen TE-1 still values setup through projection v2, and that projection keeps its historical stalling omission (5b57017, section 2 step 1). This is unchanged frozen TE-1 behavior. **TE-2E's Q has no stalling omission.**
 
-**Exactness and caching.** The memo is keyed on (route branch, d), where d is root-relative. Values depend only on the route branch and d, so the memo is exact and may be shared across decisions within a match. No sampling, pruning, beam, averaging, random cutoff or depth reduction is allowed.
+**Exactness and caching.** The memo is keyed on (route branch, d), where d is root-relative. Values depend only on the route branch and d, so the memo is exact and may be shared across decisions within a match. Section 4.3 proposes sharing it across matches within one evaluated surface run (amendment A1, not yet binding). No sampling, pruning, beam, averaging, random cutoff or depth reduction is allowed.
 
 ## 4.2 Budget, machine safety and purity (amended, T8)
 
@@ -167,6 +171,90 @@ Caches are keyed on the full route branch, never on `te.State` alone, because un
 The node limits are deterministic. The memory and wall-time limits decide only feasibility (OPEN), never a decision. The RSS cap is enforced by the measurement driver's own monitor, which stops the run and records OPEN.
 
 **Purity.** The route search draws no RNG and never mutates the live match or the live D3-B controller. It runs on sandboxes only and does no I/O, as in Stage 1B section 2.3.
+
+## 4.3 Pre-measurement amendment A1: exact cross-match transposition cache (PROPOSED)
+
+**Status.** Proposed, documentation only, not yet binding. It is an engineering amendment made **before any authoritative measurement and before any G or HG outcome was seen**.
+
+**Why.** The qualified measurement-harness preflight (`eae5780`, CI 37740238263, synthetic seeds only) measured about **88 s per Top decision** on the synthetic E-PROD stalling-ON role. Applying the Stage 1B count of about 820 Top decisions per surface and three evaluated passes per surface gives about 60 h per surface. That is past the frozen **48 h** limit, so those surfaces would be OPEN. The break-even mean is 48 h / (820 × 3), about 70 s per decision.
+
+This amendment changes **only where an already-exact value may be looked up**. Q, every decision and every gate are unchanged by construction, and section A1.5 requires a proof of that before measurement.
+
+### A1.1 What may be shared
+
+- **Only the solved-value transposition memo**, the memo of `value(route branch, depth)` of section 4, may persist **across matches within one evaluated run of one surface**.
+- The step caches stay **per match** exactly as now: exchange, reset, window loop, opponent decision, options and QB. This amendment does not broaden them.
+
+### A1.2 Key
+
+The shared memo is keyed on:
+
+```text
+(static fingerprint, full route branch, root-relative depth)
+```
+
+- **Static fingerprint.** This binds every immutable input that can affect Q:
+  - every `init=True` field of the live `MountMatch` configuration, compared by value;
+  - every field of the O-3 projection-v2 `Context`: opponent model, commitment, behavior policies, behavior and recovery modes, D3-B flag and initiator contract;
+  - B, M and the QB definition (by the preregistration SHA);
+  - the route budget class.
+- **Full route branch.** This is the projection-v2 `Branch` plus every v0.3b stalling field (section 4.1).
+- **Never `te.State` alone.**
+
+### A1.3 Lifetime
+
+- **One shared memo per evaluated run of one surface:**
+  - the candidate run's memo starts empty;
+  - the second deterministic run's memo starts **empty**;
+  - the uninstrumented run's memo starts **empty**;
+  - the inertness replay evaluates nothing.
+- **Never shared** between those runs, between surfaces, between processes, or through disk. It is never persisted.
+- Each run records a memo generation identifier. The integrity checks verify that no two runs share one.
+
+### A1.4 Budgets under sharing
+
+Every frozen limit stays: B, M, the 16 GB RSS cap, 48 h per surface, and one TACTICAL_V2 surface process at a time. Proposed accounting:
+- **New memo entries per Top decision ≤ 3,000,000.** This counts only entries newly computed during that decision; hits on the shared memo are not counted. As a consequence, a decision that would exceed the limit from an empty memo may stay within it when the memo is warm. That is accepted, because the limit is a feasibility ceiling and never changes a value.
+- **Entries computed per match ≤ 20,000,000.** This keeps the per-match meaning of the frozen limit.
+- **Deterministic exact clearing (proposed).** If the shared memo holds more than 20,000,000 entries at a **match boundary**, it is cleared before the next match. Clearing only affects runtime: values are recomputed exactly. The RSS cap remains the memory backstop, and overflow = OPEN.
+
+### A1.5 Required proof before acceptance (synthetic seeds 910000 and above only)
+
+**Cache OFF against cache ON** must be exactly equal on every synthetic preflight role shape: A-PROD, B-PROD, E-PROD stalling OFF, E-PROD stalling ON with D3-B, and the PROTECT substitute. Each role runs with **at least 3 matches**, so that cross-match hits actually occur. Required equal:
+- every decision, and every Q value of every route record;
+- the complete replay tape, and every match summary;
+- every timeline record and gameplay signature;
+- the synthetic P / G / HG-shaped scoring and its PASS / FAIL / OPEN label;
+- the inertness-replay output and the uninstrumented-run result.
+
+Also required:
+- zero evaluator RNG draws, both ways;
+- **cross-match hits > 0** on at least the E-PROD roles, so the test is not vacuous;
+- distinct memo generations across the candidate, second and uninstrumented runs, and across surfaces;
+- no frozen, regression or fresh-holdout seed executed, enforced by the preflight guard.
+
+Only timing, cache-hit and size counters and RSS may differ.
+
+**Mutation tests** must be caught by the equivalence or unit tests:
+- dropping the depth from the key;
+- dropping the stalling fields from the key;
+- dropping a fingerprint component. This is caught by a test that deliberately offers one memo object to two configurations that differ only in that component.
+
+### A1.6 Feasibility target (not a gate)
+
+On the synthetic E-PROD stalling-ON preflight role, with at least 3 matches, the mean seconds per Top decision with the cache ON should be **≤ 60 s**. That is about 15% headroom under the 70 s break-even. The cache-OFF figure is reported alongside.
+
+This is an engineering target, not a gameplay gate and not a G or HG threshold. If it is not met, the slice stops (**HARD STOP**) for a decision. The options then are another semantics-preserving optimization, or accepting OPEN. The 48 h limit is **not** raised.
+
+### A1.7 Authoritative driver requirement
+
+When authoritative mode is implemented (separately authorized), a worker that exceeds the 48 h subprocess timeout, the RSS cap or a node limit must be **recorded as that surface OPEN**, and the driver continues with the remaining surfaces. It must not crash the whole run.
+
+### A1.8 Unchanged
+
+B = 5, M = 13, QB, Tier R, the RESET rules, the stamina guard, the opponent contract, G1-G6, HG1-HG6, the fresh seeds, the 16 GB RSS cap, 48 h per surface, and one TACTICAL_V2 surface process at a time are all unchanged.
+
+A cache-OFF switch exists only for the A1.5 proof. The authoritative measurement runs with the cache ON, as frozen here once binding.
 
 ---
 
@@ -302,6 +390,18 @@ Also new for TE-2:
 | T7 | PROTECT envelope at seeds 42 and 685800 only | **APPROVED WITH PINS (section 5)** |
 | T8 | Budgets and machine safety | **AMENDED (section 4.2).** One TACTICAL_V2 surface process at a time; RSS ≤ 16 GB; deterministic node limits and 48 h kept; first limit tripped = OPEN. |
 | T9 | Uninstrumented-run identity required | **APPROVED** |
+
+**Amendment A1 (section 4.3): decisions for review (PROPOSED).**
+
+| # | Decision | Proposed |
+|---|---|---|
+| C1 | Scope: only the solved-value memo is shared; the step caches stay per match | A1.1 |
+| C2 | Key: (static fingerprint, full route branch, depth); never `te.State` alone | A1.2 |
+| C3 | Lifetime: one evaluated run of one surface; the candidate, second and uninstrumented runs each start empty; never across surfaces, processes or disk | A1.3 |
+| C4 | Budgets: 3M counts newly computed entries per decision; 20M counts entries computed per match; deterministic exact clearing above 20M held at a match boundary | A1.4 |
+| C5 | Proof: cache OFF vs ON exact on all role shapes with at least 3 matches; non-vacuous hits; mutations caught | A1.5 |
+| C6 | Feasibility target ≤ 60 s mean per Top decision on synthetic E-PROD stalling ON (not a gate); HARD STOP if missed; 48 h not raised | A1.6 |
+| C7 | Authoritative driver records a timeout, RSS or node overflow as that surface OPEN and continues | A1.7 |
 
 ---
 
