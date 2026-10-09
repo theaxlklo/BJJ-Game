@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
     inputs:
       target_sha:
@@ -19,12 +20,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || 'automatic' }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}-${{ (github.event_name == 'workflow_dispatch' || (github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha)) && github.run_id || 'automatic' }}
   cancel-in-progress: true
 
 jobs:
   classify:
-    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual admission' || 'classify changes' }}
+    # Metadata edits never cancel qualification or publish its check names.
+    if: ${{ !(github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha) }}
+    name: ${{ (github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha) && 'PR metadata (no admission)' || github.event_name == 'workflow_dispatch' && 'Manual admission' || 'classify changes' }}
     runs-on: ubuntu-latest
     outputs:
       python_required: ${{ steps.changes.outputs.python_required }}
@@ -195,8 +198,8 @@ jobs:
           tests.test_d3b_promotion_verification.D3BPromotionVerificationTests.test_pg8_nothing_bundled
 
   ci-gate:
-    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual qualification gate' || 'CI gate' }}
-    if: always()
+    name: ${{ (github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha) && 'PR metadata (no qualification)' || github.event_name == 'workflow_dispatch' && 'Manual qualification gate' || 'CI gate' }}
+    if: ${{ always() && !(github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha) }}
     needs: [classify, lightweight-validation, godot, unit-tests, verification, history-verification]
     runs-on: ubuntu-latest
     steps:
