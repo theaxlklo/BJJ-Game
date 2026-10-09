@@ -133,7 +133,7 @@ rejects any unexpected script/engine errors; those two are deliberate negative
 cases, not hidden test failures.
 Fixtures are generated during CI, not checked in.
 
-Principal self-review: all validation precedes pool/meter mutations; policy builds
+Principal self-review: a rejected spend cannot report fully paid; all validation precedes pool/meter mutations; policy builds
 copy input; safe arithmetic guards precede multiplication/addition/negation; no
 catch-all success or frame-time dependency exists; histories store bands rather
 than recalculate them; no Match defaults changed. Side Control can reuse these

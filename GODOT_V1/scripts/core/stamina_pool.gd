@@ -56,7 +56,7 @@ class Change extends RefCounted:
     var overflow: int = 0
     var after: int = 0
     var fully_paid: bool:
-        get: return shortfall == 0
+        get: return error.is_empty() and shortfall == 0
     func ok() -> bool:
         return error.is_empty()
     func spend_fields() -> Dictionary:

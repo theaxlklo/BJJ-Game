@@ -32,6 +32,7 @@ func _initialize() -> void:
     pool.maximum = 0
     check("read-only current unchanged", pool.current == 10 and pool.band == "Exhausted")
     check("read-only maximum unchanged", pool.maximum == 100)
+    check("rejected spend cannot report fully paid", not pool.spend_up_to(-1).fully_paid)
     var flow := BjjBehaviorStaminaPolicy.defaults()
     for carry: int in [MAX_INT, -MAX_INT, -MAX_INT - 1]:
         var meter := BjjBehaviorStaminaPolicy.Meter.new(carry)
