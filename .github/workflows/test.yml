@@ -58,9 +58,10 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -n "$DIFF_SPAN" ]]; then
-            git diff --check "$DIFF_SPAN"
+            # Markdown hard breaks are intentional trailing spaces.
+            git -c core.whitespace=-blank-at-eol,blank-at-eof,space-before-tab diff --check "$DIFF_SPAN"
           else
-            git show --format= --check HEAD
+            git -c core.whitespace=-blank-at-eol,blank-at-eof,space-before-tab show --format= --check HEAD
           fi
 
   godot:
