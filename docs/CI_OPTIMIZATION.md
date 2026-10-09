@@ -113,7 +113,9 @@ shared contract documents and pinned measurement/preregistration Markdown outsid
 that directory cannot use the documentation shortcut. Markdown in
 `GODOT_V1/docs/` is documentation; executable fixtures elsewhere under Godot are not.
 
-The always-created `CI gate` requires successful routing, lightweight whitespace
+The immediately queued `CI gate` uses a read-only current-attempt watcher and
+requires the aggregate qualification result. This prevents an older same-SHA gate
+from remaining the only visible result during base retargeting. The aggregate requires successful routing, lightweight whitespace
 validation (allowing intentional Markdown hard breaks), and **every selected job**. It directly depends on the reusable Godot
 qualification; skipped, cancelled or failed required Godot jobs cannot produce a
 passing gate. Existing test commands, matrices, shard assignment and digest remain
@@ -176,3 +178,12 @@ No runtime dependency or copied external code was added. Local workflow linting
 uses the MIT-licensed `rhysd/actionlint` v1.7.7 executable as a verification tool;
 it is not bundled or required by CI. See `docs/ci/PR22_REVIEW.md` for the separate,
 read-only settlement review. Issue #20 remains outside this change.
+
+
+The early gate has only `contents: read` and `actions: read`. It checks the aggregate
+job's run ID, attempt and SHA, rejects duplicate/stale/unknown evidence and fails
+if the aggregate is failed, cancelled or skipped. API pagination is supported.
+Transient API failures leave the gate pending; authorization failures fail closed.
+It polls every 15 seconds for at most 55 minutes (60-minute job timeout). Scheduler
+or API delays beyond this limit fail the gate and require a rerun; they never
+produce qualification success. This adds one waiting runner per qualifying event.
