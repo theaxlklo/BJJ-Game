@@ -27,7 +27,7 @@
 - Generic PositionContract, stable Fighter IDs, Standing, non-Mount positions
 - Real decision window/session timer, scoring modes, IBJJF rules table
 - Memory Constellation, career, rewards, persistence and netcode
-- Complete parity corpus / verified Godot headless runs
+- Complete Python↔Godot parity corpus (initial Godot headless slice has passed)
 
 ## Headless tests
 
@@ -37,7 +37,7 @@ From repository root, with Godot 4.7.2 on PATH:
 godot --headless --path GODOT_V1 --script res://tests/test_mount_slice.gd
 ```
 
-The tests assert published Python reference cases (not only self-consistency). They do not establish full parity. **Godot CLI has not been run in this environment**, so parser/runtime execution needs verification before calling this phase passed.
+The tests assert published Python reference cases (not only self-consistency). **Verified on a GitHub Actions Ubuntu runner using Godot 4.7.2 on 2026-10-09:** project import PASS; **40/40 initial Mount-slice assertions PASS**; 3D greybox startup (headless smoke check) PASS. [Verified workflow run](https://github.com/theaxlklo/BJJ-Game/actions/runs/37970015682). This does **not** establish full Python engine parity or visually certify the 3D scene.
 
 Next: run the Godot headless test and collect independently generated Python `MountResolutionEngine` fixtures (including all 18 matchups, band boundaries, drift/escape overshoots and injected modifiers). Then port the remaining MountMatch responsibilities incrementally, verifying parity each step; do not rename a successful partial slice "full parity."
 
@@ -47,3 +47,7 @@ Next: run the Godot headless test and collect independently generated Python `Mo
 - Python reference source and tests are immutable during parity migration.
 - Any numeric change or legacy policy mismatch is reported and reviewed, never silently "fixed" during a port.
 - Structural reuse must be shown with a second position before generalized match-engine claims.
+
+## CI setup
+
+The GitHub Actions workflow `.github/workflows/godot-v1.yml` runs when files under `GODOT_V1/` change, on pull requests, and via manual dispatch. It installs pinned Godot 4.7.2, imports the project, runs the Mount-slice tests, and smoke-tests the default 3D scene. [First passing test run](https://github.com/theaxlklo/BJJ-Game/actions/runs/37970015682). The implementation stays inside `GODOT_V1`; GitHub requires workflow definitions under `.github/workflows`.

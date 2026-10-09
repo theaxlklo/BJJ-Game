@@ -31,7 +31,7 @@ Or from inside the `GODOT_V1` folder:
 godot --headless --path . --script res://tests/test_mount_slice.gd
 ```
 
-If Godot is not on PATH, use its executable's full path. Test results must be verified on a machine with Godot before marking the migration parity-pass.
+If Godot is not on PATH, use its executable's full path. The dedicated [Godot GitHub Actions workflow](../../.github/workflows/godot-v1.yml) now runs this command automatically. Initial verified run: **40/40 Mount-slice assertions passed** using Godot 4.7.2, with project import and scene startup passing. This is NOT complete Python/Match parity.
 
 ## Source of truth
 
