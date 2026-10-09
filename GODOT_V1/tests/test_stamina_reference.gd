@@ -14,7 +14,7 @@ func _initialize() -> void:
         var created := BjjStaminaPool.create(int(x.current), int(x.maximum))
         compare("constructor %s" % x, not created.ok(), x.rejected)
     for c: Dictionary in data.costs:
-        var built := BjjStaminaCostPolicy.build(c.config)
+        var built := BjjStaminaCostPolicy.build(integer_config(c.config))
         compare("cost config %s" % c.config, not built.ok(), c.rejected)
         if not built.ok():
             continue
@@ -24,45 +24,49 @@ func _initialize() -> void:
             if funding.ok():
                 compare("funding result %s" % x, funding.fields(), x.result)
     for c: Dictionary in data.flow_configs:
-        var built := BjjBehaviorStaminaPolicy.build(int(c.quantum), c.rates)
+        var built := BjjBehaviorStaminaPolicy.build(int(c.quantum), integer_config(c.rates))
         compare("flow config %s" % c, not built.ok(), c.rejected)
     var flow := BjjBehaviorStaminaPolicy.defaults()
-    for index in range(data.traces.size()):
-        var t: Dictionary = data.traces[index]
-        var pool := BjjStaminaPool.create(int(t.current), int(t.maximum)).pool
-        var meter := BjjBehaviorStaminaPolicy.Meter.new(int(t.remainder))
-        for step_index in range(t.steps.size()):
-            var x: Dictionary = t.steps[step_index]
-            var op: Dictionary = x.operation
-            var label := "trace[%d] step[%d] %s" % [index, step_index, op]
-            var before := snapshot(pool, meter)
-            var error := ""
-            var result: Dictionary = {}
-            match str(op.kind):
-                "set":
-                    error = pool.set_current(int(op.value))
-                "spend":
-                    var r := pool.spend_up_to(int(op.value))
-                    error = r.error
-                    result = r.spend_fields()
-                "recover":
-                    var r := pool.recover_up_to(int(op.value))
-                    error = r.error
-                    result = r.recovery_fields()
-                "flow":
-                    var r := flow.apply(pool, str(op.behavior), int(op.value), meter)
-                    error = r.error
-                    result = r.fields()
-                _:
-                    push_error("Unknown fixture operation")
-                    quit(1)
-                    return
-            compare(label + " rejected", not error.is_empty(), x.rejected)
-            if bool(x.rejected):
-                compare(label + " unchanged", snapshot(pool, meter), before)
-            else:
-                compare(label + " result", result, x.result)
-            compare(label + " state", snapshot(pool, meter), x.state)
+    for replay_pass in range(2):
+        for index in range(data.traces.size()):
+            var t: Dictionary = data.traces[index]
+            var trace_flow: BjjBehaviorStaminaPolicy = flow
+            if t.has("policy"):
+                trace_flow = BjjBehaviorStaminaPolicy.build(int(t.policy.quantum), integer_config(t.policy.rates)).policy
+            var pool := BjjStaminaPool.create(int(t.current), int(t.maximum)).pool
+            var meter := BjjBehaviorStaminaPolicy.Meter.new(int(t.remainder))
+            for step_index in range(t.steps.size()):
+                var x: Dictionary = t.steps[step_index]
+                var op: Dictionary = x.operation
+                var label := "replay[%d] trace[%d] step[%d] %s" % [replay_pass, index, step_index, op]
+                var before := snapshot(pool, meter)
+                var error := ""
+                var result: Dictionary = {}
+                match str(op.kind):
+                    "set":
+                        error = pool.set_current(int(op.value))
+                    "spend":
+                        var r := pool.spend_up_to(int(op.value))
+                        error = r.error
+                        result = r.spend_fields()
+                    "recover":
+                        var r := pool.recover_up_to(int(op.value))
+                        error = r.error
+                        result = r.recovery_fields()
+                    "flow":
+                        var r := trace_flow.apply(pool, str(op.behavior), int(op.value), meter)
+                        error = r.error
+                        result = r.fields()
+                    _:
+                        push_error("Unknown fixture operation")
+                        quit(1)
+                        return
+                compare(label + " rejected", not error.is_empty(), x.rejected)
+                if bool(x.rejected):
+                    compare(label + " unchanged", snapshot(pool, meter), before)
+                else:
+                    compare(label + " result", result, x.result)
+                compare(label + " state", snapshot(pool, meter), x.state)
     for x: Dictionary in data.exhaustion:
         var r := BjjExhaustionPolicy.exchange(str(x.initiator), str(x.responder))
         compare("exhaustion %s" % x, r.fields(), x)
@@ -115,3 +119,11 @@ func fail(label: String, actual: Variant, expected: Variant) -> void:
     failures += 1
     if failures <= 20:
         print("FAIL %s actual=%s expected=%s" % [label, actual, expected])
+
+# JSON loses integer tags. Restore integral fixture values only at the test boundary.
+func integer_config(values: Dictionary) -> Dictionary:
+    var restored: Dictionary = {}
+    for key: String in values:
+        var value: Variant = values[key]
+        restored[key] = int(value) if value is float and value == floor(value) else value
+    return restored

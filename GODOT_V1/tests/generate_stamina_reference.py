@@ -20,7 +20,7 @@ def state(pool, meter):
                 clear=pool.exhaustion_recover_threshold, remainder=meter.remainder_units)
 
 
-def trace(current, maximum, operations, remainder=0):
+def trace(current, maximum, operations, remainder=0, policy=FLOW):
     pool, meter = StaminaPool(current, maximum), BehaviorStaminaMeter(remainder)
     steps = []
     for op in operations:
@@ -37,7 +37,7 @@ def trace(current, maximum, operations, remainder=0):
             elif kind == 'flow':
                 behavior = (TopBehavior(op['behavior']) if op['behavior'] in
                             {'PRESSURE', 'HOLD', 'CONSERVE'} else BottomBehavior(op['behavior']))
-                r = FLOW.apply(pool=pool, meter=meter, behavior=behavior, duration_seconds=value)
+                r = policy.apply(pool=pool, meter=meter, behavior=behavior, duration_seconds=value)
                 result = dict(asdict(r), behavior=r.behavior.value, net_change=r.net_change)
         except (ValueError, TypeError, KeyError):
             error = True
@@ -47,15 +47,19 @@ def trace(current, maximum, operations, remainder=0):
 
 def main():
     # Rejections precede valid operations, proving replay remains usable.
-    traces = [trace(26, 100, [dict(kind=k, value=v) for k, v in
+    traces = [trace(26, 100, [dict(kind=k, value=v, **({'behavior': 'PRESSURE'} if k == 'flow' else {})) for k, v in
               [('set', -1), ('set', 101), ('spend', -1), ('recover', -1),
                ('flow', -1), ('spend', 0), ('recover', 0), ('spend', 1),
                ('set', 34), ('set', 35), ('set', 34), ('set', 25),
                ('recover', 100), ('spend', 200), ('recover', 0)]] )]
-    traces[0]['steps'][4]['operation']['behavior'] = 'PRESSURE'
     for maximum in (1, 2, 3, 7, 11, 99, 100, 101, 137, 1000):
+        thresholds = StaminaPool(maximum, maximum)
+        enter, clear = thresholds.exhaustion_enter_threshold, thresholds.exhaustion_recover_threshold
+        traces.append(trace(enter + 1, maximum, [dict(kind=k, value=v) for k, v in
+            [('spend', 1), ('set', clear - 1), ('set', clear), ('set', clear - 1),
+             ('set', enter + 1), ('set', enter)]]))
         for current in range(maximum + 1):
-            traces.append(trace(current, maximum, [dict(kind=k, value=v) for k, v in
+            traces.append(trace(current, maximum, [dict(kind=k, value=v, **({'behavior': 'PRESSURE'} if k == 'flow' else {})) for k, v in
                 [('spend', 0), ('recover', 0), ('spend', 3), ('recover', 7),
                  ('set', maximum), ('spend', maximum), ('recover', maximum)]]))
     behaviors = ['PRESSURE', 'HOLD', 'ESCAPE', 'PROTECT', 'CONSERVE']
@@ -69,6 +73,20 @@ def main():
             for durations in ([1]*5, [5], [1, 2, 7], [10], [0, 5, 0]):
                 traces.append(trace(current, 100, [dict(kind='flow', behavior=behavior, value=d)
                                                   for d in durations]))
+    for maximum in (9007199254740991,):
+        for current in (0, maximum, maximum//4, maximum//2, maximum*3//4):
+            traces.append(trace(current, maximum, [dict(kind=k, value=v) for k, v in
+                          [('spend', 0), ('recover', 0), ('spend', 12), ('recover', 7)]]))
+    # Custom rates and quantums exercise signed division independently of defaults.
+    for quantum in (1, 3, 7):
+        rates = {'PRESSURE': -7, 'HOLD': True if quantum == 1 else 2, 'ESCAPE': -3,
+                 'PROTECT': False if quantum == 1 else 1, 'CONSERVE': 9}
+        policy = BehaviorStaminaPolicy.build(quantum_seconds=quantum, points_per_quantum=rates)
+        for current in (0, 25, 100):
+            ops = [dict(kind='flow', behavior=b, value=d) for b in behaviors for d in (0, 1, 2, 5, 11)]
+            t = trace(current, 100, ops, -2, policy)
+            t['policy'] = dict(quantum=quantum, rates=rates)
+            traces.append(t)
     constructors = []
     for current, maximum in ((-1, 100), (101, 100), (0, 0), (0, -1), (0, 1), (1, 1)):
         try:
@@ -79,6 +97,7 @@ def main():
         constructors.append(dict(current=current, maximum=maximum, rejected=rejected))
     costs = []
     for config in ({'LOW':3, 'MEDIUM':7, 'HIGH':12}, {'LOW':0,'MEDIUM':1,'HIGH':2},
+                   {'LOW':True,'MEDIUM':7,'HIGH':12}, {'LOW':False,'MEDIUM':True,'HIGH':2},
                    {}, {'LOW':3,'MEDIUM':3,'HIGH':12}, {'LOW':-1,'MEDIUM':7,'HIGH':12},
                    {'LOW':3,'MEDIUM':7,'HIGH':12,'INVALID':0}, {'LOW':3,'MEDIUM':7.5,'HIGH':12}):
         try:
@@ -110,7 +129,7 @@ def main():
     flow_configs = []
     defaults = {b.value: r for b, r in FLOW.points_per_quantum.items()}
     for quantum, rates in ((5, defaults), (1, defaults), (0, defaults), (-1, defaults),
-                           (5, {}), (5, dict(defaults, INVALID=0)), (5, dict(defaults, HOLD=0.5))):
+                           (5, dict(defaults, HOLD=True)), (5, {}), (5, dict(defaults, INVALID=0)), (5, dict(defaults, HOLD=0.5))):
         try:
             BehaviorStaminaPolicy.build(quantum_seconds=quantum, points_per_quantum=rates)
             rejected = False
