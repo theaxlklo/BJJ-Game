@@ -20,6 +20,8 @@ class RoutingTests(unittest.TestCase):
             ('documentation', ['docs/ci/usage.md'], 'DOCUMENTATION_ONLY', False, False),
             ('evidence', ['docs/evidence/a.md'], 'PYTHON_OR_SHARED', True, True),
             ('contract', ['docs/BJJ_GAME_MASTER_DEVELOPMENT_GUIDE.md'], 'PYTHON_OR_SHARED', True, True),
+            ('pinned measurement', ['docs/HANDOFF_OSCILLATION_D2_V1E_MEASUREMENT_DATA.md'], 'PYTHON_OR_SHARED', True, True),
+            ('frozen preregistration', ['docs/BURST_RECOVERY_LOCKOUT_D3B_PREREGISTRATION.md'], 'PYTHON_OR_SHARED', True, True),
             ('unknown', ['mystery'], 'UNKNOWN', True, True),
             ('mixed documentation and CI', ['README.md', 'tools/ci/test_route.py'], 'CI_INFRASTRUCTURE', True, True),
             ('empty', [], 'UNKNOWN', True, True),
