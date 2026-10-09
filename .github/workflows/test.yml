@@ -197,8 +197,28 @@ jobs:
           PYTHONPATH=src python -m unittest -v
           tests.test_d3b_promotion_verification.D3BPromotionVerificationTests.test_pg8_nothing_bundled
 
+  early-gate:
+    # No needs: publish queued/in-progress immediately, including same-SHA retargets.
+    name: ${{ (github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha) && 'PR metadata (no gate)' || github.event_name == 'workflow_dispatch' && 'Manual qualification gate' || 'CI gate' }}
+    if: ${{ !(github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Watch this attempt's qualification evidence
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          QUALIFICATION_JOB_NAME: ${{ github.event_name == 'workflow_dispatch' && 'Manual qualification results' || 'qualification results' }}
+        run: python tools/ci/watch_qualification.py
+
   ci-gate:
-    name: ${{ (github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha) && 'PR metadata (no qualification)' || github.event_name == 'workflow_dispatch' && 'Manual qualification gate' || 'CI gate' }}
+    name: ${{ (github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha) && 'PR metadata (no qualification)' || github.event_name == 'workflow_dispatch' && 'Manual qualification results' || 'qualification results' }}
     if: ${{ always() && !(github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && github.event.pull_request.base.sha && github.event.pull_request.head.sha) }}
     needs: [classify, lightweight-validation, godot, unit-tests, verification, history-verification]
     runs-on: ubuntu-latest
