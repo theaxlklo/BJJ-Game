@@ -146,5 +146,12 @@ class LightweightTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
 
 
+class TriggerTests(unittest.TestCase):
+    def test_base_retarget_events_are_qualified(self):
+        workflow = Path(__file__).resolve().parents[2] / '.github/workflows/test.yml'
+        section = workflow.read_text().split('  pull_request:', 1)[1].split('  workflow_dispatch:', 1)[0]
+        self.assertIn('edited', section, 'base retargets use edited, not synchronize events')
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

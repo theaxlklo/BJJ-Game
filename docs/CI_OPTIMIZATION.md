@@ -123,7 +123,10 @@ filters. Shared Python changes also receive Godot reference comparisons.
 ### Events and exact revisions
 
 Automatic qualification runs for every PR (including non-main stacked bases), and
-for every push/merge to `main`. Feature pushes without a PR do not launch CI: open
+for every push/merge to `main`. Base retargets trigger qualification even without
+a new head commit. Recognized title/body-only edits with complete PR refs are
+ignored in isolated concurrency groups and publish no automatic CI gate; missing
+event fields conservatively enter qualification. Feature pushes without a PR do not launch CI: open
 a draft PR or dispatch full qualification. This intentionally removes duplicate
 push/PR work. PR ranges use actual event base...head; push ranges use before..head,
 including all commits. Rename records include both old and new paths. Missing or
