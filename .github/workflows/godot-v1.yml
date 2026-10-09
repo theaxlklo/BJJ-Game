@@ -1,0 +1,46 @@
+name: Godot V1 headless checks
+
+on:
+  push:
+    paths:
+      - "GODOT_V1/**"
+      - ".github/workflows/godot-v1.yml"
+  pull_request:
+    paths:
+      - "GODOT_V1/**"
+      - ".github/workflows/godot-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  godot-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pinned Godot 4.7.2 standard edition
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            "https://downloads.godotengine.org/?version=4.7.2&flavor=stable&platform=linux.64&slug=linux.x86_64.zip" \
+            --output /tmp/godot.zip
+          echo "cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4  /tmp/godot.zip" | sha256sum --check
+          unzip -q /tmp/godot.zip -d /tmp/godot-binary
+          binary="$(find /tmp/godot-binary -maxdepth 1 -type f -name 'Godot*' | head -n 1)"
+          test -n "$binary"
+          sudo install -m 0755 "$binary" /usr/local/bin/godot
+          godot --headless --version
+
+      - name: Import and validate Godot project
+        run: godot --headless --path GODOT_V1 --editor --import --quit
+
+      - name: Run frozen Mount-slice tests
+        run: godot --headless --path GODOT_V1 --script res://tests/test_mount_slice.gd
+
+      - name: Smoke-test minimal 3D scene
+        run: godot --headless --path GODOT_V1 --quit-after 5
