@@ -1,0 +1,15 @@
+; Godot project for the isolated GDScript implementation of BJJ Game.
+; Target editor/runtime: Godot 4.7.2-stable (standard GDScript build).
+config_version=5
+
+[application]
+
+config/name="BJJ Game — Godot V1"
+run/main_scene="res://scenes/mount_debug.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
