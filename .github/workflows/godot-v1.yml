@@ -48,5 +48,23 @@ jobs:
       - name: Compare GDScript results against Python reference
         run: godot --headless --path GODOT_V1 --script res://tests/test_mount_reference.gd
 
+      - name: Generate stamina fixtures using original Python contracts
+        run: PYTHONPATH=src python GODOT_V1/tests/generate_stamina_reference.py
+
+      - name: Compare stamina, commitment, behavior and exhaustion against Python
+        run: godot --headless --path GODOT_V1 --script res://tests/test_stamina_reference.gd
+
+      - name: Run native stamina rejection and boundary tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_stamina_boundaries.gd 2>&1 | tee /tmp/stamina-native.log
+          python - <<'PY'
+          from pathlib import Path
+          errors = [line for line in Path('/tmp/stamina-native.log').read_text().splitlines()
+                    if line.startswith('ERROR:') or 'SCRIPT ERROR:' in line]
+          assert len(errors) == 2 and all(line.startswith('ERROR: read_only_property:') for line in errors), errors
+          PY
+
       - name: Smoke-test minimal 3D scene
         run: godot --headless --path GODOT_V1 --quit-after 5

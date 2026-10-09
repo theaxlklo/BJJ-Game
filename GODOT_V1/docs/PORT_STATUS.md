@@ -22,7 +22,7 @@
 ## Still NOT ported
 
 - `MountMatch` aggregate: initiative, five-minute clock lifecycle, transitions between positions, histories
-- Commitment/stamina/exhaustion and production stamina policy
+- Complete attempt/response settlement, v0.4a commitment grade semantics and production recovery policy (stamina primitives are ported below)
 - Setup, Americana Threat/Control/Finish, Recognition, stalling and penalties
 - Generic PositionContract, stable Fighter IDs, Standing, non-Mount positions
 - Real decision window/session timer, scoring modes, IBJJF rules table
@@ -62,3 +62,22 @@ This is **Mount-v0 resolution/drift parity only**, not complete stamina, setup, 
 PYTHONPATH=src python GODOT_V1/tests/generate_mount_reference.py
 godot --headless --path GODOT_V1 --script res://tests/test_mount_reference.gd
 ```
+
+## Stamina and commitment primitive slice
+
+Five typed core modules now cover the pool/latch/bands, commitment costs and
+funding, signed behavior carry, and default exhaustion modifiers. See
+[STAMINA_MIGRATION.md](STAMINA_MIGRATION.md) for APIs, exact scope, numeric/type
+boundaries, Python findings, and focused settlement/RECOVER/D3-B follow-up tasks.
+This does not claim full MountMatch or production stamina/recovery parity.
+
+```bash
+PYTHONPATH=src python GODOT_V1/tests/generate_stamina_reference.py
+godot --headless --path GODOT_V1 --script res://tests/test_stamina_reference.gd
+godot --headless --path GODOT_V1 --script res://tests/test_stamina_boundaries.gd
+```
+
+The existing GitHub Actions Godot workflow now generates both reference corpora
+and runs stamina parity/native boundary checks in addition to unchanged Mount
+tests, project import and greybox startup. The existing Python CI qualification
+workflow remains unchanged, including historical and frozen digest checks.
