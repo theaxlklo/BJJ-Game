@@ -30,6 +30,7 @@ jobs:
       python_required: ${{ steps.changes.outputs.python_required }}
       godot_required: ${{ steps.changes.outputs.godot_required }}
       target_sha: ${{ steps.changes.outputs.target_sha }}
+      diff_span: ${{ steps.changes.outputs.diff_span }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,7 +50,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.classify.outputs.target_sha }}
-      - run: git show --format= --check HEAD
+          fetch-depth: 0
+      - name: Check changed lines without treating a shallow commit as a root
+        env:
+          DIFF_SPAN: ${{ needs.classify.outputs.diff_span }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "$DIFF_SPAN" ]]; then
+            git diff --check "$DIFF_SPAN"
+          else
+            git show --format= --check HEAD
+          fi
 
   godot:
     name: Godot qualification

@@ -62,10 +62,6 @@ class RoutingTests(unittest.TestCase):
                 changed_paths('0' * 40, head, True, directory)
 
 
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-
-
 class EventAdmissionTests(unittest.TestCase):
     def test_missing_pr_fields_and_stale_manual_sha(self):
         import json
@@ -120,3 +116,33 @@ class GateTests(unittest.TestCase):
             with self.subTest(name=name):
                 result = subprocess.run(['bash', '-c', script], env=dict(os.environ, **(baseline | changes)), capture_output=True, text=True)
                 self.assertEqual(result.returncode == 0, accepted, result.stderr)
+
+
+class LightweightTests(unittest.TestCase):
+    def test_shallow_root_does_not_recheck_historical_whitespace(self):
+        import os
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repository = root / 'repository'; repository.mkdir()
+            def git(*args):
+                return subprocess.check_output(['git', '-C', str(repository), *args]).decode().strip()
+            git('init', '-q'); git('config', 'user.name', 'CI'); git('config', 'user.email', 'ci@example.invalid')
+            (repository / 'old.md').write_text('Historical Markdown break  \n')
+            git('add', '.'); git('commit', '-qm', 'historical'); base = git('rev-parse', 'HEAD')
+            (repository / 'new.md').write_text('Clean changed documentation\n')
+            git('add', '.'); git('commit', '-qm', 'new'); head = git('rev-parse', 'HEAD')
+            shallow = root / 'shallow'
+            subprocess.check_call(['git', 'clone', '-q', '--depth=1', repository.as_uri(), str(shallow)])
+            old = subprocess.run(['git', 'show', '--format=', '--check', 'HEAD'], cwd=shallow, capture_output=True)
+            self.assertNotEqual(old.returncode, 0, 'reproduce the depth-one historical-whitespace failure')
+            workflow = Path(__file__).resolve().parents[2] / '.github/workflows/test.yml'
+            section = workflow.read_text().split('  lightweight-validation:', 1)[1].split('  godot:', 1)[0]
+            self.assertIn('fetch-depth: 0', section)
+            script = section.split('        run: |\n', 1)[1]
+            script = '\n'.join(line[10:] for line in script.splitlines())
+            result = subprocess.run(['bash', '-c', script], cwd=repository, env=dict(os.environ, DIFF_SPAN=base+'...'+head), capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
