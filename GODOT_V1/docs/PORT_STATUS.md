@@ -51,3 +51,14 @@ Next: run the Godot headless test and collect independently generated Python `Mo
 ## CI setup
 
 The GitHub Actions workflow `.github/workflows/godot-v1.yml` runs when files under `GODOT_V1/` change, on pull requests, and via manual dispatch. It installs pinned Godot 4.7.2, imports the project, runs the Mount-slice tests, and smoke-tests the default 3D scene. [First passing test run](https://github.com/theaxlklo/BJJ-Game/actions/runs/37970015682). The implementation stays inside `GODOT_V1`; GitHub requires workflow definitions under `.github/workflows`.
+
+## Independent Python-to-GDScript fixture comparison (new)
+
+`tests/generate_mount_reference.py` invokes the original, unchanged Python `MountResolutionEngine`. It records the 18 frozen action/response matchups across band-history overlap, starting control values, behaviors, grade modifiers, override grades, and drift durations. `tests/test_mount_reference.gd` checks the GDScript results against that output field by field. GitHub Actions generates the fixture and runs the comparison.
+
+This is **Mount-v0 resolution/drift parity only**, not complete stamina, setup, submissions, stalling or `MountMatch` parity. If this workflow fails, its mismatch log is authoritative evidence for the next correction.
+
+```bash
+PYTHONPATH=src python GODOT_V1/tests/generate_mount_reference.py
+godot --headless --path GODOT_V1 --script res://tests/test_mount_reference.gd
+```

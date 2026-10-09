@@ -42,5 +42,11 @@ jobs:
       - name: Run frozen Mount-slice tests
         run: godot --headless --path GODOT_V1 --script res://tests/test_mount_slice.gd
 
+      - name: Generate reference results using original Python engine
+        run: PYTHONPATH=src python GODOT_V1/tests/generate_mount_reference.py
+
+      - name: Compare GDScript results against Python reference
+        run: godot --headless --path GODOT_V1 --script res://tests/test_mount_reference.gd
+
       - name: Smoke-test minimal 3D scene
         run: godot --headless --path GODOT_V1 --quit-after 5
