@@ -114,7 +114,7 @@ that directory cannot use the documentation shortcut. Markdown in
 `GODOT_V1/docs/` is documentation; executable fixtures elsewhere under Godot are not.
 
 The always-created `CI gate` requires successful routing, lightweight whitespace
-validation, and **every selected job**. It directly depends on the reusable Godot
+validation (allowing intentional Markdown hard breaks), and **every selected job**. It directly depends on the reusable Godot
 qualification; skipped, cancelled or failed required Godot jobs cannot produce a
 passing gate. Existing test commands, matrices, shard assignment and digest remain
 unchanged. The Godot workflow now runs through the caller, not independent path

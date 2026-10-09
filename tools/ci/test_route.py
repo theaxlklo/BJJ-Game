@@ -129,9 +129,9 @@ class LightweightTests(unittest.TestCase):
             def git(*args):
                 return subprocess.check_output(['git', '-C', str(repository), *args]).decode().strip()
             git('init', '-q'); git('config', 'user.name', 'CI'); git('config', 'user.email', 'ci@example.invalid')
-            (repository / 'old.md').write_text('Historical Markdown break  \n')
+            (repository / 'old.md').write_text('Historical Markdown break  \n\n')
             git('add', '.'); git('commit', '-qm', 'historical'); base = git('rev-parse', 'HEAD')
-            (repository / 'new.md').write_text('Clean changed documentation\n')
+            (repository / 'new.md').write_text('Legal changed Markdown hard break  \n')
             git('add', '.'); git('commit', '-qm', 'new'); head = git('rev-parse', 'HEAD')
             shallow = root / 'shallow'
             subprocess.check_call(['git', 'clone', '-q', '--depth=1', repository.as_uri(), str(shallow)])
