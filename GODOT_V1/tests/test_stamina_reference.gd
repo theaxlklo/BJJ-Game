@@ -23,6 +23,11 @@ func _initialize() -> void:
             compare("funding %s" % x, not funding.ok(), x.rejected)
             if funding.ok():
                 compare("funding result %s" % x, funding.fields(), x.result)
+            if c.config == data.costs[0].config:
+                var default_funding := BjjStaminaCostPolicy.defaults().determine(str(x.requested), int(x.available))
+                compare("default funding %s" % x, not default_funding.ok(), x.rejected)
+                if default_funding.ok():
+                    compare("default funding result %s" % x, default_funding.fields(), x.result)
     for c: Dictionary in data.flow_configs:
         var built := BjjBehaviorStaminaPolicy.build(int(c.quantum), integer_config(c.rates))
         compare("flow config %s" % c, not built.ok(), c.rejected)
