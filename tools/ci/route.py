@@ -6,6 +6,14 @@ import subprocess
 from pathlib import Path, PurePosixPath
 
 SHA = re.compile(r'[0-9a-f]{40}')
+# Historical tests read reports outside docs/evidence; these are shared inputs.
+SHARED_DOC_MARKERS = (
+    'MASTER_DEVELOPMENT_GUIDE', 'POLICY', 'SEMANTICS', 'FREEZE', 'EVIDENCE',
+    'DEFINITION_OF_DONE', 'MEASUREMENT', 'PREREGISTRATION', 'VERIFICATION',
+    'CHARACTERIZATION', 'DISTRIBUTIONS', 'AMENDMENT', 'INVARIANT', 'RESULT',
+    'DOD', 'MOUNT_', 'STAMINA_', 'HANDOFF_', 'BURST_', 'R1_', 'SETUP_',
+    'ARCHITECTURE', 'NAMING_LOCK',
+)
 
 
 def path_category(path):
@@ -15,7 +23,7 @@ def path_category(path):
         return 'CI_INFRASTRUCTURE'
     if path.startswith(('docs/evidence/', 'src/', 'tests/')) or path in ('pyproject.toml', 'setup.py', 'setup.cfg', 'requirements.txt', 'uv.lock', 'poetry.lock'):
         return 'PYTHON_OR_SHARED'
-    if path.startswith('docs/') and any(token in PurePosixPath(path).name.upper() for token in ('MASTER_DEVELOPMENT_GUIDE', 'POLICY', 'SEMANTICS', 'FREEZE', 'EVIDENCE', 'DEFINITION_OF_DONE')):
+    if path.startswith('docs/') and any(token in PurePosixPath(path).name.upper() for token in SHARED_DOC_MARKERS):
         return 'PYTHON_OR_SHARED'
     if path == 'README.md' or (path.startswith(('docs/', 'GODOT_V1/docs/')) and path.endswith('.md')):
         return 'DOCUMENTATION_ONLY'
