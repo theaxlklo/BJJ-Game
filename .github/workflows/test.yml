@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   classify:
-    name: classify changes
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual admission' || 'classify changes' }}
     runs-on: ubuntu-latest
     outputs:
       python_required: ${{ steps.changes.outputs.python_required }}
@@ -194,7 +194,7 @@ jobs:
           tests.test_d3b_promotion_verification.D3BPromotionVerificationTests.test_pg8_nothing_bundled
 
   ci-gate:
-    name: CI gate
+    name: ${{ github.event_name == 'workflow_dispatch' && 'Manual qualification gate' || 'CI gate' }}
     if: always()
     needs: [classify, lightweight-validation, godot, unit-tests, verification, history-verification]
     runs-on: ubuntu-latest
