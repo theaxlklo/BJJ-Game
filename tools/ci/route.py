@@ -69,8 +69,10 @@ def main():
     if name == 'workflow_dispatch' and inputs.get('target_sha') != head:
         raise SystemExit('target_sha must equal the selected branch SHA at dispatch time')
     base = event.get('pull_request', {}).get('base', {}).get('sha') if name == 'pull_request' else event.get('before')
+    span = ''
     try:
         paths = changed_paths(base, head, name == 'pull_request')
+        span = base + ('...' if name == 'pull_request' else '..') + head
         error = ''
     except (ValueError, subprocess.CalledProcessError, UnicodeError) as exc:
         paths = []
@@ -82,6 +84,7 @@ def main():
         for key, value in result.items():
             output.write(f'{key}={str(value).lower() if isinstance(value, bool) else value}\n')
         output.write(f'target_sha={head}\n')
+        output.write(f'diff_span={span}\n')
 
 
 if __name__ == '__main__':
