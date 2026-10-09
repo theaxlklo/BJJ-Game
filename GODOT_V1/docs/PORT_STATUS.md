@@ -21,9 +21,9 @@
 
 ## Still NOT ported
 
-- `MountMatch` aggregate: initiative, five-minute clock lifecycle, transitions between positions, histories
-- Complete attempt/response settlement, v0.4a commitment grade semantics and production recovery policy (stamina primitives are ported below)
-- Setup, Americana Threat/Control/Finish, Recognition, stalling and penalties
+- Complete `MountMatch` aggregate: clock advancement/recovery controllers, non-Mount transitions, scoring and full lifecycle
+- Complete production recovery policy: Bottom RECOVER and D3-B (exchange settlement and explicit Rule 1/2 selection are ported below)
+- Custom setup/submission policies, Recognition, stalling and penalties (default exchange setup/Americana transitions are ported below)
 - Generic PositionContract, stable Fighter IDs, Standing, non-Mount positions
 - Real decision window/session timer, scoring modes, IBJJF rules table
 - Memory Constellation, career, rewards, persistence and netcode
@@ -81,3 +81,14 @@ The existing GitHub Actions Godot workflow now generates both reference corpora
 and runs stamina parity/native boundary checks in addition to unchanged Mount
 tests, project import and greybox startup. The existing Python CI qualification
 workflow remains unchanged, including historical and frozen digest checks.
+
+## Phase 19 exchange settlement
+
+`BjjMountExchange` now implements validated integer-cost exchange settlement,
+historical exhaustion, frozen v0.4a sequential grade transforms, response waiver,
+legacy/supplemental hold controls, and default Ready/Americana integration.
+`BjjProductionStaminaPolicy` selects Rule 1 ON / Rule 2 OFF separately; raw defaults
+remain OFF. See [EXCHANGE_SETTLEMENT.md](EXCHANGE_SETTLEMENT.md) for source/API
+mapping, test evidence, three explicitly approved terminal rejection differences,
+strict admission boundaries and remaining dependencies. This is not full
+MountMatch or production recovery parity. Issue #20 is the next controller slice.

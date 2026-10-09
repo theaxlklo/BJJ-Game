@@ -139,3 +139,13 @@ catch-all success or frame-time dependency exists; histories store bands rather
 than recalculate them; no Match defaults changed. Side Control can reuse these
 primitives without extracting a speculative engine framework. GDScript underscore
 privacy and caller-owned mutable result objects remain language-level conventions.
+
+## Phase 19 follow-up status
+
+Task 1's integer-cost/default-policy exchange slice is implemented in
+[EXCHANGE_SETTLEMENT.md](EXCHANGE_SETTLEMENT.md), including explicit production
+selection and independently generated attempt/final-state comparisons. Atomic
+terminal guards have three user-approved Python differences, excluded from exact
+parity; boolean-cost exchange serialization and unsupported controllers are
+explicit admission boundaries. Tasks 2 and 3 remain Issues #20 and #21. The
+primitive scope and historical test results in this document remain unchanged.
