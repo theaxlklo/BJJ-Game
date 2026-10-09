@@ -149,8 +149,10 @@ Use a branch containing the updated workflow. The requested SHA must equal that
 branch's SHA at dispatch time; stale pins fail before launching tests. All jobs use
 that immutable SHA. Verify the completed run's `head_sha` and re-run after any new
 commit. Dispatch without an available diff also runs full qualification, including
-when the input is false: ambiguity never authorizes skipping. Manual dispatch is
-qualification evidence, not a promise that GitHub accepts it for branch protection.
+when the input is false: ambiguity never authorizes skipping. Manual dispatch publishes **Manual qualification gate** and **Manual admission**,
+separate from automatic **CI gate**. Invalid dispatch requests therefore cannot
+publish a failed required CI gate on an otherwise qualified PR SHA. Manual evidence
+does not satisfy an automatic CI gate requirement; verify both where appropriate.
 Major migration heads should receive a final successful full run before merging.
 
 ### Repository protection limitation
