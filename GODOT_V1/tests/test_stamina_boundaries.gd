@@ -27,6 +27,11 @@ func _initialize() -> void:
     check("Python boolean integer rate", BjjBehaviorStaminaPolicy.build(5, bool_rates).ok())
     check("unrepresentable capacity", not BjjStaminaPool.create(0, BjjStaminaPool.MAXIMUM_EXACT + 1).ok())
     var pool := BjjStaminaPool.create(10).pool
+    print("EXPECT two read-only property diagnostics; authoritative state must stay unchanged")
+    pool.current = -1
+    pool.maximum = 0
+    check("read-only current unchanged", pool.current == 10 and pool.band == "Exhausted")
+    check("read-only maximum unchanged", pool.maximum == 100)
     var flow := BjjBehaviorStaminaPolicy.defaults()
     for carry: int in [MAX_INT, -MAX_INT, -MAX_INT - 1]:
         var meter := BjjBehaviorStaminaPolicy.Meter.new(carry)

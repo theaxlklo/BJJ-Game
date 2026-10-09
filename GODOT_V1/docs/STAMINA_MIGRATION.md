@@ -24,7 +24,11 @@ The master design guide remains v10.4.
 
 Policies and pool internals use underscore members; GDScript has no private
 member enforcement. Callers must use the controlled methods, not those members.
-Public properties read authoritative internal values. Dictionaries appear only
+Public properties read authoritative internal values and reject writes with an
+explicit Godot error diagnostic (Python raises AttributeError). Getter-only
+GDScript properties otherwise silently accept writes to unused backing storage;
+the explicit setters prevent that misleading behavior. Normal recoverable pool
+operations return errors, rather than log diagnostics. Dictionaries appear only
 at configuration/serialization boundaries; simulation returns typed objects.
 No autoload, rendering dependency, frame delta, random draw, or third-party code
 was introduced. Result objects are caller-owned snapshots, not live pool views.
@@ -123,7 +127,10 @@ state after each operation, verifies unchanged state after rejection, and execut
 the corpus twice from identical initial states. JSON expected integer outputs
 must correspond to native Godot ints. Native tests additionally cover float/string
 configuration rejection, Python boolean configuration compatibility, missing objects, overflow, copied configuration,
-zero-cost funding, split/combined cumulative accounting and historical bands.
+zero-cost funding, read-only property rejection, split/combined cumulative accounting and historical bands.
+The native CI step verifies exactly two expected read-only error diagnostics and
+rejects any unexpected script/engine errors; those two are deliberate negative
+cases, not hidden test failures.
 Fixtures are generated during CI, not checked in.
 
 Principal self-review: all validation precedes pool/meter mutations; policy builds

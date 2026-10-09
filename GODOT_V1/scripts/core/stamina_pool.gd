@@ -13,14 +13,19 @@ var _exhausted_latched: bool = false
 
 var current: int:
     get: return _current
+    set(_value): _reject_property_write("current")
 var maximum: int:
     get: return _maximum
+    set(_value): _reject_property_write("maximum")
 var exhaustion_enter_threshold: int:
     get: return floori(float(_maximum) * 0.25)
+    set(_value): _reject_property_write("exhaustion_enter_threshold")
 var exhaustion_recover_threshold: int:
     get: return ceili(float(_maximum) * 0.35)
+    set(_value): _reject_property_write("exhaustion_recover_threshold")
 var ratio: float:
     get: return float(_current) / float(_maximum)
+    set(_value): _reject_property_write("ratio")
 var band: String:
     get:
         if _exhausted_latched:
@@ -30,6 +35,10 @@ var band: String:
         if ratio > 0.50:
             return "Working"
         return "Tired"
+    set(_value): _reject_property_write("band")
+
+func _reject_property_write(property: String) -> void:
+    push_error("read_only_property: %s; use controlled pool methods" % property)
 
 class Creation extends RefCounted:
     var pool: BjjStaminaPool

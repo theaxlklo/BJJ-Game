@@ -55,7 +55,16 @@ jobs:
         run: godot --headless --path GODOT_V1 --script res://tests/test_stamina_reference.gd
 
       - name: Run native stamina rejection and boundary tests
-        run: godot --headless --path GODOT_V1 --script res://tests/test_stamina_boundaries.gd
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_stamina_boundaries.gd 2>&1 | tee /tmp/stamina-native.log
+          python - <<'PY'
+          from pathlib import Path
+          errors = [line for line in Path('/tmp/stamina-native.log').read_text().splitlines()
+                    if line.startswith('ERROR:') or 'SCRIPT ERROR:' in line]
+          assert len(errors) == 2 and all(line.startswith('ERROR: read_only_property:') for line in errors), errors
+          PY
 
       - name: Smoke-test minimal 3D scene
         run: godot --headless --path GODOT_V1 --quit-after 5
