@@ -13,7 +13,7 @@ func _initialize() -> void:
         quit(1)
         return
     var header: Dictionary = JSON.parse_string(fixture.get_line())
-    compare("schema", header.schema, 1)
+    compare("schema", int(header.schema), 1)
     compare("production selection", BjjProductionStaminaPolicy.settings(), header.production_settings)
     for c: Dictionary in header.config_cases:
         compare("config %s" % c.settings, not BjjExchangeRules.build(c.settings).ok(), bool(c.rejected) or bool(c.unsupported))
@@ -52,13 +52,18 @@ func _initialize() -> void:
 
 func create_state(c: Dictionary) -> BjjMountExchange:
     var s := BjjMountExchange.new()
-    s.rules = BjjExchangeRules.build(c.settings).rules
+    var settings: Dictionary = c.settings.duplicate()
+    if c.mode == "production":
+        var selected := BjjProductionStaminaPolicy.settings()
+        for key: String in selected:
+            settings[key] = selected[key]
+    s.rules = BjjExchangeRules.build(settings).rules
     var costs: Dictionary = {}
     for key: String in c.costs:
         costs[key] = int(c.costs[key])
     s.cost_policy = BjjStaminaCostPolicy.build(costs).policy
-    s.top.set_current(int(c.top_initial))
-    s.bottom.set_current(int(c.bottom_initial))
+    s.top = BjjStaminaPool.create(int(c.top_initial),int(c.initial.top_maximum)).pool
+    s.bottom = BjjStaminaPool.create(int(c.bottom_initial),int(c.initial.bottom_maximum)).pool
     for value: Variant in c.top_history:
         s.top.set_current(int(value))
     for value: Variant in c.bottom_history:
@@ -69,6 +74,7 @@ func create_state(c: Dictionary) -> BjjMountExchange:
     if s.position.broken:
         s.position.crossing_axis = float(c.initial.crossing_axis)
     s.initiator = str(c.initial.initiator)
+    s.initial_clock = int(c.initial.initial_clock)
     s.clock_seconds = int(c.initial.clock_seconds)
     s.americana_tier = int(c.initial.americana_tier)
     s.trap_tier = int(c.initial.trap_tier)

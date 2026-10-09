@@ -15,10 +15,27 @@ func request(action: String = C.TOP_HIGH_MOUNT_CLIMB, response: String = C.BOTTO
     return BjjExchangeResult.Request.new(action, response, commitment, response_commitment)
 
 func rejected(label: String, state: BjjMountExchange, command: BjjExchangeResult.Request) -> void:
-    var before := state.snapshot().fields()
+    var before := JSON.stringify(finite_snapshot(full_state(state)))
     var result := state.attempt(command)
     check(label + " rejection", result.ok(), false)
-    check(label + " unchanged", state.snapshot().fields(), before)
+    check(label + " unchanged", JSON.stringify(finite_snapshot(full_state(state))), before)
+
+func finite_snapshot(value: Variant) -> Variant:
+    if value is Dictionary:
+        var copied: Dictionary = {}
+        for key: Variant in value:
+            copied[key] = finite_snapshot(value[key])
+        return copied
+    if value is float and not is_finite(value):
+        return "NaN" if is_nan(value) else "Infinity"
+    return value
+
+func full_state(state: BjjMountExchange) -> Dictionary:
+    var result := state.snapshot().fields()
+    result["top_behavior"] = state.top_behavior
+    result["bottom_behavior"] = state.bottom_behavior
+    result["history"] = state.history.fields() if state.history != null else null
+    return result
 
 func _initialize() -> void:
     check("missing state", BjjMountExchange.process(null, request()).ok(), false)
@@ -43,7 +60,8 @@ func _initialize() -> void:
     s.rules = rules
     rejected("missing request", s, null)
     for command: BjjExchangeResult.Request in [request(""), request(C.TOP_HIGH_MOUNT_CLIMB,""),
-        request("unknown"), request(C.TOP_HIGH_MOUNT_CLIMB,"unknown"), request(C.BOTTOM_BRIDGE,C.TOP_RESPONSE_POST_AND_BASE),
+        request("unknown"), request(C.TOP_HIGH_MOUNT_CLIMB,"unknown"),
+        request(C.TOP_RESPONSE_POST_AND_BASE), request(C.TOP_HIGH_MOUNT_CLIMB,C.BOTTOM_BRIDGE), request(C.BOTTOM_BRIDGE,C.TOP_RESPONSE_POST_AND_BASE),
         request(C.TOP_HIGH_MOUNT_CLIMB,C.TOP_RESPONSE_POST_AND_BASE), request(C.TOP_HIGH_MOUNT_CLIMB,C.BOTTOM_RESPONSE_FOREARM_FRAME,"INVALID"),
         request(C.TOP_HIGH_MOUNT_CLIMB,C.BOTTOM_RESPONSE_FOREARM_FRAME,"MEDIUM","INVALID"),
         request(BjjMountExchange.FINISH), request(C.TOP_AMERICANA_ARM_ISOLATION)]:
@@ -69,6 +87,11 @@ func _initialize() -> void:
     s.submission_stage = "INVALID"
     rejected("invalid stage", s, request())
     s.submission_stage = ""
+    s.initial_clock = 0
+    rejected("invalid initial clock", s, request())
+    s.initial_clock = 300
+    s.clock_seconds = 301
+    rejected("clock beyond initial clock", s, request())
     s.clock_seconds = 0
     rejected("timeout", s, request())
     s.clock_seconds = -1
@@ -87,6 +110,7 @@ func _initialize() -> void:
     b.rules = rules
     rejected("before replay", a, request("bad"))
     var captured: Dictionary = {}
+    var first_result: BjjExchangeResult
     for command: BjjExchangeResult.Request in [request(), request(C.BOTTOM_BRIDGE,C.TOP_RESPONSE_HIP_FOLLOW_REPUMMEL), request()]:
         var ar := a.attempt(command)
         var br := b.attempt(command)
@@ -94,8 +118,11 @@ func _initialize() -> void:
         check("deterministic state", a.snapshot().fields(), b.snapshot().fields())
         if captured.is_empty():
             captured = ar.fields()
+            first_result = ar
             ar.outcome.top_stamina = 999
             ar.initiator_funding.requested_cost = 999
+    check("serialized first result independent", captured.outcome.top_stamina, 93)
+    check("live result remains historical", first_result.outcome.top_stamina, 999)
     check("result mutation does not touch state", a.snapshot().fields(), b.snapshot().fields())
     var hist := a.history.fields()
     hist.commitment_history.append("corruption")
@@ -112,6 +139,85 @@ func _initialize() -> void:
         check("historical bands %d" % available, [r.exhaustion.initiator,r.exhaustion.responder], [ib,rb])
         check("nonnegative resources %d" % available, boundary.top.current >= 0 and boundary.bottom.current >= 0, true)
         check("funding charged %d" % available, r.stamina.charged, r.initiator_funding.effective_cost)
+    # These explicit controls accompany the independent Python hold matrix.
+    for rule1 in [false, true]:
+        for rule2 in [false, true]:
+            for action: String in [BjjMountExchange.FINISH, C.TOP_AMERICANA_ARM_ISOLATION]:
+                var hold := BjjMountExchange.new()
+                hold.rules = BjjExchangeRules.build({"enable_v02_setup":true,"enable_v03_submissions":true,
+                    "enable_v04_commitment_semantics":true,"enable_unfunded_responder_cost_waiver":rule1,
+                    "enable_supplemental_hold_settlement":rule2}).rules
+                hold.position = BjjMountPosition.new(4.0)
+                hold.top.set_current(0)
+                hold.bottom_behavior = "PROTECT"
+                hold.americana_tier = 2
+                hold.submission_stage = "Threat" if action == BjjMountExchange.FINISH else ""
+                var r := hold.attempt(request(action,C.BOTTOM_RESPONSE_FOREARM_FRAME))
+                var label := "UNFUNDED hold %s %s %s" % [action,rule1,rule2]
+                check(label + " accepted", r.ok(), true)
+                check(label + " contested", r.resolution.final_grade, 0)
+                check(label + " commitment waiver", r.response_stamina_waived, 7 if rule1 else 0)
+                check(label + " hold charge", r.submission_hold_stamina.charged, 0 if rule1 else 3)
+                check(label + " legacy unfunded supplemental", r.submission_hold_covered_by_response, 0)
+                check(label + " final defender", hold.bottom.current, 100 if rule1 else 90)
+    for supplemental in [false,true]:
+        for defender in [0,2,3,7,20]:
+            var hold := BjjMountExchange.new()
+            hold.rules = BjjExchangeRules.build({"enable_v02_setup":true,"enable_v03_submissions":true,
+                "enable_v04_commitment_semantics":true,"enable_supplemental_hold_settlement":supplemental}).rules
+            hold.position = BjjMountPosition.new(4.0)
+            hold.bottom.set_current(defender)
+            hold.bottom_behavior = "PROTECT"
+            hold.submission_stage = "Threat"
+            # Matching funded commitment ranks keeps this exchange Contested.
+            var effort := "MEDIUM" if defender >= 7 else "LOW"
+            if defender < 3:
+                hold.top.set_current(2) # Both exhausted: this Turn-In is not Contested.
+            var r := hold.attempt(request(BjjMountExchange.FINISH,C.BOTTOM_RESPONSE_TURN_IN_RECOVERY,effort,effort))
+            if defender >= 3:
+                check("funded hold contested", r.resolution.final_grade, 0)
+                check("hold is present", r.submission_hold_stamina != null, true)
+                check("supplemental coverage", r.submission_hold_covered_by_response, 3 if supplemental else 0)
+                check("hold shortfall", r.submission_hold_stamina.shortfall, 0 if supplemental or defender==20 else 3)
+                check("post-charge exhaustion", hold.bottom.band, "Exhausted")
+            else:
+                check("unfunded no contested hold", r.submission_hold_stamina == null, true)
+    for requested: String in ["LOW","MEDIUM","HIGH"]:
+        var feint := BjjMountExchange.new()
+        feint.rules = BjjExchangeRules.build({"enable_v02_setup":true,"enable_v03_submissions":true,
+            "enable_v04_commitment_semantics":true}).rules
+        feint.position = BjjMountPosition.new(4.0)
+        feint.submission_stage = "Threat"
+        feint.top.set_current(3)
+        var r := feint.attempt(request(BjjMountExchange.FINISH,C.BOTTOM_RESPONSE_FOREARM_FRAME,requested,"LOW"))
+        check("downgrade effective LOW", r.initiator_funding.effective, "LOW")
+        check("feint uses requested commitment", feint.submission_stage, "Threat" if requested=="LOW" else "Control")
+    var zero := BjjMountExchange.new()
+    zero.rules = BjjExchangeRules.build({"enable_v02_setup":true,"enable_v03_submissions":true,
+        "enable_v04_commitment_semantics":true,"enable_unfunded_responder_cost_waiver":true}).rules
+    zero.cost_policy = BjjStaminaCostPolicy.build({"LOW":0,"MEDIUM":1,"HIGH":2}).policy
+    zero.position = BjjMountPosition.new(4.0)
+    zero.submission_stage = "Threat"
+    zero.top.set_current(0)
+    zero.bottom_behavior = "PROTECT"
+    var zr := zero.attempt(request(BjjMountExchange.FINISH,C.BOTTOM_RESPONSE_FOREARM_FRAME,"LOW","HIGH"))
+    check("zero-cost LOW funded", zr.initiator_funding.effective, "LOW")
+    check("zero-cost LOW no waiver", zr.response_stamina_waived, 0)
+    check("zero-cost LOW responder pays", zr.response_stamina.charged, 2)
+    check("zero-cost LOW hold", zr.submission_hold_stamina.requested, 0)
+    var boolean_costs := BjjMountExchange.new()
+    boolean_costs.cost_policy = BjjStaminaCostPolicy.build({"LOW":false,"MEDIUM":true,"HIGH":12}).policy
+    rejected("explicit unsupported Boolean exchange costs", boolean_costs, request())
+    var original_request := request()
+    var detached := BjjMountExchange.new()
+    var result := detached.attempt(original_request)
+    var original_fields := result.fields()
+    original_request.action_id = "mutated"
+    detached.top.recover_up_to(7)
+    check("request and pool mutation do not rewrite result", result.fields(), original_fields)
+    var bad_history := BjjMountExchange.new()
+    bad_history.history = null
+    check("missing history", bad_history.attempt(request()).ok(), false)
     var shared := BjjMountExchange.new()
     shared.bottom = shared.top
     rejected("aliased fighters", shared, request())

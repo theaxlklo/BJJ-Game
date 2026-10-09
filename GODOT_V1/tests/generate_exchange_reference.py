@@ -6,14 +6,20 @@ from enum import Enum
 from pathlib import Path
 
 from bjj_game.domain.action import Commitment
-from bjj_game.domain.model import Band, Side, TopBehavior, BottomBehavior
+from bjj_game.domain.model import Band, Side, TopBehavior, BottomBehavior, ExitDestination
 from bjj_game.domain.setup import SetupTier
-from bjj_game.domain.stamina import StaminaPool, StaminaSpend
+from bjj_game.domain.stamina import StaminaPool
 from bjj_game.domain.submission import SubmissionStage
 from bjj_game.engine.match import MountMatch
 from bjj_game.engine.stamina import StaminaCostPolicy
 from bjj_game.interfaces.production_policy import PRODUCTION_STAMINA_RECOVERY_POLICY
-from bjj_game.positions.mount.catalog import *
+from bjj_game.positions.mount.catalog import (
+    MOUNT_CATALOG, TOP_HIGH_MOUNT_CLIMB, TOP_CROSSFACE_PRESSURE,
+    TOP_AMERICANA_ARM_ISOLATION, TOP_AMERICANA_SUBMISSION_FINISH,
+    BOTTOM_BRIDGE, BOTTOM_TRAP_AND_ROLL_ESCAPE,
+    TOP_RESPONSE_POST_AND_BASE, TOP_RESPONSE_WIDE_MOUNT_BASE, TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,
+    BOTTOM_RESPONSE_FOREARM_FRAME, BOTTOM_RESPONSE_TURN_IN_RECOVERY, BOTTOM_RESPONSE_TIGHT_ELBOW_ARM_DEFENSE,
+)
 from bjj_game.positions.mount.matchups import MOUNT_MATCHUPS
 
 BANDS = {b: i for i, b in enumerate(Band)}
@@ -56,7 +62,7 @@ def spend(r):
 def snapshot(m, history=True):
     out = dict(axis=m.axis, control_axis=m.position.control.value, band=BANDS[m.band],
                broken=m.position.broken, crossing_axis=m.position.crossing_axis,
-               initiator=m.initiator.value, clock_seconds=m.clock_seconds,
+               initiator=m.initiator.value, initial_clock=m.initial_clock, clock_seconds=m.clock_seconds,
                top_stamina=m.top.stamina.current, bottom_stamina=m.bottom.stamina.current,
                top_maximum=m.top.stamina.maximum, bottom_maximum=m.bottom.stamina.maximum,
                top_band=m.top.stamina.band.value, bottom_band=m.bottom.stamina.band.value,
@@ -96,17 +102,17 @@ def request(action, response, commitment='MEDIUM', response_commitment=''):
 def scenario(label, mode, commands, *, axis=1.5, band=None, side='top',
              top=100, bottom=100, setup=False, submissions=False,
              americana_tier=0, trap_tier=0, stage='', behavior=('PRESSURE','ESCAPE'),
-             costs=None, top_history=(), bottom_history=(), clock=300, tapped=False, broken=False):
+             costs=None, top_history=(), bottom_history=(), clock=300, initial_clock=300, capacity=100, tapped=False, broken=False):
     settings = dict(POLICIES[mode], enable_v02_setup=setup, enable_v03_submissions=submissions)
-    kwargs = dict(starting_axis=axis, **settings)
+    kwargs = dict(starting_axis=axis, initial_clock=initial_clock, **settings)
     if costs is not None:
         kwargs['stamina_cost_policy'] = StaminaCostPolicy.build(costs)
     m = MountMatch(**kwargs)
     m.initiator = Side(side)
     if band is not None:
         m.position.control.apply(axis, list(Band)[band])
-    m.top.stamina.set_current(top)
-    m.bottom.stamina.set_current(bottom)
+    m.top.stamina = StaminaPool(current=top, maximum=capacity)
+    m.bottom.stamina = StaminaPool(current=bottom, maximum=capacity)
     for value in top_history:
         m.top.stamina.set_current(value)
     for value in bottom_history:
@@ -119,7 +125,7 @@ def scenario(label, mode, commands, *, axis=1.5, band=None, side='top',
     m.submission_tapped = tapped
     if broken:
         m.position.break_mount(-0.5)
-        m.exit_destination = __import__("bjj_game.domain.model", fromlist=["Position"]).ExitDestination.OPEN_GUARD
+        m.exit_destination = ExitDestination.OPEN_GUARD
     initial = snapshot(m)
     steps = []
     for command in commands:
@@ -227,6 +233,21 @@ def main():
                  request(BOTTOM_BRIDGE,TOP_RESPONSE_HIP_FOLLOW_REPUMMEL),
                  request(TOP_AMERICANA_SUBMISSION_FINISH,BOTTOM_RESPONSE_FOREARM_FRAME,'MEDIUM','HIGH')],
                 axis=4.0,setup=True,submissions=True,stage=stage,top=100,bottom=100))
+    for mode in POLICIES:
+        for capacity in [17,37]:
+            cases.append(scenario(f'custom-capacity/{mode}/{capacity}',mode,
+                [request(TOP_HIGH_MOUNT_CLIMB,BOTTOM_RESPONSE_FOREARM_FRAME,'HIGH','HIGH'),
+                 request(BOTTOM_BRIDGE,TOP_RESPONSE_HIP_FOLLOW_REPUMMEL,'HIGH','HIGH')],
+                capacity=capacity,top=capacity,bottom=capacity))
+        cases.append(scenario('clock-context/'+mode,mode,
+            [request(TOP_AMERICANA_SUBMISSION_FINISH,BOTTOM_RESPONSE_FOREARM_FRAME,'LOW','LOW')],
+            axis=4.0,setup=True,submissions=True,stage='Threat',initial_clock=90,clock=17))
+        cases.append(scenario('ready-bottom-response/'+mode,mode,
+            [request(BOTTOM_TRAP_AND_ROLL_ESCAPE,TOP_RESPONSE_POST_AND_BASE)],
+            side='bottom',setup=True,trap_tier=2))
+        cases.append(scenario('finish-bottom-initiator/'+mode,mode,
+            [request(TOP_AMERICANA_SUBMISSION_FINISH,BOTTOM_RESPONSE_FOREARM_FRAME)],
+            side='bottom',setup=True,submissions=True,stage='Threat'))
     for label, terminal in [('timeout', dict(clock=0)), ('tap', dict(tapped=True)), ('broken', dict(broken=True))]:
         cases.append(scenario('approved-terminal-boundary/'+label, 'production',
             [request(TOP_AMERICANA_SUBMISSION_FINISH, BOTTOM_RESPONSE_FOREARM_FRAME)],
