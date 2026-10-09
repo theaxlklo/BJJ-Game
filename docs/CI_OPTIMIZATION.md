@@ -109,7 +109,8 @@ GODOT_ONLY, DOCUMENTATION_ONLY. Unknown/empty/failed diffs run both qualificatio
 
 All workflow edits conservatively require both routes: file-level routing cannot
 infer whether a YAML edit changes security permissions. `docs/evidence/**` and
-shared contract documents cannot use the documentation shortcut. Markdown in
+shared contract documents and pinned measurement/preregistration Markdown outside
+that directory cannot use the documentation shortcut. Markdown in
 `GODOT_V1/docs/` is documentation; executable fixtures elsewhere under Godot are not.
 
 The always-created `CI gate` requires successful routing, lightweight whitespace
