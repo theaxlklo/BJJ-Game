@@ -66,6 +66,7 @@ LOW and UNFUNDED have the same magnitude ceiling but different funding ranks and
 settlement rules. HIGH only magnifies Success/Failure. An affordable zero-cost
 LOW is funded. Funding gaps compare requested and effective costs; stamina
 shortfall compares actual expenditure request and charge. These are distinct.
+An omitted initiator commitment is invalid, as in Python's required argument.
 Raw Mount ignores even an invalid optional response commitment; v0.4a validates
 it and defaults an omitted response to MEDIUM. Preserve that surprising legacy
 behavior rather than replacing it with a new rule.
@@ -155,7 +156,7 @@ Local final qualification with pinned Godot 4.7.2:
 | Exchange operations | 14,780; each trace replayed twice |
 | Scalar/shape comparisons across oracle, rejection and boundary checks | 8,851,698; zero mismatches |
 | User-approved terminal boundary operations | 4, separately identified; source outcomes excluded from exact equivalence |
-| Native exchange negative/boundary/positive assertions | 231; zero failures |
+| Native exchange negative/boundary/positive assertions | 233; zero failures |
 | Hold operations by policy | raw 416; v0.4a, production, Rule 1-only, Rule 2-only, both: 325 each |
 | Existing Mount native / oracle | 40 assertions; 4,140 action cases + 300 drift sequences; 92,939 field checks |
 | Existing stamina oracle / native | 1,752 traces, 13,433 operations; 410,192 checks; 154 native assertions |
@@ -185,7 +186,12 @@ axis. Native guards and independent field comparisons cover these concerns. Revi
 found that clock context initially assumed 300 seconds; it now carries the source
 initial clock, with custom-clock fixtures and correct feint timestamps. A helper
 that interpreted any non-Americana identifier as the Trap tier now handles only
-the two explicit targets. No reproducible unresolved defect remains within the
+the two explicit targets. A final admission review reproduced an implicit MEDIUM
+initiator default in the Request constructor; Python requires that argument. A
+regression test first demonstrated acceptance and state mutation, then the default
+was changed to an invalid empty identifier. The corrected test proves atomic
+rejection; responder omission still defaults to MEDIUM only with v0.4a. No
+reproducible unresolved defect remains within the
 claimed integer/default-policy slice; the admission boundaries above are limitations.
 
 No third-party source, package or dependency was adopted. Consulted the official

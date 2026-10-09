@@ -7,7 +7,8 @@ class Request extends RefCounted:
     var response_id: String
     var commitment: String
     var response_commitment: String
-    func _init(action: String = "", response: String = "", requested: String = "MEDIUM", responder: String = "") -> void:
+    # Initiator effort is required; only omitted responder effort has a default.
+    func _init(action: String = "", response: String = "", requested: String = "", responder: String = "") -> void:
         action_id = action
         response_id = response
         commitment = requested

@@ -59,6 +59,8 @@ func _initialize() -> void:
     var s := BjjMountExchange.new()
     s.rules = rules
     rejected("missing request", s, null)
+    rejected("omitted initiating commitment", BjjMountExchange.new(),
+        BjjExchangeResult.Request.new(C.TOP_HIGH_MOUNT_CLIMB,C.BOTTOM_RESPONSE_FOREARM_FRAME))
     for command: BjjExchangeResult.Request in [request(""), request(C.TOP_HIGH_MOUNT_CLIMB,""),
         request("unknown"), request(C.TOP_HIGH_MOUNT_CLIMB,"unknown"),
         request(C.TOP_RESPONSE_POST_AND_BASE), request(C.TOP_HIGH_MOUNT_CLIMB,C.BOTTOM_BRIDGE), request(C.BOTTOM_BRIDGE,C.TOP_RESPONSE_POST_AND_BASE),
