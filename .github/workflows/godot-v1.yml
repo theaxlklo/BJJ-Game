@@ -1,15 +1,11 @@
 name: Godot V1 headless checks
 
 on:
-  push:
-    paths:
-      - "GODOT_V1/**"
-      - ".github/workflows/godot-v1.yml"
-  pull_request:
-    paths:
-      - "GODOT_V1/**"
-      - ".github/workflows/godot-v1.yml"
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
 
       - name: Install pinned Godot 4.7.2 standard edition
         shell: bash

@@ -2,10 +2,24 @@ name: test
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact 40-character SHA of selected branch head
+        required: true
+        type: string
+      full_qualification:
+        description: Run full Python and Godot qualification
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || 'automatic' }}
   cancel-in-progress: true
 
 jobs:
@@ -13,79 +27,42 @@ jobs:
     name: classify changes
     runs-on: ubuntu-latest
     outputs:
-      docs_only: ${{ steps.changes.outputs.docs_only }}
+      python_required: ${{ steps.changes.outputs.python_required }}
+      godot_required: ${{ steps.changes.outputs.godot_required }}
+      target_sha: ${{ steps.changes.outputs.target_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Test routing false-negative regressions
+        run: python -m unittest discover -s tools/ci -v
       - id: changes
-        name: Classify changed paths
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          set -euo pipefail
+        name: Classify changed paths and pin event head
+        run: python tools/ci/route.py
 
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            git fetch --no-tags origin "$PR_BASE_SHA" "$PR_HEAD_SHA"
-            mapfile -t changed < <(
-              git diff --name-only "$PR_BASE_SHA...$PR_HEAD_SHA"
-            )
-          elif [[ -n "${BEFORE_SHA:-}" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
-            mapfile -t changed < <(
-              git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA"
-            )
-          else
-            git fetch --no-tags origin "$DEFAULT_BRANCH"
-            base="$(git merge-base "origin/$DEFAULT_BRANCH" "$GITHUB_SHA")"
-            mapfile -t changed < <(
-              git diff --name-only "$base" "$GITHUB_SHA"
-            )
-          fi
-
-          printf 'Changed paths:\n'
-          printf '  %s\n' "${changed[@]:-<none>}"
-
-          docs_only=true
-          if (( ${#changed[@]} == 0 )); then
-            docs_only=false
-          else
-            for path in "${changed[@]}"; do
-              case "$path" in
-                docs/evidence/*)
-                  docs_only=false
-                  break
-                  ;;
-                docs/*|README.md)
-                  ;;
-                *)
-                  docs_only=false
-                  break
-                  ;;
-              esac
-            done
-          fi
-
-          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
-          echo "docs_only=$docs_only"
-
-  docs-only:
-    name: docs-only fast path
+  lightweight-validation:
+    name: lightweight validation
     needs: classify
-    if: needs.classify.outputs.docs_only == 'true'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Documentation-only change; heavy qualification intentionally skipped."
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.classify.outputs.target_sha }}
+      - run: git show --format= --check HEAD
+
+  godot:
+    name: Godot qualification
+    needs: classify
+    if: needs.classify.outputs.godot_required == 'true'
+    uses: ./.github/workflows/godot-v1.yml
+    with:
+      target_sha: ${{ needs.classify.outputs.target_sha }}
 
   unit-tests:
     name: unit-tests (${{ matrix.python-version }}, shard ${{ matrix.shard }})
     needs: classify
-    if: needs.classify.outputs.docs_only != 'true'
+    if: needs.classify.outputs.python_required == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -94,6 +71,8 @@ jobs:
         shard: [0, 1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.classify.outputs.target_sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -148,7 +127,7 @@ jobs:
   verification:
     name: verification (${{ matrix.python-version }})
     needs: classify
-    if: needs.classify.outputs.docs_only != 'true'
+    if: needs.classify.outputs.python_required == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -156,6 +135,8 @@ jobs:
         python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.classify.outputs.target_sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -178,7 +159,7 @@ jobs:
   history-verification:
     name: historical verification (${{ matrix.python-version }})
     needs: classify
-    if: needs.classify.outputs.docs_only != 'true'
+    if: needs.classify.outputs.python_required == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -188,6 +169,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.classify.outputs.target_sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -202,34 +184,35 @@ jobs:
   ci-gate:
     name: CI gate
     if: always()
-    needs:
-      - classify
-      - docs-only
-      - unit-tests
-      - verification
-      - history-verification
+    needs: [classify, lightweight-validation, godot, unit-tests, verification, history-verification]
     runs-on: ubuntu-latest
     steps:
-      - name: Require the applicable qualification path
-        shell: bash
+      - name: Require every selected qualification
         env:
           CLASSIFY_RESULT: ${{ needs.classify.result }}
-          DOCS_ONLY: ${{ needs.classify.outputs.docs_only }}
-          DOCS_RESULT: ${{ needs.docs-only.result }}
+          LIGHT_RESULT: ${{ needs.lightweight-validation.result }}
+          PYTHON_REQUIRED: ${{ needs.classify.outputs.python_required }}
+          GODOT_REQUIRED: ${{ needs.classify.outputs.godot_required }}
+          GODOT_RESULT: ${{ needs.godot.result }}
           UNIT_RESULT: ${{ needs.unit-tests.result }}
           VERIFY_RESULT: ${{ needs.verification.result }}
           HISTORY_RESULT: ${{ needs.history-verification.result }}
+        shell: bash
         run: |
           set -euo pipefail
-
-          test "$CLASSIFY_RESULT" = "success"
-
-          if [[ "$DOCS_ONLY" == "true" ]]; then
-            test "$DOCS_RESULT" = "success"
-            echo "CI gate PASS: docs-only fast path."
-          else
-            test "$UNIT_RESULT" = "success"
-            test "$VERIFY_RESULT" = "success"
-            test "$HISTORY_RESULT" = "success"
-            echo "CI gate PASS: full two-version qualification."
-          fi
+          test "$CLASSIFY_RESULT" = success
+          test "$LIGHT_RESULT" = success
+          case "$PYTHON_REQUIRED" in
+            true) expected=success ;;
+            false) expected=skipped ;;
+            *) exit 1 ;;
+          esac
+          test "$UNIT_RESULT" = "$expected"
+          test "$VERIFY_RESULT" = "$expected"
+          test "$HISTORY_RESULT" = "$expected"
+          case "$GODOT_REQUIRED" in
+            true) test "$GODOT_RESULT" = success ;;
+            false) test "$GODOT_RESULT" = skipped ;;
+            *) exit 1 ;;
+          esac
+          echo "CI gate PASS: all selected qualifications succeeded for this event head."

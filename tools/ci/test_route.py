@@ -64,3 +64,59 @@ class RoutingTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+
+class EventAdmissionTests(unittest.TestCase):
+    def test_missing_pr_fields_and_stale_manual_sha(self):
+        import json
+        import os
+        with tempfile.TemporaryDirectory() as directory:
+            def git(*args):
+                return subprocess.check_output(['git', '-C', directory, *args]).decode().strip()
+            git('init', '-q'); git('config', 'user.name', 'CI'); git('config', 'user.email', 'ci@example.invalid')
+            root = Path(directory); (root / 'README.md').write_text('test\n')
+            git('add', '.'); git('commit', '-qm', 'initial'); head = git('rev-parse', 'HEAD')
+            script = str(Path(__file__).with_name('route.py').resolve())
+            cases = [
+                ('pull_request', {'pull_request': {'head': {'sha': head}}}, True),
+                ('pull_request', {}, False),
+                ('push', {'before': '0' * 40}, True),
+                ('workflow_dispatch', {'inputs': {'target_sha': 'a' * 40, 'full_qualification': 'true'}}, False),
+                ('workflow_dispatch', {'inputs': {'target_sha': head, 'full_qualification': 'true'}}, True),
+            ]
+            for name, event, accepted in cases:
+                with self.subTest(event=name, payload=event):
+                    payload = root / 'event.json'; payload.write_text(json.dumps(event))
+                    output = root / 'outputs'; output.write_text('')
+                    env = dict(os.environ, GITHUB_EVENT_PATH=str(payload), GITHUB_OUTPUT=str(output), GITHUB_EVENT_NAME=name, GITHUB_SHA=head, GITHUB_REF='refs/heads/feature')
+                    run = subprocess.run(['python', script], cwd=directory, env=env, capture_output=True, text=True)
+                    self.assertEqual(run.returncode == 0, accepted, run.stderr)
+                    if accepted:
+                        self.assertIn('python_required=true', output.read_text())
+                        self.assertIn('godot_required=true', output.read_text())
+                    else:
+                        self.assertEqual(output.read_text(), '')
+
+
+class GateTests(unittest.TestCase):
+    def test_real_gate_failure_propagation(self):
+        import os
+        workflow = Path(__file__).resolve().parents[2] / '.github/workflows/test.yml'
+        text = workflow.read_text().split('  ci-gate:', 1)[1]
+        script = text.split('        run: |\n', 1)[1]
+        script = '\n'.join(line[10:] for line in script.splitlines())
+        baseline = dict(CLASSIFY_RESULT='success', LIGHT_RESULT='success', PYTHON_REQUIRED='false', GODOT_REQUIRED='true', GODOT_RESULT='success', UNIT_RESULT='skipped', VERIFY_RESULT='skipped', HISTORY_RESULT='skipped')
+        cases = [('godot only', {}, True), ('docs only', {'GODOT_REQUIRED': 'false', 'GODOT_RESULT': 'skipped'}, True), ('full', {'PYTHON_REQUIRED': 'true', 'UNIT_RESULT': 'success', 'VERIFY_RESULT': 'success', 'HISTORY_RESULT': 'success'}, True)]
+        for key in ('CLASSIFY_RESULT', 'LIGHT_RESULT', 'GODOT_RESULT'):
+            for state in ('failure', 'cancelled', 'skipped'):
+                cases.append((key + state, {key: state}, False))
+        for key in ('PYTHON_REQUIRED', 'GODOT_REQUIRED'):
+            cases.append((key + 'missing', {key: ''}, False))
+        for key in ('UNIT_RESULT', 'VERIFY_RESULT', 'HISTORY_RESULT'):
+            cases.append((key + 'unexpected success', {key: 'success'}, False))
+            full = dict(PYTHON_REQUIRED='true', UNIT_RESULT='success', VERIFY_RESULT='success', HISTORY_RESULT='success')
+            full[key] = 'failure'; cases.append((key + 'full failure', full, False))
+        for name, changes, accepted in cases:
+            with self.subTest(name=name):
+                result = subprocess.run(['bash', '-c', script], env=dict(os.environ, **(baseline | changes)), capture_output=True, text=True)
+                self.assertEqual(result.returncode == 0, accepted, result.stderr)
