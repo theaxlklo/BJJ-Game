@@ -62,10 +62,6 @@ class RoutingTests(unittest.TestCase):
                 changed_paths('0' * 40, head, True, directory)
 
 
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-
-
 class EventAdmissionTests(unittest.TestCase):
     def test_missing_pr_fields_and_stale_manual_sha(self):
         import json
@@ -120,3 +116,7 @@ class GateTests(unittest.TestCase):
             with self.subTest(name=name):
                 result = subprocess.run(['bash', '-c', script], env=dict(os.environ, **(baseline | changes)), capture_output=True, text=True)
                 self.assertEqual(result.returncode == 0, accepted, result.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
