@@ -31,10 +31,6 @@ class WatchTests(unittest.TestCase):
                 self.assertEqual(actual, expected)
 
 
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-
-
 class PaginationTests(unittest.TestCase):
     def test_paginated_and_incomplete_api_evidence(self):
         import io
@@ -49,3 +45,7 @@ class PaginationTests(unittest.TestCase):
         with patch('watch_qualification.urllib.request.urlopen', return_value=io.BytesIO(b'{"jobs":[],"total_count":1}')):
             with self.assertRaises(ValueError):
                 fetch_jobs('https://api.github.com', 'owner/repo', 42, 2, 'test-token')
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
