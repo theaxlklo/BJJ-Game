@@ -219,8 +219,11 @@ func submit(command: BjjPositionContract.Command) -> BjjPositionContract.Outcome
     return outcome
 
 func _transition_after(result: BjjExchangeResult) -> BjjPositionContract.Transition:
+    return transition_for(result.resolution.exit_destination)
+
+# Single mapping from Mount's exit label to a declared destination (shared with the gateway).
+static func transition_for(raw: String) -> BjjPositionContract.Transition:
     var transition := BjjPositionContract.Transition.new()
-    var raw := result.resolution.exit_destination
     if raw.is_empty():
         return transition
     transition.kind = "exit"
