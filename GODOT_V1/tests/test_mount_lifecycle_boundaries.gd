@@ -1,4 +1,5 @@
 extends SceneTree
+const C = preload("res://scripts/positions/mount/mount_catalog.gd")
 var checks: int = 0
 var failures: int = 0
 func check(label: String, actual: Variant, expected: Variant) -> void:
@@ -45,5 +46,35 @@ func _initialize() -> void:
     check("clear commitment", m.selected_commitment(), "MEDIUM")
     m.initiator = "top"
     check("Top baseline commitment", m.selected_commitment(), "MEDIUM")
+    var raw := BjjMountMatch.new()
+    var raw_before := raw.lifecycle_fields()
+    check("production prerequisites rejected", raw.configure_production_recover().ok(), false)
+    check("configuration rejection unchanged", raw.lifecycle_fields(), raw_before)
+    var settings := BjjProductionStaminaPolicy.settings()
+    settings.enable_v02_setup = true
+    settings.enable_v04_commitment_semantics = true
+    raw.rules = BjjExchangeRules.build(settings).rules
+    check("production configured explicitly", raw.configure_production_recover().ok(), true)
+    check("production Rule 1", raw.rules.rule1, true)
+    check("production Rule 2", raw.rules.rule2, false)
+    var split := BjjMountMatch.new()
+    var combined := BjjMountMatch.new()
+    for state: BjjMountMatch in [split, combined]:
+        state.top.set_current(50)
+        state.bottom.set_current(50)
+        state.top_behavior = "CONSERVE"
+        state.bottom_behavior = "ESCAPE"
+    for i in range(5):
+        split.advance(1)
+    combined.advance(5)
+    for key: String in ["axis", "control_axis", "clock_seconds", "top_stamina", "bottom_stamina", "top_remainder", "bottom_remainder", "top_band", "bottom_band"]:
+        check("split/combined " + key, split.lifecycle_fields()[key], combined.lifecycle_fields()[key])
+    raw.clock_seconds = 1
+    check("truncated terminal advance", raw.advance(5).ok(), true)
+    check("terminal clock", raw.clock_seconds, 0)
+    check("reference zero-time timeout advance", raw.advance(0).ok(), true)
+    var terminal_before := raw.lifecycle_fields()
+    check("timeout exchange still rejected", raw.attempt(BjjExchangeResult.Request.new(C.TOP_HIGH_MOUNT_CLIMB, C.BOTTOM_RESPONSE_FOREARM_FRAME, "MEDIUM")).ok(), false)
+    check("timeout exchange unchanged", raw.lifecycle_fields(), terminal_before)
     print("Mount lifecycle native: %d assertions, %d failures" % [checks, failures])
     quit(0 if failures == 0 else 1)

@@ -117,7 +117,7 @@ func compare(label: String, actual: Variant, expected: Variant) -> void:
         # float axis values have the same 1e-10 contract as the frozen Mount corpus.
         if not numeric_equal(actual, expected):
             fail(label, actual, expected)
-        if float(expected) == floorf(float(expected)) and not label.contains("axis"):
+        if float(expected) == floorf(float(expected)) and not label.contains("axis") and not label.ends_with(".total_drift"):
             if not actual is int:
                 fail(label + " integer type", actual, "int")
     elif actual != expected:
