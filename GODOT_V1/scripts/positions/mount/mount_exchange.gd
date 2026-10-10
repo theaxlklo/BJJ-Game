@@ -35,9 +35,7 @@ static func process(state: BjjMountExchange, request: BjjExchangeResult.Request)
         return missing
     return state.attempt(request)
 
-func _validate(request: BjjExchangeResult.Request) -> String:
-    if request == null:
-        return "missing_request"
+func validate_context(allow_finished_advance: bool = false) -> String:
     if rules == null or cost_policy == null or position == null or history == null:
         return "missing_configuration_or_state"
     if top == null or bottom == null:
@@ -55,7 +53,7 @@ func _validate(request: BjjExchangeResult.Request) -> String:
     if initial_clock <= 0 or initial_clock > BjjStaminaPool.MAXIMUM_EXACT or clock_seconds < 0 or clock_seconds > initial_clock:
         return "invalid_clock_context"
     # User-approved safety boundary differs from three Python terminal anomalies.
-    if clock_seconds == 0 or submission_tapped or position.broken or not exit_destination.is_empty():
+    if ((clock_seconds == 0 or submission_tapped) and not allow_finished_advance) or position.broken or not exit_destination.is_empty():
         return "terminal_exchange"
     if not is_finite(position.axis) or not BjjMountRules.axis_can_have_band(position.axis, position.band):
         return "invalid_mount_context"
@@ -65,6 +63,14 @@ func _validate(request: BjjExchangeResult.Request) -> String:
         return "invalid_setup_context"
     if not submission_stage.is_empty() and not STAGES.has(submission_stage):
         return "invalid_submission_stage"
+    return ""
+
+func _validate(request: BjjExchangeResult.Request) -> String:
+    if request == null:
+        return "missing_request"
+    var context_error := validate_context()
+    if not context_error.is_empty():
+        return context_error
     if not BjjCommitment.valid(request.commitment):
         return "invalid_commitment"
     # Frozen legacy path ignores the optional response commitment entirely.
