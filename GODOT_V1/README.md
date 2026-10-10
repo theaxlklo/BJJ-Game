@@ -9,6 +9,7 @@ The complete new Godot implementation stays inside this folder. Python code in `
 - First parity-oriented decomposition: grade arithmetic, Mount rules, Mount action/response catalog, 18 matchup entries, action resolver, drift and position state.
 - An initial Godot **headless test script**: `tests/test_mount_slice.gd`.
 - [Port status, limitations, and parity contract](docs/PORT_STATUS.md).
+- [PositionContract and Mount adapter](docs/POSITION_CONTRACT.md): position-independent interface over the headless Mount, with an architecture comparison and supported boundaries.
 
 ## Open the project
 

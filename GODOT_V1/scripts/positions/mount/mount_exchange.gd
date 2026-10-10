@@ -112,6 +112,11 @@ func _validate(request: BjjExchangeResult.Request) -> String:
         return "unsupported_matchup"
     return ""
 
+# Read-only admission query for contract adapters. Same checks and codes as attempt(),
+# which calls the very same validation; it never mutates state.
+func admission_error(request: BjjExchangeResult.Request) -> String:
+    return _validate(request)
+
 func attempt(request: BjjExchangeResult.Request) -> BjjExchangeResult:
     var r := BjjExchangeResult.new()
     r.error = _validate(request)
