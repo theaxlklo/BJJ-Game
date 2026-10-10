@@ -92,3 +92,7 @@ remain OFF. See [EXCHANGE_SETTLEMENT.md](EXCHANGE_SETTLEMENT.md) for source/API
 mapping, test evidence, three explicitly approved terminal rejection differences,
 strict admission boundaries and remaining dependencies. This is not full
 MountMatch or production recovery parity. Issue #20 is the next controller slice.
+
+## Position graph (proposal)
+
+[POSITION_GRAPH.md](POSITION_GRAPH.md) proposes the Mount → Half Guard transition architecture and Definition of Done. It is a specification only: no Half Guard mechanics exist, and Mount `Reversal` stays unresolved.
