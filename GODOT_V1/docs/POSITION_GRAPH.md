@@ -168,8 +168,18 @@ cross-position record. Commitment baseline is not recomputed by the transition.
 
 ## 8. Error handling and rejection atomicity
 
-Validation failure in steps 1–4 returns an error and mutates nothing. The exit-producing
-exchange is already atomic (existing owners). The deferred gateway hardening (an unreachable
+Two situations are kept apart and must never be conflated:
+
+- **A rejected command** (invalid, stale, duplicate, unknown fighter, wrong initiative, command
+  after a halt, failed construction validation) leaves the **entire graph state unchanged**:
+  Mount state, clock, pools, histories, controller record, window record, event log and status.
+- **An accepted exchange whose destination is unavailable** (`Reversal`, unimplemented
+  `Half Guard` / `Open Guard`) is **not** rolled back. The exchange stays accepted and settled:
+  its stamina, clock, positional and history changes remain. The graph then appends
+  `transition_blocked`, enters `halted_at_unsupported_transition`, instantiates no destination
+  and invents no winner, score or terminal result; later commands are rejected without mutation.
+
+The exit-producing exchange is atomic through the existing owners. The deferred gateway hardening (an unreachable
 post-mutation settlement guard) is a separate maintenance task; this specification neither
 depends on it nor relaxes it, and transitions run only after a fully accepted decision.
 
@@ -186,10 +196,10 @@ Three outcomes are kept distinct:
 | **Valid exchange, supported transition** | Destination declared and implemented | Atomic commit (§5) | `transition_committed` |
 | **Valid exchange, unsupported destination** | The exchange was legal and fully settled, but its destination is unresolved (`Reversal`) or unimplemented (`Open Guard`) | The exchange stands; the graph does **not** transition | `transition_blocked(from, label, reason)` |
 
-On the third case the graph status becomes `halted_at_unsupported_transition`. This is
+On the third case the exchange is accepted and settled and is never rolled back; the graph status becomes `halted_at_unsupported_transition`. This is
 neither an error return nor a match end: no result, winner or score is produced. The Mount
-segment, clock, pools, meters, controller record and histories stay exactly as the exchange left
-them; reads are allowed; every further decision is rejected `halted_unsupported_transition`
+segment, clock, pools, meters, controller record and histories stay exactly as the settled
+exchange left them; reads are allowed; every further decision is rejected `halted_unsupported_transition`
 before any mutation. Replaying the same commands halts at the same event index with identical
 state. Existing Mount tests and the contract's `resolved=false` report are unchanged.
 When a destination later becomes supported, resuming a halted graph is a separate decision.
@@ -203,7 +213,11 @@ re-entry initial state. Do not assume it works.
 
 ## 11. Definition of Done (for the later implementation slices)
 
-Specification gate (before any code):
+Gates are separate. **Slice A (§14) has its own acceptance criteria and is not blocked by
+Q1–Q8**, which concern Half Guard mechanics and completed position-to-position integration.
+The gate below applies to the later Half Guard implementation, not to Slice A.
+
+Half Guard specification gate (before any Half Guard code):
 1. Questions Q1–Q8 below answered and recorded here.
 2. A Half Guard rules document: roles, axis sign/range/bands/initial values, action and response
    catalog, commitment/stamina treatment, exit map, terminal rules.
@@ -227,7 +241,7 @@ Implementation gate (negative-first):
 Non-goals: Side Control, Standing, Closed Guard, Open Guard mechanics, scoring, stalling,
 Recognition, a human timer, memory cards and any presentation (Issue #40 stays deferred).
 
-## 12. Remaining design questions
+## 12. Remaining design questions (Half Guard gate only; not a Slice A prerequisite)
 
 | ID | Question |
 |---|---|
@@ -240,7 +254,7 @@ Recognition, a human timer, memory cards and any presentation (Issue #40 stays d
 | Q7 | Gateway construction seam for carry-over (additive factory vs per-position constructor) |
 | Q8 | Half Guard action/response catalog and exit map, including the entry to Open Guard on STRONG_SUCCESS and whether it stays a halt |
 
-## 13. Proposed first implementation slice (after Q1–Q8 and the oracle are accepted)
+## 13. First implementation slice (Slice A; approved, independent of Q1–Q8)
 
 **Slice A — graph owner with an explicit halt boundary, no Half Guard mechanics.**
 A `BjjPositionGraphMatch` that wraps the existing Mount gateway, owns the event log and the
@@ -256,5 +270,58 @@ after halt rejected with zero mutation; stale ids; unknown fighter; replay twice
 halt index; controller token count unchanged; construction-validation failures leave state intact.
 
 **Slice B — Half Guard rules + test-only oracle, then Godot Half Guard.** Only after Slice A and
-the rules acceptance. Expected files for A: `scripts/positions/graph_match.gd` (new),
+acceptance of Q1–Q8. Expected files for A: `scripts/positions/graph_match.gd` (new),
 `tests/test_position_graph_boundaries.gd` (+ `.uid`), a workflow step, docs. No Mount file changes.
+
+## 14. Slice A — acceptance criteria and boundaries
+
+`BjjPositionGraphMatch` (`scripts/positions/graph_match.gd`) is a **thin coordinator** around
+exactly one `BjjMatchWindowGateway`. Mount is the only implemented position. It never enters
+`half_guard`, `open_guard` or the unresolved `Reversal`.
+
+**Single source of truth.** The gateway (and the `BjjMountMatch` it owns) remains the only
+owner of stamina, meters, clock, D3-B, fighter identity, histories and window state. The graph
+holds no copy of any of them; every view it exposes is a fresh detached read through the gateway.
+The graph owns only what is new: its status, its global event log and the recorded blocked
+transition. Window ids are the gateway's single monotonic counter, passed through unchanged
+(one segment exists, so a separate graph counter would be a second source of truth).
+
+**Behavior.** `open_window` / `open_window_for` and `submit` delegate to the gateway unchanged.
+After an accepted decision the graph classifies the settled outcome:
+
+| Settled outcome | Graph action |
+|---|---|
+| Exchange without exit | `decision_accepted` only |
+| Exit to `Half Guard` / `Open Guard` (declared, not implemented) | `decision_accepted`, then `transition_blocked(reason=destination_not_implemented)`; halt |
+| Exit to `Reversal` (unresolved) | `decision_accepted`, then `transition_blocked(reason=unresolved_destination)`; halt |
+| Exit with any other label | `transition_blocked(reason=undeclared_exit_label)`; halt (fail closed; label never used as a position id) |
+| Timeout (clock reached 0) or tap | `terminal_outcome(reason=timeout|tap)`; status `ended`; **not** a positional exit |
+
+Statuses: `active`, `ended`, `halted_at_unsupported_transition`. Events are numbered 1.. in a
+single global order. Exactly one `transition_blocked` is recorded per accepted exit, and after
+it every `open_window*` and `submit` returns `halted_unsupported_transition` before reaching the
+gateway. Reads stay available. No winner, score or terminal result is produced by a halt.
+
+**Acceptance criteria**
+1. Half Guard exit, Open Guard exit and Reversal exit each produce an accepted-exchange halt.
+2. The settled underlying Mount state equals a bare gateway's after the same operations (never
+   compared against the pre-exchange state).
+3. Timeout and tap are not classified as positional exits.
+4. Rejected commands (invalid action, stale or duplicate window, unknown fighter, wrong
+   initiative, after a halt, after a terminal) leave the whole graph unchanged.
+5. One `transition_blocked` per exit; stable global event order; identical double replay.
+6. D3-B controller fields are identical to the bare gateway's at the transition boundary.
+7. Lockstep against a bare gateway over the existing trajectory grid.
+8. Undeclared labels are classified fail-closed by the pure classifier.
+9. Existing suites, Python checks and CI routing are unchanged and green. No Python production
+   code, fixture or Mount behavior is modified.
+
+**Future carry-over construction interface (documented only; not implemented in Slice A).**
+When a destination is implemented, the graph owner will need to construct the receiving
+position from a validated, detached *carry-over record* instead of from fresh defaults:
+fighter ids; both stamina pools (`current`, `maximum`, latch); both behavior-flow meter
+remainders; remaining and initial clock; the frozen Mount-segment controller record; the global
+window counter; and the event-log length. The construction call must validate the record,
+build the receiving position in isolation and return it without touching the active segment
+(§5). In that later slice persistent match-wide state moves to the graph owner as one move, never
+as a duplicate. Slice A deliberately adds no such interface, setter or constructor.
