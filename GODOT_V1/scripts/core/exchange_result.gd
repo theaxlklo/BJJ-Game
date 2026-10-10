@@ -170,11 +170,11 @@ var submission_hold_stamina: BjjStaminaPool.Change
 var outcome: Snapshot
 
 func ok() -> bool:
-    return error.is_empty()
+    return error.is_empty() and initiator_funding != null and responder_funding != null and exhaustion != null and base_resolution != null and resolution != null and stamina != null and outcome != null
 
 func fields() -> Dictionary:
     if not ok():
-        return {"error":error}
+        return {"error":error if not error.is_empty() else "incomplete_exchange_result"}
     return {"attempt":{"initiator":initiator, "action_id":action_id,
             "requested_commitment":initiator_funding.requested, "effective_commitment":initiator_funding.effective},
         "requested_cost":initiator_funding.requested_cost, "effective_cost":initiator_funding.effective_cost,
