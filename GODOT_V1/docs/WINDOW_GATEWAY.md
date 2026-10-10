@@ -4,7 +4,7 @@
 match-level owner of production decision windows for the headless Mount. It adds only
 **window identity and admission**. It owns no grade, cost, recovery or token logic.
 
-Built on branch `feat/godot-v1-match-window-gateway` from commit `d548358` (PositionContract + D3-B lifecycle stack). No Python source, frozen
+Built on branch `review/godot-v1-match-window-gateway` from `a51cc2a` (head of PR #39 `feat/godot-v1-position-contract`: PositionContract + D3-B lifecycle stack). No Python source, frozen
 fixture, D3-B controller, Mount rule or `project.godot` changed. Side Control, a human decision
 timer, stalling, Recognition and any presentation layer are **not** part of this slice.
 
