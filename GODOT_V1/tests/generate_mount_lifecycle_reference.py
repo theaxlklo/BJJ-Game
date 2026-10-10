@@ -13,7 +13,7 @@ from generate_exchange_reference import normalized, snapshot
 
 
 def state(m):
-    return dict(snapshot(m), top_behavior=m.top.behavior.value,
+    return dict(snapshot(m), free_pending=m.free_initiative_pending, free_beneficiary=m.free_initiative_beneficiary.value if m.free_initiative_beneficiary else "", top_behavior=m.top.behavior.value,
                 bottom_behavior=m.bottom.behavior.value,
                 top_remainder=m.top_behavior_stamina_meter.remainder_units,
                 bottom_remainder=m.bottom_behavior_stamina_meter.remainder_units)

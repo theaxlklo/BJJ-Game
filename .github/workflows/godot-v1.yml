@@ -108,5 +108,22 @@ jobs:
               assert not errors, errors
           PY
 
+      - name: Generate D3-B and integrated Mount lifecycle trajectories from Python
+        run: PYTHONPATH=src python GODOT_V1/tests/generate_d3b_reference.py
+
+      - name: Validate D3-B boundaries and integrated Mount replay parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_d3b_boundaries.gd 2>&1 | tee /tmp/d3b-native.log
+          godot --headless --path GODOT_V1 --script res://tests/test_d3b_reference.gd 2>&1 | tee /tmp/d3b-parity.log
+          python - <<'PY'
+          from pathlib import Path
+          for name in ('native', 'parity'):
+              lines = Path('/tmp/d3b-' + name + '.log').read_text().splitlines()
+              errors = [line for line in lines if line.startswith(('ERROR:', 'WARNING:')) or 'SCRIPT ERROR:' in line]
+              assert not errors, errors
+          PY
+
       - name: Smoke-test minimal 3D scene
         run: godot --headless --path GODOT_V1 --quit-after 5
