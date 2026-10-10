@@ -91,6 +91,9 @@ func full_state(s: BjjMountExchange) -> Dictionary:
     values["history"] = s.history.fields()
     return values
 
+static func numeric_equal(actual: Variant, expected: Variant) -> bool:
+    return (actual is int or actual is float) and (expected is int or expected is float) and is_finite(float(actual)) and is_finite(float(expected)) and absf(float(actual) - float(expected)) <= 0.0000000001
+
 func compare(label: String, actual: Variant, expected: Variant) -> void:
     if actual is Dictionary and expected is Dictionary:
         compare(label + " keys", actual.keys().size(), expected.keys().size())
@@ -112,7 +115,7 @@ func compare(label: String, actual: Variant, expected: Variant) -> void:
     elif expected is float or expected is int:
         # JSON parses numbers as double. Integers must remain typed integers at runtime;
         # float axis values have the same 1e-10 contract as the frozen Mount corpus.
-        if not (actual is int or actual is float) or absf(float(actual)-float(expected)) > 0.0000000001:
+        if not numeric_equal(actual, expected):
             fail(label, actual, expected)
         if float(expected) == floorf(float(expected)) and not label.contains("axis"):
             if not actual is int:

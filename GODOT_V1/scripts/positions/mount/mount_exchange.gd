@@ -109,7 +109,7 @@ func _validate(request: BjjExchangeResult.Request) -> String:
 func attempt(request: BjjExchangeResult.Request) -> BjjExchangeResult:
     var r := BjjExchangeResult.new()
     r.error = _validate(request)
-    if not r.ok():
+    if not r.error.is_empty():
         return r
     # Capture all historical authority before initiative flips or either charge.
     r.initiator = initiator
