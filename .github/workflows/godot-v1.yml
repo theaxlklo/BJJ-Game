@@ -231,5 +231,16 @@ jobs:
           cat /tmp/fighter-foundation.log
           python tools/ci/validate_mount_slice_log.py /tmp/fighter-foundation.log --name "Fighter foundation" --exit-code "$status" --expected-assertions 750
 
-      - name: Smoke-test minimal 3D scene
+      - name: Validate the 2D Mount practice scene, its controller and the graph-backed fighter snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_mount_practice.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_mount_practice.gd > /tmp/mount-practice.log 2>&1 || status=$?
+          cat /tmp/mount-practice.log
+          python tools/ci/validate_mount_slice_log.py /tmp/mount-practice.log --name "Mount practice" --exit-code "$status" --expected-assertions 1036
+
+      - name: Smoke-test the default scene (2D Mount practice; the 3D greybox stays a separate diagnostic scene)
         run: godot --headless --path GODOT_V1 --quit-after 5

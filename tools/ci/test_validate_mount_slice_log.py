@@ -387,5 +387,56 @@ class FighterStepWiringTests(unittest.TestCase):
         self.assertTrue(validate(clean.replace('Fighter foundation PASS', 'Position registry PASS'), 0, FIGHTER_EXPECTED, FIGHTER))
 
 
+PRACTICE = 'Mount practice'
+PRACTICE_EXPECTED = 1036
+
+
+class PracticeStepWiringTests(unittest.TestCase):
+    @staticmethod
+    def step():
+        text = WORKFLOW.read_text()
+        match = re.search(r'^      - name: Validate the 2D Mount practice scene[^\n]*\n(.*?)(?=^      - name: )', text, re.S | re.M)
+        assert match, 'practice step not found'
+        return match.group(1)
+
+    def test_step_validates_status_and_complete_log(self):
+        live = [line.strip() for line in self.step().splitlines() if line.strip() and not line.strip().startswith('#')]
+        self.assertTrue(any(line.startswith('godot --headless --path GODOT_V1 --script res://tests/test_mount_practice.gd '
+                                            '> /tmp/mount-practice.log 2>&1 || status=$?') for line in live), live)
+        self.assertIn('set -euo pipefail', live)
+        self.assertIn('shell: bash', live)
+        pin = re.search(r'^\s*python tools/ci/validate_mount_slice_log\.py /tmp/mount-practice\.log --name "Mount practice" '
+                        r'--exit-code "\$status" --expected-assertions ([1-9][0-9]*)\s*$', self.step(), re.M)
+        self.assertIsNotNone(pin, self.step())
+        self.assertEqual(int(pin.group(1)), PRACTICE_EXPECTED, 'workflow pin and the test constant must change together')
+        for forbidden in ('continue-on-error', '\n        if:', 'set +e'):
+            self.assertNotIn(forbidden, self.step())
+
+    def test_script_runs_once_and_matches_the_completion_contract(self):
+        self.assertEqual(WORKFLOW.read_text().count('res://tests/test_mount_practice.gd'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_mount_practice.gd').read_text()
+        self.assertIn('print("Mount practice PASS: %d assertions" % checks)', source)
+        self.assertIn('push_error("Mount practice: %d / %d assertions failed" % [failures, checks])', source)
+
+    def test_regression_pins_of_the_earlier_suites_are_untouched(self):
+        text = WORKFLOW.read_text()
+        for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750)):
+            self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
+
+    def test_default_scene_is_the_practice_scene_and_the_3d_greybox_is_kept(self):
+        project = (WORKFLOW.parents[2] / 'GODOT_V1' / 'project.godot').read_text()
+        self.assertIn('run/main_scene="res://scenes/mount_practice.tscn"', project)
+        self.assertTrue((WORKFLOW.parents[2] / 'GODOT_V1' / 'scenes' / 'mount_debug.tscn').is_file())
+        self.assertIn('Smoke-test the default scene', WORKFLOW.read_text())
+
+    def test_validator_rejects_a_premature_practice_log(self):
+        clean = 'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nMount practice PASS: 1036 assertions\n'
+        self.assertEqual(validate(clean, 0, PRACTICE_EXPECTED, PRACTICE), [])
+        premature = clean.replace('1036', '700') + 'SCRIPT ERROR: Invalid access to property or key.\n'
+        joined = '\n'.join(validate(premature, 0, PRACTICE_EXPECTED, PRACTICE))
+        self.assertIn('assertion count 700 != required 1036', joined)
+        self.assertIn('unexpected diagnostic', joined)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -17,7 +17,8 @@
 | `scripts/positions/mount/mount_resolver.gd` | `engine/mount_engine.py::resolve_action` | Core deterministic exchange, no match orchestration |
 | `scripts/positions/mount/mount_drift.gd` | `engine/mount_engine.py::simulate_drift` | Per-second drift, clock, band-change events |
 | `scripts/positions/mount/mount_position.gd` | `positions/mount/{axis,position}.py` | Persisted control / terminal crossing split |
-| `scenes/mount_debug.tscn` | New | Visual placeholder with 3 camera presets |
+| `scenes/mount_debug.tscn` | New | Visual placeholder with 3 camera presets (kept as a separate diagnostic scene; no longer the default) |
+| `scenes/mount_practice.tscn` | F1 | Default 2D Mount practice scene driven through `BjjPositionGraphMatch` (see `F1_MOUNT_PRACTICE.md`) |
 
 ## Still NOT ported
 
@@ -104,3 +105,7 @@ MountMatch or production recovery parity. Issue #20 is the next controller slice
 ## Fighter foundation (F0)
 
 [F0_FIGHTER_FOUNDATION.md](F0_FIGHTER_FOUNDATION.md) records the source-field inventory, the feasibility decisions and the API for `BjjFighterDefinition` (a reusable content `Resource`), `BjjFighterSnapshotAdapter` (read-only, fighter-keyed views over the Mount gateway) and the additive `behavior_fields()` accessor. The Mount match remains the only owner of stamina, exhaustion, behavior, roles and time; nothing here is a Node.
+
+## Mount practice prototype (F1)
+
+[F1_MOUNT_PRACTICE.md](F1_MOUNT_PRACTICE.md) explains how to play the 2D practice scene, records the feasibility decisions (graph `behavior_fields()` pass-through, graph-backed fighter snapshots, display scaling) and lists the limitations. The default scene is now `scenes/mount_practice.tscn`; the 3D greybox is a separate diagnostic scene. Standing and Half Guard are not implemented.

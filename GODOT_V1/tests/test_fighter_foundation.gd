@@ -587,9 +587,9 @@ func _test_surface_and_source_boundaries() -> void:
     check("adapter public methods", method_names(adapter_script), ["create", "fighter_ids", "snapshots"])
     check("adapter constants (the inner Creation class counts)", constant_names(adapter_script), ["Creation", "ROLES"])
     check("adapter is a RefCounted", class_level_lines("res://scripts/positions/mount/fighter_snapshot_adapter.gd", ["extends "]), ["extends RefCounted"])
-    check("adapter keeps exactly three private members: the gateway and plain identity data",
+    check("adapter keeps exactly three private members: the source handle (gateway or graph) and plain identity data",
         class_level_lines("res://scripts/positions/mount/fighter_snapshot_adapter.gd", ["var ", "static var ", "@export", "@onready"]),
-        ["var _gateway: BjjMatchWindowGateway", "var _identity: Dictionary = {}", "var _fighter_ids: Array[String] = []"])
+        ["var _source: Variant", "var _identity: Dictionary = {}", "var _fighter_ids: Array[String] = []"])
     # The adapter reads public gateway views only: no private match, id, pool, controller or carry-over access.
     var forbidden: Array[String] = ["._match", "._contract", "._top_id", "._bottom_id", "._window", ".top_meter", ".bottom_meter",
         ".d3b", ".top.", ".bottom.", "carryover_segment", "lifecycle_fields", "snapshot()",

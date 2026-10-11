@@ -45,7 +45,7 @@ BjjFighterDefinition.display_name    # non-empty, trimmed, no control characters
 BjjFighterDefinition.validation_error() -> String   # "" | invalid_definition_id | invalid_display_name
 
 # RefCounted adapter over the Mount gateway
-BjjFighterSnapshotAdapter.create(gateway: Variant, definitions: Variant) -> Creation   # .ok(), .error, .adapter
+BjjFighterSnapshotAdapter.create(source: Variant, definitions: Variant) -> Creation   # source: a gateway (F0) or a BjjPositionGraphMatch (F1); .ok(), .error, .adapter
 BjjFighterSnapshotAdapter.fighter_ids() -> Array[String]       # the two ids, sorted, role-independent
 BjjFighterSnapshotAdapter.snapshots() -> Dictionary            # fighter_id -> fresh, detached Dictionary
 
@@ -118,8 +118,9 @@ files): `scripts/core/{grade,position_contract,position_registry}.gd`,
   policy (bidi controls, zero-width characters) is a content decision left to the UI slice.
 * `create()` trusts a gateway built by `BjjMatchWindowGateway.create()`. A bare `BjjMatchWindowGateway.new()` has no match and would
   raise a script error on `roles()`, like every other gateway method; CI's log validator would flag it. It is unreachable through the supported constructor.
-* The adapter is bound to the bare Mount gateway. A `BjjPositionGraphMatch` keeps its gateway private and has no `behavior_fields()`
-  pass-through, so a graph-owned match cannot be viewed through this adapter yet. Holding the raw gateway beside a graph would let a caller
+* **Resolved in F1:** the adapter now also accepts a `BjjPositionGraphMatch` (the graph gained a read-only `behavior_fields()` pass-through
+  and still keeps its gateway private); see `F1_MOUNT_PRACTICE.md`. Originally: the adapter was bound to the bare Mount gateway. A `BjjPositionGraphMatch` keeps its gateway private and had no `behavior_fields()`
+  pass-through, so a graph-owned match could not be viewed through this adapter. Holding the raw gateway beside a graph would let a caller
   bypass the graph's halt and classification, so F0 deliberately adds no pass-through. Whether F1 uses a graph pass-through or a source
   interface is a follow-up decision.
 * Terminal matches are covered (a 12-second match is driven to its end and read); snapshots and `behavior_fields()` stay correct and inert.

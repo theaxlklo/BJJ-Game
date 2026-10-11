@@ -160,6 +160,11 @@ func controller_fields() -> Dictionary:
 func window_fields() -> Dictionary:
     return _gateway.window_fields()
 
+# Read-only pass-through of the gateway's held per-role behaviors (F0 accessor). Detached; it
+# opens no window, moves no time and never exposes the gateway itself.
+func behavior_fields() -> Dictionary:
+    return _gateway.behavior_fields()
+
 func roles() -> BjjPositionContract.Roles:
     return _gateway.roles()
 
