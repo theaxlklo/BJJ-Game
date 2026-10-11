@@ -2,9 +2,10 @@
 
 **Status: PROPOSAL for owner review. Nothing in this document is approved or implemented.** It changes no GDScript, no
 Python, no test, no workflow, no fixture and no earlier PR. Every rule, number, name and table below is a **[PROPOSAL]**
-until the owner approves it by decision id (`HG-1` … `HG-25`, §2). The only code executed to prepare it is two throwaway
-Python scripts outside the repository, reproduced verbatim in Appendices A and B, that check internal consistency and
-reachability of the proposed tables. They are neither an oracle nor parity evidence.
+until the owner approves it by decision id (`HG-1` … `HG-26`, §2; HG-26 is §12). The only code executed to prepare it is four throwaway
+Python scripts outside the repository, reproduced verbatim in Appendices A–D, that check internal consistency, reachability and structural
+dominance of the proposed tables. They are neither an oracle nor parity evidence. The game-wide design of tactical preparation, feints and
+defensive counterplay (owner-approved direction, proposed details) is in [TACTICAL_PREPARATION_AND_FEINTS.md](TACTICAL_PREPARATION_AND_FEINTS.md).
 
 Backend-first direction (owner): F1 stays available as an interactive Mount debugging interface and is not expanded.
 The goal is deterministic position-to-position transitions, starting with Mount → Half Guard, so that complete matches
@@ -25,7 +26,9 @@ Master Guide v10.4 §§7, 8, 11.4, 12–16, 19–22.
 5. The entry specifications: a neutral entry request (B1b), the Mount edge adapter (B1c) and the opt-in graph integration (B1d) (§§5–6).
 6. The independent test-only oracle plan (§7), architecture feasibility comparisons (§8), the slice plan with exact
    boundaries and the existing tests it does and does not touch (§9), measured prototype evidence (§10), risks (§11) and
-   the prototype scripts (Appendices A and B).
+   the prototype scripts (Appendices A–D).
+7. **HG-26** (§12): the Half Guard-specific proposal for positional preparation, feint eligibility, defensive effort, counterplay, stamina and
+   funding, the implementation boundary, adversarial test design, feasibility, the revised B1b gate and the HG-26 prototype findings.
 
 Non-goals (unchanged): Standing, Closed/Open Guard, Side Control or any other position's mechanics, scoring, stalling,
 Recognition, submissions, a Reversal landing, return to Mount, presentation work, Python engine changes, changes to F1.
@@ -91,6 +94,12 @@ Nothing below is approved. "Recommended" is this document's proposal; the owner 
 | HG-23 | Classification adds **no new classification code**: the static `classify_exit_from` stays byte-identical (still `unknown_source_position` for a non-Mount source, pinned by C-10). The graph instance turns the static Mount answer `blocked / destination_not_implemented / <id>` into a `transition` iff `<id>` is in the receiver table, and classifies a Half Guard source's labels by calling the same unchanged function with Half Guard's own declarations (`{"half_guard": {"exits": EXIT_DESTINATIONS, "unresolved": []}}`) | Yes | A new instance-level classifier; change the static classifier | Q8/§6 |
 | HG-24 | The Mount gateway object is **retained, frozen** after the commit (never advanced or submitted to again), so Mount's histories and D3-B record stay with the Mount segment as `POSITION_GRAPH.md` §6 says; Half Guard keeps its own histories | Yes | Keep only a detached record | §6 |
 | HG-25 | The window cadence is captured by the opt-in graph from its own `configuration.interval` (default: that same Mount constant) and passed to the entry request; the Mount record is not extended. When the key is absent the default is the constant the Mount match itself uses (`BjjMountRules.DEFAULT_INTERVAL_SECONDS`), never a second literal | Yes | Add an interval to the record; fix 5 s and halt on mismatch | §5/§6 |
+| HG-26A | **Positional preparation:** two integers `top_base` and `bottom_frame` (`None/Partial/Ready`), entry `Partial/Partial`, no decay; Crossface/Flatten/Underhook/Recover Guard write them, Knee Slice and Recover Guard read and consume them; shifts and pipeline order of §12.1. Local to Half Guard, no shared type | Yes (option M: only the two decisive counters governed) | Option S (every response governed); direct baseline without preparation | §12.1 |
+| HG-26B | **Feint eligibility** (deferred slice): explicit pairs FP-1 Crossface→Knee Slice and FP-2 Underhook→Recover Guard; FP-3 Flatten→Knee Slice rejected; bite adjustment ±1; apparent never resolves; real must be break-capable | Yes (design only; not in B1b) | Add FP-3; derive pairs automatically (rejected) | §12.2 |
+| HG-26C | **Defensive effort:** governed responses Knee Shield (frame) and Knee Pin (base); shift −1/0/+2; effort table LOW/unfunded = tier None and no wear, MEDIUM wears on a decisive result, HIGH wears only on failure | Yes | +1 for None (a Knee Shield fortress); every response governed | §12.3 |
+| HG-26D | **Counterplay:** four routes (anticipate, avoid full commitment, balanced response, call) and the neutral-state admissibility rule for any feint pair | Yes | Hide the eligible reals (GP-2) | §12.4 |
+| HG-26E | **Stamina and funding:** a feint costs exactly the direct cost at the same commitment (no surcharge, HIGH not extra); unfunded feint refused; LOW feint cannot exit | Yes | A feint surcharge; allow unfunded feints | §12.5 |
+| HG-26F | **Implementation boundary:** B1b includes HG-26A/C as two ints plus constants (no shared interface); feints are separate slices B1g (sealed-intent protocol) and B1h (Half Guard feint rules); existing B1b/B1c/B1d/B1e/B1f unchanged | Yes | Direct-only B1b; a generic framework now | §12.6, §12.9 |
 
 ## 3. Answers to Q1–Q8
 
@@ -406,8 +415,8 @@ No technique descriptions are invented here.
 
 Design properties (checked in Appendices A and B): every action has a counter (≤ −1) and a favorable response (≥ +1); no response is best against everything; each
 exit label is reachable by plain play with cooperating opponents; and **the two break-capable actions can never succeed against their −2 counter, even
-after exhaustion and commitment settlement** (Appendix B: the best reachable final grade from a raw −2 is CONTESTED), so a responder who always plays the
-best counter can never be exited on. Plain counters (raw −1) *can* be lifted to SUCCESS by an Exhausted, under-committed responder; that is intended
+after exhaustion and commitment settlement** (Appendix B: the best reachable final grade from a raw −2 is CONTESTED), so, **at the neutral readiness state**, a responder who always plays the
+best counter can never be exited on (HG-26A makes this conditional on readiness, §12.1.4). Plain counters (raw −1) *can* be lifted to SUCCESS by an Exhausted, under-committed responder; that is intended
 to let stamina matter.
 
 ### 4.5 Resolution and exit map
@@ -638,6 +647,8 @@ Counts quoted are CI-pinned values or are labelled estimates. No unpinned assert
 
 ### 9.1 B1b — Half Guard mechanics (after owner approval)
 
+*Scope note (HG-26F):* B1b is either the direct baseline of §§4–5 or that baseline plus HG-26A/C (recommended, §12.6); it never includes feints or the sealed-intent protocol.
+
 Files (new only): `scripts/positions/half_guard/{half_guard_rules,half_guard_catalog,half_guard_resolver,half_guard_match,half_guard_entry,half_guard_contract,half_guard_window_gateway}.gd`
 (+ `.gd.uid`), `tests/test_half_guard_rules.gd`, `tests/test_half_guard_reference.gd`, `tests/test_half_guard_conformance.gd` (views and `Report` against the Mount gateway),
 `tests/oracles/half_guard_v0.py`, `tests/test_half_guard_oracle.py`, `GODOT_V1/tests/generate_half_guard_reference.py`, `docs/HALF_GUARD_V0_RULES.md`, and one workflow
@@ -715,6 +726,249 @@ describe the **proposed** tables only. They are not parity evidence, not a balan
 * **Absent by design:** return to Mount, Sweep, Wrestle-Up, Backstep, opening-triggered initiative, behaviors/drift/RECOVER/D3-B, a graph envelope v2.
 * **Opt-in receivers (HG-22)** keep every qualified suite and F1 unchanged but mean a "Half Guard commits" graph exists only through the new constructor until the owner flips the default.
 * **Graph protocol amendment (HG-18)** edits the letter of `POSITION_GRAPH.md` §5/§8 when B1d lands.
+* **HG-26 risks** (new numbers, the readiness coupling, the option-M ordinary-counter stalemate, the Bottom-favorable table asymmetry, a second gateway path for the sealed-intent protocol) are in §12.10–§12.11.
+
+## 12. HG-26 — Tactical preparation, feints and defensive counterplay (proposal)
+
+**Status.** The *direction* (positional preparation, feints, defensive effort; game-wide, position-specific details) is owner-approved. **Every number and rule in this section is a
+proposal** until the owner accepts it by sub-decision id. The game-wide concepts, the information protocol and the test obligations are in
+[TACTICAL_PREPARATION_AND_FEINTS.md](TACTICAL_PREPARATION_AND_FEINTS.md); this section holds only what is Half Guard-specific. Nothing here is implemented, no Mount behavior
+changes, and §§1–11 stand as written except where §12.0 says otherwise.
+
+### 12.0 What changes in the earlier sections if HG-26 is approved
+
+* The property in §4.4 ("the two break-capable actions can never succeed against their −2 counter, even after exhaustion and commitment settlement") holds **only at the
+  neutral readiness state**. With HG-26A it becomes the conditional statement of §12.1.4. At entry (both conditions `Partial`) §4.4 and Appendices A–B are unchanged.
+* Q5's grade pipeline gains two saturating steps after the positional modifier (§12.1.3). Q4 (no behaviors, no drift) is unchanged: conditions do not decay.
+* §9.1 (B1b) is conditional on HG-26F: B1b is either the direct baseline of §§4–5 or the baseline plus HG-26A/C (recommended). **Feints are never part of B1b.**
+* The entry request (§5.1) and the Mount edge (§5.2) are **unchanged**: readiness is not carried from Mount and starts at `Partial` for both fighters.
+
+### 12.1 HG-26A — Positional preparation (minimum viable)
+
+**12.1.1 State.** Two integers owned by the Half Guard match (no shared class, HG-26F): `top_base` (the Top's pressure/weight structure) and `bottom_frame` (the Bottom's hip and
+knee frame structure). Tier `0 = None`, `1 = Partial`, `2 = Ready` (Guide §21 names). **Entry: both `Partial`**, fixed, not derived from Mount (D1). Range `0..2`. **No decay** (v0 has
+no drift, HG-6). `state_fields()` gains `top_base`, `bottom_frame` (ints) and their names; the history gains `readiness_change_history` (`"<track>:<before>-><after>:<technique>"`).
+The carry-over export is untouched (HG-20). Names are proposals.
+
+**12.1.2 Interaction of the five v0 techniques** (`final` = the full-pipeline final grade; "success" = `final >= SUCCESS`; "exit" ends the segment, so no condition is changed after an exit):
+
+| Technique | Role | Reads (own condition) | Writes on success without exit | Consumed on attempt |
+| --- | --- | --- | --- | --- |
+| Crossface (Top) | compromise | — | `bottom_frame` −1 | — |
+| Flatten (Top) | establish | — | `top_base` +1 | — |
+| Knee Slice (Top) | **prepared**, break-capable | `top_base`: shift +1 / 0 / −1 for Ready / Partial / None | — | at Ready: `top_base` −1 |
+| Underhook (Bottom) | establish | — | `bottom_frame` +1 | — |
+| Recover Guard (Bottom) | **prepared**, break-capable | `bottom_frame`: shift +1 / 0 / −1 | `top_base` −1 | at Ready: `bottom_frame` −1 |
+
+Consumption applies to the attempt, whatever the result, so a prepared technique cannot be repeated for free. The single track a fighter owns powers *both* that fighter's prepared technique and that fighter's powerful
+response (§12.3): attacking with Knee Slice spends the base that Knee Pin would use, and Recover Guard spends the frame that Knee Shield would use. This coupling is the intended positional tradeoff.
+
+**12.1.3 Pipeline order (all steps saturate at ±2 after each step, like the existing settlement).**
+`raw` → positional modifier (§4.5) → **attack readiness** (prepared technique only) → **defense readiness** (governed response only, §12.3) → exhaustion → magnitude → undercommitment.
+Order matters because of saturation: a raw −2 shifted −1 stays −2 before a later +2 lifts it to 0. The oracle must reproduce this order exactly. Tier updates after grading follow a fixed order: (1) consume the initiator's
+tier, (2) wear the responder's tier (§12.3), (3) apply the builder/weakener effect, each saturating at `0..2`.
+
+**12.1.4 What preparation does to the decisive counters (Appendix D §8, full pipeline, band 0).** Best final grade reachable by a break-capable action from a raw −2 counter:
+
+| Attacker tier \ defender power tier | Ready | Partial | None |
+| --- | --- | --- | --- |
+| None (no stamina effects / with every exhaustion and commitment lift) | −2 / 0 | −2 / 0 | 0 / +2 |
+| Partial | −2 / 0 | −2 / 0 | 0 / +2 |
+| Ready | −2 / 0 | −1 / +1 | +1 / +2 |
+
+So a **Ready** powerful defense cannot be beaten by a direct attack at all, a **Partial** one only by a **Ready** attacker who also gains every stamina lift, and an **unprepared** one by any attacker with lifts. At the neutral state
+(Partial / Partial) the §4.4 property is unchanged.
+
+**12.1.5 Option M versus option S (the owner chooses; Appendix D §§3, 6, 7).**
+
+* **M (recommended): only the two decisive counters are governed** (Knee Shield by `bottom_frame`, Knee Pin by `top_base`). Smallest change that makes "powerful counters need preparation" real.
+* **S: every response is governed** by its owner's track (shift −1 / 0 / +2). Evidence: against a defender who always plays the best counter to the visible technique the attacker can force an exit under S
+  (windows 9 / 12) but not under M; under S a *Ready* defender holds every direct attack to −2 at the neutral state of the other fighter (a stronger fortress), and every counter wears the structure that powers it
+  (more state coupling, a larger oracle, more tuning).
+* Alternative **L**: one shared track or a continuous value — rejected for v0 (GP-7).
+
+**Mount parity / compatibility.** None: new files only, no Mount file, record, fixture or digest changes; A3b record unchanged; F0 reads only existing keys; F1 never meets Half Guard (HG-22).
+**Required tests.** Entry values; every builder/weakener/consumer cell; floor and ceiling; shift table over all 9 states × raw grades; saturation-order cases (e.g. raw −2, attacker None, defender None → 0, not −1);
+readiness transition table; rejected commands change nothing; histories; oracle replay (grid × 9 states).
+**Owner decisions.** HG-26A-1 (two tracks, tiers, entry), HG-26A-2 (interaction table), HG-26A-3 (shifts and pipeline order), HG-26A-4 (option M or S).
+
+### 12.2 HG-26B — Feint eligibility (explicit pairs, deferred slice)
+
+Pairs are **listed, never derived**. A pair needs: different techniques; the real technique is **break-capable**; the apparent technique is **not** break-capable; real and apparent both belong to the acting side; no chains; and the
+pair's condition holds in the *public* state.
+
+| Id | Side | Apparent → real | Required condition | Status |
+| --- | --- | --- | --- | --- |
+| FP-1 | Top | Crossface → Knee Slice | `top_base >= Partial` | **recommended** |
+| FP-2 | Bottom | Underhook → Recover Guard | `bottom_frame >= Partial` | **recommended** |
+| FP-3 | Top | Flatten → Knee Slice | `top_base >= Partial` | **not recommended**: fails the counterplay rule (§12.4) |
+
+Plausibility: pressure or control work that sets up a knee slice; an underhook fight that sets up guard recovery (names from Guide §11.4; no technique descriptions are invented). The apparent technique **never resolves**
+and changes no condition; the *real* technique's reads, consumption and writes apply. **Bite adjustment (proposal):** if the response is a best counter to the apparent technique (Crossface → Underhook Fight; Underhook → Head Control)
+the real technique's grade shifts **+1** for the attacker; otherwise **−1**; applied after the readiness shifts and before exhaustion. Finals at the neutral state, defender seeing only the apparent technique (Appendix D §5):
+
+| Pair | vs Hip Frame / Head Control | vs Underhook Fight / Hip Pressure | vs Knee Shield / Knee Pin |
+| --- | --- | --- | --- |
+| FP-1 Crossface → Knee Slice (direct Crossface, direct Knee Slice) | −1 (+1, 0) | **+2** (−1, +2) | −2 (0, −2) |
+| FP-2 Underhook → Recover Guard (direct Underhook, direct Recover Guard) | **+2** (−1, +2) | 0 (0, +1) | −2 (+1, −2) |
+
+A feint is **never** a distinct gameplay window: it is one exchange (initiative flips once, the clock advances once, one history record with a `feint` sub-record). A feint resolved against a position-exit condition uses the real
+technique's exit rule unchanged. Refusals: `feint_not_supported`, `feint_not_eligible`, `feint_real_equals_apparent`, `feint_requires_funding` (§12.5).
+**Owner decisions.** HG-26B-1 (the pair list), HG-26B-2 (±1 bite adjustment), HG-26B-3 (apparent never resolves), HG-26B-4 (real must be break-capable).
+
+### 12.3 HG-26C — Defensive effort
+
+**Governed (powerful) responses (option M):** Knee Shield reads `bottom_frame`; Knee Pin reads `top_base`. **Defense readiness shift toward the initiator:** Ready −1, Partial 0, None **+2**. The +2 is deliberate:
+with +1 the constant Knee Shield defender is a structural fortress (no forced exit, `cfg['none']=1` in Appendix D); with +2 preparation beats it (§12.7 S-4).
+
+**Effort and wear (positional tradeoff), using existing commitment tiers only. "Effective commitment" is what funding granted, before any Rule 1 waiver of the charge:**
+
+| Responder's effective commitment | Defense strength | Charge (existing costs) | Wear of the governed track |
+| --- | --- | --- | --- |
+| LOW or unfunded | counted as tier `None` (the effort was not made) | 3 / 0 | none |
+| MEDIUM | tier-based | 7 | −1 if `final != 0` (decisive either way) |
+| HIGH | tier-based | 12 | −1 only if the defense **failed** (`final >= +1`); a successful HIGH defense preserves the structure |
+
+**When a defense succeeds** the axis swings against the attacker by the existing rule (`delta = ∓10 × final`). The defender keeps the structure only by paying HIGH (+5 over MEDIUM); at MEDIUM it loses one tier, so a
+defender starting at `Partial` answers one repeated decisive attack at full strength and is then at `None` until it rebuilds with its own initiative window (Underhook, which a correct counter denies). The prototype assumes MEDIUM responses; the LOW and HIGH rows are specified here, not modeled. **When it fails** the
+structure wears at MEDIUM and HIGH. **At LOW** a defense is cheap and weak, which matches Guide §27: a cheap threat can be answered cheaply.
+Arithmetic (existing cost policy, enter threshold 25 of 100): a fresh defender preserving at HIGH every window reaches the Exhausted latch after 7 defenses (100 → 88 → … → 16), while an attacker paying MEDIUM per attack is still at 51.
+**Interactions.** Exhaustion is unchanged (an Exhausted responder grades +1 for the attacker); an Exhausted latched defender is funded at most what its pool affords, so a latched fighter usually cannot make the MEDIUM effort.
+**Compatibility.** A departure from the AGENTS.md invariant "LOW while Exhausted" is already flagged in HG-7; HG-26C does not add a Half Guard policy-selected commitment.
+**Owner decisions.** HG-26C-1 (governed set), HG-26C-2 (shift −1/0/+2), HG-26C-3 (effort table), HG-26C-4 (definition of effective commitment for the effort check).
+
+### 12.4 HG-26D — Counterplay
+
+A defender facing a possible feint has four documented routes, each computed from the published tables (Appendix D §§1, 2, 9):
+
+1. **Anticipate:** the public view shows the apparent technique, the attacker's requested commitment and — if GP-2 is accepted — the eligible reals (FP-1: Crossface may conceal Knee Slice).
+2. **Avoid committing completely:** answer at a lower response commitment. The existing undercommitment modifier (+1 for the attacker when the responder is funded strictly below) is the price; a LOW attacker can be answered LOW for free.
+3. **Balanced response:** worst-case final grade for the attacker across the direct apparent technique and every eligible feint, neutral readiness:
+
+| Apparent | Hip Frame / Head Control | Underhook Fight / Hip Pressure | Knee Shield / Knee Pin | Balanced response |
+| --- | --- | --- | --- | --- |
+| Crossface (feint FP-1) | +1 | +2 | **0** | Knee Shield |
+| Underhook (feint FP-2) | +2 | **0** | +1 | Hip Pressure |
+| Flatten (candidate FP-3) | +1 | +1 | +1 | **none** → FP-3 rejected |
+| Knee Slice / Recover Guard (no feint exists) | 0 / +2 | +2 / +1 | −2 / −2 | the decisive counter (never worse) |
+
+4. **Call:** choose the best counter to the real technique; it wins against the feint and may lose to a direct attack.
+
+**Admissibility rule (proposed, gate for any future pair):** at the neutral state some response holds the attacker to `<= 0` across all modes. Outside the neutral state the rule can fail by design: Crossface fails when `bottom_frame = None` and
+`top_base >= Partial`; Underhook when `bottom_frame = Ready` and `top_base <= Partial` (Appendix D §10). That is the payoff of preparation (a stripped defender may have no balanced answer);
+the owner decides whether it is intended. No pure strategy dominates at the neutral state (Appendix D §2): no attacker mode dominates, and the only response that is never worse for the defender is the decisive counter against the
+*direct* technique it counters, which is why attackers prepare or feint instead.
+**Owner decisions.** HG-26D-1 (the four routes), HG-26D-2 (admissibility rule and its neutral-state scope), HG-26D-3 (outside-neutral failures accepted).
+
+### 12.5 HG-26E — Stamina and funding
+
+| Item | Direct technique at commitment `c` | Feint at commitment `c` | Notes |
+| --- | --- | --- | --- |
+| Initiator cost (existing policy) | `cost(c)` after funding downgrade (3 / 7 / 12) | **the same** | No surcharge. In particular a feint at HIGH costs 12, exactly a direct HIGH |
+| Responder cost | `cost(response commitment)` | **the same** | Responder commits before the reveal |
+| Funding downgrade | existing `determine` | the same | A funding gap shrinks the *effective* commitment, not the feint's meaning |
+| Unfunded initiator | allowed (Rule 1 waives the responder's charge) | **refused** `feint_requires_funding` (effective commitment must be `>= LOW` at admission, a pure check before mutation) | Stops a free, costless mind game |
+| Exhausted initiator | modifier −1 | the same | |
+| Exhausted responder | modifier +1 for the initiator | the same | |
+| Magnitude / undercommitment | existing | existing, using the **real** technique's grade | |
+| Feint cost if called | — | none extra; the real technique is shifted −1 and may swing the axis against the attacker (−1 final = −10, −2 = −20) | The price of a feint is positional, not a hidden charge |
+| Optional cap (HG-26E-4) | — | a LOW-effective feint cannot cause a position exit (analogue of Guide §27's first-stage cap) | Recommended |
+
+Repeated expensive feints: with HIGH feints (12) against MEDIUM responses (7) the attacker reaches the latch after 7 attacks while the defender is at 51, so repeating HIGH feints is self-limiting; repeated *called* feints also lose axis
+(−10/−20 each). Repeated LOW feints cost 3 each against 3 each when answered LOW. Parity is by construction, not by a new rule. **Owner decisions.** HG-26E-1 (no surcharge), HG-26E-2 (unfunded refusal), HG-26E-3 (cost and funding parity), HG-26E-4 (LOW feint cannot exit).
+
+### 12.6 HG-26F — Implementation boundary
+
+| Belongs to B1b (recommended, if HG-26A/C are approved) | Separate later slices |
+| --- | --- |
+| `top_base` / `bottom_frame` as two integers inside `BjjHalfGuardMatch`; constants and shift tables in `BjjHalfGuardRules`; readers, writers, consumption and wear in the existing resolution path | **B1g — sealed-intent protocol:** `seal_intent` / `respond`, the closed-schema public view, the probing-controller tests and indistinguishability tests, in the **Half Guard gateway only** (Mount gateway untouched); direct techniques may use it with `real = apparent` |
+| New history/state keys (`readiness_change_history`, `top_base`, `bottom_frame`) | **B1h — Half Guard feint rules:** eligibility pairs, bite adjustment, funding refusal, admission codes, oracle extension, counterplay-admissibility gate |
+| Oracle replay including the 9 readiness states and the saturation order | Generalization into a shared mechanism: only by the rule of three or on owner authorization to migrate Mount (GP-8) |
+| The effort/wear rule (uses existing response commitment) | The measured economy and recovery rule (B1e) and further techniques (B1f) keep their names and scope |
+
+**No shared runtime interface is introduced.** There is no `Preparation` class, registry entry, schema or base type: conditions are two ints and constants local to Half Guard, so a second position can adopt the *vocabulary* without importing code.
+B1b reserves no feint hooks: admission codes and Report/history keys for feints are additive in B1g/B1h (the §4.7 conformance test requires only the shared key superset, so extra keys do not break it).
+
+### 12.7 Adversarial test design (Task 4)
+
+Each scenario is deterministic (no random seed, no wall clock) and states what it may claim. **S** = structural/exact (CI-gateable); **B** = balance measurement (population of policies; reports only, never a pass/fail gate unless the
+owner preregisters a threshold). "Prototype" = already computed by Appendices C/D in this PR (structural, stamina ignored, **not** evidence of balance).
+
+| # | Scenario | Setup and scripted policies | Assertion | Class | Prototype result |
+| --- | --- | --- | --- | --- | --- |
+| S-1 | Repeated best-counter defense | Responder always plays the best counter to the visible technique; attacker searched exactly (24 windows, pass allowed) | Option M, direct: **no forced exit** (documented stalemate); option S: exit at window 9 (Top) / 12 (Bottom); with feints: window 3 / 4 | S | yes (D §7) |
+| S-2 | Attacker prepares before a pass | Bottom always Knee Shield; Top: Flatten, Crossface, Knee Slice (Bottom passes between) | Exact tier/axis trace: after Flatten axis 15, base Ready, frame None; after Crossface axis 35; Knee Slice exits (axis 40) at window 5 | S | yes (trace) |
+| S-3 | Defender rebuilds preparation | Frame None; Bottom Underhook against each Top response | Frame +1 only if `final >= SUCCESS` (vs Knee Pin); never against Head Control; a pass or a response never builds | S | rules only (D §3 grid) |
+| S-4 | Repeated Knee Shield | Bottom always Knee Shield | Preparation beats it (exit window 5); stamina arithmetic: MEDIUM defender wears a tier per decisive result; HIGH preserves only on success; LOW counted as None | S + arithmetic | yes (D §7) |
+| S-5 | Repeated Knee Pin | Top always Knee Pin vs Bottom attacks | Bottom exits at window 6; the same wear table applies to `top_base` | S | yes (D §7) |
+| S-6 | Successful and failed feints | Neutral state, FP-1 and FP-2 against each response | Exact finals of the §12.2 table; failed feint axis −10/−20; successful +20 | S | yes (D §5) |
+| S-7 | Correctly anticipated feints | Defender plays the balanced / call response | Finals −1/−2/0; no attacker mode dominates at neutral; a feint is never weakly better than the better of the two direct techniques against a balanced response | S | yes (D §§2, 9) |
+| S-8 | Repeated expensive feints until exhaustion | HIGH feints vs MEDIUM responses until the latch | Attacker latched after 7 attacks, defender at 51; called feints lose axis each time; unfunded feint refused afterwards | S arithmetic, B for policy populations | arithmetic only |
+| S-9 | Feint versus balanced defense | FP-1 vs Knee Shield, FP-2 vs Hip Pressure at all 9 readiness states | Worst case ≤ 0 at neutral; list of failing states equals the published list | S | yes (§12.9) |
+| S-10 | Low-stamina and unfunded feints | Initiator stamina `{0, 1, 2, 3, 6, 7, 11, 12}`, latch edges | `< 3` effective → `feint_requires_funding`, no mutation; 3..6 funded LOW; exhaustion −1 still applies | S | rules only |
+| S-11 | Both fighters pass or defend without progress | Pass/pass; counter/counter loops | Pass/pass changes only the clock; counter loops leave axis and tiers oscillating; symmetric stamina drain; timeout | S (+B for how long) | symmetric optimal play: no forced exit in 16 windows (D/C) |
+| S-12 | Protocol information tests | Public view indistinguishability, probing controller, mutation-sensitivity control | See TACTICAL_PREPARATION_AND_FEINTS.md §8.1 | S | not yet (B1g) |
+| S-13 | Mirror symmetry | Run each Top scenario with the Bottom analogue | **Not asserted equal.** The tables are not mirrored: §12.9 F-3 records the asymmetry | S/B | yes |
+| S-14 | Population measurement | Pre-registered policies (always-counter, mixed, greedy, prepared) over seeds of scripted choice | Exit distribution, durations, exhaustion timing, loop lengths; used for B1e, never a gate here | B | no |
+
+**What the structural checks do not prove:** balance, fun, human behavior, or the stamina economy. They prove reachability, dominance, exact arithmetic and the absence of a hidden extra window or charge.
+
+### 12.8 Feasibility and compatibility (Task 5)
+
+| Option | What it is | Cost / measurable effect (estimates unless pinned) | Regression risk | Verdict |
+| --- | --- | --- | --- | --- |
+| **1. Minimal local state (recommended)** | Two ints, constants and ~5 rule steps inside the Half Guard classes of B1b | ~+45 production lines, +2 state keys, +1 history, oracle +~40 lines and a ×9 readiness grid; existing Mount/F0/F1/graph files touched: **0**; entry request unchanged | None to Mount parity (256,992 / 14,631 / 8,851,698 evidence untouched) | **Smallest implementation that proves prepared techniques and decisive-counter effort** |
+| 2. Generic preparation framework now | A shared `Preparation` type, registry and schema before a second user | ~250–350 lines, a carry-over schema decision, serialization and tests (estimate) | Speculative shape; likely re-cut when the second position arrives; touches the envelope | Rejected (violates "no framework for one feature") |
+| 3. Modify Mount to adopt the new rules | Readiness and feints inside Mount | Changes Mount grades and state; the frozen Python reference and digest would no longer agree | Breaks the Mount parity evidence unless a new Python mode and fixtures are built first | Rejected without a separate owner-authorized parity plan |
+| 4. Keep Mount frozen; migrate later | Mount unchanged; revisit after Half Guard and a third position | 0 now; trigger = rule of three or owner order | None now; migration needs its own parity slice | **Accepted as the policy**, combined with option 1 |
+
+Preserved: all Mount parity evidence, the A3b/A3d/A3e/F0/F1 qualified interfaces, the existing window gateway, the graph's default behavior. The feint protocol needs a Half Guard-only gateway extension (B1g), never a Mount gateway edit.
+
+### 12.9 B1b gate and staged sequence (Task 6)
+
+**Owner decisions required before the independent oracle is written** (all others in §2 apply as before):
+
+1. **HG-26F** — whether B1b includes HG-26A/C (recommended) or the direct baseline only. Feints are out of B1b either way.
+2. **HG-26A-1…4** — the two tracks, tier meanings, entry `Partial/Partial`; the interaction table (§12.1.2); the shift tables and pipeline order (§12.1.3); option M or S.
+3. **HG-26C-1…4** — the governed set, the −1/0/+2 shift, the effort/wear table and the definition of "effective commitment" for the effort check (granted by funding, before the Rule 1 waiver).
+4. **HG-9 review in light of finding F-3** — the oracle freezes the 15 raw grades, and §12.10 shows a Bottom-favorable defensive asymmetry (constant Hip Frame is a direct-play fortress; no Top equivalent). The owner may keep, edit or accept it knowingly.
+5. **The oracle's exit-axis and clamp conventions** (HG-3, HG-4) are unchanged but must be confirmed together with the readiness writers (exit changes no condition).
+
+**Staged sequence (existing milestones kept; names do not conflict with B1e/B1f):**
+
+1. **B1b** — qualify the Half Guard mechanics with HG-26A/C and the independent oracle (direct techniques only).
+2. **B1c → B1d** — Mount edge receiver, then opt-in graph integration (unchanged scope; readiness enters at `Partial/Partial`).
+3. **B1g** — separately qualified sealed-intent commit-and-reveal protocol (Half Guard gateway only), then **B1h** — Half Guard feint rules and oracle extension.
+4. **B1e** — measure the stamina economy, defensive loops and the recovery rule (pre-registered); may include a read-only first measurement after B1b and a re-measurement after B1h.
+5. **Generalize** only after a second position requires the same mechanism (rule of three or explicit owner order, GP-8).
+
+B1g and B1h do not depend on B1c/B1d (only on the Half Guard engine), so the owner may reorder them.
+
+**Counterplay admissibility grid** (Appendix D §10, band 0, axis +5): FP-1 fails when `bottom_frame = None` and `top_base >= Partial`; FP-2 fails when `bottom_frame = Ready` and `top_base <= Partial`; FP-3 fails whenever `top_base >= Partial` and `bottom_frame <= Partial` — and at neutral.
+
+### 12.10 Prototype findings and their limits (Appendices C and D)
+
+The prototypes encode the proposed raw tables, the positional modifier, readiness, wear, feints and bite in integer tenths. They **ignore stamina, exhaustion, commitment settlement and the real clock**; "windows" count each fighter's window
+including the opponent's pass windows. They are structural checks, **not** balance evidence and **not** an oracle.
+
+* **F-1 — symmetric optimal play stalemates in every variant.** With the pass option, both fighters choosing optimally, no variant (direct, preparation M or S, with or without feints) forces an exit in 4, 8, 12 or 16 windows (value 0). The
+  design does not guarantee attacking success.
+* **F-2 — a direct attack is a losing choice against a perfect counter; preparation and feints change that.** At the neutral state the best guaranteed value of an attack is −1 (Top) and −1 (Bottom) against 0 for a pass, so a rational
+  direct attacker passes. With feints −0.20 (Top) and 0.00 (Bottom). With preparation under M: `(top_base, bottom_frame) = (1, 0)` direct 0.00 / feint +0.20; `(2, 0)` direct +1.00 / feint +1.00 — attacking becomes positive only after the
+  defender's frame is stripped. Full grid in Appendix D §6.
+* **F-3 — the raw tables are not mirror-symmetric.** A Bottom that always answers with Hip Frame cannot be forced out by direct Top play under M (Top exits at window 5 with feints, window 3 under S); a Top that always answers with Hip Pressure
+  concedes a Bottom exit at window 8 (window 6 under S). Owner attention is requested on HG-9, not an edit.
+* **F-4 — an unprepared decisive counter must be weak enough to be beaten by preparation.** With a None-tier shift of +1 a constant Knee Shield defender is a fortress; with +2 the prepared attacker exits at window 5 (Top) and a prepared Bottom
+  against a constant Knee Pin at window 6.
+* **F-5 — option M leaves the ordinary-counter loop alone; option S and feints break it.** Always playing the best counter to the visible technique: M no exit; S exits at 9 / 12; M with feints 3 / 4.
+* **F-6 — decisive counters under the full pipeline:** the §12.1.4 table.
+* **F-7 — pure dominance:** none for either side at the neutral state, except the decisive counter against the direct technique it counters.
+
+### 12.11 Outstanding owner decisions for HG-26
+
+HG-26A-1…4, HG-26B-1…4, HG-26C-1…4, HG-26D-1…3, HG-26E-1…4, HG-26F (§12.6, §12.9), the game-wide GP-1…GP-9 of TACTICAL_PREPARATION_AND_FEINTS.md, and the HG-9 asymmetry review. Risks: the new numbers are
+design content; the readiness coupling (one track powers both an attack and a defense) is the key tuning surface; option M leaves a stalemate against a perfect ordinary-counter defender that only feints (B1h) or option S would break; the
+protocol slice (B1g) adds a second gateway path that must be kept in conformance with the first.
 
 ## Appendix A — Reachability and consistency prototype (verbatim)
 
@@ -922,4 +1176,396 @@ for raw in (-2, -1):
     best[raw] = top
 print("best final grade reachable from a raw -2 counter:", best[-2])
 print("best final grade reachable from a raw -1 counter:", best[-1])
+```
+
+## Appendix C — HG-26 structural model (verbatim; save as `hg26_proto.py`)
+
+Encodes the proposed tables, readiness, wear, feints and bite; prints the full-game minimax value (horizons 4, 8, 12, 16) for six variants. Ignores stamina, exhaustion, commitment settlement and the clock.
+
+```python
+"""Throwaway structural prototype of PROPOSED HG-26 mechanics (not an oracle, not balance evidence).
+Integer tenths. Models raw grades + positional modifier + preparation + feints ONLY.
+It IGNORES stamina, exhaustion, commitment settlement and the real clock.
+Terminal value from Top's view: +1 Top exits (Side Control), -1 Bottom exits (guard), 0 timeout at horizon."""
+import sys
+from fractions import Fraction
+from functools import lru_cache
+from itertools import combinations
+
+sys.setrecursionlimit(10000)
+LO, HI, ENTRY, PASS_LINE, OUT_LINE = -40, 40, 5, 30, -30
+
+def shift(g, s): return max(-2, min(2, g + s))
+
+UP = {(0, 1): 12, (1, 2): 27, (-1, 0): -8, (-2, -1): -23}
+DOWN = {(2, 1): 23, (1, 0): 8, (0, -1): -12, (-1, -2): -27}
+def initial_band(a):
+    m = abs(a); sg = 1 if a > 0 else -1
+    return 0 if m < 10 else sg * (1 if m < 25 else 2)
+def update_band(a, band):
+    while True:
+        nxt = None
+        for (b0, b1), t in UP.items():
+            if band == b0 and a >= t: nxt = b1
+        for (b0, b1), t in DOWN.items():
+            if band == b0 and a <= t: nxt = b1
+        if nxt is None: return band
+        band = nxt
+
+TOP_RAW = {"crossface": {"hip_frame": 1, "underhook_fight": -1, "knee_shield": 0},
+           "flatten": {"hip_frame": -1, "underhook_fight": 1, "knee_shield": 1},
+           "knee_slice": {"hip_frame": 0, "underhook_fight": 2, "knee_shield": -2}}
+BOT_RAW = {"underhook": {"head_control": -1, "hip_pressure": 0, "knee_pin": 1},
+           "recover_guard": {"head_control": 2, "hip_pressure": 1, "knee_pin": -2}}
+RAW = {"top": TOP_RAW, "bottom": BOT_RAW}
+BREAK = {"knee_slice": "top", "recover_guard": "bottom"}
+# builders: action -> (track changed, delta); tracks: 'B' Top base, 'F' Bottom frame
+BUILD = {"crossface": ("F", -1), "flatten": ("B", +1), "underhook": ("F", +1), "recover_guard": ("B", -1)}
+OWN_TRACK = {"top": "B", "bottom": "F"}
+POWER_M = {"knee_shield", "knee_pin"}                 # Option M: decisive counters only
+POWER_S = {"hip_frame", "underhook_fight", "knee_shield", "head_control", "hip_pressure", "knee_pin"}
+FEINTS = {"top": [("crossface", "knee_slice"), ("flatten", "knee_slice")], "bottom": [("underhook", "recover_guard")]}
+def counters(side, action): return {r for r, g in RAW[side][action].items() if g <= -1}
+
+def def_shift(cfg, tier):
+    # governed-response shift toward the initiator: Ready -1, Partial 0, None cfg['none'] (default +2)
+    return {2: -1, 1: 0, 0: cfg.get('none', 2)}[tier]
+
+def pos_mod(side, band): return -1 if (side == "top" and band == -2) or (side == "bottom" and band == 2) else 0
+
+def step(st, side, real, resp, cfg, bite=None):
+    a, band, B, F, _ = st
+    tr = {"B": B, "F": F}
+    own = OWN_TRACK[side]; opp = "F" if side == "top" else "B"
+    raw = RAW[side][real][resp]
+    g = shift(raw, pos_mod(side, band))
+    if cfg["prep"]:
+        if real in BREAK:                                  # prepared technique reads own track
+            g = shift(g, tr[own] - 1)
+        if resp in cfg["power"]:                           # governed response reads responder track
+            g = shift(g, def_shift(cfg, tr[opp]))
+    if bite is not None:
+        g = shift(g, +1 if bite else -1)
+    delta = 10 * g if side == "top" else -10 * g
+    proposed = a + delta
+    ex = 0
+    if side == "top" and real == "knee_slice" and g >= 1 and proposed >= PASS_LINE: ex = 1
+    if side == "bottom" and real == "recover_guard" and g >= 1 and proposed <= OUT_LINE: ex = -1
+    a2 = max(LO, min(HI, proposed)); b2 = update_band(a2, band)
+    if cfg["prep"] and not ex:
+        if real in BREAK and tr[own] == 2: tr[own] -= 1    # consumption on attempt at Ready
+        if resp in cfg["power"] and g != 0 and tr[opp] > 0 and cfg["erode"]:
+            tr[opp] -= 1                                   # worn structure (response commitment MEDIUM)
+        if g >= 1 and real in BUILD:
+            t, d = BUILD[real]
+            tr[t] = max(0, min(2, tr[t] + d))
+    return (a2, b2, tr["B"], tr["F"], "bottom" if side == "top" else "top"), ex
+
+def solve_matrix(rows):
+    """rows: list of lists (attacker rows x defender cols), payoff to the ROW player. returns value (float)."""
+    n = len(rows[0])
+    if len(rows) == 1:
+        return min(rows[0])
+    # row player maximises min over cols; solve by vertex enumeration of the row mixture.
+    m = len(rows)
+    best = None
+    # variables x_1..x_m, v ; constraints: sum x =1, x>=0, sum_i x_i A[i][j] >= v for all j
+    cons = []  # each tight constraint as (coeffs over [x..., v], rhs)
+    for i in range(m):
+        cons.append(([1.0 if k == i else 0.0 for k in range(m)] + [0.0], 0.0, "x%d" % i))
+    for j in range(n):
+        cons.append(([rows[i][j] for i in range(m)] + [-1.0], 0.0, "c%d" % j))
+    simplex = ([1.0] * m + [0.0], 1.0)
+    for pick in combinations(range(len(cons)), m):
+        A = [simplex[0]] + [cons[k][0] for k in pick]
+        b = [simplex[1]] + [cons[k][1] for k in pick]
+        sol = _solve(A, b)
+        if sol is None: continue
+        x = sol[:m]; v = sol[m]
+        if min(x) < -1e-9: continue
+        if min(sum(x[i] * rows[i][j] for i in range(m)) for j in range(n)) < v - 1e-9: continue
+        if best is None or v > best: best = v
+    return best
+
+def _solve(A, b):
+    n = len(A)
+    M = [A[i][:] + [b[i]] for i in range(n)]
+    for c in range(n):
+        p = max(range(c, n), key=lambda r: abs(M[r][c]))
+        if abs(M[p][c]) < 1e-12: return None
+        M[c], M[p] = M[p], M[c]
+        for r in range(n):
+            if r != c:
+                f = M[r][c] / M[c][c]
+                for k in range(c, n + 1): M[r][k] -= f * M[c][k]
+    return [M[i][n] / M[i][i] for i in range(n)]
+
+def make(cfg, H):
+    @lru_cache(maxsize=None)
+    def V(st, depth):
+        if depth == 0: return 0.0
+        side = st[4]
+        table = RAW[side]
+        best = None
+        for A in table:
+            modes = [(A, None)]
+            if cfg["feints"]:
+                for (ap, re) in FEINTS[side]:
+                    if ap == A and _eligible(st, side, ap, re): modes.append((ap, re))
+            rows = []
+            for (ap, re) in modes:
+                row = []
+                for resp in table[A]:
+                    real = ap if re is None else re
+                    bite = None if re is None else (resp in counters(side, ap))
+                    ns, ex = step(st, side, real, resp, cfg, bite)
+                    row.append(float(ex) if ex else V(ns, depth - 1))
+                rows.append(row)
+            sign = 1 if side == "top" else -1
+            val = solve_matrix([[sign * x for x in r] for r in rows])   # initiator maximises own sign*value
+            val *= sign
+            score = sign * val
+            if best is None or score > best[0]: best = (score, A, val)
+        # a pass (no action) is always legal: nothing changes except who holds initiative
+        pv = V((st[0], st[1], st[2], st[3], "bottom" if side == "top" else "top"), depth - 1)
+        if sign * pv > best[0]: best = (sign * pv, "pass", pv)
+        return best[2]
+    return V
+
+def _eligible(st, side, ap, re):
+    a, band, B, F, _ = st
+    if side == "top": return B >= 1
+    return F >= 1
+
+START = (ENTRY, initial_band(ENTRY), 1, 1, "top")
+
+if __name__ == "__main__":
+    variants = {
+        "V0 direct, no preparation (Appendix A rules)": dict(prep=False, power=set(), erode=False, feints=False),
+        "V1 direct + preparation, decisive counters governed (Option M)": dict(prep=True, power=POWER_M, erode=True, feints=False),
+        "V2 direct + preparation, every response governed (Option S)": dict(prep=True, power=POWER_S, erode=True, feints=False),
+        "V3 = V1 + feints": dict(prep=True, power=POWER_M, erode=True, feints=True),
+        "V4 = V2 + feints": dict(prep=True, power=POWER_S, erode=True, feints=True),
+        "V5 feints only (no preparation)": dict(prep=False, power=set(), erode=False, feints=True),
+    }
+    print("Value from Top's view at entry (axis +5, base/frame Partial, Top initiates). +1 = Top forces a pass, -1 = Bottom forces a guard exit,\n0 = neither can force an exit within the horizon. Fractional = exit probability balance under optimal mixing.\n")
+    for H in (4, 8, 12, 16):
+        print("horizon", H, "windows")
+        for name, cfg in variants.items():
+            v = make(cfg, H)(START, H)
+            print("  %-64s optimal-play value %+0.3f" % (name, v + 0.0))
+```
+
+## Appendix D — HG-26 one-window and constant-defender analysis (verbatim; save as `hg26_window.py` next to Appendix C and run `python3 -B hg26_window.py`)
+
+Imports Appendix C. Sections: 1 entry-state one-window values; 2 dominance; 3 readiness grid; 4 scripted loop traces; 5 feint finals; 6 value by readiness; 7 exact best attacker against constant defenders; 8 full pipeline against decisive counters; 9 balanced-response worst cases; 10 admissibility over all readiness states.
+
+```python
+"""One-window tactical analysis of the PROPOSED HG-26 mechanics (throwaway, structural, not balance evidence).
+Imports hg26_proto's pure model. Payoff = final grade (-2..+2) from the INITIATOR's point of view before any
+stamina/exhaustion/commitment modifier. Pass = 0."""
+import sys; sys.path.insert(0, '.')
+from hg26_proto import *
+from hg26_proto import _eligible
+
+CFGS = {
+ "V0 direct, no preparation": dict(prep=False, power=set(), erode=False, feints=False),
+ "V1 prep, decisive counters governed (M)": dict(prep=True, power=POWER_M, erode=True, feints=False),
+ "V2 prep, every response governed (S)": dict(prep=True, power=POWER_S, erode=True, feints=False),
+}
+
+def g_of(st, side, real, resp, cfg, bite=None):
+    # recompute grade exactly as step() does (so the table is not distorted by clamps/exits)
+    a, band, B, F, _ = st
+    tr = {"B": B, "F": F}; own = OWN_TRACK[side]; opp = "F" if side == "top" else "B"
+    g = shift(RAW[side][real][resp], pos_mod(side, band))
+    if cfg["prep"]:
+        if real in BREAK: g = shift(g, tr[own] - 1)
+        if resp in cfg["power"]: g = shift(g, def_shift(cfg, tr[opp]))
+    if bite is not None: g = shift(g, 1 if bite else -1)
+    return g
+
+def apparent_matrix(st, side, A, cfg, feints):
+    modes = [(A, None)] + ([(ap, re) for (ap, re) in FEINTS[side] if ap == A and feints and _eligible(st, side, ap, re)])
+    rows, labels = [], []
+    for ap, re in modes:
+        real = ap if re is None else re
+        rows.append([g_of(st, side, real, r, cfg, None if re is None else (r in counters(side, ap))) for r in RAW[side][A]])
+        labels.append("direct %s" % ap if re is None else "feint %s->%s" % (ap, re))
+    return labels, rows
+
+print("== 1. Entry state (Top/Bottom readiness Partial): one-window game per apparent technique ==")
+st = START
+for name, cfg in CFGS.items():
+    for feints in (False, True):
+        if feints and not cfg["prep"] and False: continue
+        print("\n%s%s" % (name, " + feints" if feints else ""))
+        best_top = max(solve_matrix(apparent_matrix(st, "top", A, cfg, feints)[1]) for A in TOP_RAW)
+        best_bot = max(solve_matrix(apparent_matrix((st[0], st[1], 1, 1, "bottom"), "bottom", A, cfg, feints)[1]) for A in BOT_RAW)
+        for A in TOP_RAW:
+            labels, rows = apparent_matrix(st, "top", A, cfg, feints)
+            print("  Top   apparent %-11s modes=%s  value %+0.2f" % (A, "; ".join(labels), solve_matrix(rows)))
+        for A in BOT_RAW:
+            labels, rows = apparent_matrix((st[0], st[1], 1, 1, "bottom"), "bottom", A, cfg, feints)
+            print("  Bottom apparent %-13s modes=%s  value %+0.2f" % (A, "; ".join(labels), solve_matrix(rows)))
+        print("  best attack value for Top %+0.2f, for Bottom %+0.2f (a pass is 0)" % (best_top, best_bot))
+
+print("\n== 2. Pure-strategy dominance at the entry state (apparent technique visible; feints on; Option M) ==")
+cfg = CFGS["V1 prep, decisive counters governed (M)"]
+for side, tbl in (("top", TOP_RAW), ("bottom", BOT_RAW)):
+    for A in tbl:
+        labels, rows = apparent_matrix(START if side == "top" else (START[0], START[1], 1, 1, "bottom"), side, A, cfg, True)
+        cols = list(tbl[A])
+        dom_col = [cols[j] for j in range(3) if all(all(rows[i][j] >= rows[i][k] for i in range(len(rows))) for k in range(3) if k != j)]
+        dom_row = [labels[i] for i in range(len(rows)) if len(rows) > 1 and all(all(rows[i][j] >= rows[k][j] for j in range(3)) for k in range(len(rows)) if k != i)]
+        never_worse = [cols[j] for j in range(3) if all(all(rows[i][j] <= rows[i][k] for i in range(len(rows))) for k in range(3) if k != j)]
+        print("  %-6s %-14s dominant attacker mode: %-6s | response never worse for the defender than the other two (weak dominance): %s" % (side, A, dom_row or "none", never_worse or "none"))
+
+print("\n== 3. Readiness grid, Top initiator, Knee Slice vs each response (direct): final grade ==")
+for name, cfg in list(CFGS.items())[1:]:
+    print(name)
+    print("    base\\frame   " + "   ".join("F=%d" % f for f in range(3)) + "   (cells: vs hip_frame/underhook_fight/knee_shield)")
+    for B in range(3):
+        row = []
+        for F in range(3):
+            s = (5, 0, B, F, "top")
+            row.append("/".join("%+d" % g_of(s, "top", "knee_slice", r, cfg) for r in ("hip_frame", "underhook_fight", "knee_shield")))
+        print("    B=%d         " % B + "  ".join(row))
+
+print("\n== 4. Repeated best-counter defender vs a scripted attacker, direct only, 12 own windows each (stamina ignored) ==")
+for name, cfg in list(CFGS.items())[1:]:
+    st = START; trace = []
+    plan = ["crossface", "flatten", "knee_slice"]
+    sidetop = 0
+    for w in range(1, 13):
+        side = st[4]; tbl = RAW[side]
+        A = plan[sidetop % 3] if side == "top" else "underhook"
+        if side == "top": sidetop += 1
+        c = sorted(counters(side, A), key=lambda r: (tbl[A][r], r))[0]
+        g = g_of(st, side, A, c, cfg)
+        st, ex = step(st, side, A, c, cfg)
+        trace.append("%s:%s/%s g=%+d -> a=%d B=%d F=%d%s" % (side[0].upper(), A[:3], c[:3], g, st[0], st[2], st[3], " EXIT" if ex else ""))
+    print(name); print("  " + "\n  ".join(trace))
+
+print("\n== 5. Feint read by the defender: self-damage to the attacker, defender plays best counter to the REAL technique ==")
+cfg = CFGS["V1 prep, decisive counters governed (M)"]
+for ap, re in FEINTS["top"] + FEINTS["bottom"]:
+    side = "top" if ap in TOP_RAW else "bottom"
+    s = START if side == "top" else (START[0], START[1], 1, 1, "bottom")
+    out = []
+    for r in RAW[side][re]:
+        out.append("%s=%+d" % (r, g_of(s, side, re, r, cfg, r in counters(side, ap))))
+    direct = ", ".join("%s=%+d" % (r, g_of(s, side, ap, r, cfg)) for r in RAW[side][ap])
+    realdirect = ", ".join("%s=%+d" % (r, g_of(s, side, re, r, cfg)) for r in RAW[side][re])
+    print("  %s %s->%s feint finals: %s | direct %s: %s | direct %s: %s" % (side, ap, re, ", ".join(out), ap, direct, re, realdirect))
+
+print("\n== 6. Feint game value of the best apparent technique by readiness (Top initiator, axis +5, band 0) ==")
+for name, cfg in list(CFGS.items())[1:]:
+    print(name, "(cells: direct-only best / with feints best; a pass is 0)")
+    print("    base\\frame   " + "      ".join("F=%d" % f for f in range(3)))
+    for B in range(3):
+        cells = []
+        for F in range(3):
+            s = (5, 0, B, F, "top")
+            d = max(solve_matrix(apparent_matrix(s, "top", A, cfg, False)[1]) for A in TOP_RAW)
+            f = max(solve_matrix(apparent_matrix(s, "top", A, cfg, True)[1]) for A in TOP_RAW)
+            cells.append("%+0.2f/%+0.2f" % (d, f))
+        print("    B=%d         " % B + "  ".join(cells))
+
+print("\n== 7. Exact best attacker vs a CONSTANT defender policy (stamina ignored, 24-window horizon, direct only vs with feints) ==")
+from functools import lru_cache as _lc
+def best_vs_constant(cfg, policy, H=24):
+    @_lc(maxsize=None)
+    def go(st, depth, who_goal):
+        # `side` below is the ATTACKER; policy(side, A) returns the RESPONDER's response. who_goal: the fighter we optimise exits for ('top' wants +1, 'bottom' wants -1); both fighters follow `policy` when RESPONDING;
+        # the optimised fighter chooses attacks when initiating; the other fighter, when initiating, passes.
+        if depth == 0: return (0, 0)
+        side = st[4]
+        if side != who_goal:
+            ns = (st[0], st[1], st[2], st[3], who_goal); return go(ns, depth - 1, who_goal)
+        best = None
+        tbl = RAW[side]
+        for A in tbl:
+            modes = [(A, None)] + ([(ap, re) for (ap, re) in FEINTS[side] if ap == A and cfg["feints"] and _eligible(st, side, ap, re)])
+            for ap, re in modes:
+                real = ap if re is None else re
+                resp = policy(side, A)
+                bite = None if re is None else (resp in counters(side, ap))
+                ns, ex = step(st, side, real, resp, cfg, bite)
+                if ex: cand = (1, -(H - depth + 1))
+                else:
+                    r = go(ns, depth - 1, who_goal); cand = (r[0], r[1])
+                if best is None or cand > best: best = cand
+        # a pass is always available
+        nsp = (st[0], st[1], st[2], st[3], "bottom" if side == "top" else "top")
+        r = go(nsp, depth - 1, who_goal)
+        if best is None or r > best: best = r
+        return best
+    return go
+POL = {
+ "always the best counter to the visible technique": lambda side, A: sorted(counters(side, A), key=lambda r: (RAW[side][A][r], r))[0],
+  "Bottom always Knee Shield (Top always Knee Pin)": lambda side, A: ("knee_shield" if side == "top" else "knee_pin"),
+ "Bottom always Hip Frame (Top always Hip Pressure)": lambda side, A: ("hip_frame" if side == "top" else "hip_pressure"),
+ "Bottom always Underhook Fight (Top always Head Control)": lambda side, A: ("underhook_fight" if side == "top" else "head_control"),
+}
+cfgs7 = {"V1 (M)": dict(prep=True, power=POWER_M, erode=True, feints=False), "V1 + feints": dict(prep=True, power=POWER_M, erode=True, feints=True),
+         "V2 (S)": dict(prep=True, power=POWER_S, erode=True, feints=False), "V2 + feints": dict(prep=True, power=POWER_S, erode=True, feints=True)}
+for pname, pol in POL.items():
+    print(pname)
+    for cname, cfg in cfgs7.items():
+        out = []
+        for goal in ("top", "bottom"):
+            r = best_vs_constant(cfg, pol)(START, 24, goal)
+            out.append("%s exits? %s (exit window, counting the opponent's pass windows: %s)" % (goal, "yes" if r[0] == 1 else "no", -r[1] if r[0] == 1 else "-"))
+        print("   %-12s %s" % (cname, " | ".join(out)))
+
+print("\n== 8. Full grade pipeline with preparation: best final grade reachable from a RAW -2 decisive counter ==")
+print("order: positional -> attack readiness -> defense readiness -> exhaustion -> magnitude -> undercommitment (each saturating)")
+import itertools
+ORDER = ["LOW", "MEDIUM", "HIGH"]
+def _rank(e): return ORDER.index(e) + 1 if e in ORDER else 0
+def _mag(e, g):
+    if e == "HIGH":
+        if g == 1: return 1
+        if g == -1: return -1
+    if e in ("LOW", ""):
+        if g == 2: return -1
+        if g == -2: return 1
+    return 0
+def _under(i, r): return 1 if _rank(r) < _rank(i) else 0
+def best_final(raw, atk, dfn, lifts):
+    top = -9
+    for pos, exh, ie, re_ in itertools.product((-1, 0), (-1, 0, 1) if lifts else (0,), ("", "LOW", "MEDIUM", "HIGH") if lifts else ("MEDIUM",), ("", "LOW", "MEDIUM", "HIGH") if lifts else ("MEDIUM",)):
+        g = shift(raw, pos); g = shift(g, atk); g = shift(g, dfn); g = shift(g, exh)
+        top = max(top, shift(shift(g, _mag(ie, g)), _under(ie, re_)))
+    return top
+print("attacker tier / defender power tier        no stamina effects | with every exhaustion & commitment lift")
+for atk_t, atk in ((0, -1), (1, 0), (2, 1)):
+    for def_t, dfn in ((2, -1), (1, 0), (0, 2)):
+        print("  attacker %-7s defender %-7s            %+d                 | %+d" % (("None", "Partial", "Ready")[atk_t], ("None", "Partial", "Ready")[def_t], best_final(-2, atk, dfn, False), best_final(-2, atk, dfn, True)))
+
+print("\n== 9. Counterplay admissibility: worst-case final grade (initiator's view) of each response across {direct apparent} + eligible feints, neutral readiness ==")
+print("rule proposed for any feint pair: some response must hold the attacker to <= 0 whatever mode was chosen")
+cfg = CFGS["V1 prep, decisive counters governed (M)"]
+for side, tbl, st0 in (("top", TOP_RAW, START), ("bottom", BOT_RAW, (START[0], START[1], 1, 1, "bottom"))):
+    for A in tbl:
+        labels, rows = apparent_matrix(st0, side, A, cfg, True)
+        cols = list(tbl[A])
+        worst = {cols[j]: max(rows[i][j] for i in range(len(rows))) for j in range(3)}
+        verdict = "balanced response exists" if min(worst.values()) <= 0 else "NO response holds the attacker to <= 0"
+        feint = "with feint" if len(rows) > 1 else "direct only"
+        print("  %-6s %-14s (%s) worst-case by response: %s -> %s" % (side, A, feint, worst, verdict))
+
+print("\n== 10. Counterplay admissibility over all 9 readiness states (band 0, axis +5, Option M): states where NO response holds the attacker to <= 0 ==")
+for side, tbl in (("top", TOP_RAW), ("bottom", BOT_RAW)):
+    for A in tbl:
+        if not any(len(apparent_matrix((5, 0, B, F, side), side, A, cfg, True)[1]) > 1 for B in range(3) for F in range(3)):
+            print("  %-6s %-14s no feint exists" % (side, A)); continue
+        fails = []
+        for B in range(3):
+            for F in range(3):
+                labels, rows = apparent_matrix((5, 0, B, F, side), side, A, cfg, True)
+                if len(rows) == 1: continue
+                if min(max(rows[i][j] for i in range(len(rows))) for j in range(3)) > 0: fails.append("(top_base=%d, bottom_frame=%d)" % (B, F))
+        print("  %-6s %-14s fails at: %s" % (side, A, ", ".join(fails) or "none"))
 ```

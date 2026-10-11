@@ -113,3 +113,5 @@ MountMatch or production recovery parity. Issue #20 is the next controller slice
 ## Half Guard v0 proposal (B1a)
 
 [HALF_GUARD_V0_PROPOSAL.md](HALF_GUARD_V0_PROPOSAL.md) answers `POSITION_GRAPH.md` Q1–Q8 for a Half Guard v0, lists the owner decisions (`HG-1` … `HG-25`), the proposed rules sheet, an independent-oracle plan and the B1b/B1c/B1d slice boundaries. It is a proposal only: nothing is approved or implemented, and no Half Guard mechanics exist.
+
+The owner-approved *direction* for tactical preparation, feints and defensive counterplay is described, with proposed (not accepted) details, in [TACTICAL_PREPARATION_AND_FEINTS.md](TACTICAL_PREPARATION_AND_FEINTS.md); the Half Guard-specific proposal is `HALF_GUARD_V0_PROPOSAL.md` §12 (HG-26). Nothing there is implemented.
