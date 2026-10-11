@@ -121,6 +121,13 @@ func carryover_segment() -> BjjMountCarryover.Export:
 func controller_fields() -> Dictionary:
     return _match.d3b.fields()
 
+# Each role's Mount behavior as the match currently HOLDS it (set by the last advance; the next
+# advance may re-derive the bottom's from its exhaustion band). It is not recoverable from
+# history_fields() (history records what past advances used and is empty before the first
+# window). Read-only and detached: opens no window, moves no time, spends no stamina.
+func behavior_fields() -> Dictionary:
+    return {"top": _match.top_behavior, "bottom": _match.bottom_behavior}
+
 func roles() -> BjjPositionContract.Roles:
     return _contract.roles()
 

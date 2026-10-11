@@ -220,5 +220,16 @@ jobs:
           cat /tmp/position-registry.log
           python tools/ci/validate_mount_slice_log.py /tmp/position-registry.log --name "Position registry" --exit-code "$status" --expected-assertions 431
 
+      - name: Validate fighter definitions and read-only fighter snapshots over the Mount gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_fighter_foundation.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_fighter_foundation.gd > /tmp/fighter-foundation.log 2>&1 || status=$?
+          cat /tmp/fighter-foundation.log
+          python tools/ci/validate_mount_slice_log.py /tmp/fighter-foundation.log --name "Fighter foundation" --exit-code "$status" --expected-assertions 750
+
       - name: Smoke-test minimal 3D scene
         run: godot --headless --path GODOT_V1 --quit-after 5

@@ -7,7 +7,7 @@ and exits 0. The process exit status alone is therefore not evidence. This
 validator requires, together: exit status 0, no Godot/test diagnostics, exactly
 one well-formed PASS line and an exact assertion count. Any other suite that ends
 with `<name> PASS: <N> assertions` can reuse it through `--name` (the position
-registry test does); the default keeps the Mount-slice behavior unchanged.
+registry and fighter foundation tests do); the default keeps the Mount-slice behavior unchanged.
 
 The expected count is pinned in `.github/workflows/godot-v1.yml` next to the
 step. Change it only in the same reviewed change that adds or removes
