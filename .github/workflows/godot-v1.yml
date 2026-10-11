@@ -209,5 +209,16 @@ jobs:
           assert not errors, errors
           PY
 
+      - name: Validate canonical position registry (identity only) and its Mount integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_position_registry.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_position_registry.gd > /tmp/position-registry.log 2>&1 || status=$?
+          cat /tmp/position-registry.log
+          python tools/ci/validate_mount_slice_log.py /tmp/position-registry.log --name "Position registry" --exit-code "$status" --expected-assertions 431
+
       - name: Smoke-test minimal 3D scene
         run: godot --headless --path GODOT_V1 --quit-after 5

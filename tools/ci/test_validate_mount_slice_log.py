@@ -237,5 +237,114 @@ class WorkflowWiringTests(unittest.TestCase):
         self.assertIn("len(errors) == 2 and all(line.startswith('ERROR: read_only_property:') for line in errors)", text)
 
 
+REGISTRY = 'Position registry'
+REGISTRY_EXPECTED = 431
+REGISTRY_CLEAN = (
+    'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n'
+    '\n'
+    'Position registry PASS: 431 assertions\n'
+)
+# Abridged real output of a registry mutant (`declared_ids` returned the read-only constant
+# array): script errors aborted one test function, yet Godot printed PASS and exited 0.
+REGISTRY_PREMATURE = (
+    'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n'
+    '\n'
+    'Position registry PASS: 379 assertions\n'
+    'ERROR: Array is in read-only state.\n'
+    '   at: push_back (core/variant/array.cpp:283)\n'
+    '   GDScript backtrace (most recent call first):\n'
+    '       [0] _test_duplicates_and_mutation_attempts (res://tests/test_position_registry.gd:120)\n'
+    "SCRIPT ERROR: Invalid assignment on read-only value (on base: 'Array[String]').\n"
+    '          at: _test_duplicates_and_mutation_attempts (res://tests/test_position_registry.gd:122)\n'
+)
+
+
+class NamedSuiteTests(unittest.TestCase):
+    """The validator is shared by a second suite through --name; the default must not change."""
+
+    def test_named_clean_log_is_accepted(self):
+        self.assertEqual(validate(REGISTRY_CLEAN, 0, REGISTRY_EXPECTED, REGISTRY), [])
+
+    def test_named_zero_exit_premature_pass_is_rejected(self):
+        joined = '\n'.join(validate(REGISTRY_PREMATURE, 0, REGISTRY_EXPECTED, REGISTRY))
+        self.assertIn('assertion count 379 != required 431', joined)
+        self.assertIn('unexpected diagnostic: ERROR: Array is in read-only state.', joined)
+        self.assertIn('SCRIPT ERROR: Invalid assignment', joined)
+
+    def test_named_failures_missing_duplicate_malformed_and_exit(self):
+        def rejected(text, fragment, code=0):
+            problems = validate(text, code, REGISTRY_EXPECTED, REGISTRY)
+            self.assertTrue(any(fragment in problem for problem in problems), (fragment, problems))
+        rejected(REGISTRY_CLEAN.replace('Position registry PASS: 431 assertions\n', ''), 'missing')
+        rejected(REGISTRY_CLEAN + 'Position registry PASS: 431 assertions\n', '2 times')
+        rejected(REGISTRY_CLEAN.replace('431 assertions', '431 checks'), 'malformed')
+        rejected(REGISTRY_CLEAN.replace('431', '40'), 'assertion count 40 != required 431')
+        rejected(REGISTRY_CLEAN, 'status 1', code=1)
+        rejected(REGISTRY_CLEAN + 'Position registry: 2 / 431 assertions failed\n', 'assertions failed')
+        rejected(REGISTRY_CLEAN + 'ERROR: late\n', 'unexpected diagnostic')
+
+    def test_suites_never_accept_each_others_completion_lines(self):
+        self.assertTrue(validate(REAL_CLEAN, 0, EXPECTED, REGISTRY))
+        self.assertTrue(validate(REGISTRY_CLEAN, 0, REGISTRY_EXPECTED))
+        self.assertTrue(any('missing' in problem for problem in validate(REGISTRY_CLEAN, 0, REGISTRY_EXPECTED)))
+
+    def test_name_with_regex_metacharacters_is_matched_literally(self):
+        text = 'A.B (x) PASS: 5 assertions\n'
+        self.assertEqual(validate(text, 0, 5, 'A.B (x)'), [])
+        self.assertTrue(validate('AxB (x) PASS: 5 assertions\n', 0, 5, 'A.B (x)'))
+
+    def test_cli_name_option(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'registry.log'
+            path.write_text(REGISTRY_CLEAN)
+            script = str(Path(__file__).with_name('validate_mount_slice_log.py'))
+            run = lambda *extra: subprocess.run([sys.executable, '-I', script, str(path), *extra], capture_output=True, text=True)
+            good = run('--name', REGISTRY, '--exit-code', '0', '--expected-assertions', '431')
+            self.assertEqual((good.returncode, good.stderr), (0, ''))
+            self.assertIn('Position registry log OK', good.stdout)
+            wrong_default = run('--exit-code', '0', '--expected-assertions', '431')
+            self.assertEqual(wrong_default.returncode, 1)
+            self.assertIn('Mount slice log INVALID', wrong_default.stderr)
+            path.write_text(REGISTRY_PREMATURE)
+            bad = run('--name', REGISTRY, '--exit-code', '0', '--expected-assertions', '431')
+            self.assertEqual(bad.returncode, 1)
+            self.assertIn('Position registry log INVALID', bad.stderr)
+            for empty in ('', '   '):
+                blank = run('--name', empty, '--exit-code', '0', '--expected-assertions', '431')
+                self.assertEqual(blank.returncode, 2, blank.stderr)
+                self.assertIn('--name must not be empty', blank.stderr)
+
+
+class RegistryStepWiringTests(unittest.TestCase):
+    @staticmethod
+    def registry_step():
+        text = WORKFLOW.read_text()
+        match = re.search(r'^      - name: Validate canonical position registry[^\n]*\n(.*?)(?=^      - name: )', text, re.S | re.M)
+        assert match, 'registry step not found'
+        return match.group(1)
+
+    def test_step_validates_status_and_complete_log(self):
+        step = self.registry_step()
+        live = [line.strip() for line in step.splitlines() if line.strip() and not line.strip().startswith('#')]
+        self.assertTrue(any(line.startswith('godot --headless --path GODOT_V1 --script res://tests/test_position_registry.gd '
+                                            '> /tmp/position-registry.log 2>&1 || status=$?') for line in live), live)
+        self.assertIn('set -euo pipefail', live)
+        self.assertIn('shell: bash', live)
+        pin = re.search(r'^\s*python tools/ci/validate_mount_slice_log\.py /tmp/position-registry\.log --name "Position registry" '
+                        r'--exit-code "\$status" --expected-assertions ([1-9][0-9]*)\s*$', step, re.M)
+        self.assertIsNotNone(pin, step)
+        self.assertEqual(int(pin.group(1)), REGISTRY_EXPECTED, 'workflow pin and the test constant must change together')
+        for forbidden in ('continue-on-error', '\n        if:', 'set +e'):
+            self.assertNotIn(forbidden, step)
+
+    def test_registry_script_is_run_exactly_once(self):
+        self.assertEqual(WORKFLOW.read_text().count('res://tests/test_position_registry.gd'), 1)
+
+    def test_pin_matches_the_gdscript_completion_contract(self):
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_position_registry.gd').read_text()
+        self.assertIn('print("Position registry PASS: %d assertions" % checks)', source)
+        self.assertIn('push_error("Position registry: %d / %d assertions failed" % [failures, checks])', source)
+
+
 if __name__ == '__main__':
     unittest.main()

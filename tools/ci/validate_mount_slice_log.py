@@ -1,11 +1,13 @@
-"""Fail-closed validation of the frozen Mount-slice test log.
+"""Fail-closed validation of a headless Godot test log (Mount slice by default).
 
 `test_mount_slice.gd` runs every test group from `_initialize()`. A production
 `assert` (or other script error) aborts only the running function: Godot then
 continues with the next group, prints `Mount slice PASS` with fewer assertions
 and exits 0. The process exit status alone is therefore not evidence. This
 validator requires, together: exit status 0, no Godot/test diagnostics, exactly
-one well-formed PASS line and an exact assertion count.
+one well-formed PASS line and an exact assertion count. Any other suite that ends
+with `<name> PASS: <N> assertions` can reuse it through `--name` (the position
+registry test does); the default keeps the Mount-slice behavior unchanged.
 
 The expected count is pinned in `.github/workflows/godot-v1.yml` next to the
 step. Change it only in the same reviewed change that adds or removes
@@ -17,10 +19,7 @@ import sys
 from pathlib import Path
 
 ANSI = re.compile(r'\x1b\[[0-9;?]*[A-Za-z]')
-# Any line that mentions the completion marker, so malformed variants are
-# reported instead of silently ignored.
-COMPLETION_HINT = re.compile(r'mount\s+slice.*pass|pass.*mount\s+slice', re.IGNORECASE)
-COMPLETION = re.compile(r'Mount slice PASS: ([1-9][0-9]*) assertions')
+DEFAULT_NAME = 'Mount slice'
 # Godot engine diagnostics (ERROR/WARNING with optional SCRIPT/USER/SHADER/EDITOR
 # prefix), script aborts and the test's own failure output.
 # A callee `assert` can fail without aborting its caller: the count and exit
@@ -40,8 +39,18 @@ DIAGNOSTIC = re.compile(
 MAX_LISTED = 5
 
 
-def validate(text, exit_code, expected_assertions):
+def completion_patterns(name):
+    """(hint, exact): the hint matches any line mentioning the completion marker, so
+    malformed variants are reported instead of silently ignored."""
+    words = r'\s+'.join(re.escape(word) for word in name.split())
+    hint = re.compile(r'%s.*pass|pass.*%s' % (words, words), re.IGNORECASE)
+    exact = re.compile(r'%s PASS: ([1-9][0-9]*) assertions' % re.escape(name))
+    return hint, exact
+
+
+def validate(text, exit_code, expected_assertions, name=DEFAULT_NAME):
     """Return a list of human-readable problems; empty means the log is valid."""
+    hint, exact = completion_patterns(name)
     problems = []
     if exit_code != 0:
         problems.append('Godot exited with status %s, expected 0' % exit_code)
@@ -53,13 +62,13 @@ def validate(text, exit_code, expected_assertions):
     if len(diagnostics) > MAX_LISTED:
         problems.append('... and %d more unexpected diagnostic lines' % (len(diagnostics) - MAX_LISTED))
 
-    completions = [line for line in lines if COMPLETION_HINT.search(line) and not DIAGNOSTIC.search(line)]
+    completions = [line for line in lines if hint.search(line) and not DIAGNOSTIC.search(line)]
     if not completions:
-        problems.append('completion line "Mount slice PASS: <N> assertions" is missing (truncated or aborted output)')
+        problems.append('completion line "%s PASS: <N> assertions" is missing (truncated or aborted output)' % name)
     elif len(completions) > 1:
         problems.append('completion line appears %d times, expected exactly once' % len(completions))
     else:
-        match = COMPLETION.fullmatch(completions[0])
+        match = exact.fullmatch(completions[0])
         if match is None:
             problems.append('malformed completion line: ' + repr(completions[0]))
         elif int(match.group(1)) != expected_assertions:
@@ -80,19 +89,22 @@ def main(argv=None):
     parser.add_argument('log', type=Path, help='captured stdout+stderr of the Godot test run')
     parser.add_argument('--exit-code', type=int, required=True, help='Godot process exit status')
     parser.add_argument('--expected-assertions', type=positive_int, required=True)
+    parser.add_argument('--name', default=DEFAULT_NAME, help='suite name in the "<name> PASS: N assertions" line')
     args = parser.parse_args(argv)
+    if not args.name.strip():
+        parser.error('--name must not be empty')
     try:
         text = args.log.read_text(encoding='utf-8', errors='replace')
     except OSError as exc:
-        print('Mount slice log INVALID: cannot read %s: %s' % (args.log, exc), file=sys.stderr)
+        print('%s log INVALID: cannot read %s: %s' % (args.name, args.log, exc), file=sys.stderr)
         return 1
-    problems = validate(text, args.exit_code, args.expected_assertions)
+    problems = validate(text, args.exit_code, args.expected_assertions, args.name)
     if problems:
-        print('Mount slice log INVALID:', file=sys.stderr)
+        print('%s log INVALID:' % args.name, file=sys.stderr)
         for problem in problems:
             print('  - ' + problem, file=sys.stderr)
         return 1
-    print('Mount slice log OK: exit 0, no diagnostics, exactly %d assertions' % args.expected_assertions)
+    print('%s log OK: exit 0, no diagnostics, exactly %d assertions' % (args.name, args.expected_assertions))
     return 0
 
 
