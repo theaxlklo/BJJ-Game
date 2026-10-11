@@ -1,7 +1,9 @@
 # Tactical preparation, feints and defensive counterplay (game-wide design)
 
 **Status: DESIGN PROPOSAL (HG-26 direction). The direction is owner-approved; every number, rule, name, schema and code below is a proposal until the owner accepts it
-by decision id.** This document describes a **conceptual contract** that each position may adopt. It adds no runtime interface, base class, registry, shared
+by decision id.** The owner has **provisionally approved** the Half Guard v0 prototype choices (two local readiness tracks `top_base` and `bottom_frame`, `None/Partial/Ready` starting
+`Partial/Partial`, option M with Knee Shield and Knee Pin as the governed counters, preparation and defensive effort in B1b, feints in later B1g/B1h). **These are Half Guard prototype
+choices, not frozen game-wide numerical rules.** This document describes a **conceptual contract** that each position may adopt. It adds no runtime interface, base class, registry, shared
 data format or code, and it changes no Mount behavior. Position-local rules (techniques, conditions, costs, outcomes, information timing) live in each
 position's own proposal; the first is `HALF_GUARD_V0_PROPOSAL.md` §12 (HG-26A–F).
 
@@ -39,8 +41,8 @@ meaningful:
 | §27 safeguard | How the proposal keeps it |
 | --- | --- |
 | The UI does not lie | The public view states the truth: the *apparent* technique, the public cues and — if GP-2 is accepted — the list of real techniques this fighter is *currently eligible* to conceal. It never labels the apparent technique as the real one. |
-| A cheap threat is answerable cheaply | A feint costs exactly what a direct technique at the same commitment costs (§5.4). A defender facing LOW may respond LOW without an undercommitment penalty. Optional rule HG-26E-4: a LOW-effective feint cannot cause a position exit. |
-| Repeated feints are not a free drain | Both fighters pay the same commitment costs; a *called* feint costs the attacker progress (§6.3); an unfunded feint is refused (so Rule 1 cannot make it free). |
+| A cheap threat is answerable cheaply | A feint costs its commitment cost plus a separately funded surcharge (§5.4; candidate +3), so a LOW feint (6) is answered by a LOW response (3) at no undercommitment penalty and still costs the attacker more. Optional rule HG-26E-4: a LOW-effective feint cannot cause a position exit. |
+| Repeated feints are not a free drain | The attacker pays the surcharge on every feint, the defender does not; a *called* feint also costs the attacker progress (§6.3); an unfunded feint is refused (so Rule 1 cannot make it free). |
 
 ## 2. Vocabulary
 
@@ -91,7 +93,7 @@ instance of the *vocabulary*, not a reason to refactor frozen, parity-qualified 
 | Defensive readiness and defensive effort as a pair | Which responses are powerful, the effort numbers, the wear rule |
 | A feint is one exchange; apparent ≠ real; defender commits before reveal | The eligible feint pairs, required conditions, bite/miss adjustments |
 | Sealed-intent commit-and-reveal ordering, public-view schema discipline, refusal-without-mutation | Concrete action/response vocabularies, option reasons |
-| Funding: costs equal direct costs; unfunded feints refused; exhaustion unchanged | Whether a LOW feint may exit, position-specific caps |
+| Funding: direct cost plus a separately funded surcharge; all-or-nothing; unfunded feints refused; exhaustion unchanged | The surcharge value, whether a LOW feint may exit, position-specific caps |
 | Deterministic replay and anti-peeking obligations | Fallback response for a timed-out defender (published per position) |
 | Symmetry: any side may prepare, attack, defend and feint *if the position declares it* | Which side gets which feint |
 
@@ -116,25 +118,27 @@ position's baseline table the *neutral-state table*, so adding preparation does 
 A **powerful response** reads the responder's own condition: a ready structure gives its full or enhanced counter; an unprepared structure gives a weak one. The effort is
 priced with existing quantities only:
 
-* **Response commitment** (existing). Proposal: a powerful response funded below `MEDIUM` counts as unprepared (the effort was not made). `HIGH` additionally preserves the
-  structure when the defense succeeds. `MEDIUM` spends one tier when the defense succeeds or fails decisively. These are position-local numbers (see HG-26C).
+* **Response commitment** (existing). Proposal: a powerful response whose *funded effective* commitment is below `MEDIUM` counts as unprepared (the effort was not made). `HIGH` additionally preserves the
+  structure when the defense succeeds **only if the charge was actually paid**: a Rule 1 waiver removes the charge, so it cannot buy the preservation. `MEDIUM` spends one tier when the defense succeeds
+  or fails decisively. Requested, funded-effective and charged commitment are three distinct quantities (`HALF_GUARD_V0_PROPOSAL.md` §12.3.1). These are position-local numbers (see HG-26C).
 * **Condition wear** — the positional tradeoff. Repeating a powerful response degrades the structure that powers it, so a defender cannot repeat the same best counter
   indefinitely for free. Rebuilding spends the defender's *own initiative window* (an action that builds the condition) and so costs tempo.
 * Ordinary (non-governed) responses stay free of wear. Whether *every* response should be governed is a position-local choice with a measured tradeoff
   (`HALF_GUARD_V0_PROPOSAL.md` §12.1.5, option S).
 
-### 5.4 Funding (feint and direct share one cost scale)
+### 5.4 Funding (a feint costs the direct cost plus a separately funded surcharge)
 
-* The cost of an exchange is the existing cost of the attacker's *effective* commitment: LOW 3, MEDIUM 7, HIGH 12 (current policy), after the existing funding
-  downgrade. **A feint at commitment `c` costs exactly what a direct technique at `c` costs**: no new currency and no surcharge. In particular `HIGH` is never an extra cost
-  merely because a feint uses it: a direct `HIGH` and a feint `HIGH` both cost 12.
-* The *price* of a feint is therefore informational and positional, not a hidden stamina charge: if called, the attacker's real technique is shifted against it (§6.3).
-* Any proposed *additional* effort (a surcharge, a cooldown) would have to be expressed in existing commitment tiers and pass through the same funding rules; none is
-  proposed for the first feint slice.
-* **Unfunded feint:** a feint requires the attacker's effective commitment to be at least `LOW` at admission. Otherwise the command is refused without mutation. This prevents
-  an unfunded attacker (whose waived response cost, Rule 1, would make the exchange free for both) from running free mind games.
-* **Exhaustion** is unchanged: an Exhausted attacker's real technique is shifted −1 and an Exhausted defender's response +1 against the defender, exactly as for a direct
-  technique.
+* The cost of a *direct* exchange is the existing cost of the attacker's *effective* commitment: LOW 3, MEDIUM 7, HIGH 12 (current policy), after the existing funding downgrade.
+* **Owner concept: a feint costs more than an ordinary technique.** Candidate rule (a numeric decision, GP-10): a feint costs the cost of its effective commitment **plus a surcharge `s`**, illustrative
+  `s = +3` (the LOW cost). The premium is the surcharge, applied equally at every tier (LOW 3 → 6, MEDIUM 7 → 10, HIGH 12 → 15). **Choosing HIGH is not itself a premium**: a direct HIGH costs 12.
+* **Funding is all-or-nothing and separate.** The surcharge is reserved first, then the commitment is funded from the remainder with the existing `determine`: `determine(requested, available − s)`;
+  if `available < s` or the result is unfunded, the feint is refused without mutation. The commitment may *downgrade* exactly as a direct technique's does; the surcharge never partially funds and
+  is never waived. Actual spending is one `spend_up_to(s + effective_cost)` that, because funding was checked first, charges the full amount.
+* **Rule 1** (an unfunded initiator waives the responder's charge) cannot apply to a feint, because an unfunded initiator cannot feint; the responder is never charged a surcharge.
+* An unfunded or under-funded feint is refused, never silently turned into a direct technique. The price of a feint is therefore both a stamina premium for the attacker and, if the feint is
+  called, positional (§6.3). Any other additional effort (a cooldown, a second currency) is not proposed.
+* **Exhaustion** is unchanged: an Exhausted attacker's real technique is shifted −1 and an Exhausted defender's response +1 against the defender, exactly as for a direct technique.
+* This section is for the later feint slice; the first preparation slice contains no feint cost code. The Half Guard arithmetic and boundary tests are in `HALF_GUARD_V0_PROPOSAL.md` §12.5.
 
 ### 5.5 Symmetry
 
@@ -165,7 +169,7 @@ Relative to the public view, a defender's response falls into classes that the t
 * **Balanced** (worst case ≤ 0 across direct and every eligible feint): never decisively beaten by either mode.
 
 The ±1 adjustments are applied to the *real* technique after readiness shifts and before exhaustion in the position's pipeline. These specific values are proposals
-(HG-26B). Excessive stamina use is bounded by funding: a fighter that repeatedly feints pays the same cost per window as a direct attacker, and a *called* feint also
+(HG-26B). Excessive stamina use is bounded by funding: a fighter that repeatedly feints pays the direct cost plus the surcharge each time, and a *called* feint also
 costs axis progress, so repeating a read feint is self-defeating.
 
 ### 6.4 Counterplay requirement
@@ -291,3 +295,4 @@ See `HALF_GUARD_V0_PROPOSAL.md` §12.7 for the Half Guard scenarios. The class d
 | GP-7 | Use the Guide §21 tier vocabulary `None/Partial/Ready` as integers `0..2`; no continuous internal values in the first implementation | Yes |
 | GP-8 | Generalize into shared code only by the rule of three, or on explicit owner authorization to migrate Mount | Yes |
 | GP-9 | A called feint grants the defender nothing beyond the attacker's shift (no extra initiative or window) unless a position declares otherwise | Yes |
+| GP-10 | A feint costs the direct cost of its effective commitment plus a separately funded, all-or-nothing surcharge (illustrative +3); the value is a per-position numeric decision | Yes (value pending) |
