@@ -38,7 +38,16 @@ jobs:
         run: godot --headless --path GODOT_V1 --editor --import --quit
 
       - name: Run frozen Mount-slice tests
-        run: godot --headless --path GODOT_V1 --script res://tests/test_mount_slice.gd
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A production assert aborts only one test function: Godot can still print
+          # PASS with fewer assertions and exit 0. Validate status and the whole log.
+          # The pinned count changes only with reviewed test_mount_slice.gd changes.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_mount_slice.gd > /tmp/mount-slice.log 2>&1 || status=$?
+          cat /tmp/mount-slice.log
+          python tools/ci/validate_mount_slice_log.py /tmp/mount-slice.log --exit-code "$status" --expected-assertions 256992
 
       - name: Generate reference results using original Python engine
         run: PYTHONPATH=src python GODOT_V1/tests/generate_mount_reference.py

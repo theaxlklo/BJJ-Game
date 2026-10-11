@@ -1,0 +1,241 @@
+"""Synthetic and real-log regressions for the Mount-slice false-success guard."""
+import contextlib
+import io
+import re
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from validate_mount_slice_log import main, validate
+
+EXPECTED = 256992
+WORKFLOW = Path(__file__).resolve().parents[2] / '.github' / 'workflows' / 'godot-v1.yml'
+
+# Verbatim output of a clean run of the qualified A3d test (local and GitHub CI).
+REAL_CLEAN = (
+    'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n'
+    '\n'
+    'A3d resolver inventory: 45720 cases; 3690 candidates without exits\n'
+    'A3d settled inventory: 9144 accepted exchanges\n'
+    'Mount slice PASS: 256992 assertions\n'
+)
+
+# Abridged output of a real mutant run (`BjjGrade.successful` gate removed): a
+# production assert aborted one test function, yet Godot printed PASS and
+# exited 0 with only 67139 assertions (the last two backtrace lines are omitted).
+REAL_PREMATURE = (
+    'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n'
+    '\n'
+    'A3d settled inventory: 9144 accepted exchanges\n'
+    'Mount slice PASS: 67139 assertions\n'
+    'SCRIPT ERROR: Assertion failed: Missing exit-map destination for escape\n'
+    '          at: resolve_action (res://scripts/positions/mount/mount_resolver.gd:64)\n'
+    '          GDScript backtrace (most recent call first):\n'
+    '              [0] resolve_action (res://scripts/positions/mount/mount_resolver.gd:64)\n'
+    '              [1] _test_exit_inventory_resolver (res://tests/test_mount_slice.gd:300)\n'
+    '              [2] _initialize (res://tests/test_mount_slice.gd:14)\n'
+    "SCRIPT ERROR: Invalid access to property or key 'final_grade' on a base object of type 'Dictionary'.\n"
+    '          at: _test_exit_inventory_resolver (res://tests/test_mount_slice.gd:302)\n'
+)
+
+# Output shape of a run that records assertion failures (test calls quit(1)).
+FAILING_RUN = (
+    'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n'
+    '\n'
+    'FAIL catalog mount.bottom.elbow_knee_escape grade=2 band=0: got Half Guard; expected Open Guard\n'
+    'ERROR: Mount slice: 1684 / 256990 assertions failed\n'
+)
+
+
+def clean_with(extra_line, position=-1):
+    lines = REAL_CLEAN.splitlines()
+    lines.insert(position, extra_line)
+    return '\n'.join(lines) + '\n'
+
+
+class ValidatorTests(unittest.TestCase):
+    def assertRejected(self, text, exit_code=0, fragment=''):
+        self.assertTrue(fragment, 'a rejection fragment is required')
+        problems = validate(text, exit_code, EXPECTED)
+        self.assertTrue(problems, 'log was accepted: ' + repr(text))
+        self.assertTrue(any(fragment in problem for problem in problems), (fragment, problems))
+
+    def test_real_clean_log_is_accepted(self):
+        self.assertEqual(validate(REAL_CLEAN, 0, EXPECTED), [])
+
+    def test_crlf_and_ansi_wrapped_clean_log_is_accepted(self):
+        self.assertEqual(validate(REAL_CLEAN.replace('\n', '\r\n'), 0, EXPECTED), [])
+        self.assertEqual(validate(REAL_CLEAN.replace('Mount slice PASS: 256992 assertions',
+                                                      '\x1b[32mMount slice PASS: 256992 assertions\x1b[0m'), 0, EXPECTED), [])
+
+    def test_zero_exit_with_premature_pass_is_rejected(self):
+        problems = validate(REAL_PREMATURE, 0, EXPECTED)
+        joined = '\n'.join(problems)
+        self.assertIn('assertion count 67139 != required 256992', joined)
+        self.assertIn('SCRIPT ERROR: Assertion failed', joined)
+
+    def test_premature_pass_without_any_other_diagnostic_is_rejected_by_count_alone(self):
+        text = REAL_CLEAN.replace('256992', '67139')
+        self.assertRejected(text, fragment='assertion count 67139')
+
+    def test_count_must_match_exactly_in_both_directions(self):
+        self.assertRejected(REAL_CLEAN.replace('256992', '256991'), fragment='256991')
+        self.assertRejected(REAL_CLEAN.replace('256992', '256993'), fragment='256993')
+
+    def test_missing_pass_and_empty_or_truncated_output_are_rejected(self):
+        self.assertRejected('', fragment='missing')
+        self.assertRejected('\n\n', fragment='missing')
+        truncated = ''.join(REAL_CLEAN.splitlines(True)[:3])
+        self.assertRejected(truncated, fragment='missing')
+        self.assertRejected(REAL_CLEAN.replace('Mount slice PASS: 256992 assertions\n', 'Mount slice PASS: 2569'), fragment='malformed')
+
+    def test_duplicate_completion_lines_are_rejected(self):
+        self.assertRejected(clean_with('Mount slice PASS: 256992 assertions'), fragment='2 times')
+        self.assertRejected(clean_with('Mount slice PASS: 67139 assertions', 2), fragment='2 times')
+
+    def test_malformed_completion_lines_are_rejected(self):
+        for bad in ('Mount slice PASS: 256,992 assertions', 'Mount slice PASS: 0256992 assertions',
+                    'Mount slice PASS: 256992', 'Mount slice PASS: 256992 assertions extra',
+                    'Mount slice PASS:  256992 assertions', 'Mount slice PASS: 0 assertions',
+                    'Mount slice PASS: -5 assertions', 'mount slice pass: 256992 assertions',
+                    ' Mount slice PASS: 256992 assertions', 'Mount slice PASS: assertions'):
+            with self.subTest(bad=bad):
+                text = REAL_CLEAN.replace('Mount slice PASS: 256992 assertions', bad)
+                self.assertRejected(text, fragment='malformed')
+
+    def test_nonzero_exit_is_rejected_even_with_a_perfect_log(self):
+        self.assertRejected(REAL_CLEAN, exit_code=1, fragment='status 1')
+        self.assertRejected(REAL_CLEAN, exit_code=-11, fragment='status -11')
+        self.assertRejected(REAL_CLEAN, exit_code=139, fragment='status 139')
+
+    def test_each_unexpected_diagnostic_form_is_rejected(self):
+        for line in ('ERROR: something unexpected', 'WARNING: something unexpected',
+                     'SCRIPT ERROR: Parse Error: nope', 'USER ERROR: nope', 'USER WARNING: nope',
+                     'SHADER ERROR: nope', 'EDITOR ERROR: nope', '  ERROR: indented',
+                     'FAIL some case: got 1; expected 2', 'ERROR: Mount slice: 1 / 5 assertions failed',
+                     'Mount slice: 1 / 5 assertions failed', 'Parse Error: Identifier not found',
+                     'GDScript backtrace (most recent call first):', 'Program crashed with signal 11',
+                     'Traceback (most recent call last):', 'SCRIPT ERROR: Assertion failed: x'):
+            for position in (2, -1):
+                with self.subTest(line=line, position=position):
+                    self.assertRejected(clean_with(line, position), fragment='unexpected diagnostic')
+
+    def test_diagnostics_after_a_perfect_count_and_exit_zero_are_rejected(self):
+        # A failing callee assert need not abort its caller: count and exit stay perfect.
+        for line in ('SCRIPT ERROR: Assertion failed: Missing exit-map destination',
+                     'ERROR: late', 'WARNING: late', 'USER ERROR: late'):
+            with self.subTest(line=line):
+                self.assertRejected(REAL_CLEAN + line + '\n', fragment='unexpected diagnostic')
+
+    def test_diagnostics_glued_to_another_line_are_rejected(self):
+        for glued in ('A3d settled inventory: 9144 accepted exchangesSCRIPT ERROR: boom',
+                      'A3d settled inventory: 9144 accepted exchangesERROR: boom',
+                      'foo WARNING: boom', '\ufeffERROR: boom', '\x00ERROR: boom'):
+            with self.subTest(glued=glued):
+                self.assertRejected(clean_with(glued, 3), fragment='unexpected diagnostic')
+
+    def test_lowercase_prose_mentioning_error_is_not_a_diagnostic(self):
+        self.assertEqual(validate(clean_with('no error: all good'), 0, EXPECTED), [])
+
+    def test_real_failing_run_is_rejected_with_exit_and_diagnostics(self):
+        problems = validate(FAILING_RUN, 1, EXPECTED)
+        joined = '\n'.join(problems)
+        for fragment in ('status 1', 'FAIL catalog', 'assertions failed', 'missing'):
+            self.assertIn(fragment, joined)
+
+    def test_benign_a3d_summary_lines_are_not_diagnostics(self):
+        text = REAL_CLEAN + 'A3d resolver inventory: 45720 cases; 3690 candidates without exits\n'
+        self.assertEqual(validate(text, 0, EXPECTED), [])
+
+    def test_many_diagnostics_are_summarised(self):
+        text = REAL_CLEAN + 'ERROR: x\n' * 20
+        problems = validate(text, 0, EXPECTED)
+        self.assertLessEqual(len(problems), 7)
+        self.assertTrue(any('15 more' in problem for problem in problems))
+
+
+class CommandLineTests(unittest.TestCase):
+    def run_cli(self, text, *args, name='mount.log'):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / name
+            if text is not None:
+                path.write_text(text)
+            return subprocess.run([sys.executable, '-I', str(Path(__file__).with_name('validate_mount_slice_log.py')),
+                                   str(path), *args], capture_output=True, text=True)
+
+    def test_exit_codes_and_messages(self):
+        good = self.run_cli(REAL_CLEAN, '--exit-code', '0', '--expected-assertions', str(EXPECTED))
+        self.assertEqual((good.returncode, good.stderr), (0, ''))
+        self.assertIn('OK', good.stdout)
+        bad = self.run_cli(REAL_PREMATURE, '--exit-code', '0', '--expected-assertions', str(EXPECTED))
+        self.assertEqual(bad.returncode, 1)
+        self.assertIn('INVALID', bad.stderr)
+        self.assertIn('67139', bad.stderr)
+        self.assertEqual(self.run_cli(REAL_CLEAN, '--exit-code', '1', '--expected-assertions', str(EXPECTED)).returncode, 1)
+
+    def test_unreadable_log_and_bad_arguments_fail_closed(self):
+        self.assertEqual(self.run_cli(None, '--exit-code', '0', '--expected-assertions', str(EXPECTED)).returncode, 1)
+        self.assertNotEqual(self.run_cli(REAL_CLEAN, '--expected-assertions', str(EXPECTED)).returncode, 0)
+        self.assertNotEqual(self.run_cli(REAL_CLEAN, '--exit-code', '0').returncode, 0)
+        self.assertNotEqual(self.run_cli(REAL_CLEAN, '--exit-code', '0', '--expected-assertions', '0').returncode, 0)
+        self.assertNotEqual(self.run_cli(REAL_CLEAN, '--exit-code', 'x', '--expected-assertions', '5').returncode, 0)
+
+    def test_binary_and_directory_logs_fail_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / 'binary.log'
+            binary.write_bytes(b'\xff\xfe\x00garbage')
+            args = ('--exit-code', '0', '--expected-assertions', str(EXPECTED))
+            script = str(Path(__file__).with_name('validate_mount_slice_log.py'))
+            for target in (binary, Path(directory)):
+                result = subprocess.run([sys.executable, '-I', script, str(target), *args], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 1, (target, result.stderr))
+                self.assertIn('INVALID', result.stderr)
+
+    def test_main_accepts_argv_in_process(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'mount.log'
+            path.write_text(REAL_CLEAN)
+            self.assertEqual(main([str(path), '--exit-code', '0', '--expected-assertions', str(EXPECTED)]), 0)
+            with contextlib.redirect_stderr(io.StringIO()) as captured:
+                self.assertEqual(main([str(path), '--exit-code', '0', '--expected-assertions', '1']), 1)
+            self.assertIn('256992 != required 1', captured.getvalue())
+
+
+class WorkflowWiringTests(unittest.TestCase):
+    """The step must keep calling the validator; a plain `godot ...` run is the vulnerability."""
+
+    @staticmethod
+    def mount_step():
+        text = WORKFLOW.read_text()
+        match = re.search(r'^      - name: Run frozen Mount-slice tests\n(.*?)(?=^      - name: )', text, re.S | re.M)
+        assert match, 'Mount-slice step not found'
+        return match.group(1)
+
+    def test_mount_step_validates_exit_status_and_complete_log(self):
+        step = self.mount_step()
+        self.assertIn('res://tests/test_mount_slice.gd', step)
+        self.assertIn('> /tmp/mount-slice.log 2>&1 || status=$?', step)
+        self.assertIn('python tools/ci/validate_mount_slice_log.py /tmp/mount-slice.log --exit-code "$status" --expected-assertions', step)
+        pin = re.search(r'--expected-assertions ([1-9][0-9]*)\s*$', step)
+        self.assertIsNotNone(pin)
+        self.assertEqual(int(pin.group(1)), EXPECTED, 'workflow pin and the test constant must change together')
+        self.assertIn('shell: bash', step)
+        self.assertIn('set -euo pipefail', step)
+        for forbidden in ('continue-on-error', '\n        if:', 'set +e'):
+            self.assertNotIn(forbidden, step)
+        uncommented = [line for line in step.splitlines() if not line.lstrip().startswith('#')]
+        self.assertTrue(any(line.lstrip().startswith('python tools/ci/validate_mount_slice_log.py') for line in uncommented),
+                        'validator invocation must be live code, not a comment')
+
+    def test_slice_script_is_run_exactly_once_by_the_validated_step(self):
+        text = WORKFLOW.read_text()
+        self.assertEqual(text.count('res://tests/test_mount_slice.gd'), 1)
+
+    def test_stamina_read_only_diagnostic_step_is_untouched(self):
+        text = WORKFLOW.read_text()
+        self.assertIn("len(errors) == 2 and all(line.startswith('ERROR: read_only_property:') for line in errors)", text)
+
+
+if __name__ == '__main__':
+    unittest.main()
