@@ -140,10 +140,9 @@ func attempt(request: BjjExchangeResult.Request) -> BjjExchangeResult:
     r.base_resolution = _resolve(request, 0, ready)
     r.resolution = r.base_resolution if r.exhaustion.modifier == 0 else _resolve(request, r.exhaustion.modifier, ready)
     if rules.v04:
-        r.initiator_commitment_modifier = _magnitude(r.initiator_funding.effective, r.resolution.final_grade)
-        r.response_undercommitment_modifier = 1 if _rank(r.responder_funding.effective) < _rank(r.initiator_funding.effective) else 0
-        var magnitude_grade := BjjGrade.shift(r.resolution.final_grade, r.initiator_commitment_modifier)
-        var final_grade := BjjGrade.shift(magnitude_grade, r.response_undercommitment_modifier)
+        r.initiator_commitment_modifier = BjjCommitmentSettlement.magnitude_modifier(r.initiator_funding.effective, r.resolution.final_grade)
+        r.response_undercommitment_modifier = BjjCommitmentSettlement.undercommitment_modifier(r.initiator_funding.effective, r.responder_funding.effective)
+        var final_grade := BjjCommitmentSettlement.sequential_grade(r.resolution.final_grade, r.initiator_commitment_modifier, r.response_undercommitment_modifier)
         if r.initiator_commitment_modifier != 0 or r.response_undercommitment_modifier != 0:
             # Re-resolve using actual sequential target, not the sum of shifts.
             r.resolution = _resolve(request, final_grade - r.base_resolution.final_grade, ready)
@@ -154,7 +153,7 @@ func attempt(request: BjjExchangeResult.Request) -> BjjExchangeResult:
     r.stamina = attacker.spend_up_to(r.initiator_funding.effective_cost)
     if rules.v04:
         var response_cost := r.responder_funding.effective_cost
-        if rules.rule1 and r.initiator_funding.effective.is_empty():
+        if BjjCommitmentSettlement.waives_response_cost(rules.rule1, r.initiator_funding.effective):
             r.response_stamina_waived = response_cost
             response_cost = 0
         r.response_stamina = defender.spend_up_to(response_cost)
@@ -173,22 +172,6 @@ func attempt(request: BjjExchangeResult.Request) -> BjjExchangeResult:
     _record_settlement(r)
     r.outcome = snapshot()
     return r
-
-static func _rank(commitment: String) -> int:
-    return BjjCommitment.ORDER.find(commitment) + 1
-
-static func _magnitude(commitment: String, grade: int) -> int:
-    if commitment == BjjCommitment.HIGH:
-        if grade == BjjGrade.SUCCESS:
-            return 1
-        if grade == BjjGrade.FAILURE:
-            return -1
-    if commitment == BjjCommitment.LOW or commitment.is_empty():
-        if grade == BjjGrade.STRONG_SUCCESS:
-            return -1
-        if grade == BjjGrade.STRONG_FAILURE:
-            return 1
-    return 0
 
 func _resolve(request: BjjExchangeResult.Request, modifier: int, ready: bool) -> BjjExchangeResult.Resolution:
     var finish := request.action_id == FINISH
