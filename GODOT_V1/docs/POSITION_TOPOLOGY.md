@@ -1,6 +1,6 @@
 # Position topology and transition semantics (A3c — specification only)
 
-**Status: specification, recorded owner-approved direction (§19) and proposals. Nothing in this document is implemented, and nothing here
+**Status: specification, recorded owner-approved direction (§19) and proposals. Nothing in this document is implemented except the identity-only registry (A3e, §18), and nothing here
 changes Mount, the graph owner, the A3b carry-over schema, Python, a fixture or a digest.** It adds no
 executable position, no Mount exit, no catalog entry and no rule. It exists so that the three exit
 labels the frozen Mount engine happens to emit today are not mistaken for the game's complete topology.
@@ -581,7 +581,8 @@ follow-up replaces the earlier seven-step list with two tracks that share a regi
    is **not yet proven**: `bjj-scope-plan` asks for proof from a second use case before a generalized framework,
    so whether to build the registry before Standing's factory (S1) lands is a separate authorization decision. The
    approved direction is a validated registry (P-1, P-2); a pinned id list plus a test is a possible smaller first step.
-   It needs its own explicit authorization.
+   It needs its own explicit authorization. **Implemented as A3e** (owner-authorized): `BjjPositionRegistry` and
+   `tests/test_position_registry.gd`; the second-consumer question stays open and no existing code was changed to use it.
 4. **Track A, receiving-position integration (unchanged except for P-10, approved in direction, §19; Half Guard first):** Half Guard rules and test-only
    oracle (Q1–Q8, D6) -> receiver seams (T-7) -> graph commit path and envelope v2 -> Mount→Half Guard. Half Guard's
    entry must accept a role map and must not assume a Mount source (P-10).
@@ -677,8 +678,9 @@ Supporting direction **[GUIDE-DIRECTION]** (none of it is in the §0A freeze reg
 ("The player can: begin Standing"), §63 Phase 3 exit ("every normal match can begin Standing"), §63 Phase 6
 North-Star Milestone #1 ("plays a complete BJJ match from Standing"), §68 ("Match starts Standing") and §4
 ("A full match must flow through Standing, takedown entries, ... Leg Entanglement"). Everything below is a
-**[PROPOSAL]** unless tagged. **Nothing here is implemented: Standing is not executable, there is no registry or
-enum module, and the runtime default and the three Mount exits are unchanged.**
+**[PROPOSAL]** unless tagged. **Only the identity-only registry is implemented (A3e, `BjjPositionRegistry` in
+`scripts/core/position_registry.gd`; §18.2): Standing is not executable, there is no start-aware constructor, roster, topology
+catalog or enum module, and the runtime default and the three Mount exits are unchanged.** Declared does not mean implemented.
 
 ### 18.1 Proposed canonical position-family inventory (initial registry)
 
@@ -836,7 +838,7 @@ them. The A3b and graph shapes already carry only the family id, which stays val
 | --- | --- | --- |
 | Positions constructible | Mount only (`BjjMatchWindowGateway.create`, `BjjPositionGraphMatch.create` take `(configuration, top_id, bottom_id)`) | Standing for normal matches; any registered fresh-start position for training or scenarios |
 | Start parameter | None | An explicit start id, default `standing` (§18.4) |
-| Registry | None; `"mount"` is a constant | One validated registry (§18.2) |
+| Registry | Identity-only `BjjPositionRegistry` (A3e) with no consumer yet; `"mount"` is still a separate constant in the Mount contract, equal to the registry value and not derived from it | One validated registry (§18.2), used by start validation and the catalog validator |
 | Standing | Not implemented (not executable) | The normal-match entry engine |
 | Mount's role | The only engine; also the only start | One position among ten; a legitimate training start |
 | Exits | `Half Guard`, `Open Guard`, `Reversal` halt (Slice A) | Unchanged until destinations exist |
@@ -926,7 +928,7 @@ unchanged, and D1–D6, A3b and the three current Mount exits are preserved.
 | T-1 | Families and variations are distinct. Variations are the default for the Guide §10 substates | Technical Mount remains unresolved against the frozen Mount: §7 options (i)–(iii) stay open. Promotion criteria remain open, and Deep Half (not in §10) is not covered |
 | T-2 | A connection the Guide does not list requires explicit owner approval and provenance before it is cataloged | No edge beyond Guide §11 is approved; the additions in §5.2 stay "proposed" and uncataloged |
 | T-3 | `cataloged` / `producible` / `receivable` semantics, one authority per status, promotion as a move and never a copy | No catalog is built; §14 step 7 stays conditional and needs its own authorization |
-| P-1 / P-2 | A validated registry of stable string ids; the ten initial families exactly as listed in §18.1 | Class, function and code names stay provisional; nothing is implemented, and building it needs a separate authorization (§14 step 3); the amendment rule for adding a family is the §18.1 rule, not a separate approval |
+| P-1 / P-2 | A validated registry of stable string ids; the ten initial families exactly as listed in §18.1 | Class, function and code names stay provisional (the identity-only registry was since implemented as A3e, which did not change their proposal status); nothing else is implemented; the amendment rule for adding a family is the §18.1 rule, not a separate approval |
 | P-3 | Ids are append-only, never reused or silently remapped, with tombstones on retirement; registry lifecycle is separate from record-schema versions (§19.2 a, b) | Tombstone mechanics and replay compatibility are neither designed nor implemented |
 | P-4 | The first registry declares families only | Variation registration is not decided |
 | P-5 / P-6 | Normal matches default to `standing`; scenario starts are allowed; there is no fallback; the existing Mount-only constructors are preserved while Standing is unimplemented | Error-code names, validation order and the start-aware constructor signature stay proposals (§18.4, §18.5) |
@@ -968,7 +970,7 @@ d. **Standing outcomes (P-9).** Each Standing action/result branch must state ex
   reposition, the Reversal landing, receiver state including latch restoration, submission as a destination, role
   vocabularies and segment schemas per family, GrappleMap reuse, transients, scoring hooks).
 * D3-B applicability and re-entry reconciliation; the Reversal landing; new Mount exits.
-* Implementation of the registry, topology catalog, Standing engine, receiver factories and entry factories; tombstone
+* Implementation of the topology catalog (the identity-only registry was implemented separately as A3e), Standing engine, receiver factories and entry factories; tombstone
   and historical-replay mechanics; the A3d test-only slice. Each needs its own explicit authorization.
 
 ### 19.4 Effect on the rest of this document
