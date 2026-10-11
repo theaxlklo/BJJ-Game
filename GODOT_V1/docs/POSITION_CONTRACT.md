@@ -90,6 +90,8 @@ Mount's frozen catalog emits three exit labels. `Half Guard` and `Open Guard` ma
 section 9), and the specification does not say where a Trap-and-Roll reversal lands. The
 contract therefore reports it as an exit with `resolved = false` and no destination id. This
 needs an owner decision before a position graph can route it; nothing was invented.
+See [POSITION_TOPOLOGY.md](POSITION_TOPOLOGY.md) (A3c, proposal) for what a future landing rule would need;
+the three labels here are what the frozen catalog produces, not all connections Mount may eventually have.
 
 ## Architecture comparison
 

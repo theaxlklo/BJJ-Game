@@ -3,6 +3,8 @@
 Status: additive, read-only, validated, detached record of Mount state that a future position
 transition may need. **No receiver exists.** Nothing here creates a Half Guard, commits a graph
 transition, re-arms D3-B, changes stamina policy or defines a combat rule. Python is untouched.
+See [POSITION_TOPOLOGY.md](POSITION_TOPOLOGY.md) (A3c, proposal) for how this v1 record relates to a wider
+topology and how it would be versioned when a destination becomes executable.
 
 ## Ownership boundaries
 

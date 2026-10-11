@@ -96,3 +96,7 @@ MountMatch or production recovery parity. Issue #20 is the next controller slice
 ## Position graph (proposal)
 
 [POSITION_GRAPH.md](POSITION_GRAPH.md) proposes the Mount → Half Guard transition architecture and Definition of Done. It is a specification only: no Half Guard mechanics exist, and Mount `Reversal` stays unresolved.
+
+## Position topology (proposal)
+
+[POSITION_TOPOLOGY.md](POSITION_TOPOLOGY.md) (A3c) is a specification only. It separates the three exit labels the frozen Mount engine emits today from the game's future position topology, evaluates GrappleMap as an architectural reference (nothing imported), and proposes a future transition contract, receiver-state decision matrix and chaining boundary. A follow-up adds a proposed canonical position-family inventory, a registry recommendation (stable string ids, not an integer enum) and a match-start contract in which normal matches begin from Standing; Standing and the registry are not implemented and Mount remains the only constructed position. It changes no code, schema, fixture or rule, and it assigns no landing to Mount `Reversal`.
