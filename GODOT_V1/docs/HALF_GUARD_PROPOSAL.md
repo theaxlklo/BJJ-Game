@@ -1,6 +1,8 @@
 # Half Guard rules and architecture proposal (PROPOSED — nothing here is approved)
 
 **Status: proposal for owner review. No gameplay, fixture, Python or workflow change.**
+Q1–Q8 are NOT fully approved. §11 records the owner's review decisions (conceptual approvals only); all numerical
+values in this document remain provisional.
 Every number, name and default below is a *recommendation*; none is approved or frozen.
 Scope: answers Q1–Q8 of `POSITION_GRAPH.md` §12 for the first Half Guard node (Mount →
 Half Guard). Visual direction (Issue #40) is out of scope.
@@ -254,8 +256,8 @@ edited away.
 | **B2** | `BjjPositionGraphMatch.classify_exit` is hard-wired to Mount's exit table | Half Guard's labels would classify as "undeclared" | Make classification position-aware (active position's declared exit map), backward compatible; its own small slice with Slice A tests unchanged |
 | **B3** | `BjjMatchWindowGateway` is Mount-specific (composes `BjjMountMatch`, uses `next_window`/`bottom_decision`) | No gateway exists for another position | Segment interface + new Half Guard gateway (Q7-A); decide shared ledger vs temporary duplication |
 | **B4** | Mount segment has no detached carry-over export (meter remainders, controller record) | Cannot build the record | Additive read-only export on `BjjMountMatch`/gateway; no behavior change |
-| **B5** | Window ids are a per-gateway counter | Ids must be monotonic across segments | New segment is seeded with `window_counter + 1` from the record |
-| **B6** | `Roles.control_authority_id` has no "none" value | Needed for `contested` | Clarify contract: empty allowed for contested positions; Mount unchanged |
+| **B5** | Window ids are a per-gateway counter | Ids must be monotonic across segments with no skipped or reused id | The Mount gateway's `_window_id` is the *last issued* id (incremented before use). The record carries it as `window_counter`; the new segment is seeded with `_window_id = window_counter`, so its first window is `window_counter + 1`. (Seeding with `window_counter + 1` would skip an id; seeding with a lower value would reuse one.) See §11 |
+| **B6** | CORRECTED: an empty `Roles.control_authority_id` already exists (`position_contract.gd` declares `""` as the default; Mount always sets the top id) | `contested` needs an empty authority | No type change. Documentation-only: state that empty is legal and means "contested", and that consumers must not assume a non-empty id. Mount unchanged. See §11 |
 | **B7** | Oracle independence and placement | Parity claims weaker if not independent | Place under `GODOT_V1/tests/`, derive from tables, separate reviewer |
 | **B8** | Provisional numbers without a measurement | Risk of freezing untested balance | Measurement gate (§7) before freeze |
 
@@ -283,3 +285,46 @@ None of B1–B8 requires changing frozen Mount behavior if resolved as proposed;
 | Q7 | Segment interface + additive carry-over (A) | yes |
 | Q8 | 3+3 catalog above; Sweep deferred; exits `Side Control`/`Open Guard`/`Standing` | yes |
 | B1 | Extraction slice before Half Guard | yes |
+
+## 11. Review decisions recorded (owner review of PR #44)
+
+These are review outcomes, not a blanket approval. Nothing here freezes a number, and no implementation is authorized.
+
+| ID | Recorded decision | Still provisional / open |
+|---|---|---|
+| Q1 | A signed fixed-point axis is approved **conceptually**. | Numerical bounds (±500), the five bands and their enter/leave thresholds. |
+| Q2 | Contested entry at axis zero with **empty** control authority is approved. | Nothing numeric beyond the zero entry value. |
+| Q3 | Compare **Bottom-first** against Top-first. Bottom-first is the preferred *proposed* default, **not frozen**. | See §11.1. |
+| Q4 | No drift in v0. The Half Guard recovery rate is **defined separately** and explicitly, not inherited implicitly from Mount's CONSERVE rate. | The rate value and its specification. |
+| Q5 | Reusable funding primitives are approved. Half Guard modifiers and Rule 1 settlement require **explicit specification and validation** (not assumed to carry over). | Modifier values; Rule 1 restatement and its oracle validation. |
+| Q6 | D3-B stays frozen across Half Guard (never observed, never grants a token). | — |
+| Q7 | Detached, validated carry-over is approved. Window-counter seeding is corrected (B5, §11.2). | Record schema details and the segment interface. |
+| Q8 | A small three-action-per-fighter catalog is approved as a **starting scope**. | Grade tables, thresholds, exit gating; Sweep stays deferred. |
+| B1 | Approved as a **future, separately tested, behavior-neutral extraction slice**. Not implemented in this PR. | Slice design and its parity evidence. |
+
+### 11.1 Q3 comparison: Bottom-first vs Top-first
+| | Top-first (earlier proposal) | Bottom-first (preferred proposed default) |
+|---|---|---|
+| Rationale | Top is the established dominant fighter; matches the Guide's authority text. | Bottom has just escaped Mount and is the fighter acting to improve; gives Bottom's offensive options (Wrestle-Up, Recover Guard) the first opening and avoids Top acting immediately on a position it has just lost. |
+| D2 compliance | Yes: a rule-based owner, not derived from the consumed window. | Yes, provided the rule is position-local (`bottom` always opens) and never derived from who initiated the exit window. |
+| Determinism | Fixed rule. | Fixed rule; no state-dependent owner function. |
+| Risks | Top opens against a freshly recovered Bottom, which may feel punishing. | Bottom could be seen as rewarded for escaping; the measurement gate must check Bottom's first-action advantage and that Top's pass is still reachable. |
+| Alternation | Strict thereafter in both variants (RESET admitted for both, still the owner's to revisit). | Same. |
+
+The choice is settled only after the measurement criteria are pre-registered and the rules are accepted.
+
+### 11.2 Window counter seeding (correction)
+`_window_id` in the Mount gateway is the id of the last window issued, incremented before a window opens. The
+carry-over `window_counter` is that value. The consumed exit window therefore holds id `window_counter`, and the first Half
+Guard window must be `window_counter + 1`. The new segment is seeded with `_window_id = window_counter`. Tests must assert
+no skipped id, no reused id, and that the old Mount window id is rejected after commit.
+
+### 11.3 Empty control authority
+`Roles.control_authority_id` is a plain string defaulting to `""`, so an empty authority is already representable. No
+contract change is needed. The documentation clarification (empty means contested) is the only change, and Mount's
+non-empty authority stays as is.
+
+### 11.4 Measurement and oracle ordering
+Measurement criteria must be **pre-registered before any numerical tuning**; failed measurements are recorded, not
+edited away. Final oracle fixtures are generated and frozen **only after the rules are accepted**, never from provisional
+numbers.
