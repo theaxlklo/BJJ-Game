@@ -80,13 +80,13 @@ never persisted (same idea as Mount's `crossing_axis`).
 ### Q2 — Entry value and control authority
 | Option | Description | Trade-offs |
 |---|---|---|
-| **A (recommended)** | Fixed entry axis `0`, band `contested`, regardless of how Mount was left. | Zero coupling to Mount's exit grade; carry-over record stays minimal; easy to test. The recovered-but-not-secured feel is expressed by the opponent acting first (Q3), not by a bias. |
+| **A (recommended)** | Fixed entry axis `0`, band `contested`, regardless of how Mount was left. | Zero coupling to Mount's exit grade; carry-over record stays minimal; easy to test. The recovered-but-not-secured feel is expressed by the contested band itself, not by a bias; who acts first is a separate open comparison (Q3, §11.1) and is not implied here. |
 | B | Entry biased by the exit grade (e.g. `+100` for SUCCESS, `0` for STRONG_SUCCESS) | Rewards a clean escape. Needs the exit grade in the carry-over record and a Mount↔Half Guard calibration. |
 | C | Fixed `+100` (Top-favoured) | Models Half Guard as the worse guard; a fixed bias to tune and justify. |
 
 **Control authority** is *derived, never stored*: Top fighter in `top_edge`/`top_command`, Bottom
-fighter in `bottom_edge`/`bottom_command`, none (`""`) in `contested`. This needs
-`Roles.control_authority_id` to permit empty (a small contract clarification; Mount always sets it).
+fighter in `bottom_edge`/`bottom_command`, none (`""`) in `contested`. An empty
+`Roles.control_authority_id` is already representable (default `""`; Mount always sets it), so only a documentation clarification is needed (§11.3).
 Alternative: always Top (Mount-like) — simpler but contradicts D1's "retention/offensive
 advantage" meaning.
 
@@ -98,7 +98,7 @@ The first Half Guard window opens only through the normal path (a time advance b
 
 | Option | Description | Trade-offs |
 |---|---|---|
-| **A (recommended)** | **Strict alternation, Top first.** After every accepted decision *including a no-action (RESET)*, initiative flips. First holder after entry is the position-local `top`. | Same mechanism as frozen Mount (`initiator` flip), minimal new logic; Top first is rule-based, not derived from the consumed window, satisfying D2; matches "top-dominant established position, controlling top ordinarily acts first" (§15 authority rule) even though Half Guard is a contest. |
+| **A (open comparison; Bottom-first preferred, NOT approved or frozen)** | **Strict alternation with a fixed, position-local first holder.** After every accepted decision *including a no-action (RESET)*, initiative flips. The first holder after entry is either the position-local `bottom` (**Bottom-first, preferred proposal**) or `top` (**Top-first**, the earlier proposal); the side-by-side comparison is in §11.1. | Same mechanism as frozen Mount (`initiator` flip), minimal new logic. Either first holder is a fixed rule that is not derived from the consumed window, satisfying D2. Top-first echoes the Guide's "controlling top ordinarily acts first" (§15), though Half Guard is a contest; Bottom-first gives the fighter who just escaped the first opening. The choice stays open until measurement criteria are pre-registered and the rules are accepted. |
 | B | Opening-triggered: Bottom holds the window when its Wrestle-Up is READY or band is `bottom_*`; else Top | Closer to Guide §15's triggered-initiative text; adds a state-dependent owner function and more edge cases (equal triggers, stall exploits). Defer until a measured need. |
 | C | Sealed simultaneous choice (Guide §17) | Out of scope; changes the decision model. |
 
@@ -114,7 +114,7 @@ players anywhere in the gateway today, so Half Guard has no player behavior choi
 
 | Option | Description | Trade-offs |
 |---|---|---|
-| **A (recommended)** | **No behavior layer and no axis drift in v0.** Passive stamina: a fighter whose band is `Exhausted` flows at the existing position-independent CONSERVE rate (`+2` per 5 s quantum via `BjjBehaviorStaminaPolicy`); any other fighter flows at the HOLD rate (`0`). | Avoids unmeasured drift numbers (Mount's drift came from pre-registered measurement). Gives both fighters a way out of exhaustion (no permanent-exhaustion trap). Symmetric. Without drift, stalling in `contested` is possible; the clock still ends the match and stalling controls remain a separate, later rule (consistent with the project's existing "stalling not ported"). |
+| **A (recommended)** | **No behavior layer and no axis drift in v0.** Passive stamina: Half Guard's recovery rate for an `Exhausted` fighter **requires its own definition and approval**; it is NOT inherited from Mount's CONSERVE rate. Mount's position-independent CONSERVE rate (`+2` per 5 s quantum via `BjjBehaviorStaminaPolicy`) is shown only as a *provisional illustrative* value for the Half Guard definition; any other fighter flows at `0` (provisional). | Avoids unmeasured drift numbers (Mount's drift came from pre-registered measurement). Gives both fighters a way out of exhaustion (no permanent-exhaustion trap). Symmetric. Without drift, stalling in `contested` is possible; the clock still ends the match and stalling controls remain a separate, later rule (consistent with the project's existing "stalling not ported"). |
 | B | Port analogues of the three Mount behaviors per side + a drift table | Familiar, richer; but every drift/stamina number is a new, unmeasured policy. |
 | C | No passive stamina at all | Simplest; exhaustion becomes absorbing once reached. |
 
@@ -135,6 +135,8 @@ Exhausted `+1`), `BjjCommitment`. Mount-specific *policy* is what is in question
 | Rule 2 / supplemental hold charge | **Not applicable** | Belongs to Mount submission holds; v0 has none |
 | Bottom RECOVER / LOW-while-Exhausted baseline | **Not adopted**; replaced by the exhaustion-gated passive recovery in Q4-A, with baseline commitment MEDIUM for both sides | RECOVER fixes a Mount-specific bottom stalemate |
 | D3-B TOKEN / LOCKOUT_HOLD | **Frozen, not observed** (Q6) | Mount-measured |
+
+Per §11, "Adopt" in the table means "proposed for explicit specification and validation": funding primitives are approved for reuse, while Half Guard modifiers and the Rule 1 settlement are not assumed to carry over until specified and validated.
 
 Alternative: adopt *none* of the settlement modifiers (cost only). Cleaner, but changes the economic
 meaning of commitments across the graph. **The settlement code currently lives privately inside
@@ -272,19 +274,26 @@ None of B1–B8 requires changing frozen Mount behavior if resolved as proposed;
 4. **HG-2 — Half Guard position, gateway, carry-over construction, transition commit** (B3, B5), negative-first.
 5. Measurement gate; then freeze numbers.
 
+Ordering rule: measurement criteria are **pre-registered before any numerical tuning**, and numerical acceptance and the final
+oracle freeze come only **after** the measurements run against those pre-registered criteria and the rules are accepted. Step 3
+produces the oracle design; fixtures from provisional numbers are not frozen.
+
 ## 10. Decisions requested
+
+**§11 is the authoritative review record.** The table below lists the *original* proposed defaults, adjusted to match §11; where
+any earlier section differs from §11, §11 wins. All values stay provisional and nothing here is approved or frozen beyond what §11 states.
 
 | ID | Recommended default | Needs your decision |
 |---|---|---|
-| Q1 | Signed integer axis ±500, five hysteresis bands (A) | yes |
-| Q2 | Fixed entry `0`, `contested`; authority derived from band, empty when contested (A) | yes |
-| Q3 | Strict alternation, Top first, RESET admitted for both (A) | yes |
-| Q4 | No behavior layer, no drift; Exhausted fighter recovers at CONSERVE rate (A) | yes |
-| Q5 | Adopt commitment funding/modifiers, exhaustion modifier and Rule 1; no Rule 2; no RECOVER | yes |
-| Q6 | D3-B frozen, never observed in Half Guard | confirm |
-| Q7 | Segment interface + additive carry-over (A) | yes |
-| Q8 | 3+3 catalog above; Sweep deferred; exits `Side Control`/`Open Guard`/`Standing` | yes |
-| B1 | Extraction slice before Half Guard | yes |
+| Q1 | Signed fixed-point axis (concept approved); ±500 and five hysteresis bands provisional (A) | numbers |
+| Q2 | Fixed entry `0`, `contested`; authority derived from band, empty when contested (A) | approved (§11) |
+| Q3 | Strict alternation; Bottom-first preferred over Top-first (open comparison, §11.1); RESET admitted for both | open |
+| Q4 | No behavior layer, no drift; Half Guard recovery rate defined and approved separately (not inherited) | rate open |
+| Q5 | Reuse funding primitives; Half Guard modifiers and Rule 1 explicitly specified and validated; no Rule 2; no RECOVER | spec open |
+| Q6 | D3-B frozen, never observed in Half Guard | approved (§11) |
+| Q7 | Detached validated carry-over (approved); segment interface details open | details |
+| Q8 | 3+3 catalog as starting scope (approved); grades/thresholds provisional; Sweep deferred | numbers |
+| B1 | Future, separately tested, behavior-neutral extraction slice (approved; not in this PR) | approved (§11) |
 
 ## 11. Review decisions recorded (owner review of PR #44)
 
