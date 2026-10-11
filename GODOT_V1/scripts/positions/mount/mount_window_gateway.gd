@@ -84,6 +84,40 @@ func state_fields() -> Dictionary:
 func history_fields() -> Dictionary:
     return _contract.history_fields()
 
+# Segment-owned carry-over record (A3b). Read-only: opens no window, moves no time, spends no
+# stamina, advances no D3-B and never touches the window counter (it reports the last ISSUED id).
+# It is refused while a window is open: a pending window is not a transition point. Graph-level
+# facts (status, event count, blocked transition) are NOT here; the graph owns them.
+func carryover_segment() -> BjjMountCarryover.Export:
+    if _window_open:
+        return BjjMountCarryover.failed("window_open")
+    if _match == null or _match.top == null or _match.bottom == null or _match.top_meter == null or _match.bottom_meter == null:
+        return BjjMountCarryover.failed("missing_carryover_source")
+    if _match.d3b == null:
+        return BjjMountCarryover.failed("missing_d3b_controller")
+    var state := _match.snapshot()
+    var fighters: Dictionary = {}
+    for role: String in BjjMountCarryover.ROLES:
+        var pool: BjjStaminaPool = _match.top if role == "top" else _match.bottom
+        var meter: BjjBehaviorStaminaPolicy.Meter = _match.top_meter if role == "top" else _match.bottom_meter
+        fighters[role] = {"stamina_current": pool.current, "stamina_maximum": pool.maximum,
+            "exhaustion_latched": pool.band == "Exhausted", "behavior_remainder_units": meter.remainder_units}
+    var record := {
+        "schema": BjjMountCarryover.SEGMENT_SCHEMA, "version": BjjMountCarryover.VERSION,
+        "source_position_id": POSITION_ID,
+        "fighter_by_role": {"top": _top_id, "bottom": _bottom_id},
+        "fighters": fighters,
+        "clock": {"initial_seconds": state.initial_clock, "remaining_seconds": state.clock_seconds},
+        "window": {"last_issued_id": _window_id},
+        "d3b": {"armed": _match.d3b.armed, "token_consumed": _match.d3b.token_consumed,
+            "previous_exhausted": _match.d3b.previous_exhausted},
+        "terminal": {"ended": state.ended, "submission_tapped": state.submission_tapped},
+        "exit": _transition().fields()}
+    var error := BjjMountCarryover.validate_segment(record)
+    if not error.is_empty():
+        return BjjMountCarryover.failed(error)
+    return BjjMountCarryover.succeeded(record)
+
 func controller_fields() -> Dictionary:
     return _match.d3b.fields()
 
