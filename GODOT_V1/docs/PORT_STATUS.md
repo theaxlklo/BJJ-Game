@@ -109,3 +109,9 @@ MountMatch or production recovery parity. Issue #20 is the next controller slice
 ## Mount practice prototype (F1)
 
 [F1_MOUNT_PRACTICE.md](F1_MOUNT_PRACTICE.md) explains how to play the 2D practice scene, records the feasibility decisions (graph `behavior_fields()` pass-through, graph-backed fighter snapshots, display scaling) and lists the limitations. The default scene is now `scenes/mount_practice.tscn`; the 3D greybox is a separate diagnostic scene. Standing and Half Guard are not implemented.
+
+## Half Guard v0 proposal (B1a)
+
+[HALF_GUARD_V0_PROPOSAL.md](HALF_GUARD_V0_PROPOSAL.md) answers `POSITION_GRAPH.md` Q1–Q8 for a Half Guard v0, lists the owner decisions (`HG-1` … `HG-25`), the proposed rules sheet, an independent-oracle plan and the B1b/B1c/B1d slice boundaries. It is a proposal only: nothing is approved or implemented, and no Half Guard mechanics exist.
+
+The owner-approved *direction* for tactical preparation, feints and defensive counterplay is described, with proposed (not accepted) details, in [TACTICAL_PREPARATION_AND_FEINTS.md](TACTICAL_PREPARATION_AND_FEINTS.md); the Half Guard-specific proposal is `HALF_GUARD_V0_PROPOSAL.md` §12 (HG-26). Nothing there is implemented.
