@@ -66,6 +66,34 @@ func _initialize() -> void:
     check("upper clamp then no change", BjjCommitmentSettlement.sequential_grade(2, 1, 0), 2)
     check("neutral steps keep the grade", BjjCommitmentSettlement.sequential_grade(0, 0, 0), 0)
 
+    # ---- saturation: sequential application is not the same as combining modifiers first -----
+    # Literal cases at the clamp. Each pair is (sequential result, result of one summed shift).
+    check("saturated +2: +1 then -1 is sequential +1", BjjCommitmentSettlement.sequential_grade(2, 1, -1), 1)
+    check("saturated +2: summed shift (+1-1=0) would stay +2", BjjGrade.shift(2, 1 + -1), 2)
+    check("saturated -2: -1 then +1 is sequential -1", BjjCommitmentSettlement.sequential_grade(-2, -1, 1), -1)
+    check("saturated -2: summed shift (-1+1=0) would stay -2", BjjGrade.shift(-2, -1 + 1), -2)
+    check("saturated +2: -1 then +1 returns to +2", BjjCommitmentSettlement.sequential_grade(2, -1, 1), 2)
+    check("saturated +2: +1 then +1 stays +2", BjjCommitmentSettlement.sequential_grade(2, 1, 1), 2)
+    check("saturated -2: -1 then -1 stays -2", BjjCommitmentSettlement.sequential_grade(-2, -1, -1), -2)
+    # Both orders at every grade: the clamp between steps makes order observable only at the edges.
+    var diverging := 0
+    for grade in range(-2, 3):
+        for first in [-1, 0, 1]:
+            for second in [-1, 0, 1]:
+                var sequential: int = BjjCommitmentSettlement.sequential_grade(grade, first, second)
+                var summed: int = mini(2, maxi(-2, grade + first + second))
+                if sequential != summed:
+                    diverging += 1
+                    check("divergence only at an edge (%d,%d,%d)" % [grade, first, second], absi(grade) == 2, true)
+    check("exactly two edge cases diverge from a summed shift", diverging, 2)
+    # Engine-reachable domain (magnitude in -1..1, undercommitment 0/+1): a nonzero modifier can leave
+    # the grade unchanged. attempt() re-resolves on the modifiers being nonzero, not on a grade change,
+    # so the helper must not be asked to signal "changed".
+    check("nonzero undercommitment saturates unchanged at +2", BjjCommitmentSettlement.sequential_grade(2, 0, 1), 2)
+    check("nonzero magnitude and undercommitment cancel back to +2", BjjCommitmentSettlement.sequential_grade(2, -1, 1), 2)
+    check("nonzero magnitude saturates unchanged at +2", BjjCommitmentSettlement.sequential_grade(2, 1, 0), 2)
+    check("nonzero magnitude saturates unchanged at -2", BjjCommitmentSettlement.sequential_grade(-2, -1, 0), -2)
+
     # ---- Rule 1 responder-cost waiver predicate ---------------------------------------------
     for rule1 in [false, true]:
         for effective: String in ["", LOW, MEDIUM, HIGH, "BOGUS", " ", "low"]:
