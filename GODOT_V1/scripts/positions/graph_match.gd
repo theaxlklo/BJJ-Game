@@ -134,6 +134,20 @@ func events() -> Array[Dictionary]:
 func blocked_transition() -> Dictionary:
     return _blocked.duplicate(true)
 
+# Match-level carry-over envelope (A3b): the gateway's segment record beside the graph's own
+# status, global event count and recorded blocked transition. Read-only; a halt stays a halt.
+func carryover_export() -> BjjMountCarryover.Export:
+    var segment := _gateway.carryover_segment()
+    if not segment.ok():
+        return segment
+    var envelope := {"schema": BjjMountCarryover.ENVELOPE_SCHEMA, "version": BjjMountCarryover.VERSION,
+        "segment": segment.record,
+        "graph": {"status": _status, "event_count": _events.size(), "blocked_transition": _blocked.duplicate(true)}}
+    var error := BjjMountCarryover.validate_envelope(envelope)
+    if not error.is_empty():
+        return BjjMountCarryover.failed(error)
+    return BjjMountCarryover.succeeded(envelope)
+
 func state_fields() -> Dictionary:
     return _gateway.state_fields()
 
