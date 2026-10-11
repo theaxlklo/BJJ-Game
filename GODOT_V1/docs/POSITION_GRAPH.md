@@ -246,6 +246,8 @@ Recognition, a human timer, memory cards and any presentation (Issue #40 stays d
 
 ## 12. Remaining design questions (Half Guard gate only; not a Slice A prerequisite)
 
+A proposal answering Q1–Q8 (not approved) is in [HALF_GUARD_V0_PROPOSAL.md](HALF_GUARD_V0_PROPOSAL.md) (B1a).
+
 | ID | Question |
 |---|---|
 | Q1 | Half Guard axis: sign convention, range, bands, hysteresis |
