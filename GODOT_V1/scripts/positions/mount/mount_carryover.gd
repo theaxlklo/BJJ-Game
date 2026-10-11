@@ -17,6 +17,9 @@ const VERSION: int = 1
 const STATUS_ACTIVE: String = "active"
 const STATUS_ENDED: String = "ended"
 const STATUS_HALTED: String = "halted_at_unsupported_transition"
+# Blocked-transition reasons the graph records today; pinned to the graph's own strings by the test.
+const REASON_NOT_IMPLEMENTED: String = "destination_not_implemented"
+const REASON_UNRESOLVED: String = "unresolved_destination"
 const STATUSES: Array[String] = [STATUS_ACTIVE, STATUS_ENDED, STATUS_HALTED]
 const ROLES: Array[String] = ["top", "bottom"]
 
@@ -201,6 +204,12 @@ static func validate_envelope(record: Variant) -> String:
     if halted:
         if blocked.from_position_id != segment.source_position_id or blocked.label != segment.exit.raw_destination \
                 or blocked.destination_position_id != segment.exit.destination_position_id:
+            return E_CONSISTENCY
+        # v1 assumption: no destination position is implemented, so a halt is recorded for exactly
+        # two reasons, derived from the already-validated exit (no second label mapping here). A
+        # future implemented destination must update this deliberately.
+        var expected_reason: String = REASON_NOT_IMPLEMENTED if segment.exit.resolved else REASON_UNRESOLVED
+        if blocked.reason != expected_reason:
             return E_CONSISTENCY
     elif (graph_block.status == STATUS_ENDED) != segment.terminal.ended:
         return E_CONSISTENCY

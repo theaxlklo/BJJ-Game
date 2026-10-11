@@ -58,6 +58,11 @@ All values are `int`, `bool` or `String`; no floats and no shared containers.
 Cross-checks: halted <=> non-empty blocked <=> `segment.exit.kind == "exit"`, and the blocked label and
 destination equal the segment exit; `ended` status requires `segment.terminal.ended` and no exit; `active`
 requires neither. The blocked transition stays recorded graph data, never an executed transition.
+The blocked `reason` is validated against the segment exit: a resolved exit (`Half Guard`, `Open Guard`) requires
+`destination_not_implemented`, an unresolved one (`Reversal`) requires `unresolved_destination`. It is derived from the
+validated exit's `resolved` flag, not from a second label mapping. **This is a v1 assumption** that no destination
+position is implemented: when one is, halted-export validation (reasons, and the `ended`-with-exit rejection)
+must be updated deliberately, together with a schema version decision.
 
 ## Validation (exact keys, exact types, no side effects, never calls validate_context)
 

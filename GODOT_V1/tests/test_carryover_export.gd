@@ -419,6 +419,7 @@ func _initialize() -> void:
         same("graph %s segment equals the gateway segment" % label, envelope.record.segment, segment.record)
         check("graph %s status" % label, envelope.record.graph.status, "halted_at_unsupported_transition")
         check("graph %s event count is the graph's" % label, envelope.record.graph.event_count, run.events().size())
+        check("graph %s recorded reason is the one the validator derives" % label, envelope.record.graph.blocked_transition.reason, "unresolved_destination" if label == "Reversal" else "destination_not_implemented")
         same("graph %s blocked transition" % label, envelope.record.graph.blocked_transition, run.blocked_transition())
         check("graph %s validates" % label, BjjMountCarryover.validate_envelope(envelope.record), "")
         check("segment %s still carries no event count" % label, envelope.record.segment.has("event_count"), false)
@@ -447,6 +448,10 @@ func _initialize() -> void:
         tamper.call(func(r: Dictionary) -> void: r.graph.status = "bogus", "invalid_graph_block", "unknown status")
         tamper.call(func(r: Dictionary) -> void: r.graph.blocked_transition.destination_position_id = "zz", "inconsistent_graph_segment", "blocked destination differs")
         tamper.call(func(r: Dictionary) -> void: r.graph.blocked_transition.from_position_id = "half_guard", "inconsistent_graph_segment", "blocked source differs")
+        tamper.call(func(r: Dictionary) -> void: r.graph.blocked_transition.reason = "", "inconsistent_graph_segment", "empty blocked reason")
+        tamper.call(func(r: Dictionary) -> void: r.graph.blocked_transition.reason = "because", "inconsistent_graph_segment", "arbitrary blocked reason")
+        tamper.call(func(r: Dictionary) -> void: r.graph.blocked_transition.reason = "undeclared_exit_label", "inconsistent_graph_segment", "graph reason Mount never produces for a declared exit")
+        tamper.call(func(r: Dictionary) -> void: r.graph.blocked_transition.reason = "unresolved_destination" if label != "Reversal" else "destination_not_implemented", "inconsistent_graph_segment", "contradictory blocked reason")
         tamper.call(func(r: Dictionary) -> void: r.segment.exit = {"kind": "none", "raw_destination": "", "destination_position_id": "", "resolved": false}; r.segment.terminal.ended = false, "inconsistent_graph_segment", "halted graph with a no-exit segment")
         tamper.call(func(r: Dictionary) -> void: r["extra"] = 1, "invalid_carryover_shape", "extra envelope key")
         tamper.call(func(r: Dictionary) -> void: r.version = 2, "unsupported_carryover_schema", "envelope version")
@@ -491,6 +496,9 @@ func _initialize() -> void:
     check("status literal active", BjjMountCarryover.STATUS_ACTIVE, BjjPositionGraphMatch.STATUS_ACTIVE)
     check("status literal ended", BjjMountCarryover.STATUS_ENDED, BjjPositionGraphMatch.STATUS_ENDED)
     check("status literal halted", BjjMountCarryover.STATUS_HALTED, BjjPositionGraphMatch.STATUS_HALTED)
+    # Reason literals are pinned to what the graph actually records for each classification.
+    check("reason literal not implemented", BjjMountCarryover.REASON_NOT_IMPLEMENTED, BjjPositionGraphMatch.classify_exit("Half Guard").reason)
+    check("reason literal unresolved", BjjMountCarryover.REASON_UNRESOLVED, BjjPositionGraphMatch.classify_exit("Reversal").reason)
     # Accepted records are never modified by validation.
     var accepted := valid_segment()
     var accepted_copy := accepted.duplicate(true)
