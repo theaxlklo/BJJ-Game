@@ -1,6 +1,6 @@
 # Position topology and transition semantics (A3c — specification only)
 
-**Status: specification and proposals. Nothing in this document is implemented, and nothing here
+**Status: specification, recorded owner-approved direction (§19) and proposals. Nothing in this document is implemented, and nothing here
 changes Mount, the graph owner, the A3b carry-over schema, Python, a fixture or a digest.** It adds no
 executable position, no Mount exit, no catalog entry and no rule. It exists so that the three exit
 labels the frozen Mount engine happens to emit today are not mistaken for the game's complete topology.
@@ -10,12 +10,17 @@ proposed canonical position-family inventory, a registry recommendation and a ma
 §16 and §17 are updated to match. The follow-up adds decision ids P-1 to P-12 and conflict ids C-9 to C-12 and
 does not renumber any earlier T-n, C-n or section reference. (The §14 step list is replaced: old steps 3–7 are now steps 7, 4, 4, 4 and 8.)
 
+**Owner decisions (2026-10-11):** T-1 to T-3 and P-1 to P-12 are approved as architectural direction, with
+clarifications, and are recorded in §19. The original questions in §15 are unchanged. The approval implements
+nothing: mechanical questions stay open (§19.3).
+
 Tags used throughout (claims that could be mistaken for decisions carry one; quoted evidence and table facts
 that are plainly sourced do not):
 
 | Tag | Meaning |
 | --- | --- |
 | **[APPROVED]** | The Guide §0A freeze register, `POSITION_GRAPH.md` D1–D6 (**direction only**: numerical and mechanical rules are not accepted) and Slice A, `POSITION_CONTRACT.md`, and the Half Guard-first owner direction recorded in `POSITION_GRAPH.md` §1 (Slice B itself, the Half Guard rules and oracle, is **not** approved and stays gated on Q1–Q8) |
+| **[OWNER-APPROVED]** | Architectural direction the owner explicitly approved on 2026-10-11 (T-1 to T-3, P-1 to P-12, §19). Direction only: names, codes, field lists and tiers written as [PROPOSAL] stay proposals unless §19.1 says otherwise, and nothing is authorized for implementation |
 | **[OWNER-CLARIFICATION]** | Direction the owner stated while reviewing this slice (normal matches begin Standing; an explicit canonical position inventory is wanted). It sets intent, not mechanics or numbers |
 | **[GUIDE-DIRECTION]** | Master Guide sections that state design intent (🔵) but are not in the §0A freeze register (for example §10, §11, §58B). This document aligns with them and does not treat them as binding |
 | **[CODE]** | Verified in source at `577cec2` (A3b head). Source and tests are authoritative |
@@ -109,7 +114,9 @@ Fighter identity, physical role, control authority and initiative stay four sepa
 
 ## 4. Separating executable exits from cataloged possibilities
 
-**[PROPOSAL]** Four support statuses, one authority each. They are lifecycle labels for a *connection*; they do
+**[OWNER-APPROVED]** (T-3, §19) Semantics of `cataloged`, `producible` and `receivable`, with one authority each and promotion as a move (`undeclared` is the existing fail-closed case). Status names are the approved vocabulary.
+
+**[PROPOSAL]** The table and rules below explain the four statuses, one authority each (`undeclared` is the existing fail-closed case and is not part of the approved trio); they refine T-2 and T-3 and stay proposals beyond §19.1. They are lifecycle labels for a *connection*; they do
 not rename or replace any existing code field or error string.
 
 | Status | Meaning | Authority of record | Can the engine emit it? | Graph behavior |
@@ -258,7 +265,7 @@ Until then `Reversal` stays `producible`, `unresolved`, and halts with `unresolv
   family id only.
 * **[PROPOSAL]** A variation may change the legal action set, exits and camera of its family; it may not change
   role vocabulary, axis sign convention or the engine. A change that needs those is a promotion decision.
-* **[OPEN] T-1, a gap between the Guide and the frozen engine:** Mount has no substate (`substate` appears in
+* **[OPEN] T-1 (Technical Mount; the family/variation vocabulary is approved, §19.1), a gap between the Guide and the frozen engine:** Mount has no substate (`substate` appears in
   Guide §7's contract list but not in `BjjMountMatch`). A *Technical Mount* variation inside Mount would add
   state to a frozen position. Options: (i) variation inside Mount (changes frozen Mount — not allowed without
   approval); (ii) a separate position id with its own contract (consistent with Guide §10 promotion when
@@ -550,19 +557,21 @@ graphs only.
 | D4: shared stamina primitives carry; Mount policies do not automatically apply | Latch/meter carry stays; D3-B applicability left open (§11) |
 | D5: Reversal stays unresolved and explicit | Never mapped (§6.3) |
 | D6: a test-only Python oracle for any new position's rules | First step of §9.3 |
-| Half Guard first (the first receiving-position integration target); Open Guard declared-but-unimplemented at the unsupported boundary | §14 keeps both unchanged. Standing as the future *entry* engine on a separate track is a **[PROPOSAL]** (P-10) built on the owner clarification; it does not replace Half Guard (§18.7) |
+| Half Guard first (the first receiving-position integration target); Open Guard declared-but-unimplemented at the unsupported boundary | §14 keeps both unchanged. Standing as the future *entry* engine on a separate track is **[OWNER-APPROVED]** in direction (P-10, §19); it does not replace Half Guard (§18.7) |
 | Slice A halt semantics and `halted_at_unsupported_transition` | Unchanged; v1 halted exports stay valid as v1 (§10) |
 | A3b schema, `destination_not_implemented` / `unresolved_destination` distinction | Unchanged; no file under `scripts/` or `tests/` touched |
 | Frozen Mount, Python oracle, fixtures, digest | Untouched; any Mount extension is additive and separately approved (T-4) |
+| Owner decisions T-1 to T-3 and P-1 to P-12 (2026-10-11) | Recorded as direction only (§19); no implementation authorized; frozen mechanics and evidence unchanged |
 
 ## 14. Smallest safe implementation sequence after A3c
 
 **[PROPOSAL]** Each step is a separate, reviewable, explicitly authorized slice. None is started here. The A3c
 follow-up replaces the earlier seven-step list with two tracks that share a registry (§18.7).
 
-1. **Owner decisions** T-1 to T-3, P-1 to P-5 and P-10 (vocabulary, support statuses, registry representation,
-   initial inventory, start contract, track ordering). P-6 to P-9, P-11 and P-12 are decided when the step that
-   needs them is reached. Documentation only.
+1. **Owner decisions: done in direction (2026-10-11, §19).** T-1 to T-3 and P-1 to P-12 are approved; every later
+   step below still needs its own explicit authorization. Still open before the steps that need them: T-4 to T-12,
+   Half Guard Q1–Q8, Standing's sealed-choice protocol and first technique and grade tables, D3-B re-entry, the
+   Reversal landing, receiver latch restoration and new Mount exits (§19.3). Documentation only.
 2. **"A3d" (proposed name; test-only): pin the producible-exit inventory.** Enumerate (technique x grade x band)
    through the existing catalog function and assert the producible set equals today's three labels. No
    production edit. Recommended next code-adjacent slice; unchanged by the follow-up.
@@ -570,9 +579,10 @@ follow-up replaces the earlier seven-step list with two tracks that share a regi
    `POSITION_ID` keeps the value `"mount"`. Justified by the owner's explicit request for a canonical inventory
    (P-1, P-2) and by start-position validation. A second consumer (the catalog validator, graph source checks)
    is **not yet proven**: `bjj-scope-plan` asks for proof from a second use case before a generalized framework,
-   so the owner may prefer only a pinned id list plus a test until Standing's factory (S1) lands. Only after P-1
-   to P-3.
-4. **Track A, receiving-position integration (unchanged except for the P-10 proposal below; Half Guard first):** Half Guard rules and test-only
+   so whether to build the registry before Standing's factory (S1) lands is a separate authorization decision. The
+   approved direction is a validated registry (P-1, P-2); a pinned id list plus a test is a possible smaller first step.
+   It needs its own explicit authorization.
+4. **Track A, receiving-position integration (unchanged except for P-10, approved in direction, §19; Half Guard first):** Half Guard rules and test-only
    oracle (Q1–Q8, D6) -> receiver seams (T-7) -> graph commit path and envelope v2 -> Mount→Half Guard. Half Guard's
    entry must accept a role map and must not assume a Mount source (P-10).
 5. **Track B, Standing as the normal-match entry engine:** Standing rules specification and test-only oracle
@@ -580,12 +590,15 @@ follow-up replaces the earlier seven-step list with two tracks that share a regi
    (P-5 to P-7) -> honest halts for destinations that are not yet receivers -> receivers added in the order
    Standing's exit map demands them (Half Guard first, shared with Track A).
 6. **Re-entry and segment identity** before the first route back to Standing (P-11).
-7. **Topology catalog data and validator** (conditional): only if T-1 to T-3 are approved and the registry
-   plus a second consumer exist.
+7. **Topology catalog data and validator** (conditional): T-1 to T-3 are approved (§19), but this stays conditional on the registry
+   plus a second consumer existing and on its own explicit authorization.
 8. Later: Open Guard, the remaining families until all ten are reachable (Guide §63 Phase 2 exit), then the
    Reversal slice (needs the landing rule, T-6).
 
 ## 15. Open questions requiring owner approval
+
+**Status (2026-10-11):** T-1 to T-3 and P-1 to P-12 are approved in direction and recorded in §19 (the P-3 version question is answered for now in §19.2 b). The rows below keep
+the original questions verbatim under their ids. T-4 to T-12 remain open.
 
 | ID | Question |
 | --- | --- |
@@ -647,6 +660,11 @@ fixture, no digest and no earlier PR. It created no executable position, receive
 D3-B, clock or policy rule, implemented no Standing, enum or registry module, and it chose no Reversal landing.
 Mount remains the only constructed position and its three exits are unchanged.
 
+A later documentation-only commit records the owner's 2026-10-11 approval of T-1 to T-3 and P-1 to P-12 (§19),
+adding the `[OWNER-APPROVED]` tag, §19 and status notes in the header, §4, §7, §13, §14, §15, §17 and §18.1–§18.7 (headline
+retags, plus a rewrite of the §18.7 exit-map paragraph). It changes no question row, id or code, and no code, test,
+workflow, fixture, schema or Python.
+
 ## 18. Canonical position registry and match start (A3c follow-up)
 
 **[OWNER-CLARIFICATION]** The finished game normally begins from Standing, not Mount. Mount is the first
@@ -681,6 +699,8 @@ context, **not registry fields** (§18.6).
 | `leg_entanglement` | §8 #10, §11.10, §10 | Attacker / Defender | Nowhere |
 
 Format: lowercase snake case, the same style as the existing `mount`, `half_guard` and `open_guard`.
+
+**[OWNER-APPROVED]** (P-1, P-2): exactly these ten ids as the initial registry inventory.
 
 **Other top-level families the Guide requires:** none found. §8 fixes ten; §9 lists takedown, sweep, pass,
 reversal, submission and scramble as *not* nodes; §30 calls scramble "a transient state, not an eleventh node".
@@ -729,7 +749,7 @@ json round-trip type of MOUNT: 3 is float=true value=2.0
 So implicit values renumber on insertion, `99 as Position` is accepted into an enum-typed variable, and an enum
 value that passed through `JSON.stringify` and `JSON.parse_string` came back as a float. It was not rerun in CI.
 
-**[PROPOSAL] Recommendation: C, the smallest design that keeps replay and persistence safe.**
+**[OWNER-APPROVED]** (P-1, P-2, §19) **Recommendation: C, the smallest design that keeps replay and persistence safe.** Approved in direction: stable string ids behind a validated registry of exactly the ten §18.1 families. Only the string-id, validated-registry and exactly-ten-families direction is approved. Every detail below (class, function and error-code names, the id regex, the pinned-list test and the rest) remains a **[PROPOSAL]**, except where it cites an approved P-n.
 
 * **One class** (name provisional, `BjjPositionRegistry`): string constants for the ten ids, one declared list, and
   pure static functions: `is_declared(id)`, `error_for(id)` and a detached sorted `declared_ids()`. Two stable
@@ -741,9 +761,9 @@ value that passed through `JSON.stringify` and `JSON.parse_string` came back as 
   no mutable state.
 * **The string is the persisted and replayed value.** An integer ordinal, if ever wanted for speed or arrays, is
   derived at run time from the sorted list and is never serialized.
-* **Lifecycle:** append-only; an id is never renamed or reused; retirement is a tombstone, not a deletion (P-3).
-  A test pins the exact id list so a change is deliberate. Unknown ids in a persisted record are rejected
-  explicitly, never mapped to a default.
+* **Lifecycle:** append-only; an id is never reused or silently remapped; retirement is a tombstone, not a deletion (P-3, approved; §19.2 a, b).
+  A test that pins the exact id list so a change is deliberate is a **[PROPOSAL]**. Unknown ids in a persisted record are rejected
+  explicitly, never mapped to a default. A *retired* id is not unknown: it follows §19.2 a. How `is_declared` and `error_for` treat a retired id is not decided.
 * **Migration is value-preserving:** `BjjMountContract.POSITION_ID` can later reference the registry constant with
   the identical value `"mount"`, so no record, event or test changes.
 * **Not in the registry:** roles, control authority, actions, exits, edges, implementation flags, UI names.
@@ -751,12 +771,12 @@ value that passed through `JSON.stringify` and `JSON.parse_string` came back as 
 ### 18.3 Families versus variations (T-1 stays unresolved)
 
 Guide §10 says to represent configurations as substates first and to promote one to a node only when human play
-shows significantly different mechanics. **No classification below is approved;** the table records the Guide's
-own default and what is unsettled.
+shows significantly different mechanics. T-1 (approved, §19.1) makes variations the default for the Guide §10 substates; Technical Mount stays unresolved and
+promotion criteria remain open. The table records the Guide's own default and what is unsettled.
 
-| Candidate | Guide status | Guide §10 default (not adopted) | Unresolved |
+| Candidate | Guide status | Guide §10 default (variation is the T-1 default) | Unresolved |
 | --- | --- | --- | --- |
-| Technical Mount | §10 Mount substate (Low, High, Technical) | Variation of `mount` | T-1: the frozen Mount has no substate, so a variation inside Mount changes a frozen position; options (i)–(iii) in §7 are all still open |
+| Technical Mount | §10 Mount substate (Low, High, Technical) | Variation of `mount` per the Guide; **unresolved** against frozen Mount | T-1: the frozen Mount has no substate, so a variation inside Mount changes a frozen position; options (i)–(iii) in §7 are all still open |
 | North-South | §10 Side Control substate | Variation of `side_control` | Whether its mechanics differ enough to promote |
 | Knee-on-Belly | §10 Side Control substate; scored in §40.1 | Variation of `side_control` | Same; scoring is policy over events, not an edge |
 | Butterfly | §10 Open Guard substate | Variation of `open_guard` | None beyond promotion criteria |
@@ -766,14 +786,14 @@ own default and what is unsettled.
 The registry declares neither `technical_mount` as a family nor as a variation: T-1 options (i)–(iii) remain open,
 and an append-only registry permits option (ii) later.
 
-**[PROPOSAL]** The first registry declares **families only** (P-4). A variation is addressed later as
+**[OWNER-APPROVED]** (P-4) The first registry declares **families only**. **[PROPOSAL]** A variation is addressed later as
 `(position_id, variation_id)` (§7), declared per family and reviewed with that family's rules. Declaring
 variations now would freeze ids whose classification is open and would persist them before any engine can use
 them. The A3b and graph shapes already carry only the family id, which stays valid.
 
 ### 18.4 Match-start contract
 
-**[OWNER-CLARIFICATION]** Normal matches default to `standing`. **[PROPOSAL]** Contract:
+**[OWNER-CLARIFICATION]** Normal matches default to `standing`. **[OWNER-APPROVED]** (P-5, P-6, P-12, §19) in direction: the default, scenario starts, no fallback, preserved Mount-only constructors, and validated position-legal entry parameters. **[PROPOSAL]** The detailed contract below (codes, order, signature):
 
 1. **A start position is an explicit field of the match configuration**, owned by the graph owner or session
    layer, not by any position contract. Normal matches default to `"standing"`.
@@ -821,7 +841,7 @@ them. The A3b and graph shapes already carry only the family id, which stays val
 | Mount's role | The only engine; also the only start | One position among ten; a legitimate training start |
 | Exits | `Half Guard`, `Open Guard`, `Reversal` halt (Slice A) | Unchanged until destinations exist |
 
-**[PROPOSAL] Interim policy (P-6):** keep the existing Mount-only constructors untouched as the explicit *Mount
+**Interim policy (P-6).** Preserving the existing Mount-only constructors is **[OWNER-APPROVED]**; the delegation rule and the new constructor's shape are **[PROPOSAL]**. Keep the existing Mount-only constructors untouched as the explicit *Mount
 scenario* path (every current test depends on them). Add a start-aware constructor later, with default `standing`;
 until Standing has a fresh-start factory it fails explicitly rather than choosing Mount. `start="mount"` through the
 new constructor must delegate to the existing Mount constructors, so there is never a second path to Mount. The
@@ -844,7 +864,7 @@ roster entry; nothing in the registry or roster decides an outcome, an edge or a
 not mean "Mount can receive" (a `carryover_entry` for Mount does not exist). The first `carryover_entry` is the
 Half Guard integration target; the first `fresh_start` for normal matches is Standing, which will also need a
 `carryover_entry` because routes back to Standing exist (S3, P-11). The roster is a plain table: no
-self-registration, no scanning, no mutable state (§18.2). (P-7)
+self-registration, no scanning, no mutable state (§18.2). P-7 is approved in direction (§19): fresh-start and carry-over entry are separate capabilities; no roster is implemented.
 
 ### 18.7 Ordering and the minimum for a Standing-started match
 
@@ -855,7 +875,7 @@ changes that. **[OWNER-CLARIFICATION]** Standing is the future normal-match
 entry engine. These are different axes, so they run as two tracks (§14, P-10): **receiving integration** (Half
 Guard first) proves graph commit, carry-over entry and role maps; **entry engine** (Standing) proves the start
 contract and neutral play. They meet at Half Guard: Guide §29's Single Leg SUCCESS lands in Top Half Guard, so
-Half Guard's entry should accept a role map from a non-Mount source (a takedown assigns roles by outcome, unlike
+Half Guard's entry should accept a role map from a non-Mount source (approved in direction as P-10, §19; a takedown assigns roles by outcome, unlike
 D1's identity map for Mount). Standing's rules also need D6 treatment (a test-only Python oracle) before any
 Godot port, exactly as Half Guard does.
 
@@ -864,15 +884,14 @@ Minimum needed before a match can begin from Standing, in tiers:
 | Tier | What it delivers | Minimum contents |
 | --- | --- | --- |
 | **S0** | Start validation, no engine | Registry; start-position checks of §18.4; `standing` fails with `start_position_not_implemented` |
-| **S1** | A match starts in Standing | Standing contract and `fresh_start` factory; neutral roles with no authority (P-8); sealed simultaneous choices (§17) representable, including who owns a simultaneous window (today's gateway is single-initiator, C-12); Standing's own stamina and commitment settlement (LOW/MEDIUM/HIGH, Guide §22) and clock, with no Mount policy (Rule 1/2, RECOVER, D3-B) applied automatically (D4); each item of the Guide's "Missing design/implementation" list for Standing (§11.1: control or balance axis, grip/entry substates, takedown result grades, simultaneous neutral choices, guard-pull resolution, mat returns, counter-wrestling) is either specified or explicitly deferred by owner decision, and mat returns belong to S3; a first action and response set (Guide §29, §63 Phase 3: Single Leg, Double Leg, Body Lock, Snapdown, Guard Pull; Sprawl, Whizzer, Pummel/Frame, Counter-shot, Guillotine threat; §11.1 also lists Disengage / Reset) with an explicit destination for every grade (§14), including how a remain-in-Standing result is expressed (P-9). Every takedown that lands in a position without a receiver halts under the existing Slice A semantics, so S1 is **not** a full match |
+| **S1** | A match starts in Standing | Standing contract and `fresh_start` factory; neutral roles with no authority (P-8); sealed simultaneous choices (§17) representable, including who owns a simultaneous window (today's gateway is single-initiator, C-12); Standing's own stamina and commitment settlement (LOW/MEDIUM/HIGH, Guide §22) and clock, with no Mount policy (Rule 1/2, RECOVER, D3-B) applied automatically (D4); each item of the Guide's "Missing design/implementation" list for Standing (§11.1: control or balance axis, grip/entry substates, takedown result grades, simultaneous neutral choices, guard-pull resolution, mat returns, counter-wrestling) is either specified or explicitly deferred by owner decision, and mat returns belong to S3; a first action and response set (Guide §29, §63 Phase 3: Single Leg, Double Leg, Body Lock, Snapdown, Guard Pull; Sprawl, Whizzer, Pummel/Frame, Counter-shot, Guillotine threat; §11.1 also lists Disengage / Reset) with an explicit destination for every grade (§14), including an explicit statement of whether each branch remains in Standing, exits, or is another separately approved outcome (P-9, §19.2 d). Every takedown that lands in a position without a receiver halts under the existing Slice A semantics, so S1 is **not** a full match |
 | **S2** | Takedown outcomes do not halt | Receivers for each destination the first exit map names. Guide §11.1 lists six besides Standing: `closed_guard`, `open_guard`, `half_guard`, `turtle`, `front_headlock`, `side_control`; a scramble transient (CONTESTED) must resolve into a real position (§30, T-11). The actual set follows P-9 |
 | **S3** | A full match | All ten families reachable by legitimate transitions (§63 Phase 2 exit), routes back to Standing (re-entry, P-11), a ruleset and terminal layer (§40), mat-boundary and stalling policy (open) and the Guide §68 checklist; beyond A3c |
 
-Exit-map policy for S1 **[OPEN] P-9:** (A) full exit maps with honest halts for unimplemented destinations
-(recommended: it matches Slice A and D5, keeps Guide §14's "explicit destinations", and the halt frequency is a
-measurable signal for which receiver to build next); (B) a restricted catalog whose techniques only reach
-implemented receivers (fewer techniques, still explicit); (C) wait for the receivers (delays the entry engine).
-No numbers or mechanics are decided here.
+Exit-map policy for S1: **[OWNER-APPROVED]** (P-9, §19.2 d) explicit, complete result-to-destination maps with
+honest halts for unimplemented destinations (formerly option A). The alternatives were (B) a restricted catalog whose
+techniques only reach implemented receivers and (C) waiting for the receivers; neither is adopted. Standing's
+techniques, grades, numbers and first tables remain **[OPEN]**.
 
 ### 18.8 Impact on existing artifacts
 
@@ -887,3 +906,77 @@ No numbers or mechanics are decided here.
 * **Topology catalog (§9.2):** its endpoint check ("a destination or technique id that does not resolve") needs
   the registry, which is why the registry precedes the catalog in §14.
 * **Python and fixtures:** untouched; the frozen oracle has no registry and none is proposed.
+
+## 19. Owner decisions recorded (2026-10-11)
+
+**[OWNER-APPROVED] 2026-10-11.** The project owner explicitly approved **T-1 through T-3 and P-1 through P-12** as
+architectural direction, with the clarifications in §19.2, after reviewing a decision checklist for them. This
+section records that approval. It does not rewrite §15, whose questions stay verbatim under their original ids.
+
+What the tag means: the *direction* is decided. Names, error codes, field lists, tiers and validation orders written
+elsewhere in this document as **[PROPOSAL]** stay proposals unless §19.1 says otherwise. **The approval does not
+authorize implementing** the registry, the topology catalog, the Standing engine, Half Guard rules, receiver
+factories, D3-B re-entry, new Mount exits or a Reversal landing. Frozen deterministic mechanics and evidence are
+unchanged, and D1–D6, A3b and the three current Mount exits are preserved.
+
+### 19.1 Approved direction and its limits
+
+| ID | Approved direction | Limits and what stays open |
+| --- | --- | --- |
+| T-1 | Families and variations are distinct. Variations are the default for the Guide §10 substates | Technical Mount remains unresolved against the frozen Mount: §7 options (i)–(iii) stay open. Promotion criteria remain open, and Deep Half (not in §10) is not covered |
+| T-2 | A connection the Guide does not list requires explicit owner approval and provenance before it is cataloged | No edge beyond Guide §11 is approved; the additions in §5.2 stay "proposed" and uncataloged |
+| T-3 | `cataloged` / `producible` / `receivable` semantics, one authority per status, promotion as a move and never a copy | No catalog is built; §14 step 7 stays conditional and needs its own authorization |
+| P-1 / P-2 | A validated registry of stable string ids; the ten initial families exactly as listed in §18.1 | Class, function and code names stay provisional; nothing is implemented, and building it needs a separate authorization (§14 step 3); the amendment rule for adding a family is the §18.1 rule, not a separate approval |
+| P-3 | Ids are append-only, never reused or silently remapped, with tombstones on retirement; registry lifecycle is separate from record-schema versions (§19.2 a, b) | Tombstone mechanics and replay compatibility are neither designed nor implemented |
+| P-4 | The first registry declares families only | Variation registration is not decided |
+| P-5 / P-6 | Normal matches default to `standing`; scenario starts are allowed; there is no fallback; the existing Mount-only constructors are preserved while Standing is unimplemented | Error-code names, validation order and the start-aware constructor signature stay proposals (§18.4, §18.5) |
+| P-7 | Fresh-start and carry-over entry are separate capabilities | No roster is implemented and its form is not decided |
+| P-8 | Standing uses neutral fighter identities with no positional authority and no initiative, and sealed simultaneous choice in principle | The exact protocol, any role vocabulary and how the contract expresses it (C-12) stay open |
+| P-9 | Explicit, complete result-to-destination maps with honest halts; remaining in Standing is a non-exit result (§19.2 d) | Standing techniques, grades, numbers and first tables stay open |
+| P-10 | Half Guard stays the first receiver; Standing is a parallel entry track; the Half Guard receiver accepts validated role maps from non-Mount sources | Half Guard Q1–Q8 stay open; this constrains only its entry design |
+| P-11 | Segment identity and re-entry are designed before the first route back to Standing | The design itself, and D3-B reconciliation on re-entry, stay open |
+| P-12 | Scenario starts use validated, position-legal entry parameters (§19.2 c) | Each position's legality rules are its own and are not yet written |
+
+### 19.2 Clarifications recorded
+
+a. **Retired position ids (P-3).** Position ids are never reused or silently remapped. A retired id remains
+   recognizable as a historical identity, but a new match cannot start in a retired position. Historical saves and
+   replays may use retired ids when compatible historical rules are available; otherwise they fail explicitly rather
+   than silently substituting another position or changing the recorded outcome. Replay compatibility and retirement mechanics are not implemented or designed here.
+b. **Versioning (P-3).** Adding a position family to the registry does not by itself require changing the schema
+   version of an existing record. Registry identity lifecycle and serialized-record schema versions stay separate.
+   Any actual change to a serialized record's structure or meaning still needs an explicit compatibility review
+   and, where appropriate, schema versioning. Stable position ids are persisted, and no mandatory registry-version
+   field is added to existing records without a separate decision. This resolves the P-3 version question for now; adding such a field would need a
+   separate decision.
+c. **Scenario starts (P-12).** Each position owns validation of its legal initial state. A scenario may select a
+   declared, implemented position with a valid fresh-start factory, but cannot bypass that position's rules or
+   initialize an arbitrary invalid state. A position without approved entry rules or a working fresh-start factory
+   stays unavailable as a scenario start.
+d. **Standing outcomes (P-9).** Each Standing action/result branch must state explicitly whether it remains in
+   Standing, causes a declared positional exit, or produces another separately approved outcome. Remaining in
+   Standing is a non-exit result: it does not create a Standing-to-Standing transition, consume an additional window
+   or produce a graph transition event. This fixes the rule for a remain-in-Standing result; how it is represented in
+   data is not decided, and techniques, grades and numbers remain open.
+
+### 19.3 Gates that stay open
+
+* Half Guard rules and Q1–Q8 (`POSITION_GRAPH.md` §12); the Half Guard oracle (D6).
+* Technical Mount's representation against the frozen Mount (T-1; §7 options (i)–(iii)) and variation promotion criteria.
+* Standing's exact sealed-choice protocol, any role vocabulary, and its first technique and grade tables and numbers.
+* T-4 to T-12, as written in §15 (new Mount outgoing techniques and the versioning of the frozen catalog, voluntary
+  reposition, the Reversal landing, receiver state including latch restoration, submission as a destination, role
+  vocabularies and segment schemas per family, GrappleMap reuse, transients, scoring hooks).
+* D3-B applicability and re-entry reconciliation; the Reversal landing; new Mount exits.
+* Implementation of the registry, topology catalog, Standing engine, receiver factories and entry factories; tombstone
+  and historical-replay mechanics; the A3d test-only slice. Each needs its own explicit authorization.
+
+### 19.4 Effect on the rest of this document
+
+* Text elsewhere stays **[PROPOSAL]** unless §19.1 states the decision. Where a sentence only restates a §19.1
+  decision it may be read as **[OWNER-APPROVED]** for that decision alone; any name, code, field, regex, tier,
+  ordering or mechanism in it stays a proposal. Headline tags were updated only where a sentence states just that
+  decision.
+* The §15 rows, T-1 to T-12, C-1 to C-12 and P-1 to P-12 keep their ids and original text. No proposal is promoted
+  into an implementation requirement by this section.
+* "Unknown ids … are rejected" in §18.2 concerns ids that were never declared; a retired id follows §19.2 a.
