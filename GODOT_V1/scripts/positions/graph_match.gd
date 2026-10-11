@@ -18,6 +18,8 @@ const STATUS_ACTIVE: String = "active"
 const STATUS_ENDED: String = "ended"
 const STATUS_HALTED: String = "halted_at_unsupported_transition"
 const ERROR_HALTED: String = "halted_unsupported_transition"
+const REASON_UNKNOWN_SOURCE: String = "unknown_source_position"
+const REASON_MALFORMED_DECLARATION: String = "malformed_declaration"
 
 var _gateway: BjjMatchWindowGateway
 var _status: String = STATUS_ACTIVE
@@ -44,19 +46,71 @@ static func create(configuration: Dictionary, top_fighter_id: String, bottom_fig
 
 # --- Pure classification ----------------------------------------------------------------
 
-# Maps one raw Mount exit label to a graph decision. Fail closed: only labels Mount declares are
-# understood, and an arbitrary label is never treated as a position destination.
+# Maps one raw Mount exit label to a graph decision (the Slice A public entry point). Equivalent to
+# classify_exit_from(POSITION_ID, raw_label).
 static func classify_exit(raw_label: String) -> Dictionary:
+    return classify_exit_from(POSITION_ID, raw_label)
+
+# Position-aware, pure and read-only classification. Fail closed: only the active source
+# position's own declared exits are understood, and an arbitrary label is never treated as a
+# destination. Mount is read from BjjMountContract (its mapping is not copied here).
+# `declarations` is an optional {source_position_id: {"exits": {label: destination_id},
+# "unresolved": [label, ...]}} used by tests for synthetic positions; production passes none, so
+# no other position is registered. It may never redefine Mount. A result is either
+# {"kind": "none"} or {"kind": "blocked", reason, destination_position_id}; no result is a
+# transition, because no destination commit exists yet.
+static func classify_exit_from(source_position_id: String, raw_label: String, declarations: Dictionary = {}) -> Dictionary:
+    if declarations.has(POSITION_ID):
+        return _blocked_decision(REASON_MALFORMED_DECLARATION)
+    if source_position_id == POSITION_ID:
+        return _classify_mount_exit(raw_label)
+    if source_position_id.is_empty() or not declarations.has(source_position_id):
+        return _blocked_decision(REASON_UNKNOWN_SOURCE)
+    var declaration: Variant = declarations[source_position_id]
+    if not _declaration_is_valid(source_position_id, declaration):
+        return _blocked_decision(REASON_MALFORMED_DECLARATION)
+    if raw_label.is_empty():
+        return {"kind": "none"}
+    if (declaration.unresolved as Array).has(raw_label):
+        return _blocked_decision("unresolved_destination")
+    if (declaration.exits as Dictionary).has(raw_label):
+        return _blocked_decision("destination_not_implemented", str(declaration.exits[raw_label]))
+    return _blocked_decision("undeclared_exit_label")
+
+static func _classify_mount_exit(raw_label: String) -> Dictionary:
     if raw_label.is_empty():
         return {"kind": "none"}
     var transition := BjjMountContract.transition_for(raw_label)
     if BjjMountContract.UNRESOLVED_EXITS.has(raw_label):
-        return {"kind": "blocked", "reason": "unresolved_destination", "destination_position_id": ""}
+        return _blocked_decision("unresolved_destination")
     if transition.resolved:
-        # Declared by Mount, but no receiving position is implemented in Slice A.
-        return {"kind": "blocked", "reason": "destination_not_implemented",
-            "destination_position_id": transition.destination_position_id}
-    return {"kind": "blocked", "reason": "undeclared_exit_label", "destination_position_id": ""}
+        # Declared by Mount, but no receiving position is implemented yet.
+        return _blocked_decision("destination_not_implemented", transition.destination_position_id)
+    return _blocked_decision("undeclared_exit_label")
+
+static func _blocked_decision(reason: String, destination_position_id: String = "") -> Dictionary:
+    return {"kind": "blocked", "reason": reason, "destination_position_id": destination_position_id}
+
+static func _declaration_is_valid(source_position_id: String, declaration: Variant) -> bool:
+    if not declaration is Dictionary:
+        return false
+    var shape: Dictionary = declaration
+    if shape.size() != 2 or not shape.has("exits") or not shape.has("unresolved"):
+        return false
+    if not shape.exits is Dictionary or not shape.unresolved is Array:
+        return false
+    for label: Variant in shape.exits:
+        var destination: Variant = shape.exits[label]
+        if not label is String or (label as String).is_empty():
+            return false
+        if not destination is String or (destination as String).is_empty() or destination == source_position_id:
+            return false
+    var seen: Dictionary = {}
+    for label: Variant in shape.unresolved:
+        if not label is String or (label as String).is_empty() or seen.has(label) or shape.exits.has(label):
+            return false
+        seen[label] = true
+    return true
 
 # "timeout", "tap", or "" when the state is not a normal terminal outcome.
 static func terminal_reason(state: Dictionary) -> String:
@@ -133,7 +187,7 @@ func submit(window_id: int, fighter_id: String, action_id: String = "", response
     _append({"kind": "decision_accepted", "window_id": window_id, "fighter_id": fighter_id,
         "role": report.values.role, "decision": report.values.kind})
     var exit_label: String = str(report.values.transition.raw_destination)
-    var verdict := classify_exit(exit_label)
+    var verdict := classify_exit_from(POSITION_ID, exit_label)
     if verdict.kind == "blocked":
         _blocked = {"from_position_id": POSITION_ID, "label": exit_label, "reason": verdict.reason,
             "destination_position_id": verdict.destination_position_id}
