@@ -100,3 +100,7 @@ MountMatch or production recovery parity. Issue #20 is the next controller slice
 ## Position topology (proposal)
 
 [POSITION_TOPOLOGY.md](POSITION_TOPOLOGY.md) (A3c) is a specification only. It separates the three exit labels the frozen Mount engine emits today from the game's future position topology, evaluates GrappleMap as an architectural reference (nothing imported), and proposes a future transition contract, receiver-state decision matrix and chaining boundary. A follow-up adds a proposed canonical position-family inventory, a registry recommendation (stable string ids, not an integer enum) and a match-start contract in which normal matches begin from Standing; Standing is not implemented, an identity-only `BjjPositionRegistry` was added separately as A3e (ids only, no consumers), and Mount remains the only constructed position. It changes no code, schema, fixture or rule, and it assigns no landing to Mount `Reversal`.
+
+## Fighter foundation (F0)
+
+[F0_FIGHTER_FOUNDATION.md](F0_FIGHTER_FOUNDATION.md) records the source-field inventory, the feasibility decisions and the API for `BjjFighterDefinition` (a reusable content `Resource`), `BjjFighterSnapshotAdapter` (read-only, fighter-keyed views over the Mount gateway) and the additive `behavior_fields()` accessor. The Mount match remains the only owner of stamina, exhaustion, behavior, roles and time; nothing here is a Node.

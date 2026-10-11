@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="BjjFighterDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/core/fighter_definition.gd" id="1_xqd5k"]
+
+[resource]
+script = ExtResource("1_xqd5k")
+definition_id = "test_template_bravo"
+display_name = "Test Bravo"

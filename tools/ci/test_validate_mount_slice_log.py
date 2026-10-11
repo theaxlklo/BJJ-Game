@@ -346,5 +346,46 @@ class RegistryStepWiringTests(unittest.TestCase):
         self.assertIn('push_error("Position registry: %d / %d assertions failed" % [failures, checks])', source)
 
 
+FIGHTER = 'Fighter foundation'
+FIGHTER_EXPECTED = 750
+
+
+class FighterStepWiringTests(unittest.TestCase):
+    @staticmethod
+    def step():
+        text = WORKFLOW.read_text()
+        match = re.search(r'^      - name: Validate fighter definitions and read-only fighter snapshots[^\n]*\n(.*?)(?=^      - name: )', text, re.S | re.M)
+        assert match, 'fighter foundation step not found'
+        return match.group(1)
+
+    def test_step_validates_status_and_complete_log(self):
+        live = [line.strip() for line in self.step().splitlines() if line.strip() and not line.strip().startswith('#')]
+        self.assertTrue(any(line.startswith('godot --headless --path GODOT_V1 --script res://tests/test_fighter_foundation.gd '
+                                            '> /tmp/fighter-foundation.log 2>&1 || status=$?') for line in live), live)
+        self.assertIn('set -euo pipefail', live)
+        self.assertIn('shell: bash', live)
+        pin = re.search(r'^\s*python tools/ci/validate_mount_slice_log\.py /tmp/fighter-foundation\.log --name "Fighter foundation" '
+                        r'--exit-code "\$status" --expected-assertions ([1-9][0-9]*)\s*$', self.step(), re.M)
+        self.assertIsNotNone(pin, self.step())
+        self.assertEqual(int(pin.group(1)), FIGHTER_EXPECTED, 'workflow pin and the test constant must change together')
+        for forbidden in ('continue-on-error', '\n        if:', 'set +e'):
+            self.assertNotIn(forbidden, self.step())
+
+    def test_script_runs_once_and_matches_the_completion_contract(self):
+        self.assertEqual(WORKFLOW.read_text().count('res://tests/test_fighter_foundation.gd'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_fighter_foundation.gd').read_text()
+        self.assertIn('print("Fighter foundation PASS: %d assertions" % checks)', source)
+        self.assertIn('push_error("Fighter foundation: %d / %d assertions failed" % [failures, checks])', source)
+
+    def test_validator_accepts_and_rejects_the_suite_log(self):
+        clean = 'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nFighter foundation PASS: 750 assertions\n'
+        self.assertEqual(validate(clean, 0, FIGHTER_EXPECTED, FIGHTER), [])
+        premature = clean.replace('750', '633') + 'SCRIPT ERROR: Invalid access to property or key on a base object of type Nil.\n'
+        joined = '\n'.join(validate(premature, 0, FIGHTER_EXPECTED, FIGHTER))
+        self.assertIn('assertion count 633 != required 750', joined)
+        self.assertIn('unexpected diagnostic', joined)
+        self.assertTrue(validate(clean.replace('Fighter foundation PASS', 'Position registry PASS'), 0, FIGHTER_EXPECTED, FIGHTER))
+
+
 if __name__ == '__main__':
     unittest.main()
