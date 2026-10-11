@@ -9,6 +9,9 @@ behavior, no Python source and no fixture.
 Depends on: `POSITION_CONTRACT.md` (PR #39), `WINDOW_GATEWAY.md` (PR #41), `MOUNT_LIFECYCLE.md`,
 Master Guide v10.4 §§7, 8, 9, 11.4, 12, 14, 63.
 
+See also: [POSITION_TOPOLOGY.md](POSITION_TOPOLOGY.md) (A3c, proposal) for the wider position topology, which
+treats the three Mount exit labels in §1 as the current producible inventory, not the complete topology.
+
 ## 1. Why Half Guard first (deviation from Guide §63)
 
 Guide §63 Phase 2 recommends: Standing, Closed Guard, Side Control, Half Guard, Back Control,
