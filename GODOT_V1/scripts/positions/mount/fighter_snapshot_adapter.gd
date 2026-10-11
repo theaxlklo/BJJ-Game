@@ -1,9 +1,11 @@
 class_name BjjFighterSnapshotAdapter
 extends RefCounted
 
-# Read-only, fighter-keyed views of a live Mount gateway (F0). The Mount match stays the ONLY
-# owner of stamina, exhaustion, behavior, roles, initiative and time; this adapter holds no
-# second copy of any of it. It keeps the gateway reference and plain-string identity metadata
+# Read-only, fighter-keyed views of a live Mount source (F0): a BjjMatchWindowGateway or, since F1,
+# a BjjPositionGraphMatch. Both expose the same public read views (roles(), state_fields(),
+# behavior_fields()); the adapter never reaches the gateway behind a graph. The Mount match stays
+# the ONLY owner of stamina, exhaustion, behavior, roles, initiative and time; this adapter holds
+# no second copy of any of it. It keeps the source reference and plain-string identity metadata
 # copied from the definitions at creation (so later edits to a shared Resource cannot change
 # an existing view), and builds a fresh, detached Dictionary per fighter on every call.
 #
@@ -13,7 +15,7 @@ extends RefCounted
 # a later position supplies its own mapping instead of subclassing fighters per position.
 const ROLES: Array[String] = ["top", "bottom"]
 
-var _gateway: BjjMatchWindowGateway
+var _source: Variant
 var _identity: Dictionary = {}
 var _fighter_ids: Array[String] = []
 
@@ -24,21 +26,22 @@ class Creation extends RefCounted:
         return error.is_empty() and adapter != null
 
 
-# `definitions` maps each of the gateway's two stable fighter ids to a BjjFighterDefinition.
-# The keys must equal the gateway's fighter ids exactly. The SAME definition may back both
+# `source` is a BjjMatchWindowGateway or a BjjPositionGraphMatch; anything else is refused with
+# missing_gateway (the original F0 code). `definitions` maps each of the source's two stable
+# fighter ids to a BjjFighterDefinition. The keys must equal the source's fighter ids exactly. The SAME definition may back both
 # fighters. Validation runs before anything is stored; nothing here mutates the gateway.
 # Codes, in order: missing_gateway, invalid_definitions, invalid_fighter_id_key,
 # unknown_fighter_id, missing_fighter_definition, invalid_fighter_definition, then the
 # definition's own validation_error().
-static func create(gateway: Variant, definitions: Variant) -> Creation:
+static func create(source: Variant, definitions: Variant) -> Creation:
     var result := Creation.new()
-    if not gateway is BjjMatchWindowGateway:
+    if not (source is BjjMatchWindowGateway or source is BjjPositionGraphMatch):
         result.error = "missing_gateway"
         return result
     if not definitions is Dictionary:
         result.error = "invalid_definitions"
         return result
-    var gateway_ids: Array[String] = _gateway_ids(gateway)
+    var gateway_ids: Array[String] = _source_ids(source)
     for key: Variant in definitions:
         if typeof(key) != TYPE_STRING:
             result.error = "invalid_fighter_id_key"
@@ -63,7 +66,7 @@ static func create(gateway: Variant, definitions: Variant) -> Creation:
             return result
         identity[fighter_id] = {"definition_id": String(definition.definition_id), "display_name": String(definition.display_name)}
     var adapter := BjjFighterSnapshotAdapter.new()
-    adapter._gateway = gateway
+    adapter._source = source
     adapter._identity = identity
     adapter._fighter_ids = gateway_ids
     result.adapter = adapter
@@ -79,7 +82,7 @@ func fighter_ids() -> Array[String]:
 # data: fighter_id, definition_id, display_name, role, stamina_current, stamina_maximum,
 # exhaustion_band, behavior. Safe before a window, while one is open and after a decision.
 func snapshots() -> Dictionary:
-    return _build(_gateway.roles(), _gateway.state_fields(), _gateway.behavior_fields(), _identity)
+    return _build(_source.roles(), _source.state_fields(), _source.behavior_fields(), _identity)
 
 
 # Pure mapping, separate from the gateway so the identity rules are testable with synthetic
@@ -108,9 +111,9 @@ static func _build(roles: BjjPositionContract.Roles, state: Dictionary, behavior
     return result
 
 
-static func _gateway_ids(gateway: BjjMatchWindowGateway) -> Array[String]:
+static func _source_ids(source: Variant) -> Array[String]:
     var ids: Array[String] = []
-    var mapping: Dictionary = gateway.roles().fighter_by_role
+    var mapping: Dictionary = source.roles().fighter_by_role
     for role: String in ROLES:
         ids.append(str(mapping.get(role, "")))
     ids.sort()

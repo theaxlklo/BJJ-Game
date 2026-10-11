@@ -5,8 +5,15 @@ config_version=5
 [application]
 
 config/name="BJJ Game — Godot V1"
-run/main_scene="res://scenes/mount_debug.tscn"
+run/main_scene="res://scenes/mount_practice.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=1152
+window/size/viewport_height=648
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [rendering]
 

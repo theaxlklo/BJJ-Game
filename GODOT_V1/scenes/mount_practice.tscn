@@ -1,0 +1,382 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/presentation/mount_practice_scene.gd" id="1_h88ky"]
+
+[node name="MountPractice" type="Control" unique_id=1493065122]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_h88ky")
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=63381493]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="Main" type="VBoxContainer" parent="Margin" unique_id=798085593]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="Margin/Main" unique_id=983569903]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="Margin/Main/Header" unique_id=1475748811]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Mount practice - positional training prototype (not a match from Standing)"
+autowrap_mode = 3
+
+[node name="ClockLabel" type="Label" parent="Margin/Main/Header" unique_id=502968268]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BannerPanel" type="PanelContainer" parent="Margin/Main" unique_id=995086058]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BannerBoxMargin" type="MarginContainer" parent="Margin/Main/BannerPanel" unique_id=1277670271]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="BannerBox" type="VBoxContainer" parent="Margin/Main/BannerPanel/BannerBoxMargin" unique_id=1027564291]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="BannerLabel" type="Label" parent="Margin/Main/BannerPanel/BannerBoxMargin/BannerBox" unique_id=889537744]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="FightersRow" type="HBoxContainer" parent="Margin/Main" unique_id=136135620]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="FighterAPanel" type="PanelContainer" parent="Margin/Main/FightersRow" unique_id=1450854410]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FighterABoxMargin" type="MarginContainer" parent="Margin/Main/FightersRow/FighterAPanel" unique_id=1671738408]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="FighterABox" type="VBoxContainer" parent="Margin/Main/FightersRow/FighterAPanel/FighterABoxMargin" unique_id=1026861258]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="FighterATitle" type="Label" parent="Margin/Main/FightersRow/FighterAPanel/FighterABoxMargin/FighterABox" unique_id=1248386335]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Fighter A"
+
+[node name="FighterAName" type="Label" parent="Margin/Main/FightersRow/FighterAPanel/FighterABoxMargin/FighterABox" unique_id=1063686900]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="FighterARole" type="Label" parent="Margin/Main/FightersRow/FighterAPanel/FighterABoxMargin/FighterABox" unique_id=1942064883]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="FighterAStaminaBar" type="ProgressBar" parent="Margin/Main/FightersRow/FighterAPanel/FighterABoxMargin/FighterABox" unique_id=295236373]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+show_percentage = false
+
+[node name="FighterAStaminaLabel" type="Label" parent="Margin/Main/FightersRow/FighterAPanel/FighterABoxMargin/FighterABox" unique_id=1496736719]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="FighterABehavior" type="Label" parent="Margin/Main/FightersRow/FighterAPanel/FighterABoxMargin/FighterABox" unique_id=567246793]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="FighterAIdentity" type="Label" parent="Margin/Main/FightersRow/FighterAPanel/FighterABoxMargin/FighterABox" unique_id=1243019951]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="MatPanel" type="PanelContainer" parent="Margin/Main/FightersRow" unique_id=2052099877]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MatBoxMargin" type="MarginContainer" parent="Margin/Main/FightersRow/MatPanel" unique_id=237244309]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="MatBox" type="VBoxContainer" parent="Margin/Main/FightersRow/MatPanel/MatBoxMargin" unique_id=1995582380]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="MatTitle" type="Label" parent="Margin/Main/FightersRow/MatPanel/MatBoxMargin/MatBox" unique_id=469677603]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Mount control"
+
+[node name="AxisBar" type="ProgressBar" parent="Margin/Main/FightersRow/MatPanel/MatBoxMargin/MatBox" unique_id=958025951]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+show_percentage = false
+
+[node name="AxisLabel" type="Label" parent="Margin/Main/FightersRow/MatPanel/MatBoxMargin/MatBox" unique_id=1753612486]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BandLabel" type="Label" parent="Margin/Main/FightersRow/MatPanel/MatBoxMargin/MatBox" unique_id=1102128520]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="WindowLabel" type="Label" parent="Margin/Main/FightersRow/MatPanel/MatBoxMargin/MatBox" unique_id=1402930590]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="FighterBPanel" type="PanelContainer" parent="Margin/Main/FightersRow" unique_id=1309234464]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FighterBBoxMargin" type="MarginContainer" parent="Margin/Main/FightersRow/FighterBPanel" unique_id=760772846]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="FighterBBox" type="VBoxContainer" parent="Margin/Main/FightersRow/FighterBPanel/FighterBBoxMargin" unique_id=1255669205]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="FighterBTitle" type="Label" parent="Margin/Main/FightersRow/FighterBPanel/FighterBBoxMargin/FighterBBox" unique_id=254976279]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Fighter B"
+
+[node name="FighterBName" type="Label" parent="Margin/Main/FightersRow/FighterBPanel/FighterBBoxMargin/FighterBBox" unique_id=1789604538]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="FighterBRole" type="Label" parent="Margin/Main/FightersRow/FighterBPanel/FighterBBoxMargin/FighterBBox" unique_id=973878264]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="FighterBStaminaBar" type="ProgressBar" parent="Margin/Main/FightersRow/FighterBPanel/FighterBBoxMargin/FighterBBox" unique_id=665408535]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+show_percentage = false
+
+[node name="FighterBStaminaLabel" type="Label" parent="Margin/Main/FightersRow/FighterBPanel/FighterBBoxMargin/FighterBBox" unique_id=174229911]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="FighterBBehavior" type="Label" parent="Margin/Main/FightersRow/FighterBPanel/FighterBBoxMargin/FighterBBox" unique_id=1549030884]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="FighterBIdentity" type="Label" parent="Margin/Main/FightersRow/FighterBPanel/FighterBBoxMargin/FighterBBox" unique_id=952311287]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="DecisionRow" type="HBoxContainer" parent="Margin/Main" unique_id=1164897274]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="TechniqueBox" type="VBoxContainer" parent="Margin/Main/DecisionRow" unique_id=2003718304]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 3
+
+[node name="TechniqueHeader" type="Label" parent="Margin/Main/DecisionRow/TechniqueBox" unique_id=829643596]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="TechniqueList" type="ItemList" parent="Margin/Main/DecisionRow/TechniqueBox" unique_id=1071659024]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_vertical = 3
+allow_search = false
+
+[node name="ResponseBox" type="VBoxContainer" parent="Margin/Main/DecisionRow" unique_id=442067718]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 3
+
+[node name="ResponseHeader" type="Label" parent="Margin/Main/DecisionRow/ResponseBox" unique_id=168152477]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="ResponseList" type="ItemList" parent="Margin/Main/DecisionRow/ResponseBox" unique_id=1642714577]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_vertical = 3
+allow_search = false
+
+[node name="CommitBox" type="VBoxContainer" parent="Margin/Main/DecisionRow" unique_id=388216899]
+custom_minimum_size = Vector2(190, 0)
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="CommitHeader" type="Label" parent="Margin/Main/DecisionRow/CommitBox" unique_id=1313343554]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Commitment"
+
+[node name="CommitOption" type="OptionButton" parent="Margin/Main/DecisionRow/CommitBox" unique_id=1549047265]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="CommitNote" type="Label" parent="Margin/Main/DecisionRow/CommitBox" unique_id=1367917179]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Margin/Main" unique_id=372082293]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="NextWindowButton" type="Button" parent="Margin/Main/Buttons" unique_id=1080484214]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Next Window [N]"
+
+[node name="SubmitButton" type="Button" parent="Margin/Main/Buttons" unique_id=607683579]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Submit Decision [S]"
+
+[node name="NewMatchButton" type="Button" parent="Margin/Main/Buttons" unique_id=694631501]
+unique_name_in_owner = true
+layout_mode = 2
+text = "New Practice Match"
+
+[node name="MessageLabel" type="Label" parent="Margin/Main/Buttons" unique_id=1174846414]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="ResultRow" type="HBoxContainer" parent="Margin/Main" unique_id=1241402404]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="ResultPanel" type="PanelContainer" parent="Margin/Main/ResultRow" unique_id=2019934464]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ResultBoxMargin" type="MarginContainer" parent="Margin/Main/ResultRow/ResultPanel" unique_id=1472499167]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="ResultBox" type="VBoxContainer" parent="Margin/Main/ResultRow/ResultPanel/ResultBoxMargin" unique_id=2018504048]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="ResultHeader" type="Label" parent="Margin/Main/ResultRow/ResultPanel/ResultBoxMargin/ResultBox" unique_id=235391739]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Latest accepted decision and result (the live panels also include the time advance applied when a window opens)"
+autowrap_mode = 3
+
+[node name="ResultScroll" type="ScrollContainer" parent="Margin/Main/ResultRow/ResultPanel/ResultBoxMargin/ResultBox" unique_id=29278485]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ResultLabel" type="Label" parent="Margin/Main/ResultRow/ResultPanel/ResultBoxMargin/ResultBox/ResultScroll" unique_id=946849248]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 3
+
+[node name="LogPanel" type="PanelContainer" parent="Margin/Main/ResultRow" unique_id=1621896093]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="LogBoxMargin" type="MarginContainer" parent="Margin/Main/ResultRow/LogPanel" unique_id=1389065161]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="LogBox" type="VBoxContainer" parent="Margin/Main/ResultRow/LogPanel/LogBoxMargin" unique_id=2090120627]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="LogHeader" type="Label" parent="Margin/Main/ResultRow/LogPanel/LogBoxMargin/LogBox" unique_id=1315100196]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Event log (graph events)"
+
+[node name="EventLog" type="RichTextLabel" parent="Margin/Main/ResultRow/LogPanel/LogBoxMargin/LogBox" unique_id=1995638833]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_vertical = 3
+scroll_following = true
