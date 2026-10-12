@@ -1240,6 +1240,8 @@ Recovery should come from choices such as:
 
 Stabilizing a position should not give free stamina recovery.
 
+**2026-10-12 new owner-approved mechanic (future, unimplemented):** [Heart of a Lion](../GODOT_V1/docs/MATCH_INCENTIVES_HEART_OF_A_LION.md) is a **once-per-match** mutual zero-stamina event: both fighters first restore 50%, each completes five of their own ordinary turns, then both restore to full if the match is still active. No free windows, no interrupted terminal outcomes and no repeat trigger; integer rounding, turn-boundary accounting and ruleset opt-in require a separate specification gate. This does not replace normal stamina CONSERVE/RESET choices.
+
 ---
 
 # 24. Styles
@@ -2020,18 +2022,11 @@ Exact attribution still requires tuning.
 
 # 42. Stalling Penalties
 
-## Points
+## IBJJF-based points mode
 
-Potential ladder:
+**Owner clarified 2026-10-12:** stalling penalties follow the **IBJJF penalty mechanism**, not direct subtraction of a point per inactive turn. In the archived June 2024 IBJJF Rules Book v6.1, Articles 7.2.1 and 7.3.1, an applicable **20 consecutive simulated seconds** of lack of combativeness triggers the penalty process: first penalty is recorded; second awards the opponent **one advantage**; third awards the opponent **two points**; fourth disqualifies the offender. Serious-foul and inactivity penalties accumulate per that reference, with specific positional exemptions and standing-restart requirements. Reconfirm the current rulebook and target division before implementing; scoring/penalty ledgers must remain distinct.
 
-```text
-Warning
-→ penalty/point consequence
-→ position reset
-→ escalation
-```
-
-Exact values remain open.
+The previously discussed **two consecutive stalling turns** is a possible *warning/detection heuristic*, **not** a replacement for the referenced 20-second IBJJF penalty requirement. See [Match incentives and Heart of a Lion](../GODOT_V1/docs/MATCH_INCENTIVES_HEART_OF_A_LION.md) for accepted boundaries, Momentum and the still-open implementation details.
 
 ## Submission-Only
 
@@ -2059,6 +2054,8 @@ non-stalling player
 ```
 
 Repeated offense may cause Position Reset.
+
+**Momentum (owner-approved direction, 2026-10-12, unimplemented):** Stalling can give the opponent time to prepare a stronger next eligible attack; no numeric bonus, stack cap, trigger/consumption rule or extra window is approved. This is a custom game mechanic, not an IBJJF referee penalty. **Heart of a Lion** likewise is a custom optional game modifier, not official IBJJF regulation; strict IBJJF and modified game presets must remain distinguishable. See [the separate decision record](../GODOT_V1/docs/MATCH_INCENTIVES_HEART_OF_A_LION.md).
 
 ---
 
