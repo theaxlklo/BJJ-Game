@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 1.6 — record owner-directed three-slot blurry-memory learning queue, replacement choice and independent focus/recall constraints; no combat or progression implementation  
+**Roadmap revision:** 1.7 — owner confirms percentage-based residual learning after blurry-memory discard; retention rate and persistence implementation remain open  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`) and draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and any merge/integration. This document recommends; it does not change engine behavior or authorize a merge.
@@ -160,7 +160,13 @@ Opponent uses a technique not yet learned
                                   OR deliberately replace ONE with the new encounter
 ```
 
-**Owner-defined principles:** at most three unresolved blurry memories concurrently; the player may **grind/practice until one becomes learned** (then its slot is freed) or **discard one and acquire a newly encountered technique**. A new encounter must **never automatically evict** an existing blurry memory. Reject or defer admission of a fourth active blurry record if no player replacement choice has been committed. Do not lose learned/mastered techniques when clearing a blurry slot. These mechanics do not narrow the future total memory/technique collection.
+**Owner-defined principles:** at most three unresolved blurry memories concurrently; the player may **grind/practice until one becomes learned** (then its slot is freed) or **discard one and acquire a newly encountered technique**. A new encounter must **never automatically evict** an existing blurry memory. Reject or defer admission of a fourth active blurry record if no player replacement choice has been committed. **Discarding preserves a percentage of that blurry memory's current learning progress as a dormant residual trace, rather than deleting all partial progress.** The slot is freed; if the technique is encountered again, the stored trace is available for relearning instead of a forced fresh start. Do not lose learned/mastered techniques when clearing a blurry slot. These mechanics do not narrow the future total memory/technique collection.
+
+**Residual clarity / partial learning retention (OWNER-APPROVED CONCEPT; numeric rate OPEN):**
+- A discarded unfinished memory keeps **a fraction of its earned clarity** keyed by that technique's stable identity; the player does not retain an active fourth blurry memory. The residual trace is dormant, not a new usable/equipped technique, and confers no priority, legal-action entitlement or mastered-memory status.
+- At a later genuine encounter, selecting the rediscovered technique for an available slot restores its residual progress rather than resetting it to zero. **Example only:** if clarity was 60% and the retention rate were 50%, the dormant trace would be 30% clarity. Neither the 50% rate nor rounding is approved.
+- Decide a consistent rounding rule, whether the retained fraction depends on belt/general Technique/positional focus or is universal, how repeated discard/reacquisition affects the stored trace (avoid exploitative double-counting or unreasonably punitive decay), and whether it survives loss/restart/career progression. The rule must be deterministic, recorded per stable move/variant, and auditable in replays.
+- Preserve the three-slot cap and explicit replacement choice. Never automatically convert dormant traces into active blurry memories, permanently learned repertoire, or Never Forget selections.
 
 **Proposed interactions (not frozen implementation):**
 - A White Belt's illustrative **two positional-focus slots** (`mount/top` etc.) are unrelated to the **three blurry-memory slots**; active positional focus may speed learning matching move memories but does not change the concurrency cap absent a later explicit rule.
@@ -169,7 +175,7 @@ Opponent uses a technique not yet learned
 - Store active slots in stable order with stable technique/variant IDs, deterministic clarity progress, optional pending encounter reference and explicit `keep` / `replace(slot_id)` selection. Replay/load must reproduce the same choices and queue. Treat distinct technique variants consistently, and do not count the same technique twice.
 - No pass/REST spam or scripted opponent repetition should award unlimited mastery. Progress triggers and anti-farming policy require independent measurement; previously mastered / Never Forget techniques are not forcibly displaced by slot replacement.
 
-**Open implementation decisions:** what exact events add clarity (observation, using an incomplete memory, practice, defeat/training), whether discarded partial clarity is fully lost or leaves a retrievable trace, what counts as `learned` versus `mastered`, whether pending observations expire, timing/UX for replacement prompts in five-minute matches, duplicate-variant semantics, career/run persistence boundaries, and whether the 3-slot cap ever upgrades. Do not fill missing numerical XP thresholds or game-balance rules without owner approval.
+**Open implementation decisions:** the exact **nonzero residual retention percentage** and rounding, what exact events add clarity (observation, using an incomplete memory, practice, defeat/training), repeated-discard handling, what counts as `learned` versus `mastered`, whether pending observations expire, timing/UX for replacement prompts in five-minute matches, duplicate-variant semantics, career/run persistence boundaries, and whether the 3-slot cap ever upgrades. **The existence of percentage-based partial progress retention is owner direction; the numeric rate is not approved.** Do not fill missing numerical XP thresholds or game-balance rules without owner approval.
 
 **Milestone placement:** include this in the **memory/career design** phase and in a later bounded memory learning specification, not the current B2a.1 initiative contract or B2b Side Control oracle. B2a.1 may reference how positional focus would accelerate memory progress, but it must not implement this queue or change initiative.
 
