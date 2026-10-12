@@ -1,6 +1,6 @@
 <!-- Generated, deterministic. Regenerate with:
   godot-bjj --headless --path GODOT_V1 --script res://tests/measure_match_flow.gd
-and keep the lines from '# Match-flow measurement' to the line before '== PERFORMANCE'. SHA-256 of that body: 94eaa489d9074d48a3945cbbba3659ab38bdd566e60dd2248489909261a39dea -->
+and keep the lines from '# Match-flow measurement' to the line before '== PERFORMANCE', with trailing blank lines removed (the file ends with exactly one newline). SHA-256 of that body: 6f11aae39bddbf8ce865c824cba56077d120301c1f35b73cd8b96eb0bebe421a -->
 
 # Match-flow measurement (B1e) — evidence only, not a balance claim
 
@@ -1809,4 +1809,3 @@ Mount -> Half Guard transitions checked for identity, stamina, latch, meter, clo
 Half Guard windows in which any stamina rose (Half Guard v0 has no recovery rule): 0
 published-fallback exchanges: 3041; undercommitment +1 applied: 1693; expected from the funded commitments alone: 1693; any other modifier difference: 0
 (measured, not an invariant) Mount windows where any stamina rose: 9763; Mount D3-B HOLD windows: 930; games ended by a tap: 189, by a clock end: 907, halted at an unsupported exit: 1438
-
