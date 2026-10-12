@@ -10,26 +10,24 @@ This is a future rules specification, not a change to the B1e-qualified engine, 
 - Reference for the **IBJJF-specific** stalling and scoring interpretation: [archived June 2024 IBJJF Rules Book v6.1](https://www.ligabjj.com/ibjjfrules/2024JUN_IBJJF_Rules_EN.pdf), Articles 6.2.1, 7.2.1, 7.3.1. Pin and review the applicable current official edition and division before shipping. Nothing in this document certifies IBJJF compliance.
 - Momentum and Heart of a Lion are **game-original modifiers**, **not** IBJJF rules. They require explicit opt-in or a labeled custom ruleset; a faithful/strict IBJJF preset cannot silently enable them.
 
-## 1. Stalling — IBJJF penalties, not direct points deducted
+## 1. Stalling — game-specific third-turn trigger, IBJJF-inspired consequence
 
-**Owner clarification:** “Point deduction” meant the **IBJJF penalty process**: stalling can eventually award advantages or points to the opponent, or disqualify the offender. It **does not** mean subtracting one positional point from the staller on each turn.
+**Updated owner decision (2026-10-12):** The intended game's activity rule is **NOT** the official IBJJF inactivity threshold. To keep the video-game match moving, the **third consecutive personal turn spent without meaningful offensive or defensive activity triggers a stalling penalty**. A fighter may be inactive for two of their own consecutive turns without a penalty; the third is punishable. Count the streak **separately by stable fighter ID**, across position changes, not as three global windows (initiative can be unequal). A consumed normal decision is eligible for evaluation; a rejected command, sealed-but-unresolved feint, or mere UI observation is not a turn.
 
-For the archived June 2024 **adult** reference:
- 
-| Cumulative penalty | Result |
+| Inactivity streak for one fighter | Target game rule |
 | --- | --- |
-| First | Record a penalty against the offender. |
-| Second | Record penalty; award **one advantage to opponent**. |
-| Third | Record penalty; award **two points to opponent**. |
-| Fourth | **Disqualify** offender. |
+| First consecutive inactive personal turn | Allowed |
+| Second consecutive inactive personal turn | Allowed; visible impending-penalty warning is a presentation proposal |
+| Third consecutive inactive personal turn | **Stalling penalty event** |
+| Further inactive turns | Repeated-offense cadence and reset behavior remain **open**; do not invent a counter reset or extra penalty |
 
-The cited reference, Article 7.3.1, counts **20 consecutive simulated seconds** of applicable lack of combativeness, rather than a literal third turn. Penalties for serious fouls and lack of combativeness accumulate under the reference. When **both** athletes receive their third lack-of-combativeness penalty, the reference calls for a restart standing; Standing/reset support is not implemented, so do **not** invent a positional hop or fake a match result.
+Meaningful engagement resets or prevents the inactivity streak under a **future, explicit activity classifier**. Real attack, escape, and legitimate defense attempts must not be treated as stalling *simply because they fail*, even when exhausted. Meaningless action spam must not reset it. An ordinary pass or deliberate rest without progress is an **inactive** turn, unless a separately defined legitimate defensive context exempts it. A player with no legal defense must not be automatically punished for an opponent's unanswerable action; referee/defense exemptions still require definition.
 
-The owner's earlier “more than two consecutive stalling turns” idea can be explored as a **visible early warning or detection heuristic** only. Its use remains **open**, and it must not override the configured IBJJF 20-second penalty threshold.
+**Penalty consequence, deliberately distinct from official timing:** Carry forward the owner's IBJJF-*inspired* penalty progression as the proposed match scoring policy: 1st penalty recorded; 2nd awards opponent one advantage; 3rd awards opponent two points; 4th disqualifies. These are **not** negative positional-point deductions. Integrating inactivity offenses with any other foul penalties, handling repeated third-plus inactive turns, and all exceptions require a separate ruleset decision before code. Momentum is a separate non-scoring benefit, not an automatic point penalty.
 
-Progress matters rather than button activity: ineffective button spam is not automatically productive; legitimate failed efforts, emergency defense, or exhaustion by themselves are not automatically stalling. Stalling attribution needs position- and ruleset-specific simulated-clock evidence, including the IBJJF exceptions (for example a mount/back-control holder and a defender of an active dominant-position attack may be exempt under the referenced provisions).
+**Reference only — not this game's trigger:** The archived [June 2024 IBJJF Rules Book v6.1](https://www.ligabjj.com/ibjjfrules/2024JUN_IBJJF_Rules_EN.pdf), Articles 7.2.1 and 7.3.1, describes the cumulative penalty structure and an applicable **20 consecutive seconds** of lack of combativeness. The owner explicitly chose the game-specific **third-personal-turn** threshold instead. Call this mode **custom game stalling with IBJJF-inspired scoring**, not a faithful IBJJF inactivity implementation. An optional strict IBJJF mode, if supported later, must retain its own accurate referee/timing/exemption rules; this specification does not modify that mode.
 
-**Not yet defined:** exact per-position classifier, warning UI, simulated-seconds accounting through interrupted windows, rulebook version/division policy, penalty ledger, and automatic referee criteria. Do not gate gameplay on an invented “two turns = penalty” mechanic.
+**Not yet frozen:** activity classifier per position, forced holds/emergency defenses, whether a successful defense immediately clears the count, warning UX, ledger integration, scoring consequence of repeat penalties, referee tie handling, and the effect of simultaneous initiative. Do not make positional transitions or award points merely because a window passed.
 
 ## 2. Momentum — opponent's passive time becomes an opportunity
 
@@ -60,13 +58,25 @@ Progress matters rather than button activity: ineffective button spam is not aut
 - Define integer rounding for capacities where 50% is fractional (normal 100-capacity examples do not settle it); maintain stamina bounds and ordinary exhaustion hysteresis. Do not create float/nondeterministic stamina.
 - Remain inactive in strict IBJJF configuration unless the user explicitly chooses a **modified** game ruleset. The player's conceptual rule is approved; its ruleset activation policy needs owner sign-off before implementing.
 
-## 4. Regressions and first implementation slice
+## 4. After Heart of a Lion is spent — zero-stamina last-resort choices
+
+**Owner-approved contingency:** If **both fighters are at exactly zero stamina** and Heart of a Lion's one-time activation has **already been consumed**, the match must not be left with an unplayable zero-stamina menu. While this mutual-zero condition holds, give each fighter legal, position-appropriate last-resort choices:
+
+- **Eligible LOW memories** (the lowest-commitment versions of learned techniques) may still be *attempted* as meaningful actions at zero stamina, subject to positional/technique legality and available defenses. A legal attempt does not become stalling simply because it fails. These are not free automatic wins, extra turns or bypasses of submission defense.
+- **REST** may be selected for up to **two consecutive personal turns** without a stalling penalty. Rest consumes the fighter's existing normal turn and match time, counts as inactivity, and does not grant a bonus window. The **third consecutive inactive/rest turn** triggers the game-specific stalling penalty in §1. Rest should restore some capacity only if a separately approved deterministic rest-economy rule defines an amount; none is set here.
+
+**Important implementation incompatibility:** the current LOW funding cost is **3 stamina**, so a zero-stamina LOW-memory attempt is *not already legal* in the B1e engine. The new exception needs an explicit future admission/funding and grading rule: how to allow a qualifying LOW memory at zero, with what exhaustion disadvantage/cost (if any), without making all LOW attacks indefinitely free or bypassing ordinary commitment rules. Likewise Half Guard v0 currently has **no recovery action**; this document does not secretly grant REST recovery or claim it exists. The Memory system's concrete metadata/eligibility interface also remains unimplemented.
+
+The stalling streak is shared across all inactivity/rest decisions by a fighter; alternating REST with meaningless passes does **not** erase it. Only meaningful activity under the future classifier can clear it. Whether fallback eligibility continues when one fighter regains stamina, and exactly when REST restoration occurs relative to the inactivity penalty, remain design questions. There is no reactivation of Heart of a Lion.
+
+## 5. Regressions and first implementation slice
 
 Before coding, resolve open numeric and ordering questions; introduce no rule without reviewed tests. Recommended independent, opt-in gates:
 
-1. **Stalling and referee accounting:** 19/20/21-second boundaries, valid defense, real but failed effort, pass spam, status freeze and third/combined penalty handling; score/advantage/penalties ledger field-by-field, no forced transition while Standing is absent.
+1. **Game stalling and referee accounting:** personal inactive turns 1/2/3; alternating unequal-initiative windows; distinct fighters' counters; valid defense, exhausted but real failed effort, pass spam and REST spam; penalty trigger exactly on third, with repeat-offense behavior separately approved; score/advantage/penalties ledger field-by-field; no forced transition while Standing is absent. If strict IBJJF mode is added, test its time-based thresholds separately.
 2. **Momentum:** non-stalling opponent's benefit, no double awards, no bonus windows, test feint/timeout/direct indistinguishability from the defender's public view, saturating grade if adopted, deterministic replay.
 3. **Heart of a Lion:** zero/zero versus zero/nonzero/latch-only; activation once; each fighter's own five turns under nonuniform initiative and changing positions; rejected and sealed inputs excluded; no clock or token changes at a refill; no triggers after ended/halted; cap/rounding/hysteresis; replay and match-owner continuity.
-4. **Measurement:** keep the B1e harness and baseline reports unchanged; run new opt-in populations separately. Do not gate a policy-dependent frequency or silently retune frozen evidence.
+4. **Mutual-zero contingency:** consumed versus available Heart of a Lion; both zero versus one zero; eligible and ineligible LOW memories, positional legality, explicit zero-funding exception, regular stamina costs elsewhere, REST turns 1/2/3, no recovery without approved numeric rule, penalty counters and status freeze. Test finite ability to act, deterministic replay and non-stalling legitimate failures.
+5. **Measurement:** keep the B1e harness and baseline reports unchanged; run new opt-in populations separately. Do not gate a policy-dependent frequency or silently retune frozen evidence.
 
 **Separate question:** Ordinary, repeatable stamina conservation in Half Guard is still a distinct design decision. Heart of a Lion is a rare once-only emergency mechanic, not a substitute for a deliberate recover/conserve action.
