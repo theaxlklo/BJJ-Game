@@ -145,9 +145,10 @@ func _initialize() -> void:
             own_properties.append(str(p.name))
     own_properties.sort()
     # HG-16 revises this pin: the retained Mount gateway is still the only Mount owner; the typed nullable Half Guard slot, the
-    # opt-in receiver table and the cadence are the only additions.
-    check("graph holds gateway, Half Guard slot, receivers, cadence, status, events, blocked, terminal reason", own_properties,
-        ["_blocked", "_events", "_gateway", "_half_guard", "_interval_seconds", "_receivers", "_status", "_terminal_reason"])
+    # opt-in receiver table and the cadence are the only additions. B1i revises it again for the opt-in sealed protocol: one typed nullable
+    # protocol slot (it adopts the SAME Half Guard gateway) and its opt-in flag.
+    check("graph holds gateway, Half Guard slot, sealed protocol slot and flag, receivers, cadence, status, events, blocked, terminal reason", own_properties,
+        ["_blocked", "_events", "_gateway", "_half_guard", "_interval_seconds", "_receivers", "_sealed", "_sealed_enabled", "_status", "_terminal_reason"])
 
     # ---- 2. Rejections leave the whole graph unchanged ---------------------------------------
     var g := graph_of(config(modern_rules()))

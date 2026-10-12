@@ -27,6 +27,10 @@ const PUBLIC_SEALED_KEYS: Array[String] = ["event", "index", "window_id", "inten
     "commitment_requested"]
 
 var _gateway: BjjHalfGuardWindowGateway
+# B1i adoption: true when this protocol drives a gateway that someone else (the position graph) also holds. Such a protocol remembers the
+# gateway snapshot after each of its own operations and refuses to act (`gateway_diverged`) if anything else changed the gateway since.
+var _adopted: bool = false
+var _seen: Dictionary = {}
 var _pending: Dictionary = {}
 var _serial: int = 0
 var _events: Array = []
@@ -46,8 +50,46 @@ static func create(entry: Variant) -> Creation:
         return result
     var protocol := BjjHalfGuardSealedProtocol.new()
     protocol._gateway = built.gateway
+    built.gateway.claim_for_protocol()
     result.protocol = protocol
     return result
+
+# B1i: the smallest validated adoption seam. Attaches a protocol to an ALREADY constructed gateway (the position graph's Half Guard
+# gateway) instead of building a second simulation. Everything is checked before anything is claimed: a typed non-null gateway, not already
+# claimed by another protocol, not terminal and no window open. The claim is the last step, so a refusal leaves the gateway untouched.
+# `create(entry)` is unchanged and keeps its own gateway.
+static func adopt(gateway: Variant) -> Creation:
+    var result := Creation.new()
+    if typeof(gateway) != TYPE_OBJECT or gateway == null or not gateway is BjjHalfGuardWindowGateway:
+        result.error = "invalid_gateway"
+        return result
+    var typed: BjjHalfGuardWindowGateway = gateway
+    if typed.is_terminal() or bool(typed.window_fields().open):
+        result.error = "gateway_not_idle"
+        return result
+    if not typed.claim_for_protocol():
+        result.error = "gateway_already_attached"
+        return result
+    var protocol := BjjHalfGuardSealedProtocol.new()
+    protocol._gateway = typed
+    protocol._adopted = true
+    protocol._seen = typed.snapshot()
+    result.protocol = protocol
+    return result
+
+static func _same(left: Variant, right: Variant) -> bool:
+    return typeof(left) == typeof(right) and JSON.stringify(left, "", true, true) == JSON.stringify(right, "", true, true)
+
+# Adopted protocols only: nothing but this object may have changed the gateway since its last own operation.
+func _diverged() -> bool:
+    return _adopted and not _same(_gateway.snapshot(), _seen)
+
+func _resync() -> void:
+    if _adopted:
+        _seen = _gateway.snapshot()
+
+func is_adopted() -> bool:
+    return _adopted
 
 static func _fail(code: String) -> BjjMatchWindowGateway.Report:
     var report := BjjMatchWindowGateway.Report.new()
@@ -152,14 +194,16 @@ func _public_view() -> Dictionary:
 # --- Time (unchanged gateway behavior; a window can never open while another is open, so a seal can never be overtaken) ---
 
 func open_window() -> BjjMatchWindowGateway.Report:
-    if _closed:
-        return _fail("session_closed")
-    return _gateway.open_window()
+    return open_window_for(null)
 
 func open_window_for(duration: Variant) -> BjjMatchWindowGateway.Report:
     if _closed:
         return _fail("session_closed")
-    return _gateway.open_window_for(duration)
+    if _diverged():
+        return _fail("gateway_diverged")
+    var report := _gateway.open_window_for(duration)
+    _resync()
+    return report
 
 # Existing one-call decision (an exchange or a pass), unchanged semantics, refused while a seal is pending so the sealed intent can
 # never be bypassed, cancelled or overtaken.
@@ -169,7 +213,11 @@ func submit(window_id: int, fighter_id: String, action_id: String = "", response
         return _fail("session_closed")
     if not _pending.is_empty():
         return _fail("intent_pending")
-    return _gateway.submit(window_id, fighter_id, action_id, response_id, commitment, response_commitment)
+    if _diverged():
+        return _fail("gateway_diverged")
+    var report := _gateway.submit(window_id, fighter_id, action_id, response_id, commitment, response_commitment)
+    _resync()
+    return report
 
 # --- Phase 1: seal -----------------------------------------------------------------------------------
 
@@ -179,6 +227,8 @@ func submit(window_id: int, fighter_id: String, action_id: String = "", response
 func _seal_error(window_id: int, fighter_id: String, action_id: String, commitment: String, real_action_id: String) -> String:
     if _closed:
         return "session_closed"
+    if _diverged():
+        return "gateway_diverged"
     var window := _gateway.window_fields()
     if not bool(window.open):
         return "no_open_window"
@@ -227,6 +277,8 @@ func seal_intent(window_id: int, fighter_id: String, action_id: String, commitme
 func _pending_error(window_id: int, intent_serial: int) -> String:
     if _closed:
         return "session_closed"
+    if _diverged():
+        return "gateway_diverged"
     var window := _gateway.window_fields()
     if not bool(window.open):
         return "no_open_window"
@@ -313,6 +365,7 @@ func _resolve(responder_id: String, response_id: String, response_commitment: St
         return _fail(report.error)
     var requested_response := _gateway.selected_commitment() if response_commitment.is_empty() else response_commitment
     _pending = {}
+    _resync()
     _events.append({"event": "response_committed", "index": _events.size() + 1, "window_id": int(sealed.window_id),
         "intent_serial": int(sealed.intent_serial), "responder_id": responder_id, "response_id": response_id,
         "response_commitment_requested": requested_response, "defaulted": defaulted})

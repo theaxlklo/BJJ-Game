@@ -1135,13 +1135,15 @@ func _method_names(script: GDScript) -> Array:
 
 func _test_unchanged_surfaces() -> void:
     var gateway_methods := _method_names(BjjHalfGuardWindowGateway)
-    check("the Half Guard gateway's method set is exactly the qualified one", gateway_methods, ["_report", "action_options", "behavior_fields", "controller_fields",
+    check("the Half Guard gateway's method set is exactly the qualified one", gateway_methods, ["_report", "action_options", "behavior_fields", "claim_for_protocol", "controller_fields",
         "create", "eligible_real_ids", "feint_error", "history_fields", "is_terminal", "open_window", "open_window_for", "response_options", "roles",
         "selected_commitment", "snapshot", "state_fields", "submit", "submit_feint", "window_fields"])
     for method_name: String in ["seal_intent", "respond", "apply_response_timeout", "end_session", "public_intent_view", "sealed_intent_view"]:
         check("the Half Guard gateway has no %s" % method_name, gateway_methods.has(method_name), false)
         check("the Mount gateway has no %s" % method_name, _method_names(BjjMatchWindowGateway).has(method_name), false)
-        check("the position graph has no %s" % method_name, _method_names(BjjPositionGraphMatch).has(method_name), false)
+        # B1i: the graph exposes the sealed workflow ONLY as its own explicit opt-in coordinator methods (it is not the gateway and holds no protocol rules)
+        check("the position graph has %s only as the B1i opt-in coordinator method" % method_name, _method_names(BjjPositionGraphMatch).has(method_name),
+            method_name != "end_session")
         check("the Half Guard match has no %s" % method_name, _method_names(BjjHalfGuardMatch).has(method_name), false)
         check("the Half Guard contract has no %s" % method_name, _method_names(BjjHalfGuardContract).has(method_name), false)
         check("the protocol has %s" % method_name, _method_names(BjjHalfGuardSealedProtocol).has(method_name), true)
@@ -1195,7 +1197,8 @@ func _test_scope_and_hygiene() -> void:
             "res://scripts/presentation/mount_debug_view.gd"]:
         var other := _code_text(path)
         check("%s is readable" % path, other.is_empty(), false)
-        check("%s never references the protocol" % path, other.contains("SealedProtocol") or other.contains("seal_intent"), false)
+        # B1i: the graph is now the one production file that names the protocol (its opt-in slot and adoption); Mount files never do
+        check("%s references the protocol only if it is the graph (B1i)" % path, other.contains("SealedProtocol") or other.contains("seal_intent"), path.ends_with("graph_match.gd"))
     var seen := {}
     for directory: String in ["res://scripts/core", "res://scripts/positions", "res://scripts/positions/mount", "res://scripts/positions/half_guard",
             "res://scripts/presentation", "res://scripts/ui"]:
@@ -1209,7 +1212,7 @@ func _test_scope_and_hygiene() -> void:
     for path: String in seen:
         if seen[path]:
             referencing.append(path)
-    check("no production source references the protocol yet (it is an explicit opt-in path)", referencing, [])
+    check("only the graph's explicit opt-in references the protocol (B1i); no other production source does", referencing, ["res://scripts/positions/graph_match.gd"])
     # the controller double above never names executor internals
     var own := FileAccess.open("res://tests/test_half_guard_sealed_protocol.gd", FileAccess.READ).get_as_text()
     var begin := own.find("# BEGIN controller double")

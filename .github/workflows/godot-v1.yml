@@ -309,7 +309,7 @@ jobs:
           status=0
           godot --headless --path GODOT_V1 --script res://tests/test_half_guard_graph.gd > /tmp/half-guard-graph.log 2>&1 || status=$?
           cat /tmp/half-guard-graph.log
-          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-graph.log --name "Half Guard graph" --exit-code "$status" --expected-assertions 2125
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-graph.log --name "Half Guard graph" --exit-code "$status" --expected-assertions 2133
 
       - name: Validate the Half Guard sealed-intent protocol (seal, respond, refusals, redaction, oracle compatibility)
         shell: bash
@@ -343,6 +343,17 @@ jobs:
           godot --headless --path GODOT_V1 --script res://tests/test_half_guard_feint_protocol.gd > /tmp/half-guard-feint-protocol.log 2>&1 || status=$?
           cat /tmp/half-guard-feint-protocol.log
           python tools/ci/validate_mount_slice_log.py /tmp/half-guard-feint-protocol.log --name "Half Guard feint protocol" --exit-code "$status" --expected-assertions 32222
+
+      - name: Validate the opt-in sealed Half Guard graph match flow (adoption, single settlement, stay-and-end flows, refusals, replay)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_graph_sealed_flow.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_graph_sealed_flow.gd > /tmp/half-guard-graph-sealed-flow.log 2>&1 || status=$?
+          cat /tmp/half-guard-graph-sealed-flow.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-graph-sealed-flow.log --name "Half Guard graph sealed flow" --exit-code "$status" --expected-assertions 2433
 
       - name: Smoke-test the default scene (2D Mount practice; the 3D greybox stays a separate diagnostic scene)
         run: godot --headless --path GODOT_V1 --quit-after 5

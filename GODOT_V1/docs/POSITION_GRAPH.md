@@ -341,3 +341,7 @@ window counter; and the event-log length. The construction call must validate th
 build the receiving position in isolation and return it without touching the active segment
 (§5). In that later slice persistent match-wide state moves to the graph owner as one move, never
 as a duplicate. Slice A deliberately adds no such interface, setter or constructor.
+
+## 15. Match flow (B1i): the graph coordinates outcomes, it does not prescribe a sequence
+
+The graph never forces a position change to make progress. A match stays in its active position through any number of accepted exchanges; a completed exchange without an exit keeps that position active; a normal terminal outcome (a tap, or the clock reaching zero) ends the match **from its current position** without requiring another one; only a legal, accepted positional exit triggers a transition; and an unsupported exit halts at the incomplete-engine boundary (§9) and is never a victory. This applies equally to every position added later. B1i verifies it for Mount (staying, ending by tap and by clock expiry) and Half Guard (staying through direct and sealed exchanges, a clock end, and unsupported exits), and connects the qualified Half Guard sealed protocol to the graph through one explicit opt-in constructor. See `HALF_GUARD_V0_ENGINE.md` (last section) for the adoption seam, the atomic activation, the single settlement path and the intentionally revised pins. No scoring, winner calculation, positional-stalling engine or multi-position UI exists yet, and F1 remains Mount-only.
