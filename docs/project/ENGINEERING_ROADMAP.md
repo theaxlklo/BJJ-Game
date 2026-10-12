@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 1.2 — B2a PR #65 verified; awaiting owner decisions SC-D1–SC-D15  
+**Roadmap revision:** 1.3 — B2a.1 position-aware initiative checkpoint approved for design; no initiative rules frozen  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`) and draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and any merge/integration. This document recommends; it does not change engine behavior or authorize a merge.
@@ -57,6 +57,7 @@ Dotted connections are **not runnable** in the current graph; Standing arrows sh
 |---|---|---|---|---|
 | P0 | **Integration-readiness checkpoint** | Inventory the 30-PR stack, independent #44, all exact heads, CI and dependent commits; explicitly plan safe bottom-up integration. | Owner-approved merge train, no silently changed bases or SHA, full composite CI; branch/PR reconciled with `main`. | **Needed**. No merges authorized. |
 | P1 | **B2a Side Control spec** | [Draft #65](https://github.com/theaxlklo/BJJ-Game/pull/65): `GODOT_V1/docs/SIDE_CONTROL_V0_PROPOSAL.md` (346 lines); 3 actions and 3 responses per side, proposed grade tables, four proposed exits, Knee Slice receiver, R1–R12 risks and SC-D1–SC-D15. | Owner accepts or amends exact mechanics and architecture before any oracle is frozen. | **DOC-QUALIFIED; awaiting owner approval**. |
+| P1.1 | **B2a.1 Position-aware initiative contract** | New documentation-only checkpoint stacked on qualified B2a #65. Compare current Mount/Half Guard windows against Side Control, Closed Guard, Open Guard and Standing needs; define first-window, ongoing-initiative and neutral simultaneous-choice semantics, with impact on personal turn accounting. | Report design alternatives and owner decisions, no code/fixture/default changes; preserve SC-D2 as open. | **NEXT · approved to investigate only**. |
 | P2 | **Side Control executable** | **B2b** accepted canonical rules sheet and independent test-only Python oracle (checkpoint PR), **B2c** typed Godot engine, **B2d** source→destination keyed receiver/opt-in graph seam, **B2e** measurement (separate slices). | After owner approval: independent oracle prior to GDScript, negative-first and replay parity, real Knee Slice→Side entry, no leaked Half Guard protocol or Mount replay, honest unsupported exit halts. | **Blocked on SC-D1–SC-D15; not started**. |
 | P3 | **Open Guard** | Spec/oracle/engine plus legal receiving routes from Mount and Half Guard. | Unblocked real exits; no illegal role/axis conversion or fabricated window. | Not started. |
 | P4 | **Closed Guard** | Spec/oracle/engine receiving Half Guard recovery; deliberate guard initiative/defense and realistic return paths. | Legal entry/exit, rejection atomicity, replay. | Not started. |
@@ -84,6 +85,20 @@ Dotted connections are **not runnable** in the current graph; Standing arrows sh
 - **Primary architecture risks:** existing graph keys receivers only by destination, hard-codes Mount→Half Guard building and source reporting, uses 17+ nullable routing sites, exposes stale sealed-protocol/export fallthrough hazards, and has Mount-only retained-segment fingerprint tests. B2d must address these without changing default graph behavior or fabricating a return route. The B1e measurement file and digest remain frozen.
 - **Recommendation (not authorization):** accept the compact v0 *scope* and tested approach first; review SC-D1–D15, especially first Side Control initiative (Top-first after Top's Knee Slice means consecutive **personal** decisions across positions) and the tentative raw grades/axis/entry thresholds. Treat all proposed combat numbers as provisional test baselines until measured. After owner sign-off, proceed **B2b docs+test-only Python oracle**, then **B2c standalone typed engine**, then **B2d graph/edge**, then **B2e measured population**.
 - **Overseer action:** update `OVERSIGHT_LEDGER.md` with this evidence. Do not advance B2b, merge or retarget any PR without the relevant owner decision.
+
+## New design checkpoint — B2a.1 position-aware initiative (owner direction, 2026-10-12)
+
+The owner deliberately **declined to freeze** a universal initiative rule or the Top-first Side Control choice (SC-D2). Design must accommodate position-specific tactical rights:
+- Side Control: Top may have priority because of pinning control; Bottom still has meaningful, initiated escape opportunities.
+- Closed Guard: the Bottom can sometimes own initiative despite physical Bottom role.
+- Open Guard and Standing: neutral exchanges may use genuinely simultaneous committed choices.
+- Mount and Half Guard: preserve all existing implemented decision-window and role behavior; do not retrofit universal simultaneous choices.
+
+Separate three dimensions: **positional control / authority**, **initiative ownership / eligibility**, and **decision-timing protocol** (sequential with response, or simultaneous sealed choices). Assess entrance initiative separately from ongoing initiative and from cross-position exchange fairness. Top-first after a Knee Slice would give that fighter consecutive **personal opportunities** across positions, even without a free clock/window; treat this as an **open game-balance decision** rather than a technical inevitability.
+
+**B2a.1 deliverable:** one docs-only `GODOT_V1/docs/POSITION_AWARE_INITIATIVE_PROPOSAL.md` (name itself provisional), proposed state-machine/contract, position matrix and explicit compatibility/test plan covering actor eligibility, real simultaneous commitment secrecy, responder rights, `window_id` and simulated clock once per bounded exchange, and **per-fighter** completed-turn tracking for future 3-turn stalling and 5-turn-per-fighter Heart of a Lion. No executable engine/refactor, no proposed numeric buffs, no changes to #65, and no B2b authorization. Prefer conditional design variants to premature universal abstractions.
+
+**Gate:** project owner reviews B2a.1 and the Side Control SC-D2 choice together. Only then can B2b freeze a self-contained Side Control rules sheet and independent Python oracle. Any new 2-fighter simultaneous action protocol is a later independently qualified slice, not assumed to exist because Half Guard has a sealed feint/response protocol.
 
 ## Open PR inventory — status snapshot
 
@@ -118,7 +133,7 @@ Maintain one canonical file on the integrated repo branch, e.g. `docs/project/OV
 | `opponent` | Autonomous opponent policy | No production opponent, only scripted practice/harness |
 | `special_mechanics` | Momentum/Lion/REST/zero-LOW implemented | No, documented only |
 | `open_merge_work` | Main-stack, divergent and oversight branches | 31-stack + independent #44 + independent docs #64 |
-| `next_gate` | Near-term objective | P0 integration review + owner decision on B2a SC-D1–SC-D15 |
+| `next_gate` | Near-term objective | B2a.1 initiative design checkpoint before SC-D1–SC-D15 approval and B2b |
 
 For each new slice, record these fields **even if unchanged**:
 
@@ -156,6 +171,7 @@ B2a was executed by Claude as [draft PR #65](https://github.com/theaxlklo/BJJ-Ga
 
 ## Key owner decisions, deferred to the right gate
 
+- **B2a.1:** investigate position-specific initiative and sequential versus simultaneous decisions; do **not** implement or preapprove Top-first Side Control, Bottom-first Closed Guard, or neutral simultaneous Open Guard. Show minimal safe extension without disturbing implemented windows.
 - **B2a owner review (SC-D1–SC-D15):** Top/Bottom identities, first Side Control initiative, declared exits, action and defense set, local axis/grades/readiness, no-recovery economy, Half Guard snapshot edge, new opt-in graph constructor and oracle-vs-engine slicing. Draft #65 proposes values, none is frozen.
 - **Return routes:** exact Mount Reversal landing and role swap; re-entry semantics for frozen Mount D3-B episode.
 - **Ruleset:** how the game-specific third inactive *personal* turn earns repeat penalties and what meaningful activity means in each position. Keep official IBJJF 20-second rule separate.
@@ -178,6 +194,6 @@ B2a was executed by Claude as [draft PR #65](https://github.com/theaxlklo/BJJ-Ga
 
 ## Living document workflow (established 2026-10-12)
 
-The companion file [`OVERSIGHT_LEDGER.md`](OVERSIGHT_LEDGER.md) is the fast one-page overseer view. This longer roadmap is the architectural sequence, unchanged unless evidence changes dependencies or the owner approves a new rule. The first Claude assignment is archived as [`CLAUDE_B2A_HANDOFF.md`](CLAUDE_B2A_HANDOFF.md); Claude completed it in draft [#65](https://github.com/theaxlklo/BJJ-Game/pull/65). The next gate is **owner review of SC-D1 through SC-D15**, not permission to build Side Control. The #64 oversight documentation branch is kept independent of the gameplay stack.
+The companion file [`OVERSIGHT_LEDGER.md`](OVERSIGHT_LEDGER.md) is the fast one-page overseer view. This longer roadmap is the architectural sequence, unchanged unless evidence changes dependencies or the owner approves a new rule. The first Claude assignment is archived as [`CLAUDE_B2A_HANDOFF.md`](CLAUDE_B2A_HANDOFF.md); Claude completed it in draft [#65](https://github.com/theaxlklo/BJJ-Game/pull/65). The next gate is **B2a.1 position-aware initiative review**, followed by owner review of SC-D1 through SC-D15, not permission to build Side Control. The #64 oversight documentation branch is kept independent of the gameplay stack.
 
 **When the owner pastes Claude's next handoff:** cross-check its PR URL, exact SHA, changed files and CI claims against GitHub; add a timestamped immutable result entry to the ledger; update status/dependencies here, preserving old baseline evidence; identify proposal versus qualified code versus merged state; and produce one bounded next Claude prompt. Do not treat a claimed PASS as verified until independently checked. No background monitoring or automatic merge is implied.
