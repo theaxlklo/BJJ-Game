@@ -2024,9 +2024,9 @@ Exact attribution still requires tuning.
 
 ## IBJJF-based points mode
 
-**Owner clarified 2026-10-12:** stalling penalties follow the **IBJJF penalty mechanism**, not direct subtraction of a point per inactive turn. In the archived June 2024 IBJJF Rules Book v6.1, Articles 7.2.1 and 7.3.1, an applicable **20 consecutive simulated seconds** of lack of combativeness triggers the penalty process: first penalty is recorded; second awards the opponent **one advantage**; third awards the opponent **two points**; fourth disqualifies the offender. Serious-foul and inactivity penalties accumulate per that reference, with specific positional exemptions and standing-restart requirements. Reconfirm the current rulebook and target division before implementing; scoring/penalty ledgers must remain distinct.
+**Owner clarified 2026-10-12 (revised game rule):** The intended video game uses **three consecutive inactive personal turns** as its **custom** stalling trigger, irrespective of the official IBJJF time-based threshold. The first two are allowed; the third triggers a stalling penalty. Classify genuine engagement rather than button activity; legal failed efforts are not automatically stalling. Track each fighter's personal inactivity count separately even across positional transitions. The third-plus repeated-penalty cadence and specific position exemptions remain open. The point/advantage consequences are **IBJJF-inspired**, not direct subtraction from the staller's positional points.
 
-The previously discussed **two consecutive stalling turns** is a possible *warning/detection heuristic*, **not** a replacement for the referenced 20-second IBJJF penalty requirement. See [Match incentives and Heart of a Lion](../GODOT_V1/docs/MATCH_INCENTIVES_HEART_OF_A_LION.md) for accepted boundaries, Momentum and the still-open implementation details.
+In the archived June 2024 IBJJF Rules Book v6.1, Articles 7.2.1 and 7.3.1, the actual reference has an applicable **20 consecutive simulated seconds** of lack of combativeness and a cumulative ladder: first penalty recorded; second gives the opponent **one advantage**; third gives the opponent **two points**; fourth disqualifies the offender. That timing is retained as a **reference for possible strict IBJJF policy**, *not* as the approved game's three-personal-turn trigger. Preserve separate ruleset accounting rather than claiming the custom game mode is official IBJJF-compliant. See [Match incentives and Heart of a Lion](../GODOT_V1/docs/MATCH_INCENTIVES_HEART_OF_A_LION.md) for the full owner rule and open implementation details.
 
 ## Submission-Only
 
@@ -2054,6 +2054,8 @@ non-stalling player
 ```
 
 Repeated offense may cause Position Reset.
+
+**After Heart of a Lion is spent (owner-approved direction, 2026-10-12, unimplemented):** If both fighters are at 0 stamina after the once-only event has fully completed, each may attempt eligible **LOW memories** or REST. The first two consecutive inactive/REST personal turns are tolerated; the third causes the custom stalling penalty. A LOW attempt made in earnest is not inactivity simply because it fails. The existing LOW cost requires future explicit zero-stamina exception; recovery amount and timing for REST are still **open**. See the [decision record](../GODOT_V1/docs/MATCH_INCENTIVES_HEART_OF_A_LION.md).
 
 **Momentum (owner-approved direction, 2026-10-12, unimplemented):** Stalling can give the opponent time to prepare a stronger next eligible attack; no numeric bonus, stack cap, trigger/consumption rule or extra window is approved. This is a custom game mechanic, not an IBJJF referee penalty. **Heart of a Lion** likewise is a custom optional game modifier, not official IBJJF regulation; strict IBJJF and modified game presets must remain distinguishable. See [the separate decision record](../GODOT_V1/docs/MATCH_INCENTIVES_HEART_OF_A_LION.md).
 
