@@ -1,20 +1,20 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 1.0 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 1.1 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
-**Next Claude assignment:** [`CLAUDE_B2A_HANDOFF.md`](CLAUDE_B2A_HANDOFF.md) (canonical repository document)
+**Completed Claude handoff:** [`CLAUDE_B2A_HANDOFF.md`](CLAUDE_B2A_HANDOFF.md) (archived B2a scope; completed in [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65)). **Next gate:** owner review of Side Control SC-D1–SC-D15; B2b not yet authorized.
 
 ## One-screen overseer pulse
 
 | Indicator | Observed value | Meaning |
 |---|---|---|
 | Stable integrated baseline | `main` @ `7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1` | Godot PR stack is **not merged** |
-| Current active stack tip | Draft PR [#63](https://github.com/theaxlklo/BJJ-Game/pull/63) @ `650e7e1b9c6ba138a931c2805ce661e2268431b2` | Specs, not executed mechanics |
-| Exact-head CI | #63 **21/21 jobs PASS**; #62 **21/21 PASS** | Verified by GitHub workflow/job records; separate from merge |
-| Open work | 30 sequential mainline Godot PRs + separate open #44 | Current integration exposure |
-| Tip relative to `main` | 74 commits ahead, 0 behind; 198 changed paths | From GitHub comparison at snapshot |
+| Current active stack tip | Draft PR [#65](https://github.com/theaxlklo/BJJ-Game/pull/65) @ `9942c5a53caf58d0d944bd7931ccc81bf86d0d07` | Side Control **proposal only**, no new executable position |
+| Exact-head CI | #65 **4 PASS / 4 expected SKIP**; #63 **21/21 PASS**; #62 **21/21 PASS**; oversight #64 workflow PASS | Exact heads; doc-only CI proves no gameplay behavior |
+| Open work | 31 sequential Godot PRs (#17→#65), divergent #44, independent oversight #64 | Three distinct branch lanes; none merged |
+| Tip relative to `main` | 75 commits ahead, 0 behind; 199 changed paths | GitHub compare for PR #65's exact SHA |
 | Executable connected positions on tip | **Mount -> Half Guard**, opt-in | No Side Control receiver |
 | Player interface | **F1 Mount practice** | Not a full multi-position player-vs-opponent match |
 | Complete match from Standing | **NO** | Standing, scoring, decisions and wider routes missing |
@@ -24,8 +24,9 @@
 
 ```mermaid
 flowchart LR
-  P0["P0 · Integration review"] --> P1["B2a · Side Control spec"]
-  P1 --> P2["B2b/c · Oracle + engine"]
+  P0["P0 · Integration review"] --> P1["B2a · Side Control spec QUALIFIED"]
+  P1 --> D["SC-D1–D15 · owner decision"]
+  D --> P2["B2b/c · Oracle + engine"]
   P2 --> G["Open / Closed Guard"]
   G --> ST["Standing + loops"]
   ST --> R["Scoring + stalling"]
@@ -40,9 +41,9 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 
 | Track | Slice | State | Next owner-visible result |
 |---|---|---|---|
-| Stack safety | P0 — integration readiness and #44 decision | **Read-only audit next** | Risk assessment and safe bottom-up integration plan; no merges |
-| Gameplay breadth | B2a — Side Control rules/entry spec | **Claude next** | New docs-only draft PR stacked on #63; questions for approval |
-| Implementation | B2b+ — Side Control oracle, typed Godot, real receiver | **Blocked on B2a approval** | Real Half Guard Knee Slice -> Side Control |
+| Stack safety | P0 — integration readiness and #44 decision | **Partial read-only review** | #44 is separate/superseded; bottom-up merge train needs owner approval and fuller gate |
+| Gameplay breadth | B2a — Side Control rules/entry spec | **Doc-qualified #65, not approved** | Review SC-D1–SC-D15; propose compact v0 values, not yet combat authorization |
+| Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **Blocked on SC-D1–SC-D15** | B2b separate Python oracle; B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
 | Wider positions | Open/Closed Guard, Standing, reversals | **Planned** | Full legal graph traversal and start |
 | Match completion | Scoring, adjudication, activity enforcement, basic opponent | **Planned** | Human plays a complete fight from Standing |
 | Distinctive mechanics | Heart of a Lion, REST, LOW-at-zero, Momentum | **Approved concept, not implemented** | Separate rule gates and tests after core match, or earlier if liveness blocks play |
@@ -51,7 +52,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 
 | ID | Question | Current decision / state |
 |---|---|---|
-| D-SC-01 | Side Control action, role, axis, initiative, transitions and entry schema | **Open for B2a** |
+| D-SC-01 | Side Control SC-D1–SC-D15: roles, first initiative, axis, catalog, grades, economy, exits, entry, opt-in and slicing | **Proposal delivered #65; all owner decisions remain OPEN** |
 | D-STACK-01 | Merge order/authorization for 30-PR chain and disposition of parallel #44 | **Not authorized, audit only** |
 | D-STALL-01 | Game-specific stalling trigger | **Approved direction: third consecutive inactive personal turn**, independent by fighter |
 | D-STALL-02 | Penalty repeat/reset cadence and full activity classifier | **Open**; IBJJF-inspired scoring consequences are proposed |
@@ -70,6 +71,17 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - Corrected report typo: Half Guard exchanging-cell maximum no-progress streak **53**, not 788 (which counted feint attempts in a different table).
 - #63 exact head `650e7e1b9c6ba138a931c2805ce661e2268431b2`: **21/21 CI jobs passed**. Remains **open draft**; no merge.
 - Next handoff expected: **B2a specification**. No Side Control mechanics authorized until owner approves the proposal.
+
+### E-001 — Claude B2a Side Control proposal, 2026-10-12
+
+- **User-supplied Claude handoff independently verified:** [draft PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65), base draft #63 branch `docs/match-incentives-heart-of-lion-spec` at `650e7e1b9c6ba138a931c2805ce661e2268431b2`; exact head `9942c5a53caf58d0d944bd7931ccc81bf86d0d07`. GitHub comparison: **1 commit ahead, 0 behind**, **one new Markdown file** (`GODOT_V1/docs/SIDE_CONTROL_V0_PROPOSAL.md`, 346 lines). No code or engine behavior changed.
+- **Exact-head GitHub workflow `38297697211`:** 8 total jobs, **4 success** (CI gate, classify changes, lightweight validation, qualification results), **4 skipped** (Godot and Python paths). This qualifies a **documentation proposal only**. Claude reports local whitespace/link checks; those local commands were not independently re-executed here.
+- **Proposal contents:** Side Control identity and Top/Bottom role map; own signed axis, authority, first-window initiative question; six proposed action IDs (3 Top/3 Bottom), three responses per side and two raw-grade matrices; new readiness and economy rules; four exit labels (Mount, Back Control, Half Guard, Turtle) **all halt in v0**; Half Guard Knee Slice→Side Control adapter, snapshot validator and segment-continuity plan; B2b oracle, B2c Godot engine, B2d opt-in graph, B2e measurement.
+- **Design decisions:** SC-D1–SC-D15 in §11 of the proposal are **unapproved**. Architectural recommendation to owner: D1 preserve roles; D2 Top-first is consistent with positional authority but causes consecutive personal decisions after Top's pass (no free window); D10 pure Half Guard snapshot adapter; D12 explicit new opt-in with unchanged defaults; D15 independent Python oracle checkpoint before GDScript. All numeric grades, entry axis/threshold, tier and stamina rules are provisional; owner must approve test baseline before oracle, not treat oracle as a substitute for owner decisions.
+- **Critical risks to test at B2d:** destination-only receiver could wrongly rebuild Half Guard from retained Mount; at least 17 nullable routing sites and hard-coded Mount transition origin; stale Half Guard sealed protocol; missing Half Guard frozen fingerprint; stale carry-over-export and terminal handling; source scans/CI pins need explicit, justified updates; earlier B1e populations must remain unchanged. No return route or Mount Reversal landing may be invented.
+- **Agent provenance:** Claude reports the named repo-specific reviewer agents were not registered in its session; it used general-purpose read-only agents with repository definitions inlined. Their findings are reported, not independently reproduced by the reviewers in this oversight turn.
+- **Independent oversight docs:** [draft PR #64](https://github.com/theaxlklo/BJJ-Game/pull/64) holds this ledger and roadmap on a separate main-based branch; exact-head workflow at `e15b7ee4d623ee5a36edfe41b5947a12d3adb93b` succeeded. Docs #64 and gameplay #65 remain **unmerged**.
+- **Next action:** present compact owner decision matrix; **do not authorize B2b or change #65's text** absent owner approval. Then draft B2b rules-sheet + test-only Python oracle prompt; keep P0 bottom-up integration as a parallel read-only track.
 
 ## Standard Claude-result ingestion form
 
