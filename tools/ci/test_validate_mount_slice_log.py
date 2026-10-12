@@ -438,5 +438,82 @@ class PracticeStepWiringTests(unittest.TestCase):
         self.assertIn('unexpected diagnostic', joined)
 
 
+class _HalfGuardSuiteWiring:
+    """Shared wiring checks for the three Half Guard Godot suites (each is its own workflow step with an exact pin)."""
+    NAME = ''
+    STEP_PREFIX = ''
+    SCRIPT = ''
+    LOG = ''
+    EXPECTED = 0
+
+    @classmethod
+    def step(cls):
+        text = WORKFLOW.read_text()
+        match = re.search(r'^      - name: %s[^\n]*\n(.*?)(?=^      - name: )' % re.escape(cls.STEP_PREFIX), text, re.S | re.M)
+        assert match, '%s step not found' % cls.NAME
+        return match.group(1)
+
+    def test_step_validates_status_and_complete_log(self):
+        live = [line.strip() for line in self.step().splitlines() if line.strip() and not line.strip().startswith('#')]
+        self.assertTrue(any(line.startswith('godot --headless --path GODOT_V1 --script res://tests/%s > %s 2>&1 || status=$?' % (self.SCRIPT, self.LOG))
+                            for line in live), live)
+        self.assertIn('set -euo pipefail', live)
+        self.assertIn('shell: bash', live)
+        pin = re.search(r'^\s*python tools/ci/validate_mount_slice_log\.py %s --name "%s" --exit-code "\$status" --expected-assertions ([1-9][0-9]*)\s*$'
+                        % (re.escape(self.LOG), re.escape(self.NAME)), self.step(), re.M)
+        self.assertIsNotNone(pin, self.step())
+        self.assertEqual(int(pin.group(1)), self.EXPECTED, 'workflow pin and the test constant must change together')
+        for forbidden in ('continue-on-error', '\n        if:', 'set +e'):
+            self.assertNotIn(forbidden, self.step())
+
+    def test_script_runs_once_and_matches_the_completion_contract(self):
+        self.assertEqual(WORKFLOW.read_text().count('res://tests/' + self.SCRIPT), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / self.SCRIPT).read_text()
+        self.assertIn('print("%s PASS: %%d assertions" %% checks)' % self.NAME, source)
+        self.assertIn('push_error("%s: %%d / %%d assertions failed" %% [failures, checks])' % self.NAME, source)
+
+    def test_validator_accepts_and_rejects_the_suite_log(self):
+        clean = 'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\n%s PASS: %d assertions\n' % (self.NAME, self.EXPECTED)
+        self.assertEqual(validate(clean, 0, self.EXPECTED, self.NAME), [])
+        premature = clean.replace(str(self.EXPECTED), '7') + 'SCRIPT ERROR: Invalid access to property or key on a base object of type Nil.\n'
+        joined = '\n'.join(validate(premature, 0, self.EXPECTED, self.NAME))
+        self.assertIn('assertion count 7 != required %d' % self.EXPECTED, joined)
+        self.assertIn('unexpected diagnostic', joined)
+        self.assertTrue(validate(clean.replace(self.NAME + ' PASS', 'Position registry PASS'), 0, self.EXPECTED, self.NAME))
+
+
+class HalfGuardBoundariesWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Half Guard boundaries', 'Validate Half Guard v0 boundaries'
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_boundaries.gd', '/tmp/half-guard-boundaries.log', 4006
+
+
+class HalfGuardReferenceWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Half Guard reference', 'Validate Half Guard v0 against the independent Python oracle'
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_reference.gd', '/tmp/half-guard-reference.log', 49609
+
+    def test_fixture_is_generated_before_the_replay_and_by_the_oracle_only(self):
+        text = WORKFLOW.read_text()
+        generate = text.index('python GODOT_V1/tests/generate_half_guard_reference.py')
+        replay = text.index('res://tests/test_half_guard_reference.gd')
+        self.assertLess(generate, replay)
+        self.assertEqual(text.count('generate_half_guard_reference.py'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'generate_half_guard_reference.py').read_text()
+        self.assertIn('from oracles import half_guard_v0_scenarios', source)
+        self.assertNotIn('bjj_game', source)
+
+
+class HalfGuardConformanceWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Half Guard conformance', 'Validate Half Guard v0 window-gateway conformance'
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_conformance.gd', '/tmp/half-guard-conformance.log', 151
+
+
+class HalfGuardEarlierPinsUntouchedTests(unittest.TestCase):
+    def test_earlier_suite_pins_and_routing_inputs_are_untouched(self):
+        text = WORKFLOW.read_text()
+        for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750),
+                            ('/tmp/mount-practice.log', 1036)):
+            self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
+
+
 if __name__ == '__main__':
     unittest.main()
