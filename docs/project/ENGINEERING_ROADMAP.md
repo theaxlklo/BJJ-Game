@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 1.5 — add player-selected role-specific positional training focuses to B2a.1 and future career/memory design; no implementation or stat values frozen  
+**Roadmap revision:** 1.6 — record owner-directed three-slot blurry-memory learning queue, replacement choice and independent focus/recall constraints; no combat or progression implementation  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`) and draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and any merge/integration. This document recommends; it does not change engine behavior or authorize a merge.
@@ -68,7 +68,7 @@ Dotted connections are **not runnable** in the current graph; Standing arrows sh
 | **Gate A** | **First complete playable match** | End-to-end human-in-loop acceptance transcript and regression suite. | No reachable unsupported exit in the supported match scenario menu; gameplay doesn't deadlock at zero stamina; playable on lightweight laptop; state/log determinism. | **Not reached**. |
 | P9 | **Further graph breadth** | Back Control, Turtle, Front Headlock, Leg Entanglement, appropriate submissions and the remaining ten-family coverage. | All intended family nodes reachable through correct grappling transitions, no surprise fallthrough halts. | Not started. |
 | P10 | **Distinctive tactical mechanics** | Heart of a Lion (once, mutual zero, 50%; five *personal* turns each; 100%), zero-stamina LOW memories, REST with 2-turn stalling allowance, Momentum with capped owner-approved modifier. | Exact normal-turn accounting, no infinite refills/extra windows, no double penalties, deterministic tests and per-ruleset opt-in. | **Design direction recorded in #63; not coded.** Bring essential anti-deadlock minimum forward to P8 if required. |
-| P11 | **Game identity and campaign** | F0 expanded with belts/styles/loadouts; Memory Constellation, clutch/never-forget, persistent belt career, three-win runs, rewards, injuries, 2D anime/arcade UI. | First complete short roguelike run changes player choices meaningfully; no unearned belt loss. | Mostly approved/open design, not engine. |
+| P11 | **Game identity and campaign** | F0 expanded with belts/styles/loadouts; Memory Constellation and **three-slot blurry-memory learning queue**, clutch/never-forget, persistent belt career, three-win runs, rewards, injuries, 2D anime/arcade UI. | First complete short roguelike run changes player choices meaningfully; no unearned belt loss. | Mostly approved/open design, not engine. |
 
 ### Why this order
 
@@ -137,6 +137,41 @@ The owner wants a player to **choose the positions they actively train**, instea
 
 
 **Gate:** project owner reviews B2a.1 and the Side Control SC-D2 choice together. Only then can B2b freeze a self-contained Side Control rules sheet and independent Python oracle. Any new 2-fighter simultaneous action protocol is a later independently qualified slice, not assumed to exist because Half Guard has a sealed feint/response protocol.
+
+### Blurry memory learning queue — three unfinished techniques maximum (OWNER DIRECTION, 2026-10-12)
+
+The user proposes an **exactly three-slot capacity for active blurry / unfinished technique memories** at a time. This is a constraint on **concurrent learning projects**, **not** the lifetime total of learned techniques, currently equipped match techniques, positional training focuses, or the limited `Never Forget` / clutch recall pool.
+
+**Proposed state machine for later memory-system implementation:**
+
+```text
+Opponent uses a technique not yet learned
+      │
+      ├─ available blurry slot ──> add fuzzy observation to open slot
+      │                              │
+      │                         repetition / practice
+      │                              │
+      │                         learned / clarified ──> learned repertoire
+      │                                                      │
+      │                                                   free slot
+      │
+      └─ all 3 occupied ───────> prompt non-authoritative player choice:
+                                  keep 3 current blur memories
+                                  OR deliberately replace ONE with the new encounter
+```
+
+**Owner-defined principles:** at most three unresolved blurry memories concurrently; the player may **grind/practice until one becomes learned** (then its slot is freed) or **discard one and acquire a newly encountered technique**. A new encounter must **never automatically evict** an existing blurry memory. Reject or defer admission of a fourth active blurry record if no player replacement choice has been committed. Do not lose learned/mastered techniques when clearing a blurry slot. These mechanics do not narrow the future total memory/technique collection.
+
+**Proposed interactions (not frozen implementation):**
+- A White Belt's illustrative **two positional-focus slots** (`mount/top` etc.) are unrelated to the **three blurry-memory slots**; active positional focus may speed learning matching move memories but does not change the concurrency cap absent a later explicit rule.
+- General `Technique`, role-specific positional proficiency and memory mastery have distinct effects. A blurred memory is **not fully learned**. Whether it can be attempted weakly or as a LOW-memory variant before clarity, and how near-learned techniques graduate into deeper mastery, require a separate rule gate.
+- If the three slots are occupied and an opponent reveals a new move during a real exchange, record a deterministic `technique_observed` fact and offer a choice in safe UI flow; **do not add an unauthorized combat decision window, extra clock, automatic reveal of sealed intent or another action**. The player may continue with current memories without swapping.
+- Store active slots in stable order with stable technique/variant IDs, deterministic clarity progress, optional pending encounter reference and explicit `keep` / `replace(slot_id)` selection. Replay/load must reproduce the same choices and queue. Treat distinct technique variants consistently, and do not count the same technique twice.
+- No pass/REST spam or scripted opponent repetition should award unlimited mastery. Progress triggers and anti-farming policy require independent measurement; previously mastered / Never Forget techniques are not forcibly displaced by slot replacement.
+
+**Open implementation decisions:** what exact events add clarity (observation, using an incomplete memory, practice, defeat/training), whether discarded partial clarity is fully lost or leaves a retrievable trace, what counts as `learned` versus `mastered`, whether pending observations expire, timing/UX for replacement prompts in five-minute matches, duplicate-variant semantics, career/run persistence boundaries, and whether the 3-slot cap ever upgrades. Do not fill missing numerical XP thresholds or game-balance rules without owner approval.
+
+**Milestone placement:** include this in the **memory/career design** phase and in a later bounded memory learning specification, not the current B2a.1 initiative contract or B2b Side Control oracle. B2a.1 may reference how positional focus would accelerate memory progress, but it must not implement this queue or change initiative.
 
 ## Open PR inventory — status snapshot
 
