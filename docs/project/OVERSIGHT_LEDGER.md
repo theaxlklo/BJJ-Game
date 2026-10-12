@@ -1,6 +1,6 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 1.3 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 1.4 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
@@ -43,7 +43,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 |---|---|---|---|
 | Stack safety | P0 — integration readiness and #44 decision | **Partial read-only review** | #44 is separate/superseded; bottom-up merge train needs owner approval and fuller gate |
 | Gameplay breadth | B2a — Side Control rules/entry spec | **Doc-qualified #65, not approved** | SC-D2 Top-first explicitly remains open; don't freeze numbers | 
-| Initiative design | B2a.1 — Position-aware contract | **Next, owner-approved investigation only** | Docs-only proposal: Side Control Top priority, Closed Guard possible Bottom priority, neutral Open Guard/Standing simultaneous choices; engine unchanged |
+| Initiative design | B2a.1 — Position-aware and skill-sensitive contract | **Next, design investigation only** | Include role-specific selectable training focuses, belt Technique variance and move mastery without implementing career, focus selection, or initiative changes |
 | Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **Blocked on SC-D1–SC-D15** | B2b separate Python oracle; B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
 | Wider positions | Open/Closed Guard, Standing, reversals | **Planned** | Full legal graph traversal and start |
 | Match completion | Scoring, adjudication, activity enforcement, basic opponent | **Planned** | Human plays a complete fight from Standing |
@@ -57,6 +57,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 | D-INIT-01 | Position-aware initiative, especially SC-D2 first Side Control window | **B2a.1 docs investigation approved; no specific priority policy approved** |
 | D-INIT-02 | Neutral simultaneous commitments in Open Guard/Standing and potential Bottom initiative in Closed Guard | **Proposed future capability; not implemented; requires secrecy, clock, ordering, personal-turn rules** |
 | D-INIT-03 | Belt-banded Technique stat with within-belt variance and position-specific proficiency affecting opening priority | **New owner design idea, NOT APPROVED**. Investigate in B2a.1, keep control/authority/response and clock independent; initial ranges/override thresholds OPEN. |
+| D-FOCUS-01 | Player-selected positional training focuses keyed by position family **and physical role**; White Belt begins with proposed 2 focuses (e.g. Mount Top and Side Control Top); more slots as fighter improves | **Owner design direction/provisional 2-slot example; NOT CODE-AUTHORIZED.** Decide exact slot ladder, focus switching, XP/learning rules and persistent storage later. Preserve off-focus move legality, earned belts and earned proficiency. |
 | D-STACK-01 | Merge order/authorization for 30-PR chain and disposition of parallel #44 | **Not authorized, audit only** |
 | D-STALL-01 | Game-specific stalling trigger | **Approved direction: third consecutive inactive personal turn**, independent by fighter |
 | D-STALL-02 | Penalty repeat/reset cadence and full activity classifier | **Open**; IBJJF-inspired scoring consequences are proposed |
@@ -101,6 +102,14 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Provisional paper model only:** 0–100 initial skill ranges White 10–35, Blue 25–50, Purple 40–65, Brown 55–80, Black 70–95. Distinguish *general Technique*, position-specific knowledge and named memory mastery. A Side Control Top bias such as +12 is **just an example**; neither ranges nor positional bonus nor threshold nor calculation is approved.
 - **Key architecture constraints:** belt never decides automatically; skilled Bottom may earn opening priority without becoming the physical Top or nullifying the Top's response. No additional turn, premature window, clock advancement, feint information leak or RNG on every exchange. If skill varies at fighter generation, the variation must be seeded/stored and reproducible. Do not equate priority with already present action-result exhaustion modifiers.
 - **Scope decision:** add the proficiency-vs-positional-bias alternatives and deterministic test cases to the **existing B2a.1 docs-only initiative investigation**, not to B2b oracle or current gameplay. The owner still needs to approve the eventual formula, belt distributions and SC-D2 interaction. No PR #65 or engine file was changed by this entry.
+
+### E-004 — Owner proposes player-selected positional training focuses, 2026-10-12
+
+- **Owner game-design direction:** positional expertise develops according to the positions a fighter **chooses to train**, with growing focus capacity through wins and belt/career development. Illustrative White Belt start: **2 chosen position-and-role focuses** (`mount/top` and `side_control/top`); later belts/achievements may unlock more. Exact level gating, number of later slots and XP rates remain open. This direction complements—not replaces—the proposed belt-banded general Technique and named memory mastery.
+- **Role-specificity matters:** `mount/top` and `mount/bottom` are separate expertise areas, as are `side_control/top` and `side_control/bottom`. Standing/neutral families require their real role semantics, never fabricated top/bottom.
+- **Proposed integration:** active focus enhances rate/direction of positional skill growth and may improve practice/clarity of matching move memories; earned role-specific proficiency persists when training assignments change. General Technique supplies broad competence, focus influences specialist skill, and named move memory controls learned-technique mastery. Avoid stacking all three independently into repeated priority and grade bonuses.
+- **Constraints:** off-focus positions and legal defense remain playable; true observation-based technique learning remains possible outside focuses; no pass/REST spam for XP; no in-match free reallocations, new decision windows or clock changes. Career persistence respects retained earned belts and mastered knowledge. The current Godot fighter foundation is not assumed to implement these mechanics.
+- **Action:** include a small, deterministic design matrix and data/role-contract proposal within B2a.1. **No PR #65, engine, oracle, roster, persistence format or default behavior was edited.** Defer numeric slot ladder, per-action XP, assignment/respec economy and initiative override formula to owner approval and later implementation. Full focus/memory development must not hold up the Side Control oracle once a safe provisional initiative baseline is approved.
 
 ## Standard Claude-result ingestion form
 
