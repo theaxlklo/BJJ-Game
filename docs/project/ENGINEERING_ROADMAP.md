@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 2.0 — PR #17 merged and GitHub Actions verified on new main; #18 retarget/pre-merge qualification is next, no #18 merge authorized  
+**Roadmap revision:** 2.1 — PR #18 retargeted to main, independently reviewed and engineering GO for merge-commit subject to owner authorization and post-merge CI  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`27599f28fa0e815693aa9d36aedb7aa14d573ac8`, after PR #17 integration) and draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and any merge/integration. This document recommends; it does not change engine behavior or authorize a merge.
@@ -55,7 +55,7 @@ Dotted connections are **not runnable** in the current graph; Standing arrows sh
 
 | Priority | Work package | First artifacts / PR boundary | Exit gate and overseer evidence | Current status |
 |---|---|---|---|---|
-| P0 | **Integration-readiness checkpoint** | **#17 INTEGRATED**; next Batch A step is PR #18 retarget to `main` and pre-merge qualification, followed by #22 only after #18 integration passes. | Check retarget-only diff/commits and unchanged head; simulate #18 merge into actual `main`; run Python/Godot parity; require separate owner authorization for any merge and cumulative push CI before proceeding. | **#17 verified PASS on `main`; #18 merge NOT authorized.** |
+| P0 | **Integration-readiness checkpoint** | #17 integrated; #18 **retargeted and premerge-qualified**; #22 later only after #18 merge and actual-main CI pass. | Confirm exact base/head, one guarded merge commit only with explicit owner approval; validate expected tree, preserved ancestry, Python+Godot push runs and full field-check counts; stop on mismatch. | **#18 engineering GO; owner merge authorization pending. `main` unchanged.** |
 | P1 | **B2a Side Control spec** | [Draft #65](https://github.com/theaxlklo/BJJ-Game/pull/65): `GODOT_V1/docs/SIDE_CONTROL_V0_PROPOSAL.md` (346 lines); 3 actions and 3 responses per side, proposed grade tables, four proposed exits, Knee Slice receiver, R1–R12 risks and SC-D1–SC-D15. | Owner accepts or amends exact mechanics and architecture before any oracle is frozen. | **DOC-QUALIFIED; awaiting owner approval**. |
 | P1.1 | **B2a.1 Position-aware initiative contract** | New documentation-only checkpoint stacked on qualified B2a #65. Compare current Mount/Half Guard windows against Side Control, Closed Guard, Open Guard and Standing needs; define first-window, ongoing-initiative and neutral simultaneous-choice semantics, with impact on personal turn accounting. | Report design alternatives and owner decisions, no code/fixture/default changes; preserve SC-D2 as open. | **NEXT · approved to investigate only**. |
 | P2 | **Side Control executable** | **B2b** accepted canonical rules sheet and independent test-only Python oracle (checkpoint PR), **B2c** typed Godot engine, **B2d** source→destination keyed receiver/opt-in graph seam, **B2e** measurement (separate slices). | After owner approval: independent oracle prior to GDScript, negative-first and replay parity, real Knee Slice→Side entry, no leaked Half Guard protocol or Mount replay, honest unsupported exit halts. | **Blocked on SC-D1–SC-D15; not started**. |
@@ -219,6 +219,21 @@ Opponent uses a technique not yet learned
 **Recommendation for next bounded Claude assignment:** explicitly authorize **base retargeting of #18 to `main` only** as a PR metadata change, with no head change. Before/after, prove that the intended 18-file, six-new-commit diff remains, check for anomalies in GitHub's new PR diff and CI, and run a separate simulated merge against actual `main`; return a GO/NO-GO #18 premerge report. **Do not merge #18**, touch #22, rewrite commits, push or change `main` without separate authorization. Existing #17 CI cannot automatically qualify #18.
 
 **Known debt:** at this integration point the old aggregate Python CI gate does not enforce the path-filtered Godot job, and early parity assertions can accept empty fixtures unless scenario counts are verified. Keep these mitigations explicit until later changes land.
+
+## P0 PR #18 retargeted and pre-merge-qualified — awaiting owner authorization (2026-10-12)
+
+**GitHub-verified facts:**
+- [PR #18](https://github.com/theaxlklo/BJJ-Game/pull/18) remains open, non-draft, mergeable, now based on `main` `27599f28fa0e815693aa9d36aedb7aa14d573ac8`; unchanged head `9c4166cef43d367786bbb24b76bccef6624779ba`; 6 commits, 18 intended paths, +948/−1. `main` still has the same SHA, no integration yet.
+- The GitHub comparison of actual `main` vs #18 head reports **6 ahead / 1 behind** (the #17 merge commit), common merge base `1de58ef97c4a0a4342f6a80a36c352926620be6e`; expected with preserved ancestry and **not** a rebase request. Scope is typed stamina/commitment scripts, matching tests/docs and Godot workflow only; no frozen Python source, no Mount position script edits.
+- [PR #22](https://github.com/theaxlklo/BJJ-Game/pull/22) is unchanged, base `feat/godot-v1-stamina-commitment`, head `83d2eb9d4d5f29249f1954ebf7b6b82661bac982`. Its retarget and merge are still outside authorization.
+- Historic exact-head [Python workflow 37988354328](https://github.com/theaxlklo/BJJ-Game/actions/runs/37988354328): 18 successful jobs and one expected docs-only skip. [Godot workflow 37988354550](https://github.com/theaxlklo/BJJ-Game/actions/runs/37988354550): successful. **No new CI on base retarget.**
+- The Godot job log was independently inspected: Mount slice **40 assertions**, Mount parity **4,140 actions + 300 drifts + 92,939 checks**, stamina generated **1,752 traces + 13,433 operations**, stamina parity **410,192 checks / 0 failures**, native stamina boundaries **154 checks / 0 failures** with two expected `read_only_property` diagnostics checked by CI.
+
+**Claude-reported simulated-merge proof, not independently run here:** actual post-#17 `main` merged with #18 head in an isolated scratch clone with no conflict, resulting tree `06f1407f0bbd11e7015d5ce732a9cab4c1b2622e` (matching #18 head tree). Godot 4.7.2 / Python 3.14.7 local checks and deterministic hash-seed replay all passed; adversarial corruptions were detected. The full local Python unit suite was not rerun, but both historical 3.11/3.13 CI shards succeeded.
+
+**Engineering verdict:** **GO recommended for the merge-commit integration of PR #18 only, pending explicit owner authorization**. Before any mainline change, require exact `main` SHA `27599f28fa0e815693aa9d36aedb7aa14d573ac8`, exact #18 head SHA, open clean mergeability and historical jobs still green. Use `gh pr merge 18 --merge --match-head-commit 9c4166cef43d367786bbb24b76bccef6624779ba` only after owner approval. After merge, require the actual `main` tree `06f1407f0bbd11e7015d5ce732a9cab4c1b2622e`, #18 head as ancestor, uncancelled successful *push* Python and Godot workflows on the new SHA, and all counts above. **Do not retarget #22**, rewrite history, delete branches or merge further PRs automatically. Any mismatch is a STOP; recovery needs separately authorized forward fix/revert, not force-push.
+
+**Known defects to carry forward, without unapproved scope creep:** both early parity comparers accept an empty fixture or truncated scenarios, so their counts must be checked manually; Godot still runs as a separate path-filtered workflow and is not included in the aggregate Python CI gate until later integration slices such as #23. Do not silently weaken or change existing frozen reference evidence.
 
 ## Open PR inventory — status snapshot
 
