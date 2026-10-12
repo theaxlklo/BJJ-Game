@@ -515,5 +515,15 @@ class HalfGuardEarlierPinsUntouchedTests(unittest.TestCase):
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
 
+class HalfGuardMountEdgeWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Half Guard Mount edge', 'Validate the Half Guard v0 Mount edge adapter'
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_mount_edge.gd', '/tmp/half-guard-mount-edge.log', 3119
+
+    def test_earlier_half_guard_pins_are_untouched(self):
+        text = WORKFLOW.read_text()
+        for name, count in (('/tmp/half-guard-boundaries.log', 4006), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151)):
+            self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
+
+
 if __name__ == '__main__':
     unittest.main()
