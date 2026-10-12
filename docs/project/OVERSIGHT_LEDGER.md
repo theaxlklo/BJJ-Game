@@ -1,6 +1,6 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 1.4 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 1.5 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
@@ -58,6 +58,8 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 | D-INIT-02 | Neutral simultaneous commitments in Open Guard/Standing and potential Bottom initiative in Closed Guard | **Proposed future capability; not implemented; requires secrecy, clock, ordering, personal-turn rules** |
 | D-INIT-03 | Belt-banded Technique stat with within-belt variance and position-specific proficiency affecting opening priority | **New owner design idea, NOT APPROVED**. Investigate in B2a.1, keep control/authority/response and clock independent; initial ranges/override thresholds OPEN. |
 | D-FOCUS-01 | Player-selected positional training focuses keyed by position family **and physical role**; White Belt begins with proposed 2 focuses (e.g. Mount Top and Side Control Top); more slots as fighter improves | **Owner design direction/provisional 2-slot example; NOT CODE-AUTHORIZED.** Decide exact slot ladder, focus switching, XP/learning rules and persistent storage later. Preserve off-focus move legality, earned belts and earned proficiency. |
+| D-MEM-01 | Three concurrent **blurry/unfinished memory slots**; learn one to free a slot, or choose to discard one when discovering a new move | **Owner mechanic direction; NOT IMPLEMENTED.** No automatic eviction; three is a concurrent learning limit, not total techniques, training focuses or Never Forget count. Explicit opt-in replacement required. |
+| D-MEM-02 | Clarity triggers, discarded progress, learned/mastered threshold, encounter timing, variant identity, persistence | **OPEN**: separate bounded memory-system specification; no XP numbers, combat timing or save-schema assumptions authorized. |
 | D-STACK-01 | Merge order/authorization for 30-PR chain and disposition of parallel #44 | **Not authorized, audit only** |
 | D-STALL-01 | Game-specific stalling trigger | **Approved direction: third consecutive inactive personal turn**, independent by fighter |
 | D-STALL-02 | Penalty repeat/reset cadence and full activity classifier | **Open**; IBJJF-inspired scoring consequences are proposed |
@@ -110,6 +112,14 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Proposed integration:** active focus enhances rate/direction of positional skill growth and may improve practice/clarity of matching move memories; earned role-specific proficiency persists when training assignments change. General Technique supplies broad competence, focus influences specialist skill, and named move memory controls learned-technique mastery. Avoid stacking all three independently into repeated priority and grade bonuses.
 - **Constraints:** off-focus positions and legal defense remain playable; true observation-based technique learning remains possible outside focuses; no pass/REST spam for XP; no in-match free reallocations, new decision windows or clock changes. Career persistence respects retained earned belts and mastered knowledge. The current Godot fighter foundation is not assumed to implement these mechanics.
 - **Action:** include a small, deterministic design matrix and data/role-contract proposal within B2a.1. **No PR #65, engine, oracle, roster, persistence format or default behavior was edited.** Defer numeric slot ladder, per-action XP, assignment/respec economy and initiative override formula to owner approval and later implementation. Full focus/memory development must not hold up the Side Control oracle once a safe provisional initiative baseline is approved.
+
+### E-005 — Owner caps blurry memory queue at three slots, 2026-10-12
+
+- **Owner mechanic direction:** a fighter may hold **three active blurry/unfinished technique memories simultaneously**. A new technique encountered while full offers a deliberate decision: **keep** the three existing learning projects, or **discard one** to admit the new blurry memory. Continued practice/observation can bring a chosen blurry memory to **learned** status and free its slot. This does **not** limit the fighter's accumulated learned/mastered repertoire.
+- **Distinct player-controlled resources:** the White Belt example of two selected *positional training focuses* (D-FOCUS-01) is independent of **three active blurry memories** (D-MEM-01); both differ from the future limited **Never Forget** / clutch selections. Specializing in a position might speed clarification of related memories but cannot silently add blurry slots.
+- **Safeguards:** explicit confirmation before replacement; no automatic loss of learned memories, no fourth hidden blurry slot, no duplicate technique IDs, deterministic encounter and selection history; observation and selection must not create a new combat decision window, advance the match clock, expose a sealed feint or remove mandatory defenses. Protect progression from trivial repeat-action XP farming.
+- **Open design:** whether dropping a blurry memory destroys its incomplete progress, when it reaches learned (vs mastered), how to practice, whether repeated observations while queue is full can be tracked, the exact player-choice UI timing, technique-variant granularity, persistence across runs, and whether slot capacity can ever increase. None of these was implicitly approved by the capacity rule.
+- **Scope:** added to [Roadmap v1.6](ENGINEERING_ROADMAP.md) for a later memory/career implementation slice; B2a.1 remains a **documentation-only initiative investigation**, and B2b remains blocked pending Side Control rules approval. No gameplay branch, PR #65 or existing oracle was modified.
 
 ## Standard Claude-result ingestion form
 
