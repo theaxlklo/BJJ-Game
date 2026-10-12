@@ -242,5 +242,45 @@ jobs:
           cat /tmp/mount-practice.log
           python tools/ci/validate_mount_slice_log.py /tmp/mount-practice.log --name "Mount practice" --exit-code "$status" --expected-assertions 1036
 
+      - name: Generate the independent Half Guard Python oracle fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Standard-library oracle (tests/oracles/half_guard_v0.py); no engine code and no Mount code is imported.
+          python GODOT_V1/tests/generate_half_guard_reference.py
+
+      - name: Validate Half Guard v0 boundaries (negative-first typed engine tests)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_boundaries.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_boundaries.gd > /tmp/half-guard-boundaries.log 2>&1 || status=$?
+          cat /tmp/half-guard-boundaries.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-boundaries.log --name "Half Guard boundaries" --exit-code "$status" --expected-assertions 4006
+
+      - name: Validate Half Guard v0 against the independent Python oracle (fixture replay)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_reference.gd or oracle change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_reference.gd > /tmp/half-guard-reference.log 2>&1 || status=$?
+          cat /tmp/half-guard-reference.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-reference.log --name "Half Guard reference" --exit-code "$status" --expected-assertions 49609
+
+      - name: Validate Half Guard v0 window-gateway conformance to the Mount gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_conformance.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_conformance.gd > /tmp/half-guard-conformance.log 2>&1 || status=$?
+          cat /tmp/half-guard-conformance.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-conformance.log --name "Half Guard conformance" --exit-code "$status" --expected-assertions 151
+
       - name: Smoke-test the default scene (2D Mount practice; the 3D greybox stays a separate diagnostic scene)
         run: godot --headless --path GODOT_V1 --quit-after 5

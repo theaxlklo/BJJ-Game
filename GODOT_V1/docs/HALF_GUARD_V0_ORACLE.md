@@ -1,6 +1,6 @@
 # Half Guard v0 independent oracle (B1b checkpoint)
 
-**Status: test-only checkpoint. Nothing here is production code and no GDScript Half Guard class exists yet.** The oracle executes the rules of
+**Status: test-only. Nothing in the oracle is production code.** The typed GDScript engine (`GODOT_V1/scripts/positions/half_guard/`, see [HALF_GUARD_V0_ENGINE.md](HALF_GUARD_V0_ENGINE.md)) was written *after* the oracle and is replayed against its fixture. The oracle executes the rules of
 [HALF_GUARD_V0_RULES.md](HALF_GUARD_V0_RULES.md) (the provisional v0 prototype baseline, C1 grades, decisions N-1 … N-11) so that the later typed GDScript
 engine can be compared with a second, independently written implementation. It is not a balance claim.
 
@@ -17,7 +17,7 @@ engine can be compared with a second, independently written implementation. It i
 ## Independence evidence
 
 * The oracle imports only `copy`, `hashlib`, `json`, `math` (AST-checked); it never imports `bjj_game`, never constructs or runs a `MountMatch`, reads no file, uses no clock and no randomness (AST-checked).
-* It was written from the rules sheet; the GDScript Half Guard engine does not exist, and no existing GDScript was translated.
+* It was written from the rules sheet before any Half Guard GDScript existed, and no existing GDScript was translated. The engine was then written from the same sheet and compared with the oracle through the generated fixture (a mismatch is a bug in one of the two, never silently reconciled).
 * The frozen Python reference is imported **only inside the unit tests** to compare position-independent helper semantics: stamina thresholds/bands/latch transitions (including capacities near 2^53), the cost policy, the exhaustion modifier, the magnitude and undercommitment helpers and `Grade.shift`.
 * `RulesSheetConsistencyTests` parse the 15 raw-grade cells and the 8 hysteresis rules out of the rules sheet and compare them with the oracle tables, so the document cannot drift from the code unnoticed.
 * The scenario module defines each helper, table and trajectory exactly once (an earlier draft carried shadowed duplicates). A development-time **mutation-sensitivity control** (disposable copies, not committed) confirmed that each of these single mutations is detected by the focused suite: C0 grade restored; defense None shift +2→+1; attack Ready shift +1→0; HIGH preservation ignoring payment; HIGH wearing like MEDIUM; a LOW response still wearing; Rule 1 waiver removed; no consumption on an exit; defense applied before attack (saturation order); pass line 30→35; a hysteresis threshold 12→13; undercommitment removed; initiative flipping on an exit.

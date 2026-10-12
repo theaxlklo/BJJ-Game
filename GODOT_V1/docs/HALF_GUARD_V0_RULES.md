@@ -2,7 +2,7 @@
 
 **Status: provisional v0 prototype baseline for the independent oracle. This is a qualified-prototype target, not final game balance.** The owner selected
 the implementation-baseline decisions N-1 … N-11 of `HALF_GUARD_V0_PROPOSAL.md` §12.13.1 with the selections recorded in §1. This sheet restates the accepted rules as one
-self-contained, ordered specification; the Python oracle (`tests/oracles/half_guard_v0.py`) is written from **this sheet**, not from any GDScript. No GDScript Half Guard class exists yet.
+self-contained, ordered specification; the Python oracle (`tests/oracles/half_guard_v0.py`) is written from **this sheet**, not from any GDScript; the typed GDScript engine (`scripts/positions/half_guard/`) implements the same sheet and is compared with the oracle fixture (see [HALF_GUARD_V0_ENGINE.md](HALF_GUARD_V0_ENGINE.md)).
 
 **Provenance of earlier evidence.** The B1a proposal (`HALF_GUARD_V0_PROPOSAL.md`) and its prototype measurements (Appendices A–E: reachability counts, random-play splits, horizon values,
 exit windows) were computed for the **proposal-stage grades ("C0": Knee Slice vs Hip Frame = 0)**. They are historical proposal evidence. They are **not** measurements of this C1 baseline, and no
