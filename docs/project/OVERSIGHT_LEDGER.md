@@ -1,6 +1,6 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 1.5 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 1.6 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
@@ -59,7 +59,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 | D-INIT-03 | Belt-banded Technique stat with within-belt variance and position-specific proficiency affecting opening priority | **New owner design idea, NOT APPROVED**. Investigate in B2a.1, keep control/authority/response and clock independent; initial ranges/override thresholds OPEN. |
 | D-FOCUS-01 | Player-selected positional training focuses keyed by position family **and physical role**; White Belt begins with proposed 2 focuses (e.g. Mount Top and Side Control Top); more slots as fighter improves | **Owner design direction/provisional 2-slot example; NOT CODE-AUTHORIZED.** Decide exact slot ladder, focus switching, XP/learning rules and persistent storage later. Preserve off-focus move legality, earned belts and earned proficiency. |
 | D-MEM-01 | Three concurrent **blurry/unfinished memory slots**; learn one to free a slot, or choose to discard one when discovering a new move | **Owner mechanic direction; NOT IMPLEMENTED.** No automatic eviction; three is a concurrent learning limit, not total techniques, training focuses or Never Forget count. Explicit opt-in replacement required. |
-| D-MEM-02 | Clarity triggers, discarded progress, learned/mastered threshold, encounter timing, variant identity, persistence | **OPEN**: separate bounded memory-system specification; no XP numbers, combat timing or save-schema assumptions authorized. |
+| D-MEM-02 | Percentage retained on discarding blurry memory; later rediscovery restores residual clarity | **Owner-approved concept:** discard frees slot but preserves **some percentage of current earned progress** in a dormant trace; it is not an active fourth memory. **OPEN:** numeric rate, rounding, repeated replacements, persistence and learned/mastered thresholds. |
 | D-STACK-01 | Merge order/authorization for 30-PR chain and disposition of parallel #44 | **Not authorized, audit only** |
 | D-STALL-01 | Game-specific stalling trigger | **Approved direction: third consecutive inactive personal turn**, independent by fighter |
 | D-STALL-02 | Penalty repeat/reset cadence and full activity classifier | **Open**; IBJJF-inspired scoring consequences are proposed |
@@ -120,6 +120,13 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Safeguards:** explicit confirmation before replacement; no automatic loss of learned memories, no fourth hidden blurry slot, no duplicate technique IDs, deterministic encounter and selection history; observation and selection must not create a new combat decision window, advance the match clock, expose a sealed feint or remove mandatory defenses. Protect progression from trivial repeat-action XP farming.
 - **Open design:** whether dropping a blurry memory destroys its incomplete progress, when it reaches learned (vs mastered), how to practice, whether repeated observations while queue is full can be tracked, the exact player-choice UI timing, technique-variant granularity, persistence across runs, and whether slot capacity can ever increase. None of these was implicitly approved by the capacity rule.
 - **Scope:** added to [Roadmap v1.6](ENGINEERING_ROADMAP.md) for a later memory/career implementation slice; B2a.1 remains a **documentation-only initiative investigation**, and B2b remains blocked pending Side Control rules approval. No gameplay branch, PR #65 or existing oracle was modified.
+
+### E-006 — Owner preserves partial clarity when discarding a blurry memory, 2026-10-12
+
+- **Owner decision:** when a fighter deliberately discards one of the three unfinished/blurry memory projects, they retain **a percentage of the progress earned so far**. This prevents an abandoned learning project from feeling entirely wasted. The slot becomes free for the newly observed technique; the abandoned progress becomes a **dormant residual trace**, not a fourth active blurry memory.
+- **Rediscovery:** upon a later genuine encounter and voluntary re-admission into one of the three slots, the technique should restore its residual clarity instead of starting completely from zero. The original three-slot cap, consent before replacing a memory, and permanent separation from learned/mastered and Never Forget memories remain unchanged.
+- **Illustration, not an accepted rate:** 60% learned × a hypothetical 50% retention = 30% dormant clarity. **The actual retention percentage has NOT been selected**; also open are integer rounding, whether specializations influence retention, prevention of repeated-discard exploits, re-discovery recognition, and career/run persistence.
+- **Implementation gate:** later Memory Constellation/learning slice only, with deterministic stable technique IDs and replay/save tests. No combat engine, SC-D2 initiative, B2a.1 or Side Control oracle work was authorized or changed by this decision.
 
 ## Standard Claude-result ingestion form
 
