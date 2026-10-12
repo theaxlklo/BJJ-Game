@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 1.3 — B2a.1 position-aware initiative checkpoint approved for design; no initiative rules frozen  
+**Roadmap revision:** 1.4 — B2a.1 expanded to evaluate technique proficiency and belt-band variance; no values or initiative policies frozen  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`) and draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and any merge/integration. This document recommends; it does not change engine behavior or authorize a merge.
@@ -97,6 +97,19 @@ The owner deliberately **declined to freeze** a universal initiative rule or the
 Separate three dimensions: **positional control / authority**, **initiative ownership / eligibility**, and **decision-timing protocol** (sequential with response, or simultaneous sealed choices). Assess entrance initiative separately from ongoing initiative and from cross-position exchange fairness. Top-first after a Knee Slice would give that fighter consecutive **personal opportunities** across positions, even without a free clock/window; treat this as an **open game-balance decision** rather than a technical inevitability.
 
 **B2a.1 deliverable:** one docs-only `GODOT_V1/docs/POSITION_AWARE_INITIATIVE_PROPOSAL.md` (name itself provisional), proposed state-machine/contract, position matrix and explicit compatibility/test plan covering actor eligibility, real simultaneous commitment secrecy, responder rights, `window_id` and simulated clock once per bounded exchange, and **per-fighter** completed-turn tracking for future 3-turn stalling and 5-turn-per-fighter Heart of a Lion. No executable engine/refactor, no proposed numeric buffs, no changes to #65, and no B2b authorization. Prefer conditional design variants to premature universal abstractions.
+
+### Technical proficiency as a possible initiative modifier (owner idea; PROPOSAL ONLY, 2026-10-12)
+
+The owner proposed adding a fighter **Technique proficiency stat** with **overlapping typical distributions by belt** (White, Blue, Purple, Brown, Black) and meaningful within-belt fighter variance. The idea is to let exceptional technical proficiency sometimes overcome a position's default opening initiative. This is not approval of values, dynamic turn theft or new fighter schema. Distinguish:
+
+- **Belt** = progression/rank and a possible *distribution for initial proficiency*, never an automatic initiative win or a hard cap on later learning.
+- **General technique proficiency** = fighter characteristic; **position-specific proficiency** = expertise in the relevant position; **individual memory mastery** = proficiency with a named move/variant. Avoid double counting one learned technique both as a priority modifier and a resolution/grade boost without explicit balance approval.
+- **Position policy** = ordinary opening initiative and sequential-vs-simultaneous timing. **Technical differential** = possible *bounded exception* to that policy if one fighter's relevant proficiency greatly exceeds the other's. Control axis, authority, and legality of defenses remain separate; even a priority loss must not eliminate legal responses.
+- **Determinism** = any within-belt variation is assigned reproducibly at fighter creation/career progression and stored in fighter state, never randomly rerolled during a decision window. Re-evaluate only at explicit match-owner boundaries. Avoid extra windows, time advances, repeated initiative theft, sealed-intent leaks or opportunity inflation.
+
+**Illustrative candidate ranges only (NOT ACCEPTED, 0–100):** White 10–35, Blue 25–50, Purple 40–65, Brown 55–80, Black 70–95. These represent overlapping starting distributions, not the real BJJ belt system or proven game balance; exceptional positional specialists may differ substantially. An equally provisional Side Control +12 bias for Top is useful solely as a paper test of whether an opposing proficiency gap could reverse opening priority. Do not freeze any bonus, formula, threshold, range, tie rule, or simultaneous protocol from this example.
+
+**B2a.1 proposal must evaluate:** how to represent general vs positional vs move-level skill without feature bloat; whether fighter definitions currently expose enough skill data; when skill may override *opening priority* vs ongoing turn eligibility; per-position policy table including neutral simultaneous entry; how belts and persistent career affect stable stats; no deadlock or passive runaway advantage; and a deterministic test matrix for equal ratings, adjacent belts, underdogs, high-skill Bottom in Side Control/Closed Guard, and low-technique Top in Open Guard. This is docs-only and does **not** expand the approved B2a.1 into implementation.
 
 **Gate:** project owner reviews B2a.1 and the Side Control SC-D2 choice together. Only then can B2b freeze a self-contained Side Control rules sheet and independent Python oracle. Any new 2-fighter simultaneous action protocol is a later independently qualified slice, not assumed to exist because Half Guard has a sealed feint/response protocol.
 
