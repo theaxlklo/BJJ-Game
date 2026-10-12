@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 1.8 — P0 Batch A #17→#18→#22 selected for integration preflight; no merge authorization or main mutation  
+**Roadmap revision:** 1.9 — #17 simulated merge qualified by Claude, GitHub state reverified, merge commit recommended pending explicit owner authorization; no main mutation  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`) and draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and any merge/integration. This document recommends; it does not change engine behavior or authorize a merge.
@@ -55,7 +55,7 @@ Dotted connections are **not runnable** in the current graph; Standing arrows sh
 
 | Priority | Work package | First artifacts / PR boundary | Exit gate and overseer evidence | Current status |
 |---|---|---|---|---|
-| P0 | **Integration-readiness checkpoint** | Review the 31-PR active chain plus #44 and independent #64; first candidate **Batch A #17→#18→#22**, then remaining dependencies in short batches. | Owner specifically authorizes merge operations before any execution; validate exact heads, predecessor ancestry, post-merge cumulative CI and default behavior after **each** PR; stop on conflict or failing gate. | **Batch A selected for read-only preflight; no merges authorized.** |
+| P0 | **Integration-readiness checkpoint** | Review the 31-PR active chain plus #44 and independent #64; first candidate **Batch A #17→#18→#22**. #17 preflight supports merge-commit integration. | Owner explicitly authorizes merge; validate new main tree, ancestry and full push CI **after each** PR before continuing. No squash/rebase without approved new plan; stop on failed gate. | **#17 engineering GO; awaiting owner merge authorization. No main changes.** |
 | P1 | **B2a Side Control spec** | [Draft #65](https://github.com/theaxlklo/BJJ-Game/pull/65): `GODOT_V1/docs/SIDE_CONTROL_V0_PROPOSAL.md` (346 lines); 3 actions and 3 responses per side, proposed grade tables, four proposed exits, Knee Slice receiver, R1–R12 risks and SC-D1–SC-D15. | Owner accepts or amends exact mechanics and architecture before any oracle is frozen. | **DOC-QUALIFIED; awaiting owner approval**. |
 | P1.1 | **B2a.1 Position-aware initiative contract** | New documentation-only checkpoint stacked on qualified B2a #65. Compare current Mount/Half Guard windows against Side Control, Closed Guard, Open Guard and Standing needs; define first-window, ongoing-initiative and neutral simultaneous-choice semantics, with impact on personal turn accounting. | Report design alternatives and owner decisions, no code/fixture/default changes; preserve SC-D2 as open. | **NEXT · approved to investigate only**. |
 | P2 | **Side Control executable** | **B2b** accepted canonical rules sheet and independent test-only Python oracle (checkpoint PR), **B2c** typed Godot engine, **B2d** source→destination keyed receiver/opt-in graph seam, **B2e** measurement (separate slices). | After owner approval: independent oracle prior to GDScript, negative-first and replay parity, real Knee Slice→Side entry, no leaked Half Guard protocol or Mount replay, honest unsupported exit halts. | **Blocked on SC-D1–SC-D15; not started**. |
@@ -192,6 +192,18 @@ Opponent uses a technique not yet learned
 **Integration procedure to prepare, not execute yet:** verify GitHub branch protections, exact SHA and PR review gate; recommend **merge-commit ancestry preservation** for this dependent stack where permitted; simulate/inspect result against current `main`; prepare a *one-PR-at-a-time* gate and rollback procedure, with explicit owner authorization required before every actual mainline mutation. Once #17 is integrated and independently verified, reassess #18's base/diff/CI against the actual updated `main`; only then proceed to #18, and repeat for #22. Do not rewrite ancestor commit SHA, squash early dependencies without an explicit ancestry-safe recovery design, auto-retarget dependent PRs or merge if checks are incomplete. Existing exact-head CI success **does not** prove the subsequent integration commit's CI.
 
 **Watchouts:** the existing early PRs have no submitted GitHub reviews in the queried API result, and the presence/absence of branch-protection gates is not established by that fact. Track both explicitly. Keep proposed B2a.1/Side Control design paused until P0 integration is stable. Independent oversight [#64](https://github.com/theaxlklo/BJJ-Game/pull/64) may be evaluated separately; divergent #44 is not a chain predecessor.
+
+## P0 PR #17 pre-merge GO — awaiting owner authorization (2026-10-12)
+
+**Claude's read-only premerge report:** clean scratch merge of `main` at `7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1` and PR #17 head `1de58ef97c4a0a4342f6a80a36c352926620be6e`; expected resulting tree `3c91f43da03fd08af86a950351c26a023284af58`. Reported local Godot 4.7.2 import, Mount slice 40 assertions, independent Python fixture 4,140 actions + 300 drifts, 92,939 parity checks, frozen digest, three `PYTHONHASHSEED` values, Godot smoke, semantic checker and 516 Python 3.14.7 tests all passed. **Local commands/logs are Claude-reported, not independently re-executed by oversight.**
+
+**Independent GitHub recheck:** #17 is open, non-draft, mergeable, base `main` at the expected SHA, head unchanged; one commit ahead, zero behind, exactly five expected docs/workflow/fixture/test paths and **no production scripts**. Its exact-head PR/push workflow records concluded `success`; merge-commit method enabled. User/Claude report no branch protections or mandatory reviews; consider this reported policy evidence rather than an ownership approval.
+
+**Engineer's decision:** **GO recommended for a SINGLE merge commit of #17**, conditional on the owner explicitly authorizing a real mainline write. **No merge authorization has been supplied in the pasted report, and no GitHub merge or PR retargeting has occurred.** The preflight does not authorize #18 or #22.
+
+**Integration gate once the owner authorizes #17:** re-verify `main` and #17 head; merge with a head guard using merge-commit strategy; verify the resulting `main` tree is exactly `3c91f43da03fd08af86a950351c26a023284af58`, and #17 head is an ancestor; inspect both workflow results **on the actual new `main` push SHA**, including Godot's 40/4140/300/92939 counts. Fail closed on changed SHAs, missing/cancelled/failing post-merge jobs, tree mismatch or unexpected files. Do not automatically retarget #18, and do not merge more PRs. Recovery is an explicitly approved forward-fix or `git revert -m 1 <merge_sha>`, never a forced main reset.
+
+**Known debt to track:** at this old PR's stage a parity checker may report success on an empty or incomplete expected fixture; the CI path regenerates fixture and observed counts were pinned manually in Claude's preflight, but enforce explicit counts when the later pinning slice merges. The historic old `test.yml` aggregate gate does not itself include Godot; verify the independent Godot job on the new `main` commit.
 
 ## Open PR inventory — status snapshot
 
