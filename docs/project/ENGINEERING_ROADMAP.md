@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 1.4 — B2a.1 expanded to evaluate technique proficiency and belt-band variance; no values or initiative policies frozen  
+**Roadmap revision:** 1.5 — add player-selected role-specific positional training focuses to B2a.1 and future career/memory design; no implementation or stat values frozen  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`) and draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and any merge/integration. This document recommends; it does not change engine behavior or authorize a merge.
@@ -110,6 +110,31 @@ The owner proposed adding a fighter **Technique proficiency stat** with **overla
 **Illustrative candidate ranges only (NOT ACCEPTED, 0–100):** White 10–35, Blue 25–50, Purple 40–65, Brown 55–80, Black 70–95. These represent overlapping starting distributions, not the real BJJ belt system or proven game balance; exceptional positional specialists may differ substantially. An equally provisional Side Control +12 bias for Top is useful solely as a paper test of whether an opposing proficiency gap could reverse opening priority. Do not freeze any bonus, formula, threshold, range, tie rule, or simultaneous protocol from this example.
 
 **B2a.1 proposal must evaluate:** how to represent general vs positional vs move-level skill without feature bloat; whether fighter definitions currently expose enough skill data; when skill may override *opening priority* vs ongoing turn eligibility; per-position policy table including neutral simultaneous entry; how belts and persistent career affect stable stats; no deadlock or passive runaway advantage; and a deterministic test matrix for equal ratings, adjacent belts, underdogs, high-skill Bottom in Side Control/Closed Guard, and low-technique Top in Open Guard. This is docs-only and does **not** expand the approved B2a.1 into implementation.
+
+### Selectable positional training focus — role-specific fighter strategy (OWNER PROPOSAL, 2026-10-12)
+
+The owner wants a player to **choose the positions they actively train**, instead of having every fighter improve equally everywhere. Example at White Belt: choose **two focus slots**, such as `mount/top` and `side_control/top`; as the persistent fighter wins, improves and advances belts, the number of available focuses may expand. **Two starting slots is the owner's example/provisional direction; no higher-belt slot ladder, XP rates, unlock schedule or numeric modifier has yet been decided.**
+
+**Role-aware focus keys are essential:** `mount/top`, `mount/bottom`, `side_control/top`, `side_control/bottom`, `closed_guard/bottom`, `closed_guard/top` are distinct specializations. Neutral positions such as Standing require position-specific roles rather than fictitious top/bottom assignments. Track the stable family ID and that family's physical role vocabulary, not the fighter's identity, axis sign or control authority. Whether each pair consumes exactly one slot needs owner review.
+
+**Proposed three-factor composition** (not three independent permanent bonuses to one outcome):
+1. **General Technique**: baseline competence, potentially initialized from overlapping belt ranges with reproducible fighter variance; never use belt as a universal priority trump.
+2. **Positional proficiency**: accumulated role-specific experience. Player-chosen **training focuses** accelerate growth or direct investment for their matching position/role; previously earned proficiency remains persistent when a focus changes.
+3. **Individual memory mastery**: progress with a particular named technique/variant (blurry discovery → clarified/learned → mastered); focus may improve discovery/clarification and training, but it should not auto-grant mastery or block observation-based learning elsewhere. The Never Forget/clutch selection is a separate, limited overlay.
+
+**Safeguards and progression questions:**
+- **No legal move or defense locked solely for lack of focus.** Focus changes the fighter's preparation, growth and possibly familiarity, not the basic legality of positional survival. Non-focus techniques may still be learned or performed under the game's existing knowledge/belt gating.
+- **No XP farming through pass/no-op/REST.** Growth events require legitimate accepted attempts, defenses, focused training or reviewed match/career rewards; failed legitimate effort can count while repeated meaningless spam should not.
+- **No automatic promotion or automatic focus deletion.** The persistent fighter retains earned belt and historical positional proficiency across runs under existing career rules. The focus slot unlock path can be linked to promotion or specific milestone wins, but no exact threshold is chosen here.
+- **Avoid triple dipping.** General Technique, relevant positional expertise and memory mastery must have clearly separated responsibilities (opening priority versus execution/grading versus learning speed), with bounded contributions and explicit balance tests; no hidden stat double-count or passive initiative monopoly.
+- **Training selection is between matches or explicit career opportunities**, not a free priority rebalance mid-exchange. Determine how reassignment works, whether choices persist across matches, and whether unused training focuses are allowed.
+- **Stable deterministic representation** when implemented: fighter ID, belt, general Technique, role-specific proficiency per stable position ID, active focus-slot list, unlocked slot count, and named move mastery; assign any variance once and persist it. Current F0/fighter snapshots are not claimed to support this model.
+- **Sealed neutral decisions remain sealed.** Even an exceptional specialist doesn't get to see the opponent's committed technique before choosing, and all legal emergency defenses remain available.
+
+**Design gate / tests for B2a.1:** Compare two White Belts with different 2-focus selections; Bottom Closed Guard specialist against high-general-Technique opponent; Top Side Control specialist against high-general-Technique Bottom escape specialist; identical belt/general Technique with different focus histories; a respec retaining earned proficiency; off-focus legitimate moves; fighter promotion unlocking an additional active focus; replay determinism across career load/save and matches. These are **test cases to specify**, not authorization to implement the underlying career or serialization system.
+
+**Scheduling:** B2a.1 may define the *interfaces and meaning* of role-specific proficiency and show how future priorities use them, but **must not implement focus selection, memory XP, fighter data migrations, belt advancement or combat modification**. Implement selectable focuses when fighter identity/career/memory infrastructure is ready; do not make its full implementation a blocker for the next Side Control oracle. Until the subsystem exists, use explicit stable test inputs or a provisional fixed initiative rule approved by the owner.
+
 
 **Gate:** project owner reviews B2a.1 and the Side Control SC-D2 choice together. Only then can B2b freeze a self-contained Side Control rules sheet and independent Python oracle. Any new 2-fighter simultaneous action protocol is a later independently qualified slice, not assumed to exist because Half Guard has a sealed feint/response protocol.
 
