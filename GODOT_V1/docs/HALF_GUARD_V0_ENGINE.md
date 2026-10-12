@@ -1,7 +1,7 @@
 # Half Guard v0 typed GDScript engine (B1b)
 
 **Status: provisional v0 prototype baseline, not final game balance.** Implements [HALF_GUARD_V0_RULES.md](HALF_GUARD_V0_RULES.md) (C1 grades, decisions N-1 … N-11) in typed GDScript and is compared, cell for cell, with the independent Python oracle ([HALF_GUARD_V0_ORACLE.md](HALF_GUARD_V0_ORACLE.md)).
-It is a headless, deterministic position implementation. It changes **no** Mount, graph, F0 or F1 behavior and is **not connected to any of them**: nothing starts, enters, exports or renders Half Guard yet (the Mount edge adapter and graph integration are later slices).
+It is a headless, deterministic position implementation. The engine itself changes **no** Mount, F0 or F1 behavior. Two later slices connect it, both additive and neither enabling Half Guard in F1: the Mount edge adapter (B1c, `BjjHalfGuardMountEdge`, a pure Mount-record-to-entry-request converter) and the **opt-in** graph integration (B1d, see "Graph integration" below). `BjjPositionGraphMatch.create` still builds a Mount-only graph in which every Mount exit halts, F1 uses `create`, and nothing in F1 or F0 can start, enter or render Half Guard.
 
 ## Files (`GODOT_V1/scripts/positions/half_guard/`)
 
@@ -44,8 +44,21 @@ The counts are measured by the suites and pinned in `.github/workflows/godot-v1.
 
 ## Known limitations
 
-* Not connected to the graph, F0 or F1; no Mount edge adapter, no receiver, no carry-over export, no UI.
+* Reachable only through an opt-in graph (`create_with_receivers`) or directly through the gateway; F0 and F1 do not use it and there is no UI. There is no Half Guard carry-over export (the graph refuses one) and no return route.
 * No feints, sealed intent, behaviors, drift, recovery or D3-B (all explicitly later work). Direct techniques only.
 * Stamina-state corruption (an out-of-range pool value) is not representable (the pool refuses it); context corruption is exercised through plain field assignment on the match.
 * `BjjHalfGuardMatch.new()` is not a supported construction path; a match is built only from an entry request.
 * The oracle fixture is large (tens of megabytes) and generated at test time; it is git-ignored.
+
+## Graph integration (B1d, opt-in)
+
+`BjjPositionGraphMatch.create_with_receivers(configuration, top_id, bottom_id, receivers)` builds the Mount graph with a receiver table; `create` is unchanged and builds none.
+`receivers` must be a `Dictionary` whose keys are a subset of `{"half_guard"}` and whose values are valid two-argument `Callable`s `(record, interval_seconds) -> BjjHalfGuardWindowGateway.Creation`; anything else builds no graph and returns `invalid_receivers`. An empty table is observably identical to `create`. `BjjPositionGraphMatch.default_receivers()` returns the Half Guard edge for future callers and tests (no production caller exists). The cadence handed to a receiver is the graph's own `configuration.interval` (default: `BjjMountRules.DEFAULT_INTERVAL_SECONDS`).
+
+The graph owns the **choice of the active position** (`active_position_id()`: `"mount"` or `"half_guard"`); each position owns its own mechanics. At every moment of an active match exactly one position accepts commands. A transition replaces that owner in one step and the previous segment is retained as frozen history.
+
+After an accepted Mount decision whose exit label is registered, the graph (1) takes the validated A3b record from the retained Mount gateway, (2) computes its **own** expected entry request and fresh reference snapshot with the edge adapter and the Half Guard entry, (3) calls the receiver with a detached record copy, (4) checks the returned object is a `BjjHalfGuardWindowGateway.Creation` with a gateway and compares the gateway's detached views with the expected request (roles, per-fighter-id stamina, maximum, latch and meter, both clocks, window counter, cadence, entry axis, band, readiness, initiative, empty history, no open window) and with the fresh snapshot, (5) confirms the retained Mount segment's public views and export are unchanged, and only then (6) sets the typed `_half_guard` slot and appends exactly one `transition_committed`. It opens no window, charges nothing and moves no clock; the first Half Guard window opens on a later caller request, with window ids continuing from the Mount counter.
+
+If step 2-5 fails after the exchange was accepted, the exchange stays settled (there is no rollback; see the `POSITION_GRAPH.md` §5/§8 amendment): the graph appends `transition_blocked` with reason `transition_entry_invalid`, halts, and activates nothing. Open Guard and Reversal (and Mount exits on a graph with no receiver) halt exactly as before. A Half Guard exit (`Side Control`, `Open Guard`, `Closed Guard`) halts with `transition_blocked` and `from_position_id = "half_guard"`; a Half Guard timeout is a terminal outcome, never an exit. While Half Guard is active `carryover_export()` is refused with `carryover_unsupported_position`; no v2 schema exists, and the unchanged v1 validator refuses a graph halted with `transition_entry_invalid` (`inconsistent_graph_segment`).
+
+A halt at an unsupported transition is an **incomplete-engine boundary**, not a state of a finished playable game. `test_half_guard_graph.gd` pins this slice (see the CI step); two private-property pins in `test_position_graph_boundaries.gd` and `test_carryover_export.gd` were revised on purpose (HG-16).
