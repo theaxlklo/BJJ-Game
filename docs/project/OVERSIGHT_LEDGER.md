@@ -1,6 +1,6 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 1.9 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 2.0 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
@@ -13,7 +13,7 @@
 | Stable integrated baseline | `main` @ `27599f28fa0e815693aa9d36aedb7aa14d573ac8` | **#17 merged**; actual-main Python+Godot post-merge CI PASS |
 | Current active stack tip | Draft PR [#65](https://github.com/theaxlklo/BJJ-Game/pull/65) @ `9942c5a53caf58d0d944bd7931ccc81bf86d0d07` | Side Control **proposal only**, no new executable position |
 | Exact-head CI | #65 **4 PASS / 4 expected SKIP**; #63 **21/21 PASS**; #62 **21/21 PASS**; oversight #64 workflow PASS | Exact heads; doc-only CI proves no gameplay behavior |
-| Open work | 30 remaining sequential Godot PRs (#18→#65), divergent #44, independent oversight #64 | #17 integrated; #18 still on old predecessor branch; #44 and #64 still independent |
+| Open work | 30 remaining sequential Godot PRs (#18→#65), divergent #44, independent oversight #64 | #17 integrated; #18 retargeted to `main` but not merged; #22 unchanged |
 | Tip relative to `main` | 75 commits ahead, 0 behind; 199 changed paths | GitHub compare for PR #65's exact SHA |
 | Executable connected positions on tip | **Mount -> Half Guard**, opt-in | No Side Control receiver |
 | Player interface | **F1 Mount practice** | Not a full multi-position player-vs-opponent match |
@@ -41,7 +41,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 
 | Track | Slice | State | Next owner-visible result |
 |---|---|---|---|
-| Stack safety | P0 — integrate Godot safely | **#17 integrated and verified** | Next: owner-authorized **#18 retarget to main + premerge simulation only**; no #18 merge approval |
+| Stack safety | P0 — integrate Godot safely | **#18 retargeted and engineering GO** | Await explicit owner approval for #18 merge; require actual-main push CI and tree/ancestry verification; #22 untouched |
 | Gameplay breadth | B2a — Side Control rules/entry spec | **Doc-qualified #65, not approved** | SC-D2 Top-first explicitly remains open; don't freeze numbers | 
 | Initiative design | B2a.1 — Position-aware and skill-sensitive contract | **Next, design investigation only** | Include role-specific selectable training focuses, belt Technique variance and move mastery without implementing career, focus selection, or initiative changes |
 | Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **Blocked on SC-D1–SC-D15** | B2b separate Python oracle; B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
@@ -60,7 +60,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 | D-FOCUS-01 | Player-selected positional training focuses keyed by position family **and physical role**; White Belt begins with proposed 2 focuses (e.g. Mount Top and Side Control Top); more slots as fighter improves | **Owner design direction/provisional 2-slot example; NOT CODE-AUTHORIZED.** Decide exact slot ladder, focus switching, XP/learning rules and persistent storage later. Preserve off-focus move legality, earned belts and earned proficiency. |
 | D-MEM-01 | Three concurrent **blurry/unfinished memory slots**; learn one to free a slot, or choose to discard one when discovering a new move | **Owner mechanic direction; NOT IMPLEMENTED.** No automatic eviction; three is a concurrent learning limit, not total techniques, training focuses or Never Forget count. Explicit opt-in replacement required. |
 | D-MEM-02 | Percentage retained on discarding blurry memory; later rediscovery restores residual clarity | **Owner-approved concept:** discard frees slot but preserves **some percentage of current earned progress** in a dormant trace; it is not an active fourth memory. **OPEN:** numeric rate, rounding, repeated replacements, persistence and learned/mastered thresholds. |
-| D-STACK-01 | Batch A #17→#18→#22; subsequent remaining stack and independent #44/#64 | **#17 merged and all post-merge gates PASS**. Next recommended step: explicitly authorize #18 PR-base retarget and read-only qualification; **#18 merge not authorized**. |
+| D-STACK-01 | Batch A #17→#18→#22; subsequent remaining stack and independent #44/#64 | #17 merged/validated; #18 retargeted and independently GitHub-reviewed, merge-commit GO **pending owner authorization**; #22 untouched. |
 | D-STALL-01 | Game-specific stalling trigger | **Approved direction: third consecutive inactive personal turn**, independent by fighter |
 | D-STALL-02 | Penalty repeat/reset cadence and full activity classifier | **Open**; IBJJF-inspired scoring consequences are proposed |
 | D-LION-01 | Heart of a Lion | **Approved concept**: both exactly 0; once per match; 50%; five completed personal turns each; then 100% if active |
@@ -152,6 +152,15 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Verification limit:** the connector exposed the merged commit but not its complete tree object for an independent hash comparison; the exact tree equality and scratch clone cleanliness remain **Claude-reported**, not re-executed here. Godot's independent CI is still not part of old Python aggregate gate, and the old parity checker requires explicit count scrutiny.
 - **Remaining stack:** 30 open sequential Godot PRs #18→#65; divergent #44 and independent docs/ledger #64 remain outside that stack. #18 unchanged head `9c4166cef43d367786bbb24b76bccef6624779ba`, based on `feat/godot-v1-reference-parity` (the original #17 head). Comparing #18 to actual `main` shows six commits ahead, one behind (the merge commit), 18 intended paths. #22 unchanged at `83d2eb9d4d5f29249f1954ebf7b6b82661bac982`. No reason to rebase or change head.
 - **Next recommended owner authorization:** allow **retargeting PR #18 base to `main` only**, keeping its head unchanged, then have Claude qualify a simulated merge into actual `main` (CI/determinism/fixture counts, policy, no unexpected diff) and stop for a separate GO/NO-GO decision. **#18 merge, #22 retarget/merge and all further mainline writes are NOT approved by this entry.**
+
+### E-010 — PR #18 retargeted to main, premerge GO verified with qualifications, 2026-10-12
+
+- **Claude OVERSIGHT HANDOFF:** user-authorized base-only retarget of [PR #18](https://github.com/theaxlklo/BJJ-Game/pull/18) from `feat/godot-v1-reference-parity` to `main`. No mainline merge, branch push, rebase, amendment, forced update or PR #22 mutation. In an isolated simulated merge, Claude reports **zero conflicts**, expected tree `06f1407f0bbd11e7015d5ce732a9cab4c1b2622e`, no unrelated files, Godot 4.7.2 and Python 3.14.7 local parity, boundaries, digest and hash-seed replay PASS. **Local simulation/tree SHA not independently reproduced by oversight.** Full Python local unit tests were intentionally not rerun.
+- **GitHub-confirmed state:** `main` remains `27599f28fa0e815693aa9d36aedb7aa14d573ac8`; #18 base `main`, same SHA as `main`; head `9c4166cef43d367786bbb24b76bccef6624779ba`, open non-draft mergeable, 6 commits, 18 changed file paths (+948/−1), all within expected Godot stamina/commitment scripts, tests/docs and `.github/workflows/godot-v1.yml`. Compare reports **6 ahead / 1 behind**, merge-base #17 head `1de58ef97c4a0a4342f6a80a36c352926620be6e`; the one-behind merge commit is expected from the completed #17 integration. #22 remains base `feat/godot-v1-stamina-commitment`, exact head `83d2eb9d4d5f29249f1954ebf7b6b82661bac982`.
+- **Independently verified exact-head CI from 2026-10-09:** [Python workflow 37988354328](https://github.com/theaxlklo/BJJ-Game/actions/runs/37988354328) has 18 success/1 expected skipped; [Godot workflow 37988354550](https://github.com/theaxlklo/BJJ-Game/actions/runs/37988354550) successful. Downloaded Godot job log verified Mount **40 assertions, 4140 actions, 300 drifts, 92939 field checks**; stamina fixture **1752 traces, 13433 operations**; stamina parity **410192 checks/0 failures**; native boundary **154 checks/0 failures** with exactly two deliberately expected read-only-property errors. **No fresh CI triggered by retarget.**
+- **Known weaknesses:** both early parity comparers accept empty fixtures/truncated samples; log counts provide essential but manual regression checks until explicit minimum pins merge. Godot remains a distinct path-filtered workflow outside the old aggregate Python CI gate. If the actual postmerge push runs fail or are missing, integration stops before #22.
+- **Engineering verdict and authorization boundary:** **GO RECOMMENDED for a single guarded #18 merge commit**, conditional on the project owner's explicit authorization after checking no head/main drift. Expected post-merge `main` tree `06f1407f0bbd11e7015d5ce732a9cab4c1b2622e`, #18 head ancestor, actual-main Python+Godot push workflows successful, uncancelled, and all log counts matching. **No merge authorization received in this message; no merge executed by oversight.** #22 retarget, #22 merge, branch deletion, force-push, new gameplay PRs and recovery writes remain unauthorized.
+- **Next Claude instruction recommended:** once the owner authorizes, merge #18 only with `gh pr merge 18 --merge --match-head-commit 9c4166cef43d367786bbb24b76bccef6624779ba`; check resulting tree/ancestry and both new-main CI workflows; then STOP before #22 and return OVERSIGHT HANDOFF.
 
 ## Standard Claude-result ingestion form
 
