@@ -1,6 +1,11 @@
 extends SceneTree
 
 # Negative-first tests for the Half Guard sealed-intent protocol (B1g, TACTICAL_PREPARATION_AND_FEINTS.md section 7-8).
+# B1h REVISED THIS SUITE ON PURPOSE (owner decisions GP-2, GP-3 and the published timeout fallback): the requested commitment and the list of
+# eligible real techniques are now PUBLIC view fields; the sealed secret of B1g (the commitment) is public, so the secrecy checks moved to the
+# real technique, the feint flag and the funding results (see test_half_guard_feint_protocol.gd); executor events gained `real_action_id` /
+# `apparent_action_id` / `feint`; `apply_response_timeout` accepts only the published fallback; the gateway gained three feint methods.
+# Everything that is not one of those is unchanged.
 # Expected values are literals, come from a TWIN driven through the unchanged one-call BjjHalfGuardWindowGateway.submit with the
 # same inputs, or come from the independent Python oracle fixture; the protocol is never compared with itself except for the
 # deliberate replay and indistinguishability checks. Refusals are checked by whole executor-state equality (gateway snapshot, the
@@ -21,8 +26,8 @@ const KSH: String = BjjHalfGuardCatalog.BOTTOM_KNEE_SHIELD
 const HC: String = BjjHalfGuardCatalog.TOP_HEAD_CONTROL
 const HP: String = BjjHalfGuardCatalog.TOP_HIP_PRESSURE
 const KP: String = BjjHalfGuardCatalog.TOP_KNEE_PIN
-const VIEW_KEYS: Array = ["apparent_technique_id", "apparent_technique_name", "initiator_id", "intent_serial", "position_id",
-    "responder_id", "response_ids", "window_id"]
+const VIEW_KEYS: Array = ["apparent_technique_id", "apparent_technique_name", "commitment_requested", "eligible_real_ids", "initiator_id",
+    "intent_serial", "position_id", "responder_id", "response_ids", "window_id"]
 const COMMITMENTS: Array = ["LOW", "MEDIUM", "HIGH"]
 
 var checks: int = 0
@@ -214,7 +219,7 @@ func _test_seal_refusals() -> void:
     expect_refused("the responder cannot seal over a pending intent", p, b, p.seal_intent(id, BOTTOM_ID, UH, "LOW"), "not_initiator")
     expect_refused("a stale seal over a pending intent", p, b, p.seal_intent(id + 1, TOP_ID, CF, "LOW"), "stale_window")
     check("the original sealed content survives every refusal", p.sealed_intent_view(TOP_ID).values,
-        {"window_id": id, "intent_serial": 1, "action_id": CF, "commitment_requested": "HIGH"})
+        {"window_id": id, "intent_serial": 1, "action_id": CF, "real_action_id": CF, "commitment_requested": "HIGH"})
     expect_refused("the legacy submit is refused while sealed", p, b, p.submit(id, TOP_ID, FL, HF, "LOW", "LOW"), "intent_pending")
     expect_refused("a pass is refused while sealed (a seal is irrevocable)", p, b, p.submit(id, TOP_ID), "intent_pending")
     expect_refused("a responder pass is refused while sealed", p, b, p.submit(id, BOTTOM_ID), "intent_pending")
@@ -280,7 +285,7 @@ func _test_retry_after_refusal() -> void:
     check("the first response is refused", refused.error, "unknown_response")
     check("the public view is unchanged by the refusal", p.public_intent_view().values, view_before)
     check("the sealed content is unchanged by the refusal", p.sealed_intent_view(TOP_ID).values,
-        {"window_id": 1, "intent_serial": 1, "action_id": KS, "commitment_requested": "HIGH"})
+        {"window_id": 1, "intent_serial": 1, "action_id": KS, "real_action_id": KS, "commitment_requested": "HIGH"})
     var refused_again := p.respond(int(w.window_id), BOTTOM_ID, 1, KSH, "bad")
     check("a second invalid response is refused", refused_again.error, "invalid_response_commitment")
     var retry := p.respond(int(w.window_id), BOTTOM_ID, 1, KSH, "LOW")
@@ -309,10 +314,10 @@ func _test_timeout_refusals_and_fallback() -> void:
     b = p.executor_snapshot()
     expect_refused("timeout stale window", p, b, p.apply_response_timeout(id + 1, 1, HF, "LOW"), "stale_window")
     expect_refused("timeout serial", p, b, p.apply_response_timeout(id, 2, HF, "LOW"), "intent_serial_mismatch")
-    expect_refused("timeout fallback must be a legal response", p, b, p.apply_response_timeout(id, 1, "nonsense", "LOW"), "unknown_response")
-    expect_refused("timeout fallback cannot be the initiator's own response", p, b, p.apply_response_timeout(id, 1, HC, "LOW"), "unknown_response")
-    expect_refused("timeout fallback must carry a valid commitment", p, b, p.apply_response_timeout(id, 1, HF, "bad"), "invalid_response_commitment")
-    expect_refused("timeout with no fallback at all is refused, never invented", p, b, p.apply_response_timeout(id, 1, "", ""), "unknown_response")
+    # B1h: only the PUBLISHED fallback of the defender's role is accepted (Bottom: Hip Frame LOW). Anything else, including a legal response
+    # at another commitment or another side's response, is `fallback_not_published`; the code depends only on the defender's role.
+    for wrong: Array in [["nonsense", "LOW"], [HC, "LOW"], [HF, "bad"], [HF, ""], [HF, "MEDIUM"], [HF, "HIGH"], [UF, "LOW"], [KSH, "LOW"], ["", ""]]:
+        expect_refused("timeout fallback %s is not the published one" % [wrong], p, b, p.apply_response_timeout(id, 1, str(wrong[0]), str(wrong[1])), "fallback_not_published")
     check("a refused timeout keeps the seal", p.has_pending_intent(), true)
     # an accepted timeout resolves exactly like the responder's own identical response, flagged as defaulted
     var t := twin()
@@ -342,7 +347,7 @@ func _test_timeout_refusals_and_fallback() -> void:
 
 func _test_closed_public_view() -> void:
     check("the allow-list literal", BjjHalfGuardSealedProtocol.PUBLIC_VIEW_KEYS, ["position_id", "window_id", "intent_serial", "initiator_id", "responder_id",
-        "apparent_technique_id", "apparent_technique_name", "response_ids"])
+        "apparent_technique_id", "apparent_technique_name", "commitment_requested", "eligible_real_ids", "response_ids"])
     for action: String in [CF, FL, KS]:
         for commitment: String in ["", "LOW", "MEDIUM", "HIGH"]:
             var p := fresh()
@@ -355,11 +360,15 @@ func _test_closed_public_view() -> void:
             check("the seal call returns exactly the public view (%s %s)" % [action, commitment], seal.values, view)
             check("literal view (%s %s)" % [action, commitment], view, {"position_id": "half_guard", "window_id": 1, "intent_serial": 1,
                 "initiator_id": TOP_ID, "responder_id": BOTTOM_ID, "apparent_technique_id": action,
-                "apparent_technique_name": BjjHalfGuardCatalog.technique_name(action), "response_ids": [HF, UF, KSH]})
-            check("the view is identical whatever the sealed commitment (%s)" % action, view,
-                _view_for(action, "LOW" if commitment != "LOW" else "HIGH"))
+                "apparent_technique_name": BjjHalfGuardCatalog.technique_name(action), "commitment_requested": "MEDIUM" if commitment.is_empty() else commitment,
+                "eligible_real_ids": [KS] if action == CF else [], "response_ids": [HF, UF, KSH]})
+            # GP-3: the REQUESTED commitment is public and is the only thing the commitment changes in the view
+            var other := _view_for(action, "LOW" if commitment != "LOW" else "HIGH")
+            other["commitment_requested"] = view.commitment_requested
+            check("the view differs by the requested commitment only (%s %s)" % [action, commitment], view, other)
             for key: String in view:
-                check("no sealed or feint vocabulary in key %s" % key, key.contains("commit") or key.contains("real") or key.contains("feint") or key.contains("sealed"), false)
+                for fragment: String in ["feint", "sealed", "effective", "funded", "downgrade", "surcharge", "total", "real_action", "real_technique"]:
+                    check("no hidden vocabulary '%s' in key %s" % [fragment, key], key.contains(fragment), false)
     # the bottom's seal presents Bottom's technique and Top's responses
     var q := fresh()
     var qw := opened(q)
@@ -369,10 +378,11 @@ func _test_closed_public_view() -> void:
     q.seal_intent(int(qw2.window_id), BOTTOM_ID, RG, "LOW")
     check("Bottom's public view", q.public_intent_view().values, {"position_id": "half_guard", "window_id": 2, "intent_serial": 1,
         "initiator_id": BOTTOM_ID, "responder_id": TOP_ID, "apparent_technique_id": RG, "apparent_technique_name": "Recover Guard",
-        "response_ids": [HC, HP, KP]})
+        "commitment_requested": "LOW", "eligible_real_ids": [], "response_ids": [HC, HP, KP]})
     check("only the owner reads the sealed view", [q.sealed_intent_view(TOP_ID).error, q.sealed_intent_view("").error, q.sealed_intent_view("stranger").error],
         ["not_intent_owner", "not_intent_owner", "not_intent_owner"])
-    check("the owner reads it", q.sealed_intent_view(BOTTOM_ID).values, {"window_id": 2, "intent_serial": 1, "action_id": RG, "commitment_requested": "LOW"})
+    check("the owner reads it", q.sealed_intent_view(BOTTOM_ID).values, {"window_id": 2, "intent_serial": 1, "action_id": RG, "real_action_id": RG,
+        "commitment_requested": "LOW"})
 
 
 func _view_for(action: String, commitment: String) -> Dictionary:
@@ -425,24 +435,28 @@ func _test_probing_controller() -> void:
     var leaky := LeakyObject.new()
     leaky.carried = [{"inner": "HIGH"}]
     check("the probe walks object properties", probe_leaks({"obj": leaky}, secrets), 1)
+    # B1h: the REQUESTED commitment is public (GP-3). What stays executor-only, even for a direct command, is the sealed-store vocabulary: the real
+    # technique's key, the feint flag and the surcharge. The very same probe must find none of it on any public surface before the reveal.
+    var hidden: Array = ["real_action_id", "feint", "surcharge"]
     for action: String in [CF, FL, KS]:
         for commitment: String in COMMITMENTS:
             var p := fresh()
             var w := opened(p)
             var seal := p.seal_intent(int(w.window_id), TOP_ID, action, commitment)
             var view := p.public_intent_view().values
-            check("the public view leaks no sealed commitment (%s %s)" % [action, commitment], probe_leaks(view, [commitment]), 0)
-            check("the seal report leaks none", probe_leaks(seal.values, [commitment]), 0)
-            check("the public events leak none", probe_leaks(p.public_events(), [commitment]), 0)
-            check("the public views of the gateway leak none", probe_leaks([p.window_fields(), p.state_fields(), p.history_fields(), p.snapshot()], [commitment]), 0)
+            check("the public view carries the requested commitment (%s %s)" % [action, commitment], view.commitment_requested, commitment)
+            check("the public view leaks no sealed-store vocabulary (%s %s)" % [action, commitment], probe_leaks(view, hidden), 0)
+            check("the seal report leaks none", probe_leaks(seal.values, hidden), 0)
+            check("the public events leak none", probe_leaks(p.public_events(), hidden), 0)
+            check("the public views of the gateway leak none", probe_leaks([p.window_fields(), p.state_fields(), p.history_fields(), p.snapshot()], hidden), 0)
             check("the responder's option menus leak none", probe_leaks([p.response_options(action).options.map(func(o: BjjPositionContract.Option) -> Dictionary: return o.fields()),
-                p.action_options(BOTTOM_ID).options.map(func(o: BjjPositionContract.Option) -> Dictionary: return o.fields())], [commitment]), 0)
+                p.action_options(BOTTOM_ID).options.map(func(o: BjjPositionContract.Option) -> Dictionary: return o.fields())], hidden), 0)
             # the executor surface DOES hold it, which is exactly why a controller must never be handed it
-            check("control: the executor surface holds the sealed commitment", probe_leaks(p.executor_snapshot(), [commitment]) > 0, true)
-            # injected leak: a view that adds the commitment is caught by the very same probe
+            check("control: the executor surface holds the sealed store", probe_leaks(p.executor_snapshot(), hidden) > 0, true)
+            # injected leak: a view that adds a sealed-store key is caught by the very same probe
             var mutated := view.duplicate(true)
-            mutated["extra"] = commitment
-            check("mutation control: a leaky view fails the probe", probe_leaks(mutated, [commitment]), 1)
+            mutated["real_action_id"] = action
+            check("mutation control: a leaky view fails the probe", probe_leaks(mutated, hidden), 1)
 
 
 # ---- 8. The defender cannot learn the sealed commitment from refusals, menus or any public surface -----------------------------------------
@@ -470,15 +484,30 @@ func _defender_transcript(action: String, commitment: String) -> Dictionary:
         "own_menu": p.action_options(BOTTOM_ID).options.map(func(o: BjjPositionContract.Option) -> Dictionary: return o.fields())}
 
 
+# GP-3: the requested commitment is public, so it is the ONE thing a defender transcript may differ by; blank it before comparing.
+func _normalized(transcript: Dictionary) -> Dictionary:
+    var copy := transcript.duplicate(true)
+    copy.seal["commitment_requested"] = ""
+    copy.view["commitment_requested"] = ""
+    for event: Dictionary in copy.public_events:
+        if event.has("commitment_requested"):
+            event["commitment_requested"] = ""
+    return copy
+
+
 func _test_defender_indistinguishability() -> void:
     for action: String in [CF, FL, KS]:
         var reference := _defender_transcript(action, "MEDIUM")
         for commitment: String in ["", "LOW", "HIGH"]:
-            check("everything the defender can observe is identical for %s sealed at '%s' versus MEDIUM" % [action, commitment],
-                _defender_transcript(action, commitment), reference)
+            var transcript := _defender_transcript(action, commitment)
+            check("the requested commitment is what the defender sees (%s '%s')" % [action, commitment], [transcript.view.commitment_requested, transcript.seal.commitment_requested,
+                transcript.public_events[0].commitment_requested], ["MEDIUM" if commitment.is_empty() else commitment, "MEDIUM" if commitment.is_empty() else commitment,
+                "MEDIUM" if commitment.is_empty() else commitment])
+            check("everything else the defender can observe is identical for %s sealed at '%s' versus MEDIUM" % [action, commitment],
+                _normalized(transcript), _normalized(reference))
         check("the refusal codes are the expected literals", reference.codes, ["intent_serial_mismatch", "stale_window", "not_responder",
             "unknown_response", "invalid_response_commitment", "not_initiator", "intent_already_sealed", "intent_pending", "window_already_open",
-            "not_intent_owner", "unknown_response"])
+            "not_intent_owner", "fallback_not_published"])
     # the refusal codes do not depend on the sealed technique either
     var codes_cf: Array = _defender_transcript(CF, "LOW").codes
     check("refusal codes are the same for Flatten", _defender_transcript(FL, "LOW").codes, codes_cf)
@@ -503,9 +532,9 @@ func _test_events_and_redaction() -> void:
     var id := int(w.window_id)
     p.seal_intent(id, TOP_ID, KS, "HIGH")
     check("the seal appends exactly one executor event", p.protocol_events(), [{"event": "intent_sealed", "index": 1, "window_id": 1,
-        "intent_serial": 1, "initiator_id": TOP_ID, "apparent_technique_id": KS, "commitment_requested": "HIGH"}])
-    check("the public stream redacts the commitment", p.public_events(), [{"event": "intent_sealed", "index": 1, "window_id": 1,
-        "intent_serial": 1, "initiator_id": TOP_ID, "apparent_technique_id": KS}])
+        "intent_serial": 1, "initiator_id": TOP_ID, "apparent_technique_id": KS, "commitment_requested": "HIGH", "real_action_id": KS}])
+    check("the public stream carries the requested commitment (GP-3) and never the real technique's key", p.public_events(), [{"event": "intent_sealed",
+        "index": 1, "window_id": 1, "intent_serial": 1, "initiator_id": TOP_ID, "apparent_technique_id": KS, "commitment_requested": "HIGH"}])
     var report := p.respond(id, BOTTOM_ID, 1, KSH, "LOW")
     var executor := p.protocol_events()
     check("one exchange appends exactly three events in order", _event_names(executor), ["intent_sealed", "response_committed", "exchange_revealed"])
@@ -518,8 +547,9 @@ func _test_events_and_redaction() -> void:
     check("the reveal carries the resolved outcome", revealed.settlement, report.values.detail.settlement)
     check("the reveal carries the transition and end flag", [revealed.transition, revealed.ended], [report.values.transition, report.values.ended])
     var public_stream := p.public_events()
-    check("the public stream after the reveal still redacts the sealed event", public_stream[0].has("commitment_requested"), false)
-    check("the reveal now publishes the commitment", public_stream[2].commitment_requested, "HIGH")
+    check("the public stream after the reveal still omits the sealed event's real-technique key", public_stream[0].has("real_action_id"), false)
+    check("the reveal publishes the resolved intent", [public_stream[2].commitment_requested, public_stream[2].apparent_action_id, public_stream[2].action_id,
+        public_stream[2].feint], ["HIGH", KS, KS, false])
     # refusals append nothing and a pass appends nothing
     var n := p.protocol_events().size()
     p.respond(id, BOTTOM_ID, 1, KSH, "LOW")
@@ -637,11 +667,15 @@ func _lockstep(label: String, request: Dictionary, steps: Array) -> void:
             _same_views(tag + " after the seal (a seal changes nothing)", p, t)
             var events_before := p.protocol_events().size()
             var done: BjjMatchWindowGateway.Report
+            var direct: BjjMatchWindowGateway.Report
             if step.kind == "timeout":
-                done = p.apply_response_timeout(window_id, int(seal.values.intent_serial), response, step.rc)
+                # B1h: a timeout accepts only the published fallback of the defender's role (Bottom Hip Frame LOW, Top Hip Pressure LOW).
+                var published := BjjHalfGuardCatalog.timeout_fallback(other)
+                done = p.apply_response_timeout(window_id, int(seal.values.intent_serial), str(published.response_id), str(published.commitment))
+                direct = t.submit(window_id, fighter_id, action, str(published.response_id), step.c, str(published.commitment))
             else:
                 done = p.respond(window_id, responder_id, int(seal.values.intent_serial), response, step.rc)
-            var direct := t.submit(window_id, fighter_id, action, response, step.c, step.rc)
+                direct = t.submit(window_id, fighter_id, action, response, step.c, step.rc)
             check(tag + " resolved report equals the direct path", rep(done), rep(direct))
             check(tag + " the seal is consumed", p.has_pending_intent(), false)
             check(tag + " the resolution appends two events after the seal's one", p.protocol_events().size() - events_before, 2)
@@ -837,7 +871,7 @@ func _scenario_log() -> Array:
         {"op": "respond", "w": 1, "f": BOTTOM_ID, "s": 1, "r": UF, "rc": "HIGH"},
         {"op": "open"},
         {"op": "seal", "w": 2, "f": BOTTOM_ID, "a": UH, "c": "MEDIUM"},
-        {"op": "timeout", "w": 2, "s": 2, "r": HC, "rc": "LOW"},
+        {"op": "timeout", "w": 2, "s": 2, "r": HP, "rc": "LOW"},
         {"op": "open"},
         {"op": "submit", "w": 3, "f": TOP_ID},
         {"op": "open"},
@@ -879,7 +913,7 @@ func _test_deterministic_replay() -> void:
     check("the scenario's refusals and acceptances are as designed", errors, ["no_open_window", "", "invalid_commitment", "", "intent_already_sealed",
         "not_responder", "unknown_response", "", "", "", "", "", "", "", "", "", "session_closed"])
     check("the seeded history is exactly the two resolved exchanges", first.history_fields().initiated_action_history, [CF, UH])
-    check("and the resolved responses, the second one defaulted by the session", [first.history_fields().response_history, first.protocol_events()[4].defaulted], [[UF, HC], true])
+    check("and the resolved responses, the second one defaulted by the session", [first.history_fields().response_history, first.protocol_events()[4].defaulted], [[UF, HP], true])
     # the executor's own event log is a replayable command log: windows are session-side, so the replay opens one per seal
     var original := fresh()
     original.open_window()
@@ -887,7 +921,7 @@ func _test_deterministic_replay() -> void:
     original.respond(1, BOTTOM_ID, 1, UF, "LOW")
     original.open_window()
     original.seal_intent(2, BOTTOM_ID, UH, "MEDIUM")
-    original.apply_response_timeout(2, 2, HC, "LOW")
+    original.apply_response_timeout(2, 2, HP, "LOW")
     var rebuilt := fresh()
     for event: Dictionary in original.protocol_events():
         match str(event.event):
@@ -1102,8 +1136,8 @@ func _method_names(script: GDScript) -> Array:
 func _test_unchanged_surfaces() -> void:
     var gateway_methods := _method_names(BjjHalfGuardWindowGateway)
     check("the Half Guard gateway's method set is exactly the qualified one", gateway_methods, ["_report", "action_options", "behavior_fields", "controller_fields",
-        "create", "history_fields", "is_terminal", "open_window", "open_window_for", "response_options", "roles", "selected_commitment", "snapshot", "state_fields",
-        "submit", "window_fields"])
+        "create", "eligible_real_ids", "feint_error", "history_fields", "is_terminal", "open_window", "open_window_for", "response_options", "roles",
+        "selected_commitment", "snapshot", "state_fields", "submit", "submit_feint", "window_fields"])
     for method_name: String in ["seal_intent", "respond", "apply_response_timeout", "end_session", "public_intent_view", "sealed_intent_view"]:
         check("the Half Guard gateway has no %s" % method_name, gateway_methods.has(method_name), false)
         check("the Mount gateway has no %s" % method_name, _method_names(BjjMatchWindowGateway).has(method_name), false)
@@ -1135,11 +1169,22 @@ func _test_scope_and_hygiene() -> void:
     check("the protocol source is readable", text.is_empty(), false)
     for token: String in ["randi", "randf", "RandomNumberGenerator", "Time.", "OS.get_ticks", "await", "get_tree", "Engine.get_frames", "FileAccess", "preload(",
             "BjjMount", "BjjMatchWindowGateway.create", "BjjPositionGraphMatch", "BjjHalfGuardMatch", "BjjHalfGuardResolver", "BjjHalfGuardEntry", "BjjStaminaPool",
-            "BjjStaminaCostPolicy", "BjjCommitmentSettlement", "spend", "set_current", "_match", "feint", "Feint", "surcharge", "BjjD3B", "BjjBehaviorStaminaPolicy"]:
+            "BjjStaminaCostPolicy", "BjjCommitmentSettlement", "spend", "set_current", "_match", "FEINT_PAIRS", "FEINT_SURCHARGE", "BjjGrade", "grade_after", "BjjD3B", "BjjBehaviorStaminaPolicy"]:
         check("the protocol has no %s" % token, text.contains(token), false)
     check("it reaches the gateway's submit only in the gated pass-through and the single resolution", text.count("_gateway.submit("), 2)
     check("and never through the match or contract", [text.contains(".attempt("), text.contains(".decide(")], [false, false])
-    check("the only catalog use is the public technique name", text.count("BjjHalfGuardCatalog"), 1)
+    var rules_uses: Array = []
+    for code_line: String in text.split("\n"):
+        if code_line.contains("BjjHalfGuardRules"):
+            rules_uses.append(code_line.contains("BjjHalfGuardRules.POSITION_ID"))
+    check("the rules file is read only for the position id (no rule constant is copied)", rules_uses, [true])
+    # B1h: the catalog is read only for the public technique name and the published fallback; every rule lives in the match
+    var catalog_uses: Array = []
+    for code_line: String in text.split("\n"):
+        if code_line.contains("BjjHalfGuardCatalog"):
+            catalog_uses.append(code_line.contains("BjjHalfGuardCatalog.technique_name(") or code_line.contains("BjjHalfGuardCatalog.timeout_fallback("))
+    check("the catalog is used only for the technique name and the published fallback", catalog_uses, [true, true])
+    check("a feint resolves through the gateway's submit_feint exactly once", text.count("_gateway.submit_feint("), 1)
     # no other source knows the protocol: dependency direction is protocol -> gateway only
     for path: String in ["half_guard_rules", "half_guard_catalog", "half_guard_resolver", "half_guard_entry", "half_guard_match", "half_guard_contract",
             "half_guard_window_gateway", "half_guard_mount_edge"]:

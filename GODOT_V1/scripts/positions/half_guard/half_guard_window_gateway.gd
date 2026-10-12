@@ -75,6 +75,17 @@ func response_options(action_id: String) -> BjjPositionContract.OptionList:
 func selected_commitment() -> String:
     return _match.selected_commitment()
 
+# --- Feints (B1h; the single authority is BjjHalfGuardMatch, these only expose it) ---------------------------------
+
+# Pure: whether the initiator could feint `apparent_id` as `real_id` at `commitment` (empty = the selected commitment) in the current state.
+# "" = admissible, otherwise the match's own refusal code. Nothing is reserved, charged or recorded.
+func feint_error(apparent_id: String, real_id: String, commitment: String = "") -> String:
+    return _match.feint_error(apparent_id, real_id, selected_commitment() if commitment.is_empty() else commitment)
+
+# Pure: the real techniques `apparent_id` may conceal right now (pair table x public tier condition; ignores stamina and funding).
+func eligible_real_ids(apparent_id: String) -> Array[String]:
+    return BjjHalfGuardCatalog.eligible_real_ids(apparent_id, _match.top_base, _match.bottom_frame)
+
 # Canonical detached snapshot of the whole segment (for parity tests and diagnostics).
 func snapshot() -> Dictionary:
     return _match.snapshot()
@@ -92,3 +103,9 @@ func open_window_for(duration: Variant) -> BjjMatchWindowGateway.Report:
 func submit(window_id: int, fighter_id: String, action_id: String = "", response_id: String = "",
         commitment: String = "", response_commitment: String = "") -> BjjMatchWindowGateway.Report:
     return _report(_match.decide(window_id, fighter_id, action_id, response_id, commitment, response_commitment))
+
+# One decision that is an explicit feint: `action_id` is the apparent technique (it never resolves), `real_action_id` settles through the
+# same path as `submit`. Same window, report keys and atomicity; the settlement record carries one extra `feint` sub-record.
+func submit_feint(window_id: int, fighter_id: String, action_id: String, real_action_id: String, response_id: String = "",
+        commitment: String = "", response_commitment: String = "") -> BjjMatchWindowGateway.Report:
+    return _report(_match.decide(window_id, fighter_id, action_id, response_id, commitment, response_commitment, real_action_id))

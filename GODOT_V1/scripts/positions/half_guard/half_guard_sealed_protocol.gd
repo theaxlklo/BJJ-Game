@@ -1,11 +1,12 @@
 class_name BjjHalfGuardSealedProtocol
 extends RefCounted
 
-# Explicit, Half Guard-only two-phase decision protocol (B1g; TACTICAL_PREPARATION_AND_FEINTS.md section 7). It is a protocol
-# slice, not a feint slice: the sealed technique is the direct technique and nothing here changes a grade, a cost, a readiness
-# tier, the axis or an exit.
-#   1. seal_intent: the initiator seals ONE direct technique and its commitment for the open window. The executor (this object)
-#      stores it privately. Nothing in the simulation changes.
+# Explicit, Half Guard-only two-phase decision protocol (B1g; TACTICAL_PREPARATION_AND_FEINTS.md section 7), extended in B1h with the two
+# explicit feint pairs. Nothing here changes a grade, a cost, a readiness tier, the axis or an exit: every rule lives in BjjHalfGuardMatch
+# and this object only asks it (feint_error, eligible_real_ids) and hands it the resolved command (submit / submit_feint).
+#   1. seal_intent: the initiator seals ONE technique (the apparent one), its requested commitment and, privately, either nothing (a direct
+#      technique) or one real technique of an explicit feint pair. The executor (this object) stores it privately. Nothing in the
+#      simulation changes.
 #   2. respond: the responder chooses a response and a response commitment from the closed-schema public_intent_view().
 #   3. The same call hands the resolved command to the unchanged BjjHalfGuardWindowGateway.submit, which is the single authority
 #      for grades, stamina, readiness, axis, initiative and exits. One window, one accepted exchange, one initiative advancement.
@@ -15,11 +16,15 @@ extends RefCounted
 # Information isolation (accurate scope): a controller that is handed ONLY the dictionaries returned by public_intent_view() /
 # public_events() cannot reach the sealed store, because those are detached copies built from an allow-list. GDScript has no private
 # members, so any in-process code that holds THIS object can read `_pending`; this is discipline plus tests, not a security boundary.
+# Public by decision: the apparent technique, the REQUESTED commitment (GP-3) and the list of real techniques the apparent technique may
+# conceal in the visible state (GP-2, a pure function of the pair table and the public tiers). Never public before the reveal: the real
+# technique, whether the command is a feint, the funded effective commitment or a downgrade, the surcharge and any funding result.
 const POSITION_ID: String = BjjHalfGuardRules.POSITION_ID
-# The allow-list of the closed public intent view. The sealed commitment is deliberately absent (owner decision GP-3 is open).
+# The allow-list of the closed public intent view (GP-2, GP-3). The real technique, a feint flag and any funding result are deliberately absent.
 const PUBLIC_VIEW_KEYS: Array[String] = ["position_id", "window_id", "intent_serial", "initiator_id", "responder_id",
-    "apparent_technique_id", "apparent_technique_name", "response_ids"]
-const PUBLIC_SEALED_KEYS: Array[String] = ["event", "index", "window_id", "intent_serial", "initiator_id", "apparent_technique_id"]
+    "apparent_technique_id", "apparent_technique_name", "commitment_requested", "eligible_real_ids", "response_ids"]
+const PUBLIC_SEALED_KEYS: Array[String] = ["event", "index", "window_id", "intent_serial", "initiator_id", "apparent_technique_id",
+    "commitment_requested"]
 
 var _gateway: BjjHalfGuardWindowGateway
 var _pending: Dictionary = {}
@@ -105,9 +110,9 @@ func sealed_intent_view(fighter_id: String) -> BjjMatchWindowGateway.Report:
     if fighter_id != str(_pending.fighter_id):
         return _fail("not_intent_owner")
     return _done({"window_id": _pending.window_id, "intent_serial": _pending.intent_serial, "action_id": _pending.action_id,
-        "commitment_requested": _pending.commitment})
+        "real_action_id": _pending.real_action_id, "commitment_requested": _pending.commitment})
 
-# The redacted public event stream: the same events minus the sealed commitment, which is revealed only by exchange_revealed.
+# The redacted public event stream: the same events minus the sealed real technique (executor-only), which is revealed only by exchange_revealed.
 func public_events() -> Array:
     var redacted: Array = []
     for event: Dictionary in _events:
@@ -141,7 +146,8 @@ func _public_view() -> Dictionary:
             response_ids.append(option.id)
     return {"position_id": POSITION_ID, "window_id": int(_pending.window_id), "intent_serial": int(_pending.intent_serial),
         "initiator_id": initiator_id, "responder_id": responder_id, "apparent_technique_id": str(_pending.action_id),
-        "apparent_technique_name": BjjHalfGuardCatalog.technique_name(str(_pending.action_id)), "response_ids": response_ids}
+        "apparent_technique_name": BjjHalfGuardCatalog.technique_name(str(_pending.action_id)), "commitment_requested": str(_pending.commitment),
+        "eligible_real_ids": _gateway.eligible_real_ids(str(_pending.action_id)), "response_ids": response_ids}
 
 # --- Time (unchanged gateway behavior; a window can never open while another is open, so a seal can never be overtaken) ---
 
@@ -167,9 +173,10 @@ func submit(window_id: int, fighter_id: String, action_id: String = "", response
 
 # --- Phase 1: seal -----------------------------------------------------------------------------------
 
-# Order: closed session, window state, window identity, gateway context/addressing, initiator, duplicate seal, technique, commitment.
+# Order: closed session, window state, window identity, gateway context/addressing, initiator, duplicate seal, technique, commitment, then
+# (a feint only) the match's own feint admission: real equals apparent, the real id's shape, the pair table, the public condition, funding.
 # A refusal depends only on public state and the caller's own command; it changes nothing.
-func _seal_error(window_id: int, fighter_id: String, action_id: String, commitment: String) -> String:
+func _seal_error(window_id: int, fighter_id: String, action_id: String, commitment: String, real_action_id: String) -> String:
     if _closed:
         return "session_closed"
     var window := _gateway.window_fields()
@@ -192,19 +199,24 @@ func _seal_error(window_id: int, fighter_id: String, action_id: String, commitme
         return "unknown_action"
     if not commitment.is_empty() and not BjjCommitment.valid(commitment):
         return "invalid_commitment"
+    if not real_action_id.is_empty():
+        return _gateway.feint_error(action_id, real_action_id, commitment)
     return ""
 
-# Seals one direct technique with its commitment (empty = the gateway's selected commitment). The report carries the PUBLIC view,
-# so the sealing call itself cannot leak anything the responder does not already see.
-func seal_intent(window_id: int, fighter_id: String, action_id: String, commitment: String = "") -> BjjMatchWindowGateway.Report:
-    var error := _seal_error(window_id, fighter_id, action_id, commitment)
+# Seals one technique with its requested commitment (empty = the gateway's selected commitment). An empty `real_action_id` seals the
+# direct technique; a non-empty one seals that real technique behind the apparent `action_id` (an explicit feint pair, admitted and funded
+# by the match's own rules). The report carries the PUBLIC view, so the sealing call itself cannot leak anything the responder does not see.
+func seal_intent(window_id: int, fighter_id: String, action_id: String, commitment: String = "", real_action_id: String = "") -> BjjMatchWindowGateway.Report:
+    var error := _seal_error(window_id, fighter_id, action_id, commitment, real_action_id)
     if not error.is_empty():
         return _fail(error)
     _serial += 1
     _pending = {"window_id": window_id, "intent_serial": _serial, "fighter_id": fighter_id, "action_id": action_id,
+        "real_action_id": action_id if real_action_id.is_empty() else real_action_id,
         "commitment": _gateway.selected_commitment() if commitment.is_empty() else commitment}
     _events.append({"event": "intent_sealed", "index": _events.size() + 1, "window_id": window_id, "intent_serial": _serial,
-        "initiator_id": fighter_id, "apparent_technique_id": action_id, "commitment_requested": str(_pending.commitment)})
+        "initiator_id": fighter_id, "apparent_technique_id": action_id, "commitment_requested": str(_pending.commitment),
+        "real_action_id": str(_pending.real_action_id)})
     return _done(_public_view())
 
 # --- Phase 2: respond / timeout -------------------------------------------------------------------------
@@ -261,28 +273,42 @@ func respond(window_id: int, fighter_id: String, intent_serial: int, response_id
         return _fail(error)
     return _resolve(fighter_id, response_id, response_commitment, false)
 
-# Session-layer timeout for the responder (Guide 5.2a): the SESSION supplies the published fallback response; this seam only checks
-# that it is a legal response for the sealed technique and resolves it exactly like respond, flagged `defaulted`. The protocol
-# invents no fallback table (the Half Guard published fallback, GP-5, is an open owner decision) and the clock never decides.
+# Session-layer timeout for the responder (Guide 5.2a, rules sheet 13.8): the SESSION supplies the published fallback of the defender's role
+# (BjjHalfGuardCatalog.timeout_fallback: Bottom Hip Frame LOW, Top Hip Pressure LOW). This seam refuses anything else (`fallback_not_published`),
+# resolves it exactly like respond (so it may bite or fail to bite and gets the existing undercommitment step and nothing else) and flags it
+# `defaulted`. It never reads a clock, never advances one, opens no window and is not positional stalling or the emergency submission rule.
 func apply_response_timeout(window_id: int, intent_serial: int, fallback_response_id: String, fallback_response_commitment: String = "") -> BjjMatchWindowGateway.Report:
     var error := _pending_error(window_id, intent_serial)
+    var responder_id := "" if not error.is_empty() else _responder_id()
+    if error.is_empty():
+        var published := BjjHalfGuardCatalog.timeout_fallback(_gateway.roles().role_of(responder_id))
+        if published.is_empty() or fallback_response_id != str(published.response_id) or fallback_response_commitment != str(published.commitment):
+            error = "fallback_not_published"
     if error.is_empty():
         error = _content_error(fallback_response_id, fallback_response_commitment)
     if not error.is_empty():
         return _fail(error)
+    return _resolve(responder_id, fallback_response_id, fallback_response_commitment, true)
+
+func _responder_id() -> String:
     var roles_value := _gateway.roles()
-    var responder_id := ""
     for role: Variant in roles_value.fighter_by_role:
         if str(roles_value.fighter_by_role[role]) != str(_pending.fighter_id):
-            responder_id = str(roles_value.fighter_by_role[role])
-    return _resolve(responder_id, fallback_response_id, fallback_response_commitment, true)
+            return str(roles_value.fighter_by_role[role])
+    return ""
 
 # The one resolution path. The unchanged gateway validates once more and applies the single exchange atomically; only after it
 # accepted does this object clear the seal and append events. A gateway refusal leaves everything (seal, events, serial) as it was.
 func _resolve(responder_id: String, response_id: String, response_commitment: String, defaulted: bool) -> BjjMatchWindowGateway.Report:
     var sealed := _pending.duplicate(true)
-    var report := _gateway.submit(int(sealed.window_id), str(sealed.fighter_id), str(sealed.action_id), response_id,
-        str(sealed.commitment), response_commitment)
+    var feint := str(sealed.real_action_id) != str(sealed.action_id)
+    var report: BjjMatchWindowGateway.Report
+    if feint:
+        report = _gateway.submit_feint(int(sealed.window_id), str(sealed.fighter_id), str(sealed.action_id), str(sealed.real_action_id), response_id,
+            str(sealed.commitment), response_commitment)
+    else:
+        report = _gateway.submit(int(sealed.window_id), str(sealed.fighter_id), str(sealed.action_id), response_id,
+            str(sealed.commitment), response_commitment)
     if not report.ok():
         return _fail(report.error)
     var requested_response := _gateway.selected_commitment() if response_commitment.is_empty() else response_commitment
@@ -292,7 +318,8 @@ func _resolve(responder_id: String, response_id: String, response_commitment: St
         "response_commitment_requested": requested_response, "defaulted": defaulted})
     _events.append({"event": "exchange_revealed", "index": _events.size() + 1, "window_id": int(sealed.window_id),
         "intent_serial": int(sealed.intent_serial), "initiator_id": str(sealed.fighter_id), "responder_id": responder_id,
-        "action_id": str(sealed.action_id), "response_id": response_id, "commitment_requested": str(sealed.commitment),
+        "apparent_action_id": str(sealed.action_id), "action_id": str(sealed.real_action_id), "feint": feint, "response_id": response_id,
+        "commitment_requested": str(sealed.commitment),
         "response_commitment_requested": requested_response, "defaulted": defaulted, "kind": str(report.values.kind),
         "settlement": (report.values.detail as Dictionary).settlement.duplicate(true),
         "transition": (report.values.transition as Dictionary).duplicate(true), "ended": bool(report.values.ended)})

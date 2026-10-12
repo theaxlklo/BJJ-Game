@@ -297,15 +297,21 @@ See `HALF_GUARD_V0_PROPOSAL.md` §12.7 for the Half Guard scenarios. The class d
 | GP-9 | A called feint grants the defender nothing beyond the attacker's shift (no extra initiative or window) unless a position declares otherwise | Yes |
 | GP-10 | A feint costs the direct cost of its effective commitment plus a separately funded, all-or-nothing surcharge (illustrative +3); the value is a per-position numeric decision | Yes (value pending) |
 
-## 11. Implementation status (B1g)
+## 11. Implementation status (B1g protocol, B1h feints)
 
-B1g implements only the **sealed-intent protocol** of §7.1 for Half Guard, with `real = apparent` (a direct technique), as an explicit opt-in wrapper over the unchanged Half Guard gateway (`HALF_GUARD_V0_ENGINE.md`, last section). It implements no feint, surcharge, bite adjustment or counterplay gate, and it adds no game-wide runtime interface (GP-8). Where the proposal above leaves a decision open, B1g chose the conservative reading and states it:
+B1g implemented the **sealed-intent protocol** of §7.1 for Half Guard (direct techniques) as an explicit opt-in wrapper over the Half Guard gateway. **B1h** implements the first real feints on top of it for Half Guard only, with the provisional owner decisions below (`HALF_GUARD_V0_RULES.md` §13, `HALF_GUARD_V0_ENGINE.md`). Nothing here creates a game-wide runtime interface (GP-8): every number, pair and code is a Half Guard prototype value.
 
-| Decision | What B1g does | Status |
+| Decision | What is implemented | Status |
 | --- | --- | --- |
-| GP-3 (requested commitment is a public cue) | The public view **omits** the requested commitment; it is revealed by `exchange_revealed` | open; adding it later is additive |
-| GP-4 (a seal is irrevocable) | A pending seal blocks every other command; there is no cancel. A session end discards it and refuses all later commands | implemented, not yet accepted |
-| GP-5 (published timeout fallback) | `apply_response_timeout` takes the fallback **from the session**, validates it as a legal response, and flags it `defaulted`. No fallback table exists in the protocol | open; the Half Guard table is a B1h-or-earlier owner decision |
-| GP-2 (public list of eligible real techniques) | Not present: with `real = apparent` there is nothing to list | deferred to B1h |
-| §7.3 codes | All seal and respond codes that apply to a direct technique are used (`feint_*` codes and `unsupported_cost_policy` are not applicable yet) | partial by design |
-| §7.1 event names | `intent_sealed`, `response_committed`, `exchange_revealed` (plus `session_closed`) | implemented |
+| GP-2 (public list of eligible real techniques) | The public view carries `eligible_real_ids`: the pair table crossed with the public tier condition; independent of stamina, funding and the sealed command | accepted provisionally (owner, B1h) |
+| GP-3 (requested commitment is a public cue) | `commitment_requested` is public in the view and in the public `intent_sealed` event; the funded effective commitment, a downgrade and the surcharge are not | accepted provisionally (owner, B1h) |
+| GP-4 (a seal is irrevocable) | A pending seal blocks every other command; a refused response keeps it; a session end discards it without resolving or charging anything and refuses all later commands | accepted (owner, B1h) |
+| GP-5 (published timeout fallback) | Ordinary defender decision timeout: Bottom Hip Frame LOW, Top Hip Pressure LOW, supplied by the session and enforced by the protocol (`fallback_not_published` otherwise). The only consequence is the existing undercommitment step | accepted for the Half Guard prototype (owner, B1h) |
+| GP-9 (a called feint gives nothing beyond the attacker's shift) | No extra turn, token, window or initiative; the call's benefit is the −1 on the real technique | implemented |
+| GP-10 (feint surcharge) | `s = +3`, all-or-nothing, funded first, requires `S ≥ 6` | accepted provisionally (owner, B1h) |
+| HG-26B (pairs, ±1 bite) | FP-1 and FP-2 only; Flatten → Knee Slice excluded; bite `+1`, otherwise `−1`, after the readiness shifts and before exhaustion | accepted provisionally (owner, B1h) |
+| HG-26E-4 (LOW feint cannot exit) | The funded **effective** LOW commitment removes the exit; the exchange otherwise resolves | accepted provisionally (owner, B1h) |
+| §7.3 codes | `feint_real_equals_apparent`, `feint_not_supported`, `feint_not_eligible`, `feint_requires_funding`, `feint_without_action`, `fallback_not_published` are added; `unsupported_cost_policy` is not applicable (the cost policy is fixed) | implemented |
+| GP-6, GP-7, GP-8 | unchanged (Standing deferred; tiers `0..2`; no shared abstraction) | unchanged |
+
+The timeout of an ordinary missed decision, positional stalling (Guide §§41–42) and the emergency submission-defense expiry are three different systems; B1h implements only the first, only for a defender, and nothing in it is a stalling penalty or a free initiative window.

@@ -3,7 +3,8 @@ extends RefCounted
 
 # Pure Half Guard exchange resolution (HALF_GUARD_V0_RULES.md sections 5.3, 5.4 and 5.7). It reads plain values and
 # returns a value object; it mutates nothing and owns no state. The ordered grade pipeline (each step saturating):
-#   raw -> positional -> attack readiness -> defense readiness -> exhaustion -> magnitude -> undercommitment.
+#   raw -> positional -> attack readiness -> defense readiness -> [feint bite / non-bite] -> exhaustion -> magnitude -> undercommitment.
+# The bracketed step exists only for a feint (B1h): `action_id` is then the REAL technique and `feint_apparent_id` the apparent one.
 # Shared stamina and commitment primitives are reused unchanged (BjjGrade, BjjExhaustionPolicy, BjjCommitmentSettlement).
 
 class Inputs extends RefCounted:
@@ -18,6 +19,8 @@ class Inputs extends RefCounted:
     var responder_band: String = ""
     var initiator_effective: String = ""
     var responder_effective: String = ""
+    # Non-empty only for a feint: the apparent technique (it never resolves; it selects the bite response and nothing else).
+    var feint_apparent_id: String = ""
 
 class Resolution extends RefCounted:
     var raw_grade: int = 0
@@ -27,6 +30,10 @@ class Resolution extends RefCounted:
     var defense_strength_tier: int = -1
     var defense_readiness_shift: int = 0
     var exhaustion_modifier: int = 0
+    var feint_bit: bool = false
+    var feint_modifier: int = 0
+    var exit_capped: bool = false
+    var grade_after_feint: int = 0
     var grade_after_positional: int = 0
     var grade_after_attack: int = 0
     var grade_after_defense: int = 0
@@ -57,8 +64,14 @@ static func resolve(input: Inputs) -> Resolution:
         r.defense_strength_tier = 0 if unmade else track_tier
         r.defense_readiness_shift = int(BjjHalfGuardRules.DEFENSE_SHIFT[r.defense_strength_tier])
     r.grade_after_defense = BjjGrade.shift(r.grade_after_attack, r.defense_readiness_shift)
+    r.grade_after_feint = r.grade_after_defense
+    if not input.feint_apparent_id.is_empty():
+        # After the readiness shifts, before exhaustion; it saturates on its own like every other step.
+        r.feint_bit = input.response_id == str(BjjHalfGuardCatalog.FEINT_PAIRS[input.feint_apparent_id].bite)
+        r.feint_modifier = 1 if r.feint_bit else -1
+        r.grade_after_feint = BjjGrade.shift(r.grade_after_defense, r.feint_modifier)
     r.exhaustion_modifier = BjjExhaustionPolicy.exchange(input.initiator_band, input.responder_band).modifier
-    r.grade_after_exhaustion = BjjGrade.shift(r.grade_after_defense, r.exhaustion_modifier)
+    r.grade_after_exhaustion = BjjGrade.shift(r.grade_after_feint, r.exhaustion_modifier)
     r.magnitude_modifier = BjjCommitmentSettlement.magnitude_modifier(input.initiator_effective, r.grade_after_exhaustion)
     r.grade_after_magnitude = BjjGrade.shift(r.grade_after_exhaustion, r.magnitude_modifier)
     r.undercommitment_modifier = BjjCommitmentSettlement.undercommitment_modifier(input.initiator_effective, input.responder_effective)
@@ -70,6 +83,10 @@ static func resolve(input: Inputs) -> Resolution:
             r.exit_destination = "Side Control"
         elif input.action_id == BjjHalfGuardCatalog.BOTTOM_RECOVER_GUARD and r.axis_proposed <= BjjHalfGuardRules.ESCAPE_LINE:
             r.exit_destination = "Open Guard" if r.final_grade == BjjGrade.SUCCESS else "Closed Guard"
+    # Section 13.4: a feint whose FUNDED EFFECTIVE commitment is LOW cannot cause an exit (the axis, tiers and initiative still follow).
+    if not r.exit_destination.is_empty() and not input.feint_apparent_id.is_empty() and input.initiator_effective == BjjCommitment.LOW:
+        r.exit_capped = true
+        r.exit_destination = ""
     # The clamp and the band update also happen on an exit (N-7).
     r.axis_after = clampi(r.axis_proposed, BjjHalfGuardRules.AXIS_MIN, BjjHalfGuardRules.AXIS_MAX)
     r.band_after = BjjHalfGuardRules.band_update(r.axis_after, input.band)
