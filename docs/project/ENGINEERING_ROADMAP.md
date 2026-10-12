@@ -1,20 +1,20 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 1.1 — handoff prepared; latest PR #63 CI evidence refreshed  
+**Roadmap revision:** 1.2 — B2a PR #65 verified; awaiting owner decisions SC-D1–SC-D15  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
-**Baseline audited:** `main` (`7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`) and draft PR #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
+**Baseline audited:** `main` (`7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`) and draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and any merge/integration. This document recommends; it does not change engine behavior or authorize a merge.
 
 ## Executive verdict
 
 The deterministic Godot foundation is strong and the Mount→Half Guard graph is real, but the game cannot yet execute a complete scored match from Standing. Shift from engine polishing to **connected, human-playable matches**, without abandoning test coverage or frozen Python parity. Put integration discipline ahead of additional unbounded stacking.
 
-**Observed repository facts:** 51 total PRs in the repository search; 16 merged (#1–#16), four closed CI probes without merge (#24–#27), 31 open PRs. Thirty open PRs form one continuous, SHA-checked branch stack from #17 through #63 (gaps in PR numbering are expected); #44 is an additional, divergent Half Guard proposal, not in the active lineage. Compared with `main`, the latest mainline tip is 74 commits ahead, 0 behind, with 198 changed files. All 31 open PRs are **not** merged to `main`. Some early Godot PRs are not drafts, but their open state is not approval to merge.
+**Observed repository facts:** 53 total PRs as of the B2a review: 16 merged (#1–#16), four closed CI probes without merge (#24–#27), 33 open. Thirty-one open PRs form the active sequential, SHA-checked Godot branch stack from #17 through #65 (with expected numbering gaps). #44 is an additional divergent Half Guard proposal. #64 is a separate **main-based** documentation-only oversight PR and is not in the gameplay stack. Compared with `main`, draft #65's head is 75 commits ahead, 0 behind, with 199 changed paths. Neither the 31 active-stack PRs nor #44 nor #64 is merged to `main`. Some early Godot PRs are not drafts, but their open state is not approval to merge.
 
 **Functional evidence at the stacked tip:** typed Godot Mount parity and stamina/commitment systems, production-safe window gateway, PositionContract, graph, validated Mount→Half Guard transition, Half Guard independent oracle, preparation/feints/sealed-intent, F0 fighter read views, F1 interactive **Mount-only** 2D practice, B1e structural and exploratory match-flow harness. F1 has a scripted non-acting Bottom path and player-selected opposition responses; it is not a true computer opponent or cross-position match UI. B1e measured 2,534 games/74,490 windows, including 1,438 unsupported exits, 907 clock endings with no adjudication and 189 taps; the outcomes are scripted-policy evidence, **not** balanced player tests.
 
-**Critical management risk:** CI tests and PR qualification measure the exact tested branches. They are not proof of playable game completion and not proof that `main` contains the work. PR #62 and PR #63 have each been verified with **21/21 successful exact-head jobs** (at `cd87bf21` and `650e7e1` respectively); both remain unmerged drafts.
+**Critical management risk:** CI tests and PR qualification measure the exact tested branches. They are not proof of playable game completion and not proof that `main` contains the work. PR #62 and PR #63 each had **21/21 successful exact-head jobs** (`cd87bf21` and `650e7e1`). B2a PR #65's doc-only exact-head workflow (`9942c5a`) concluded successfully: **4 successful jobs, 4 expected skipped jobs**. Draft PR #64, the independent oversight-doc branch, also has a successful exact-head workflow on `e15b7ee`. All these PRs remain unmerged.
 
 ## Visual roadmap
 
@@ -56,8 +56,8 @@ Dotted connections are **not runnable** in the current graph; Standing arrows sh
 | Priority | Work package | First artifacts / PR boundary | Exit gate and overseer evidence | Current status |
 |---|---|---|---|---|
 | P0 | **Integration-readiness checkpoint** | Inventory the 30-PR stack, independent #44, all exact heads, CI and dependent commits; explicitly plan safe bottom-up integration. | Owner-approved merge train, no silently changed bases or SHA, full composite CI; branch/PR reconciled with `main`. | **Needed**. No merges authorized. |
-| P1 | **B2a Side Control spec** | Rules document: side/top/bottom roles, own axis, legal actions/defenses, entry from Half Guard, scoring signals, exits, return-path risks, independent oracle/test gate. | Owner reviews unresolved mechanical values and state/role rules. No combat code yet. | **Next Claude task**. |
-| P2 | **Side Control executable** | Independent test-only oracle, typed position engine, position contract, receiver integration through the graph, sealed-option compatibility as needed. | Existing oracles/pins unchanged except justified additive pins; real Half Guard→Side entry, continuity, negative tests and deterministic replay. | Not started. |
+| P1 | **B2a Side Control spec** | [Draft #65](https://github.com/theaxlklo/BJJ-Game/pull/65): `GODOT_V1/docs/SIDE_CONTROL_V0_PROPOSAL.md` (346 lines); 3 actions and 3 responses per side, proposed grade tables, four proposed exits, Knee Slice receiver, R1–R12 risks and SC-D1–SC-D15. | Owner accepts or amends exact mechanics and architecture before any oracle is frozen. | **DOC-QUALIFIED; awaiting owner approval**. |
+| P2 | **Side Control executable** | **B2b** accepted canonical rules sheet and independent test-only Python oracle (checkpoint PR), **B2c** typed Godot engine, **B2d** source→destination keyed receiver/opt-in graph seam, **B2e** measurement (separate slices). | After owner approval: independent oracle prior to GDScript, negative-first and replay parity, real Knee Slice→Side entry, no leaked Half Guard protocol or Mount replay, honest unsupported exit halts. | **Blocked on SC-D1–SC-D15; not started**. |
 | P3 | **Open Guard** | Spec/oracle/engine plus legal receiving routes from Mount and Half Guard. | Unblocked real exits; no illegal role/axis conversion or fabricated window. | Not started. |
 | P4 | **Closed Guard** | Spec/oracle/engine receiving Half Guard recovery; deliberate guard initiative/defense and realistic return paths. | Legal entry/exit, rejection atomicity, replay. | Not started. |
 | P5 | **Standing and takedown opening** | Fresh-start factory; takedowns, guard pulls, defenses, start roster, legitimate receiver paths. | A normal match can actually start Standing; Mount-only practice constructors still unchanged. | Architectural direction approved; mechanics absent. |
@@ -77,11 +77,19 @@ Dotted connections are **not runnable** in the current graph; Standing arrows sh
 - **The F1 UI** is not multi-position nor a real opponent; extend it only after the engine supports legal traversal. The controller must never force engine decisions.
 - **The zero-stamina escape hatch** is a gameplay liveness concern; whether it can wait until after Gate A must be validated. Do not assume that every match can end without it.
 
+## Latest engineering checkpoint — B2a qualified (2026-10-12)
+
+- **Verified:** [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65), base `docs/match-incentives-heart-of-lion-spec` at `650e7e1b9c6ba138a931c2805ce661e2268431b2`, head `9942c5a53caf58d0d944bd7931ccc81bf86d0d07`. Exactly one new `GODOT_V1/docs/SIDE_CONTROL_V0_PROPOSAL.md`, 346 lines, one commit, no production behavior. Docs-only CI: 4 PASS / 4 SKIP. All unchanged engine functionality remains **unmerged**.
+- **B2a deliverable:** identity-role proposal, Side Control local axis and initiative, 3 Top + 3 Bottom proposed actions, three responses per defending side, a grade matrix, setup/readiness/economy, four exits all **unsupported in v0**, a Half Guard Knee Slice→Side Control receiver contract, oracle plan, negative-first tests, 12 architectural risks, 15 owner decisions.
+- **Primary architecture risks:** existing graph keys receivers only by destination, hard-codes Mount→Half Guard building and source reporting, uses 17+ nullable routing sites, exposes stale sealed-protocol/export fallthrough hazards, and has Mount-only retained-segment fingerprint tests. B2d must address these without changing default graph behavior or fabricating a return route. The B1e measurement file and digest remain frozen.
+- **Recommendation (not authorization):** accept the compact v0 *scope* and tested approach first; review SC-D1–D15, especially first Side Control initiative (Top-first after Top's Knee Slice means consecutive **personal** decisions across positions) and the tentative raw grades/axis/entry thresholds. Treat all proposed combat numbers as provisional test baselines until measured. After owner sign-off, proceed **B2b docs+test-only Python oracle**, then **B2c standalone typed engine**, then **B2d graph/edge**, then **B2e measured population**.
+- **Overseer action:** update `OVERSIGHT_LEDGER.md` with this evidence. Do not advance B2b, merge or retarget any PR without the relevant owner decision.
+
 ## Open PR inventory — status snapshot
 
 **Merged foundation:** #1–#16 are merged on main (Python stamina, stalling groundwork, submission track, commitment, production policy, CI experiments).  
 **Closed disposable probes:** #24–#27 are closed and not merged.  
-**Active, continuous Godot integration stack (30 PRs, oldest to newest):**
+**Active, continuous Godot integration stack (31 PRs, oldest to newest):**
 
 | Layer | PRs | Delivered on stack (not necessarily on main) |
 |---|---|---|
@@ -109,8 +117,8 @@ Maintain one canonical file on the integrated repo branch, e.g. `docs/project/OV
 | `human_control` | Human can control multi-position fight | Mount practice only |
 | `opponent` | Autonomous opponent policy | No production opponent, only scripted practice/harness |
 | `special_mechanics` | Momentum/Lion/REST/zero-LOW implemented | No, documented only |
-| `open_merge_work` | Main-stack and divergent review | 30-stack + 1 parallel |
-| `next_gate` | Near-term objective | P0 integration-readiness + B2a Side Control spec |
+| `open_merge_work` | Main-stack, divergent and oversight branches | 31-stack + independent #44 + independent docs #64 |
+| `next_gate` | Near-term objective | P0 integration review + owner decision on B2a SC-D1–SC-D15 |
 
 For each new slice, record these fields **even if unchanged**:
 
@@ -135,7 +143,9 @@ Next dependency and responsible agent:
 
 **Default checkpoint cadence:** update a one-screen project summary after each PR and compare against this baseline. At each milestone gate, run deterministic headless suite plus a **manual 2D interactive check** on the target laptop. No fabricated test times or green badges before evidence.
 
-## Next bounded Claude assignment (B2a only)
+## Completed Claude assignment (B2a; archived task boundary)
+
+B2a was executed by Claude as [draft PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65), exact head `9942c5a53caf58d0d944bd7931ccc81bf86d0d07`, documentation only, GitHub exact-head workflow 4 PASS / 4 SKIP. The original scope below is retained as historical acceptance criteria, not as an instruction to rerun the task.
 
 1. Verify `AGENTS.md`, all 30 mainline ancestor heads, independent #44, current CI on #63 and Godot code at exact SHA; do not change existing PR bases or merge anything.
 2. Review `BjjPositionGraphMatch`, `PositionContract`, `HALF_GUARD_V0_RULES`, `POSITION_TOPOLOGY`, the B1e measurement and Side Control rules in Master Guide.
@@ -146,7 +156,7 @@ Next dependency and responsible agent:
 
 ## Key owner decisions, deferred to the right gate
 
-- **B2a:** Side Control entry, attack/defense catalog, return edges, own axis and setup rules.
+- **B2a owner review (SC-D1–SC-D15):** Top/Bottom identities, first Side Control initiative, declared exits, action and defense set, local axis/grades/readiness, no-recovery economy, Half Guard snapshot edge, new opt-in graph constructor and oracle-vs-engine slicing. Draft #65 proposes values, none is frozen.
 - **Return routes:** exact Mount Reversal landing and role swap; re-entry semantics for frozen Mount D3-B episode.
 - **Ruleset:** how the game-specific third inactive *personal* turn earns repeat penalties and what meaningful activity means in each position. Keep official IBJJF 20-second rule separate.
 - **Zero stamina:** REST recharge amount/timing and zero-stamina LOW technique grade/funding exception; the present LOW cost is 3, so both mechanics need code changes.
@@ -168,6 +178,6 @@ Next dependency and responsible agent:
 
 ## Living document workflow (established 2026-10-12)
 
-The companion file [`OVERSIGHT_LEDGER.md`](OVERSIGHT_LEDGER.md) is the fast one-page overseer view. This longer roadmap is the architectural sequence, unchanged unless evidence changes dependencies or the owner approves a new rule. The first Claude assignment is saved separately as [`CLAUDE_B2A_HANDOFF.md`](CLAUDE_B2A_HANDOFF.md) and is intended to create a documentation-only B2a Side Control proposal stacked on #63.
+The companion file [`OVERSIGHT_LEDGER.md`](OVERSIGHT_LEDGER.md) is the fast one-page overseer view. This longer roadmap is the architectural sequence, unchanged unless evidence changes dependencies or the owner approves a new rule. The first Claude assignment is archived as [`CLAUDE_B2A_HANDOFF.md`](CLAUDE_B2A_HANDOFF.md); Claude completed it in draft [#65](https://github.com/theaxlklo/BJJ-Game/pull/65). The next gate is **owner review of SC-D1 through SC-D15**, not permission to build Side Control. The #64 oversight documentation branch is kept independent of the gameplay stack.
 
 **When the owner pastes Claude's next handoff:** cross-check its PR URL, exact SHA, changed files and CI claims against GitHub; add a timestamped immutable result entry to the ledger; update status/dependencies here, preserving old baseline evidence; identify proposal versus qualified code versus merged state; and produce one bounded next Claude prompt. Do not treat a claimed PASS as verified until independently checked. No background monitoring or automatic merge is implied.
