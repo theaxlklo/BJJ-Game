@@ -28,6 +28,26 @@ def _leaves(value):
     return 1
 
 
+# JSON (and Godot's parser) cannot tell the int 300 from the float 300.0. Inputs that the oracle must treat as a *float* (and
+# therefore refuse) are written as {"$float": value}; every other JSON number in an input is an integer. Expected outputs are
+# plain numbers and are compared numerically by the Godot suite.
+INPUT_KEYS = ("request", "entry", "commands", "command")
+
+
+def _mark_floats(value):
+    if isinstance(value, float):
+        return {"$float": value}
+    if isinstance(value, dict):
+        return {key: _mark_floats(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_mark_floats(item) for item in value]
+    return value
+
+
+def _encode(row):
+    return {key: (_mark_floats(item) if key in INPUT_KEYS else item) for key, item in row.items()}
+
+
 def _operations(row):
     if row["family"] == "trajectory":
         return len(row["commands"])
@@ -43,7 +63,7 @@ def write(path, rows=None):
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w", encoding="ascii", newline="\n") as handle:
         for row in rows:
-            line = json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+            line = json.dumps(_encode(row), sort_keys=True, separators=(",", ":"), ensure_ascii=True)
             handle.write(line + "\n")
             digest.update(line.encode("ascii") + b"\n")
             comparisons += _leaves(row.get("expected", row.get("expected_snapshot", row.get("expected_error"))))

@@ -420,7 +420,8 @@ class HalfGuard:
             return {"error": record["error"]}
         s["window_open"], s["window_side"] = False, ""
         return {"error": "", "window_id": window_id, "fighter_id": fighter_id, "role": side, "kind": "exchange",
-                "detail": {"settlement": record}, "transition": transition_for(s["exit_destination"]), "ended": _ended(s),
+                "detail": {"settlement": {key: value for key, value in record.items() if key != "error"}},
+                "transition": transition_for(s["exit_destination"]), "ended": _ended(s),
                 "state": self.state_fields()}
 
     # -- the exchange (S5, S6) -------------------------------------------------------------------
