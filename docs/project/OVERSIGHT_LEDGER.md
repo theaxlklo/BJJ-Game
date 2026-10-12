@@ -1,6 +1,6 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 1.6 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 1.7 · **Snapshot date:** 2026-10-12 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
@@ -41,7 +41,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 
 | Track | Slice | State | Next owner-visible result |
 |---|---|---|---|
-| Stack safety | P0 — integration readiness and #44 decision | **Partial read-only review** | #44 is separate/superseded; bottom-up merge train needs owner approval and fuller gate |
+| Stack safety | P0 — integrate Godot safely | **Batch A #17→#18→#22 selected for preflight** | Premerge gates first; no merge authorization, no changes to main; verify after each integration |
 | Gameplay breadth | B2a — Side Control rules/entry spec | **Doc-qualified #65, not approved** | SC-D2 Top-first explicitly remains open; don't freeze numbers | 
 | Initiative design | B2a.1 — Position-aware and skill-sensitive contract | **Next, design investigation only** | Include role-specific selectable training focuses, belt Technique variance and move mastery without implementing career, focus selection, or initiative changes |
 | Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **Blocked on SC-D1–SC-D15** | B2b separate Python oracle; B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
@@ -60,7 +60,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 | D-FOCUS-01 | Player-selected positional training focuses keyed by position family **and physical role**; White Belt begins with proposed 2 focuses (e.g. Mount Top and Side Control Top); more slots as fighter improves | **Owner design direction/provisional 2-slot example; NOT CODE-AUTHORIZED.** Decide exact slot ladder, focus switching, XP/learning rules and persistent storage later. Preserve off-focus move legality, earned belts and earned proficiency. |
 | D-MEM-01 | Three concurrent **blurry/unfinished memory slots**; learn one to free a slot, or choose to discard one when discovering a new move | **Owner mechanic direction; NOT IMPLEMENTED.** No automatic eviction; three is a concurrent learning limit, not total techniques, training focuses or Never Forget count. Explicit opt-in replacement required. |
 | D-MEM-02 | Percentage retained on discarding blurry memory; later rediscovery restores residual clarity | **Owner-approved concept:** discard frees slot but preserves **some percentage of current earned progress** in a dormant trace; it is not an active fourth memory. **OPEN:** numeric rate, rounding, repeated replacements, persistence and learned/mastered thresholds. |
-| D-STACK-01 | Merge order/authorization for 30-PR chain and disposition of parallel #44 | **Not authorized, audit only** |
+| D-STACK-01 | First merge candidate Batch A #17→#18→#22; later 31-PR chain and independent #44/#64 | **Sequence approved for preflight, NOT for merge**; each mainline write requires explicit owner authorization and verified cumulative CI gates. |
 | D-STALL-01 | Game-specific stalling trigger | **Approved direction: third consecutive inactive personal turn**, independent by fighter |
 | D-STALL-02 | Penalty repeat/reset cadence and full activity classifier | **Open**; IBJJF-inspired scoring consequences are proposed |
 | D-LION-01 | Heart of a Lion | **Approved concept**: both exactly 0; once per match; 50%; five completed personal turns each; then 100% if active |
@@ -127,6 +127,15 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Rediscovery:** upon a later genuine encounter and voluntary re-admission into one of the three slots, the technique should restore its residual clarity instead of starting completely from zero. The original three-slot cap, consent before replacing a memory, and permanent separation from learned/mastered and Never Forget memories remain unchanged.
 - **Illustration, not an accepted rate:** 60% learned × a hypothetical 50% retention = 30% dormant clarity. **The actual retention percentage has NOT been selected**; also open are integer rounding, whether specializations influence retention, prevention of repeated-discard exploits, re-discovery recognition, and career/run persistence.
 - **Implementation gate:** later Memory Constellation/learning slice only, with deterministic stable technique IDs and replay/save tests. No combat engine, SC-D2 initiative, B2a.1 or Side Control oracle work was authorized or changed by this decision.
+
+### E-007 — P0 audit closing message and Batch A preflight decision, 2026-10-12
+
+- **Supplied Claude excerpt:** the read-only P0 audit has finished and proposed first integration Batch A = PRs #17, #18 and #22. Claude reports **no merges, pushes, retargets or other mutations**. Its full audit report was not reproduced in the latest pasted excerpt, so conclusions outside Batch A cannot be independently accepted on that basis.
+- **Independently checked on GitHub:** [#17](https://github.com/theaxlklo/BJJ-Game/pull/17) `1de58ef97c4a0a4342f6a80a36c352926620be6e` → [#18](https://github.com/theaxlklo/BJJ-Game/pull/18) `9c4166cef43d367786bbb24b76bccef6624779ba` → [#22](https://github.com/theaxlklo/BJJ-Game/pull/22) `83d2eb9d4d5f29249f1954ebf7b6b82661bac982`; each open, non-draft, mergeable, correctly stacked and historical exact-head workflows successful. GitHub submitted review list for each returned no reviews. PR #17 is directly based on main `7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`; subsequent bases match direct predecessor heads.
+- **Merge-method recommendation:** repository reports merge commits, squash merges and rebase merges enabled. Prefer the **merge-commit** method to retain stacked ancestry, but confirm branch policies, bot rules and expected diff changes at each step. A green source PR does not demonstrate CI success on a new integration commit.
+- **Decision:** approve Batch A as the **first integration candidate and read-only preflight scope**, not a blanket three-PR merge approval. Preflight should report exact current heads, branch protection, simulator/merge-tree or read-only diff, required CI and rollback; stop for the project owner's separate explicit merge authorization before changing `main`, PR bases or history. After a single authorized merge, check cumulative CI on the actual main SHA before permitting the next.
+- **Scope frozen:** B2a.1, Side Control B2b+, #44 and oversight #64 must not be swept into this batch. Existing Python oracle, frozen fixtures, Godot parity and production opt-in must remain unchanged.
+- **Next task:** Claude returns an actionable first-step premerge gate report, then owner selects go/no-go for #17. Keep `main` stable until approved.
 
 ## Standard Claude-result ingestion form
 
