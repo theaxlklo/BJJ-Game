@@ -282,5 +282,16 @@ jobs:
           cat /tmp/half-guard-conformance.log
           python tools/ci/validate_mount_slice_log.py /tmp/half-guard-conformance.log --name "Half Guard conformance" --exit-code "$status" --expected-assertions 151
 
+      - name: Validate the Half Guard v0 Mount edge adapter (carry-over record to entry request)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_mount_edge.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_mount_edge.gd > /tmp/half-guard-mount-edge.log 2>&1 || status=$?
+          cat /tmp/half-guard-mount-edge.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-mount-edge.log --name "Half Guard Mount edge" --exit-code "$status" --expected-assertions 3119
+
       - name: Smoke-test the default scene (2D Mount practice; the 3D greybox stays a separate diagnostic scene)
         run: godot --headless --path GODOT_V1 --quit-after 5
