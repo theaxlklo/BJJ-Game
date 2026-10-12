@@ -23,7 +23,9 @@ RANK = {"": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3}
 TIER_NAMES = ("None", "Partial", "Ready")
 BAND_NAMES = {-2: "BOTTOM_CONTROL", -1: "BOTTOM_EDGE", 0: "CONTESTED", 1: "TOP_EDGE", 2: "TOP_CONTROL"}
 GRADE_NAMES = {-2: "Strong Failure", -1: "Failure", 0: "Contested", 1: "Success", 2: "Strong Success"}
-ASCII_WHITESPACE = " \t\n\r\x0b\x0c"
+# Godot's String.strip_edges (the engine behind BjjPositionContract.fighter_ids_error) strips exactly the code points 0x01..0x20 at
+# either end; 0x7f, 0x85, 0xa0, the Unicode spaces and 0xfeff are NOT stripped (measured with Godot 4.7.2). A Godot String cannot hold NUL.
+STRIP_EDGES_CHARACTERS = "".join(chr(code) for code in range(1, 33))
 DEFAULT_COMMITMENT = "MEDIUM"
 
 # ---- Catalog (S3) ---------------------------------------------------------------------------
@@ -113,6 +115,14 @@ def legal_pair(axis, band):
     return {0: -12 < axis < 12, 1: 8 < axis < 27, 2: axis > 23, -1: -27 < axis < -8, -2: axis < -23}.get(band, False)
 
 
+def transition_for(label):
+    """The accepted BjjPositionContract.Transition.fields() dictionary for a Half Guard exit label ('' = no transition)."""
+    if label == "":
+        return {"kind": "none", "raw_destination": "", "destination_position_id": "", "resolved": False}
+    return {"kind": "exit", "raw_destination": label, "destination_position_id": EXIT_DESTINATION_IDS.get(label, ""),
+            "resolved": label in EXIT_DESTINATION_IDS}
+
+
 def authority_of(axis, role_map):
     if axis > 0:
         return role_map["top"]
@@ -184,7 +194,7 @@ def _is_int(value):
 
 
 def _padded(identifier):
-    return identifier != identifier.strip(ASCII_WHITESPACE)
+    return identifier != identifier.strip(STRIP_EDGES_CHARACTERS)
 
 
 def validate_entry(request):
@@ -403,13 +413,15 @@ class HalfGuard:
             s["history"]["reset_window_history"].append(side)
             detail = {"settlement": {"kind": "reset", "initiator": side, "next_initiator": s["initiator"]}}
             return {"error": "", "window_id": window_id, "fighter_id": fighter_id, "role": side, "kind": "reset",
-                    "detail": detail, "ended": _ended(s), "state": self.state_fields()}
+                    "detail": detail, "transition": transition_for(s["exit_destination"]), "ended": _ended(s),
+                    "state": self.state_fields()}
         record = self.attempt(action_id, response_id, DEFAULT_COMMITMENT if commitment == "" else commitment, response_commitment)
         if record["error"]:
             return {"error": record["error"]}
         s["window_open"], s["window_side"] = False, ""
         return {"error": "", "window_id": window_id, "fighter_id": fighter_id, "role": side, "kind": "exchange",
-                "detail": {"settlement": record}, "ended": _ended(s), "state": self.state_fields()}
+                "detail": {"settlement": record}, "transition": transition_for(s["exit_destination"]), "ended": _ended(s),
+                "state": self.state_fields()}
 
     # -- the exchange (S5, S6) -------------------------------------------------------------------
     def _shape_error(self, action_id, response_id, commitment, response_commitment):

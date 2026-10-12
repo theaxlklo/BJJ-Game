@@ -12,7 +12,12 @@ import functools
 from . import half_guard_v0 as O
 
 TOP_ID, BOTTOM_ID = "fighter_a", "fighter_b"
-COMMITMENTS = ("LOW", "MEDIUM", "HIGH")
+# Short names for the catalog ids used by trajectories and tests (one definition, defined before first use).
+ACTION = {"cf": "half_guard.top.crossface", "fl": "half_guard.top.flatten", "ks": "half_guard.top.knee_slice",
+          "uh": "half_guard.bottom.underhook", "rg": "half_guard.bottom.recover_guard"}
+RESPONSE = {"hf": "half_guard.bottom_response.hip_frame", "uf": "half_guard.bottom_response.underhook_fight",
+            "ks": "half_guard.bottom_response.knee_shield", "hc": "half_guard.top_response.head_control",
+            "hp": "half_guard.top_response.hip_pressure", "kp": "half_guard.top_response.knee_pin"}
 
 
 def fighter(current=100, maximum=100, latched=None, remainder=0):
@@ -25,9 +30,10 @@ def fighter(current=100, maximum=100, latched=None, remainder=0):
 def entry(top_current=100, bottom_current=100, maximum=100, swap=False, clock=300, interval=5, last_issued=0,
           top_remainder=0, bottom_remainder=0):
     """Fighter-id keyed entry. ``swap`` binds the same two fighters to the opposite roles."""
-    a, b = fighter(top_current, maximum, remainder=top_remainder), fighter(bottom_current, maximum, remainder=bottom_remainder)
+    first = fighter(top_current, maximum, remainder=top_remainder)
+    second = fighter(bottom_current, maximum, remainder=bottom_remainder)
     role_map = {"top": BOTTOM_ID, "bottom": TOP_ID} if swap else {"top": TOP_ID, "bottom": BOTTOM_ID}
-    return {"role_map": role_map, "fighters": {TOP_ID: a, BOTTOM_ID: b},
+    return {"role_map": role_map, "fighters": {TOP_ID: first, BOTTOM_ID: second},
             "clock": {"initial_seconds": clock, "remaining_seconds": clock}, "window": {"last_issued_id": last_issued},
             "interval_seconds": interval}
 
@@ -96,8 +102,8 @@ def exchange_rows():
                     top_cur, bottom_cur = (init_cur, resp_cur) if side == "top" else (resp_cur, init_cur)
                     state = state_with(top_base=top_base, bottom_frame=bottom_frame, initiator=side,
                                        top_current=top_cur, bottom_current=bottom_cur)
-                    for commitment in COMMITMENTS:
-                        for response_commitment in COMMITMENTS:
+                    for commitment in O.COMMITMENTS:
+                        for response_commitment in O.COMMITMENTS:
                             rows.append(_attempt_row("exchange_grid", state, action, response, commitment, response_commitment))
     return rows
 
@@ -126,7 +132,7 @@ def break_rows():
                 for top_base in range(3):
                     for bottom_frame in range(3):
                         state = state_with(axis_tenths=axis, band=band, top_base=top_base, bottom_frame=bottom_frame, initiator=side)
-                        for commitment in COMMITMENTS:
+                        for commitment in O.COMMITMENTS:
                             rows.append(_attempt_row("break_grid", state, action, response, commitment, "MEDIUM"))
     return rows
 
@@ -134,9 +140,10 @@ def break_rows():
 def entry_rows():
     rows = []
     good = [entry(), entry(swap=True), entry(top_current=2, bottom_current=7), entry(top_current=25, bottom_current=35),
-            entry(maximum=1, top_current=0, bottom_current=1), entry(maximum=O.MAXIMUM_EXACT, top_current=O.MAXIMUM_EXACT,
-                                                                       bottom_current=O.recover_threshold(O.MAXIMUM_EXACT)),
+            entry(maximum=1, top_current=0, bottom_current=1),
+            entry(maximum=O.MAXIMUM_EXACT, top_current=O.MAXIMUM_EXACT, bottom_current=O.recover_threshold(O.MAXIMUM_EXACT)),
             entry(last_issued=41, interval=7, clock=11, top_remainder=-3, bottom_remainder=O.MAXIMUM_EXACT)]
+    good += [_with_ids(top, bottom) for top, bottom in ID_ACCEPTED]
     for request in good + refusal_entries():
         match, error = O.HalfGuard.from_entry(request)
         rows.append({"family": "entry", "request": copy.deepcopy(request), "expected_error": error,
@@ -144,17 +151,33 @@ def entry_rows():
     return rows
 
 
-def refusal_entries():
-    """One entry per refusal code plus precedence combinations (several faults at once)."""
-    base = entry
-    out = []
+# Fighter-id edge cases measured against Godot's String.strip_edges (the engine behind BjjPositionContract.fighter_ids_error):
+# it strips exactly the code points 0x01..0x20 at either end; 0x7f, 0x85, 0xa0, the Unicode spaces and 0xfeff are NOT stripped.
+ID_REFUSED = tuple(f for c in (1, 9, 10, 11, 12, 13, 27, 31, 32) for f in (chr(c) + "x", "x" + chr(c)))
+ID_ACCEPTED = tuple((identifier, "other") for identifier in (
+    "x" + chr(0x7f), chr(0x85) + "x", "x" + chr(0xa0), chr(0x2003) + "x", "x" + chr(0x3000), "x" + chr(0x200b), chr(0xfeff) + "x",
+    "inner space", "tab\tinside", "x" + chr(0x2028)))
 
-    def mutated(fn):
-        request = base()
-        fn(request)
+
+def _with_ids(top_id, bottom_id):
+    request = entry()
+    request["role_map"] = {"top": top_id, "bottom": bottom_id}
+    request["fighters"] = {top_id: fighter(), bottom_id: fighter()}
+    return request
+
+
+def refusal_entries():
+    """One entry per refusal code plus precedence combinations (several faults at once), in documented order."""
+    out = ["not a dict"]
+
+    def mutated(change):
+        request = entry()
+        change(request)
         out.append(request)
 
-    out.append("not a dict")
+    def replace_fighters(request):
+        request["fighters"] = {TOP_ID: fighter(), "stranger": fighter()}
+
     mutated(lambda r: r.pop("interval_seconds"))
     mutated(lambda r: r.update(extra=1))
     mutated(lambda r: r["role_map"].update(middle="x"))
@@ -166,7 +189,7 @@ def refusal_entries():
     mutated(lambda r: r["role_map"].update(top=" padded"))
     mutated(lambda r: r["role_map"].update(bottom="id\n"))
     mutated(lambda r: r["role_map"].update(bottom=TOP_ID))
-    mutated(lambda r: r["fighters"].pop(BOTTOM_ID) or r["fighters"].update(stranger=fighter()))
+    mutated(replace_fighters)
     mutated(lambda r: r["fighters"][TOP_ID].update(stamina_maximum=0))
     mutated(lambda r: r["fighters"][TOP_ID].update(stamina_maximum=O.MAXIMUM_EXACT + 1))
     mutated(lambda r: r["fighters"][BOTTOM_ID].update(stamina_current=101))
@@ -180,139 +203,89 @@ def refusal_entries():
     mutated(lambda r: r["window"].update(last_issued_id=-1))
     mutated(lambda r: r.update(interval_seconds=0))
     mutated(lambda r: r.update(interval_seconds=-5))
-    # precedence: several faults at once -> the earliest rule in the sheet's order wins
-    mutated(lambda r: (r.update(interval_seconds=0), r["window"].update(last_issued_id=-1), r["clock"].update(remaining_seconds=0)))
-    mutated(lambda r: (r["role_map"].update(bottom=TOP_ID), r["fighters"][TOP_ID].update(stamina_maximum=0)))
+
+    def clock_window_interval(request):  # precedence: clock, then window id, then interval
+        request.update(interval_seconds=0)
+        request["window"].update(last_issued_id=-1)
+        request["clock"].update(remaining_seconds=0)
+
+    def ids_before_stamina(request):  # precedence: fighter ids before stamina
+        request["role_map"].update(bottom=TOP_ID)
+        request["fighters"][TOP_ID].update(stamina_maximum=0)
+
+    mutated(clock_window_interval)
+    mutated(ids_before_stamina)
+    for refused in ID_REFUSED:
+        out.append(_with_ids(refused, "other"))
+        out.append(_with_ids("other", refused))
     return out
+
+
+# ---- trajectories -----------------------------------------------------------------------------------
+def _open(duration=None):
+    return {"op": "open", "duration": duration}
+
+
+def _submit(window_id, fighter_id, action="", response="", commitment="", response_commitment=""):
+    return {"op": "submit", "window_id": window_id, "fighter_id": fighter_id, "action_id": action, "response_id": response,
+            "commitment": commitment, "response_commitment": response_commitment}
+
+
+def _attempt(action, response, commitment="MEDIUM", response_commitment=""):
+    return {"op": "attempt", "action_id": action, "response_id": response, "commitment": commitment,
+            "response_commitment": response_commitment}
+
+
+@functools.lru_cache(maxsize=None)
+def trajectories():
+    """name -> (entry request, command list). Each name is defined exactly once."""
+    t, b = TOP_ID, BOTTOM_ID
+    cf, fl, ks, uh = ACTION["cf"], ACTION["fl"], ACTION["ks"], ACTION["uh"]
+    hf, uf, kshield, hc, hp = RESPONSE["hf"], RESPONSE["uf"], RESPONSE["ks"], RESPONSE["hc"], RESPONSE["hp"]
+    return {
+        "opening_and_alternation": (entry(last_issued=9), [
+            _open(), _submit(10, t, cf, uf), _open(), _submit(11, b, uh, hc), _open(), _submit(12, t), _open(), _submit(13, b)]),
+        "double_open_and_stale": (entry(), [
+            _open(), _open(), _submit(2, t, cf, hf), _submit(1, b, uh, hp), _submit(1, t, cf, hf), _submit(1, t, cf, hf)]),
+        "pass_pass_timeout": (entry(clock=20, interval=5), [
+            _open(), _submit(1, t), _open(), _submit(2, b), _open(), _submit(3, t), _open(), _open(), _submit(3, t)]),
+        "zero_time_window": (entry(clock=10), [
+            _open(-1), _open(True), _open("5"), _open(2.5), _open(0), _submit(1, t, fl, hf), _open(99)]),
+        "timeout_exact_boundary": (entry(clock=5, interval=5), [_open(), _open(), _submit(1, t, cf, hf)]),
+        "rule1_waiver_high_unpaid": (entry(top_current=2, bottom_current=100), [_open(), _submit(1, t, ks, kshield, "HIGH", "HIGH")]),
+        "rule1_paid_high_preserved": (entry(top_current=5, bottom_current=100), [_open(), _submit(1, t, ks, kshield, "LOW", "HIGH")]),
+        "refusal_matrix": (entry(), [
+            _submit(1, t, cf, hf), _open(), _submit(0, t, cf, hf), _submit(1, "", cf, hf), _submit(1, "ghost", cf, hf),
+            _submit(1, b, uh, hc), _submit(1, t, "", hf), _submit(1, t, "", "", "LOW"), _submit(1, t, "", "", "", "LOW"),
+            _submit(1, t, cf, hf, "EXTREME"), _submit(1, t, cf, hf, "", "EXTREME"), _submit(1, t, "nope", hf),
+            _submit(1, t, uh, hf), _submit(1, t, hf, hf), _submit(1, t, cf, "nope"), _submit(1, t, cf, ""),
+            _submit(1, t, cf, hc), _submit(1, t, cf, uh), _submit(1, t, cf, hf)]),
+        "cooperative_exit_side_control": (entry(), [
+            _open(), _submit(1, t, ks, uf), _open(), _submit(2, b, uh, hc), _open(), _submit(3, t, ks, uf),
+            _open(), _submit(4, b), _open(), _submit(5, t, cf, hf)]),
+        "post_exit_refusals": (entry(), [
+            _open(), _submit(1, t, ks, uf), _open(), _submit(2, b), _open(), _submit(3, t, ks, uf),
+            _attempt(cf, hf), _open(), _submit(3, t, cf, hf)]),
+    }
 
 
 def trajectory_rows():
     """Deterministic multi-command trajectories (windows, passes, refusals, timeouts, waiver, exits)."""
-    rows = []
-    for name, (request, commands) in trajectories().items():
-        rows.append({"family": "trajectory", "name": name, "entry": request, "commands": commands,
-                     "expected": O.replay(request, commands)})
-    return rows
-
-
-A = {"cf": "half_guard.top.crossface", "fl": "half_guard.top.flatten", "ks": "half_guard.top.knee_slice",
-     "uh": "half_guard.bottom.underhook", "rg": "half_guard.bottom.recover_guard"}
-R = {"hf": "half_guard.bottom_response.hip_frame", "uf": "half_guard.bottom_response.underhook_fight",
-     "ks": "half_guard.bottom_response.knee_shield", "hc": "half_guard.top_response.head_control",
-     "hp": "half_guard.top_response.hip_pressure", "kp": "half_guard.top_response.knee_pin"}
-
-
-def _o():
-    return {"op": "open"}
-
-
-def _s(window_id, who, action="", response="", commitment="", response_commitment=""):
-    return {"op": "submit", "window_id": window_id, "fighter_id": who, "action_id": action, "response_id": response,
-            "commitment": commitment, "response_commitment": response_commitment}
-
-
-def trajectories():
-    a, b = TOP_ID, BOTTOM_ID
-    out = {}
-    out["opening_and_alternation"] = (entry(last_issued=9), [
-        _o(), _s(10, a, A["cf"], R["uf"]), _o(), _s(11, b, A["uh"], R["hc"]), _o(), _s(12, a, "", ""), _o(), _s(13, b)])
-    out["double_open_and_stale"] = (entry(), [_o(), _o(), _s(2, a, A["cf"], R["hf"]), _s(1, b, A["uh"], R["hp"]),
-                                              _s(1, a, A["cf"], R["hf"]), _s(1, a, A["cf"], R["hf"])])
-    out["pass_pass_timeout"] = (entry(clock=20, interval=5), [
-        _o(), _s(1, a), _o(), _s(2, b), _o(), _s(3, a), _o(), _o(), _s(3, a)])
-    out["zero_time_window"] = (entry(clock=10), [
-        {"op": "open", "duration": -1}, {"op": "open", "duration": True}, {"op": "open", "duration": "5"},
-        {"op": "open", "duration": 2.5}, {"op": "open", "duration": 0}, _s(1, a, A["fl"], R["hf"]),
-        {"op": "open", "duration": 99}])
-    out["timeout_exact_boundary"] = (entry(clock=5, interval=5), [_o(), _o(), _s(1, a, A["cf"], R["hf"])])
-    out["rule1_waiver_high_unpaid"] = (entry(top_current=2, bottom_current=100), [
-        _o(), _s(1, a, A["ks"], R["ks"], "HIGH", "HIGH")])
-    out["rule1_paid_high_preserved"] = (entry(top_current=5, bottom_current=100), [
-        _o(), _s(1, a, A["ks"], R["ks"], "LOW", "HIGH")])
-    out["refusal_matrix"] = (entry(), [
-        _s(1, a, A["cf"], R["hf"]), _o(), _s(0, a, A["cf"], R["hf"]), _s(1, "", A["cf"], R["hf"]), _s(1, "ghost", A["cf"], R["hf"]),
-        _s(1, b, A["uh"], R["hc"]), _s(1, a, "", R["hf"]), _s(1, a, "", "", "LOW"), _s(1, a, "", "", "", "LOW"),
-        _s(1, a, A["cf"], R["hf"], "EXTREME"), _s(1, a, A["cf"], R["hf"], "", "EXTREME"), _s(1, a, "nope", R["hf"]),
-        _s(1, a, A["uh"], R["hf"]), _s(1, a, R["hf"], R["hf"]), _s(1, a, A["cf"], "nope"), _s(1, a, A["cf"], ""),
-        _s(1, a, A["cf"], R["hc"]), _s(1, a, A["cf"], A["uh"]), _s(1, a, A["cf"], R["hf"])])
-    out["cooperative_exit_side_control"] = (entry(), [
-        _o(), _s(1, a, A["ks"], R["uf"]), _o(), _s(2, b, A["uh"], R["hc"]), _o(), _s(3, a, A["ks"], R["uf"]),
-        _o(), _s(4, b, "", ""), _o(), _s(5, a, A["cf"], R["hf"])])
-    out["post_exit_refusals"] = (entry(), [
-        _o(), _s(1, a, A["ks"], R["uf"]), _o(), _s(2, b), _o(), _s(3, a, A["ks"], R["uf"]),
-        {"op": "attempt", "action_id": A["cf"], "response_id": R["hf"], "commitment": "MEDIUM"}, _o(), _s(3, a, A["cf"], R["hf"])])
-    return out
-
-
-def trajectory_rows():
-    """Deterministic multi-command trajectories (windows, passes, refusals, timeouts, waiver, exits)."""
-    rows = []
-    for name, (request, commands) in trajectories().items():
-        rows.append({"family": "trajectory", "name": name, "entry": request, "commands": commands,
-                     "expected": O.replay(request, commands)})
-    return rows
-
-
-A = {"cf": "half_guard.top.crossface", "fl": "half_guard.top.flatten", "ks": "half_guard.top.knee_slice",
-     "uh": "half_guard.bottom.underhook", "rg": "half_guard.bottom.recover_guard"}
-R = {"hf": "half_guard.bottom_response.hip_frame", "uf": "half_guard.bottom_response.underhook_fight",
-     "ks": "half_guard.bottom_response.knee_shield", "hc": "half_guard.top_response.head_control",
-     "hp": "half_guard.top_response.hip_pressure", "kp": "half_guard.top_response.knee_pin"}
-
-
-def _o():
-    return {"op": "open"}
-
-
-def _s(window_id, who, action="", response="", commitment="", response_commitment=""):
-    return {"op": "submit", "window_id": window_id, "fighter_id": who, "action_id": action, "response_id": response,
-            "commitment": commitment, "response_commitment": response_commitment}
-
-
-def trajectories():
-    a, b = TOP_ID, BOTTOM_ID
-    out = {}
-    out["opening_and_alternation"] = (entry(last_issued=9), [
-        _o(), _s(10, a, A["cf"], R["uf"]), _o(), _s(11, b, A["uh"], R["hc"]), _o(), _s(12, a, "", ""), _o(), _s(13, b)])
-    out["double_open_and_stale"] = (entry(), [_o(), _o(), _s(2, a, A["cf"], R["hf"]), _s(1, b, A["uh"], R["hp"]),
-                                              _s(1, a, A["cf"], R["hf"]), _s(1, a, A["cf"], R["hf"])])
-    out["pass_pass_timeout"] = (entry(clock=20, interval=5), [
-        _o(), _s(1, a), _o(), _s(2, b), _o(), _s(3, a), _o(), _o(), _s(3, a)])
-    out["zero_time_window"] = (entry(clock=10), [
-        {"op": "open", "duration": -1}, {"op": "open", "duration": True}, {"op": "open", "duration": "5"},
-        {"op": "open", "duration": 2.5}, {"op": "open", "duration": 0}, _s(1, a, A["fl"], R["hf"]),
-        {"op": "open", "duration": 99}])
-    out["timeout_exact_boundary"] = (entry(clock=5, interval=5), [_o(), _o(), _s(1, a, A["cf"], R["hf"])])
-    out["rule1_waiver_high_unpaid"] = (entry(top_current=2, bottom_current=100), [
-        _o(), _s(1, a, A["ks"], R["ks"], "HIGH", "HIGH")])
-    out["rule1_paid_high_preserved"] = (entry(top_current=5, bottom_current=100), [
-        _o(), _s(1, a, A["ks"], R["ks"], "LOW", "HIGH")])
-    out["refusal_matrix"] = (entry(), [
-        _s(1, a, A["cf"], R["hf"]), _o(), _s(0, a, A["cf"], R["hf"]), _s(1, "", A["cf"], R["hf"]), _s(1, "ghost", A["cf"], R["hf"]),
-        _s(1, b, A["uh"], R["hc"]), _s(1, a, "", R["hf"]), _s(1, a, "", "", "LOW"), _s(1, a, "", "", "", "LOW"),
-        _s(1, a, A["cf"], R["hf"], "EXTREME"), _s(1, a, A["cf"], R["hf"], "", "EXTREME"), _s(1, a, "nope", R["hf"]),
-        _s(1, a, A["uh"], R["hf"]), _s(1, a, R["hf"], R["hf"]), _s(1, a, A["cf"], "nope"), _s(1, a, A["cf"], ""),
-        _s(1, a, A["cf"], R["hc"]), _s(1, a, A["cf"], A["uh"]), _s(1, a, A["cf"], R["hf"])])
-    out["cooperative_exit_side_control"] = (entry(), [
-        _o(), _s(1, a, A["ks"], R["uf"]), _o(), _s(2, b, A["uh"], R["hc"]), _o(), _s(3, a, A["ks"], R["uf"]), _o(),
-        _s(4, b, "", ""), _o(), _s(5, a, A["ks"], R["uf"]), _o(), _s(6, a, A["cf"], R["hf"])])
-    out["post_exit_refusals"] = (entry(), [
-        _o(), _s(1, a, A["ks"], R["uf"]), _o(), _s(2, b, "", ""), _o(), _s(3, a, A["ks"], R["uf"]), _o(), _s(4, b, "", ""),
-        _o(), _s(5, a, A["ks"], R["uf"]), {"op": "attempt", "action_id": A["cf"], "response_id": R["hf"], "commitment": "MEDIUM"}, _o(), _s(5, a, A["cf"], R["hf"])])
-    return out
+    return [{"family": "trajectory", "name": name, "entry": request, "commands": commands,
+             "expected": O.replay(request, commands)} for name, (request, commands) in trajectories().items()]
 
 
 @functools.lru_cache(maxsize=None)
 def all_rows():
-    return list(band_rows() + entry_rows() + list(exchange_rows()) + list(break_rows()) + trajectory_rows())
+    return band_rows() + entry_rows() + list(exchange_rows()) + list(break_rows()) + trajectory_rows()
 
 
 # ---- structural searches (reachability; never a balance claim) --------------------------------------
 def _key(snapshot):
-    f = snapshot["fighters"]
+    fighters = snapshot["fighters"]
     ids = (snapshot["role_map"]["top"], snapshot["role_map"]["bottom"])
     return (snapshot["axis_tenths"], snapshot["band"], snapshot["initiator"], snapshot["top_base"], snapshot["bottom_frame"],
-            tuple((f[i]["stamina_current"], f[i]["exhaustion_latched"]) for i in ids), snapshot["exit_destination"])
+            tuple((fighters[i]["stamina_current"], fighters[i]["exhaustion_latched"]) for i in ids), snapshot["exit_destination"])
 
 
 def _step(snapshot, action, response, commitment, response_commitment):
@@ -322,37 +295,11 @@ def _step(snapshot, action, response, commitment, response_commitment):
     return match.snapshot(), result
 
 
-def _pass(snapshot):
+def _pass_turn(snapshot):
+    """The state after the initiator passes (initiative flips, nothing else changes)."""
     match = O.HalfGuard.from_snapshot(snapshot)
-    side = match.s["initiator"]
-    match.s["initiator"] = "bottom" if side == "top" else "top"
+    match.s["initiator"] = "bottom" if match.s["initiator"] == "top" else "top"
     return match.snapshot()
-
-
-def earliest_exits(max_windows=8, commitments=("MEDIUM",)):
-    """Breadth-first search with *cooperating* players (both choose freely, passes allowed); windows to each exit label."""
-    start = O.HalfGuard.from_entry(entry())[0].snapshot()
-    seen, frontier, first = {_key(start)}, [start], {}
-    for windows in range(1, max_windows + 1):
-        nxt = []
-        for snap in frontier:
-            side = snap["initiator"]
-            other = "bottom" if side == "top" else "top"
-            options = [(a, r, c, rc) for a in O.ACTIONS[side] for r in O.RESPONSES[other] for c in commitments for rc in commitments]
-            for action, response, commitment, response_commitment in options:
-                after, result = _step(snap, action, response, commitment, response_commitment)
-                if after["exit_destination"]:
-                    first.setdefault(after["exit_destination"], windows)
-                    continue
-                if _key(after) not in seen:
-                    seen.add(_key(after))
-                    nxt.append(after)
-            passed = _pass(snap)
-            if _key(passed) not in seen:
-                seen.add(_key(passed))
-                nxt.append(passed)
-        frontier = nxt
-    return first, len(seen)
 
 
 def best_counter(side, action):
@@ -361,27 +308,43 @@ def best_counter(side, action):
     return sorted(row, key=lambda r: (row[r], r))[0]
 
 
-def best_counter_earliest(max_windows=10, attacker_commitments=("LOW", "MEDIUM", "HIGH"), responder_commitment="MEDIUM"):
-    """Breadth-first: the earliest window at which each exit label becomes reachable when the *responder* always plays
-    the best counter (at ``responder_commitment``) and the *attacker* chooses any action, commitment or pass. Returns
-    ({label: windows}, states explored). Passes count as windows. A label that is absent was not reached in the horizon."""
+def _search(max_windows, choices):
+    """Breadth-first search from the standard entry. ``choices(snapshot)`` yields (action, response, commitment,
+    response_commitment) tuples; a pass is always available. Returns ({exit label: first window}, states explored);
+    passes count as windows and a label that is absent was not reached within the horizon."""
     start = O.HalfGuard.from_entry(entry())[0].snapshot()
     seen, frontier, first = {_key(start)}, [start], {}
     for windows in range(1, max_windows + 1):
-        nxt = []
-        for snap in frontier:
-            side = snap["initiator"]
-            for action in O.ACTIONS[side]:
-                for commitment in attacker_commitments:
-                    after, _ = _step(snap, action, best_counter(side, action), commitment, responder_commitment)
-                    if after["exit_destination"]:
-                        first.setdefault(after["exit_destination"], windows)
-                    elif _key(after) not in seen:
-                        seen.add(_key(after))
-                        nxt.append(after)
-            passed = _pass(snap)
+        following = []
+        for snapshot in frontier:
+            for action, response, commitment, response_commitment in choices(snapshot):
+                after, _ = _step(snapshot, action, response, commitment, response_commitment)
+                if after["exit_destination"]:
+                    first.setdefault(after["exit_destination"], windows)
+                elif _key(after) not in seen:
+                    seen.add(_key(after))
+                    following.append(after)
+            passed = _pass_turn(snapshot)
             if _key(passed) not in seen:
                 seen.add(_key(passed))
-                nxt.append(passed)
-        frontier = nxt
+                following.append(passed)
+        frontier = following
     return first, len(seen)
+
+
+def earliest_exits(max_windows=8, commitments=("MEDIUM",)):
+    """Cooperating players: both choose any action, response and commitment from ``commitments``; passes allowed."""
+    def choices(snapshot):
+        side = snapshot["initiator"]
+        other = "bottom" if side == "top" else "top"
+        return [(a, r, c, rc) for a in O.ACTIONS[side] for r in O.RESPONSES[other] for c in commitments for rc in commitments]
+    return _search(max_windows, choices)
+
+
+def best_counter_earliest(max_windows=10, attacker_commitments=O.COMMITMENTS, responder_commitment="MEDIUM"):
+    """The responder always plays the best counter (at ``responder_commitment``); the attacker chooses any action,
+    commitment or pass."""
+    def choices(snapshot):
+        side = snapshot["initiator"]
+        return [(a, best_counter(side, a), c, responder_commitment) for a in O.ACTIONS[side] for c in attacker_commitments]
+    return _search(max_windows, choices)

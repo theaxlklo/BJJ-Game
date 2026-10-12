@@ -24,7 +24,7 @@ if HERE not in sys.path:
 from oracles import half_guard_v0 as O  # noqa: E402
 from oracles import half_guard_v0_scenarios as S  # noqa: E402
 
-A, R = S.A, S.R
+A, R = S.ACTION, S.RESPONSE
 TOP, BOT = S.TOP_ID, S.BOTTOM_ID
 MEASURED = {"assertions": 0, "scenario_rows_checked": 0, "frozen_comparisons": 0, "searches": {}}
 _DEPTH = [0]
@@ -224,7 +224,7 @@ class EntryTests(Counted):
         "invalid_clock", "invalid_window_id", "invalid_interval", "invalid_interval",
         "invalid_clock",            # precedence: clock before window id before interval
         "invalid_fighter_id",       # precedence: fighter ids before stamina
-    ]
+    ] + ["invalid_fighter_id"] * 36   # every stripped code point 0x01..0x20 sampled at the start or end of either role id
 
     def test_every_refusal_code_and_precedence(self):
         requests = S.refusal_entries()
@@ -254,6 +254,22 @@ class EntryTests(Counted):
         self.assertEqual((fields["top_stamina"], fields["bottom_stamina"]), (20, 40))
         self.assertEqual((fields["top_latched"], fields["bottom_latched"]), (True, False))
         self.assertEqual(fields["authority"], BOT)  # axis +5 favors whoever holds the Top role
+
+    def test_fighter_id_whitespace_matches_godot_strip_edges(self):
+        """Measured with Godot 4.7.2 String.strip_edges: exactly the code points 0x01..0x20 are stripped at either end."""
+        def error_for(top, bottom):
+            return O.validate_entry(S._with_ids(top, bottom))
+        for code in range(1, 33):
+            self.assertEqual(error_for(chr(code) + "x", "other"), "invalid_fighter_id", hex(code))
+            self.assertEqual(error_for("other", "x" + chr(code)), "invalid_fighter_id", hex(code))
+        for code in (0x7f, 0x80, 0x85, 0x9f, 0xa0, 0xad, 0x1680, 0x180e, 0x2000, 0x2003, 0x200a, 0x200b, 0x2028, 0x2029, 0x202f, 0x205f,
+                     0x2060, 0x3000, 0xfeff):
+            self.assertEqual(error_for(chr(code) + "x", "other"), "", hex(code))   # not stripped by Godot, so accepted
+            self.assertEqual(error_for("other", "x" + chr(code)), "", hex(code))
+        self.assertEqual(error_for("inner space", "tab\tinside"), "")  # interior whitespace is fine
+        self.assertEqual(error_for("", "other"), "invalid_fighter_id")
+        self.assertEqual(error_for("same", "same"), "invalid_fighter_id")
+        self.assertEqual(O.STRIP_EDGES_CHARACTERS, "".join(chr(c) for c in range(1, 33)))
 
     def test_latch_consistency_boundaries_by_capacity(self):
         table = {1: (0, 1), 2: (0, 1), 3: (0, 2), 4: (1, 2), 7: (1, 3), 20: (5, 7), 37: (9, 13), 64: (16, 23), 100: (25, 35)}
@@ -709,6 +725,30 @@ class ExitTests(Counted):
         self.assertEqual(match.open_window(), {"error": "terminal_exchange"})
         self.assertEqual(match.submit(1, TOP, A["cf"], R["hf"])["error"], "no_open_window")
         self.assertEqual(match.snapshot(), snapshot)
+
+    def test_submit_reports_carry_the_accepted_transition_dictionary(self):
+        none = {"kind": "none", "raw_destination": "", "destination_position_id": "", "resolved": False}
+        self.assertEqual(set(none), {"kind", "raw_destination", "destination_position_id", "resolved"})  # BjjPositionContract.Transition.fields()
+        match = fresh()
+        match.open_window()
+        self.assertEqual(match.submit(1, TOP, A["cf"], R["hf"])["transition"], none)   # a non-exit exchange is "none"
+        match.open_window()
+        self.assertEqual(match.submit(2, BOT)["transition"], none)                       # a pass is "none"
+        self.assertNotIn("transition", match.open_window())                              # window-open reports carry no transition
+        for label, destination, state, action, response in (
+                ("Side Control", "side_control", dict(axis_tenths=25, band=1), A["ks"], R["hf"]),
+                ("Open Guard", "open_guard", dict(axis_tenths=-25, band=-2, initiator="bottom"), A["rg"], R["hp"]),
+                ("Closed Guard", "closed_guard", dict(axis_tenths=-15, band=-1, initiator="bottom"), A["rg"], R["hc"])):
+            exiting = at(**state)
+            window = exiting.open_window()
+            report = exiting.submit(window["window_id"], window["fighter_id"], action, response)
+            self.assertEqual(report["transition"], {"kind": "exit", "raw_destination": label, "destination_position_id": destination, "resolved": True})
+            self.assertEqual((report["ended"], report["state"]["exit_destination"]), (True, label))
+            self.assertEqual(O.transition_for(label), report["transition"])
+        self.assertEqual(O.transition_for(""), none)
+        # an undeclared label would be an unresolved exit (never silently mapped); Half Guard declares exactly three labels
+        self.assertEqual(O.transition_for("Mount"), {"kind": "exit", "raw_destination": "Mount", "destination_position_id": "", "resolved": False})
+        self.assertEqual(set(O.EXIT_DESTINATION_IDS), {"Side Control", "Open Guard", "Closed Guard"})
 
     def test_exit_state_divergence_from_mount_is_clamp_and_band_update(self):
         result = attempt(at(axis_tenths=30, band=2), A["ks"], R["uf"])   # +2 -> proposed 50, clamped to 40

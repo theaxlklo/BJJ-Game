@@ -97,7 +97,7 @@ State belongs to the **fighter id**; roles are labels over the role map.
 
 Validation (pure, nothing is built on error), first failing code wins, in this order:
 1. `entry_not_a_dictionary`; 2. `entry_malformed` (any missing or extra key at any level; a wrong type — `bool` is not an `int`, a float is not an `int`);
-3. `invalid_fighter_id` (a role-map id that is empty, has leading/trailing ASCII whitespace, or the two ids are equal); 4. `fighters_mismatch` (the `fighters` keys differ from the two role-map ids);
+3. `invalid_fighter_id` (a role-map id that is empty, is padded at either end by any code point `0x01 … 0x20`, or the two ids are equal — exactly Godot's `String.strip_edges` set, measured with Godot 4.7.2; `0x7f`, `0x85`, `0xa0`, the Unicode spaces and `0xfeff` are **not** stripped and are accepted; interior whitespace is accepted); 4. `fighters_mismatch` (the `fighters` keys differ from the two role-map ids);
 5. `invalid_stamina_maximum` (`1 … 9007199254740991`); 6. `invalid_stamina_current` (`0 … maximum`); 7. `inconsistent_exhaustion_latch` (`current ≤ enter` requires latched; `current ≥ recover` requires not latched; between: either);
 8. `invalid_behavior_remainder` (`|r| ≤ 9007199254740991`); 9. `invalid_clock` (`initial ∈ 1 … 9007199254740991`, `remaining ∈ 1 … initial`); 10. `invalid_window_id` (`0 … 9007199254740991`); 11. `invalid_interval` (`1 … 9007199254740991`).
 Fighters are checked in role order (top, then bottom) within steps 5–8.
@@ -144,6 +144,8 @@ There is no exit special case: terminal tiers are the post-exchange values; the 
 * `open_window(duration = None)`: `window_already_open` → context errors → `invalid_duration` (not `None` and not an `int`; a `bool` is not an `int`) → `invalid_window_request` (`duration < 0`). `None` means `interval_seconds`; `0` is a legal zero-time window.
   `elapsed = min(duration, clock_seconds)`; `clock_seconds −= elapsed`. If the clock is now `0` the report is `closed`, **no window opens**, the window id is unchanged and, if no exit occurred, `exit_reason = "TIMEOUT — Half Guard retained"`.
   Otherwise the window id increments, the window opens for the current initiator.
+* A successful `submit` report carries `transition`, semantically `BjjPositionContract.Transition.fields()`: `{"kind": "none", "raw_destination": "", "destination_position_id": "", "resolved": false}` for a non-exit exchange or a pass, and for an exit
+  `{"kind": "exit", "raw_destination": <label>, "destination_position_id": "side_control" | "open_guard" | "closed_guard", "resolved": true}`. A label that is not one of the three declared destinations would be `kind: "exit"`, `resolved: false` with an empty destination id (never silently mapped). Window-open reports carry no `transition`.
 * `submit(window_id, fighter_id, action_id, response_id, commitment, response_commitment)` (§8) closes the window on success. An empty `action_id` is a **pass** (no stamina, no clock, no grades): the initiator flips and `reset_window_history` records the side; either side may pass.
   An exchange with an empty `commitment` uses `MEDIUM`.
 * Strict alternation: the Top opens at entry; after every accepted non-exit exchange and every pass the initiator flips.
@@ -165,24 +167,25 @@ Histories (per accepted exchange unless noted): `initiated_action_history`, `res
 `response_charge_history`, `response_waived_history`, `band_change_history` (`"<before>-><after>"`, one net entry when the band changed), `readiness_change_history` (`"<track>:<before name>-><after name>:<action short name>"`, one entry per tier that changed, in §5.7 order),
 `reset_window_history` (per pass), `top_initiation_count`, `bottom_initiation_count`. A snapshot (`snapshot()`) is a canonical JSON-able dictionary of the whole state; refusals leave it byte-identical. Replay of the same entry and command list is deterministic and bit-identical.
 
-## 10. Oracle-resolved details (not numeric rules; owner review requested)
+## 10. Resolved non-numeric details (owner-accepted with the B1b continuation; none changes a number)
 
-| # | Detail resolved in the oracle | Why it was open |
+| # | Resolution | Note |
 | --- | --- | --- |
-| A-1 | `band_change_history` records one net `before->after` per exchange (a multi-band jump is one entry) | Proposal said "per band change" |
-| A-2 | `readiness_change_history` uses tier **names**, and the technique is the initiator's action short name; the cause (consume / wear / build) is implied by order | Proposal gave the format only |
-| A-3 | Initiation counts increase per accepted exchange, not per pass | Not specified |
-| A-4 | A fighter id is "padded" if it differs from itself stripped of ASCII whitespace (`space \t \n \r \v \f`); the Godot `strip_edges` rule is the reference for the later engine | Python and Godot whitespace sets differ |
-| A-5 | Stamina bands and thresholds use the **frozen float formulas** (`current / max > 0.75`, `ceil(max × 0.35)`); exact-integer forms differ from them at capacities above about 2^52 | Float vs exact at huge capacities |
-| A-6 | A refused exchange never charges anything; a pass never charges anything | Implied |
-| A-7 | `terminal_exchange` is a context error and therefore precedes every command-shape error | Mirrors the Mount order |
-| A-8 | `window_initiator_changed` is unreachable through the public API; it is exercised only through a corrupted snapshot | Defensive guard |
-| A-9 | Timeout `exit_reason` text is `"TIMEOUT — Half Guard retained"`; `exit_destination` stays `""` | Mirrors Mount's wording |
-| A-10 | Wear and strength use the responder's *funded effective* commitment; only HIGH preservation uses the *charge actually paid* | §5.6 |
-| A-11 | The effective-commitment test for wear uses the value granted by funding **before** the Rule 1 waiver | HG-26C-4 |
-| A-12 | An exchange by an unfunded initiator (stamina < 3) is legal; Rule 1 then waives the responder's charge | Mount precedent |
-| A-13 | `behavior_remainder_units` are carried in the snapshot and never changed | HG-6 |
-| A-14 | Contract-level addressing codes (`missing_command`, `unknown_position`, …) are not part of the oracle; they belong to the later GDScript contract | Different layer |
+| A-1 | `band_change_history` records **one net `before->after` entry per accepted exchange** whose band changed (a multi-band jump is one entry) | resolved |
+| A-2 | `readiness_change_history` uses tier **names** (`None`/`Partial`/`Ready`) and the initiator's action short name; the cause (consume / wear / build) is implied by the §5.7 order | resolved |
+| A-3 | `top_initiation_count` / `bottom_initiation_count` count **accepted exchanges only**; a pass is recorded in `reset_window_history` and is not an initiation | resolved |
+| A-4 | A fighter id is padded if it differs from itself stripped of the code points `0x01 … 0x20` — the exact `String.strip_edges` set of Godot 4.7.2, which `BjjPositionContract.fighter_ids_error` uses. Godot does **not** strip `0x7f`, `0x85`, `0xa0`, `0x1680`, `0x2000–0x200b`, `0x2028/9`, `0x202f`, `0x205f`, `0x3000`, `0xfeff`; those ids are valid. A Godot `String` cannot hold NUL, so NUL is outside the contract | measured, not assumed |
+| A-5 | Stamina bands and thresholds use the **frozen float formulas** (`current / max > 0.75`, `floor(0.25·max)`, `ceil(0.35·max)`); exact-integer forms differ at capacities above about 2^52 | resolved |
+| A-6 | A refused exchange never charges anything; a pass never charges anything | resolved |
+| A-7 | `terminal_exchange` is a context error and precedes every command-shape error | resolved |
+| A-8 | `window_initiator_changed` is unreachable through the public API; the oracle exercises it only through a corrupted snapshot | defensive guard |
+| A-9 | Timeout `exit_reason` is `"TIMEOUT — Half Guard retained"`; `exit_destination` stays `""` | resolved |
+| A-10 | Defense **strength** and **wear** use the responder's *funded effective* commitment; only HIGH *preservation* uses the charge actually paid. A LOW or unfunded defender is evaluated at tier **None** whatever its track | resolved |
+| A-11 | The effective-commitment test for wear uses the value granted by funding **before** the Rule 1 waiver | resolved |
+| A-12 | An exchange by an unfunded initiator (stamina < 3) is legal; Rule 1 then waives the responder's charge | resolved |
+| A-13 | `behavior_remainder_units` are carried in the snapshot and never changed | resolved |
+| A-14 | Contract-level addressing codes (`missing_command`, `unknown_position`, …) are not part of the oracle; they belong to the Godot contract layer | resolved |
+| A-15 | **HIGH preservation on Contested:** a paid HIGH defense is preserved on a Contested result (`final == 0`) and on a defense success; it wears only when the defense failed (`final ≥ +1`) | resolved |
 
 ## 11. Known properties (measured on this C1 baseline; recorded, not failures, not a balance claim)
 
@@ -207,17 +210,10 @@ All numbers below come from the oracle checkpoint's own tests (`tests/test_half_
 * Reachability (can each label be reached?) and balance (is play fair or fun?) are separate questions; these tests establish only the former.
 * The baseline has no behaviors, drift, recovery, feints, scoring or Standing.
 
-## 12. Outstanding ambiguities and owner questions (none changes an accepted number)
+## 12. Remaining non-numeric limitations (none blocks the engine)
 
-| # | Question | Oracle behavior today |
-| --- | --- | --- |
-| Q-1 | Is a per-exchange net `band_change_history` entry right, or one entry per band step? (A-1) | one net entry |
-| Q-2 | Tier names vs integers in `readiness_change_history`, and whether the cause (consume / wear / build) should be explicit (A-2) | tier names, cause implied by order |
-| Q-3 | Initiation counts for passes (A-3) | passes are not counted |
-| Q-4 | Whitespace set for "padded" fighter ids: ASCII (oracle) vs Godot `strip_edges` (A-4) | ASCII `space \t \n \r \v \f` |
-| Q-5 | Stamina bands and thresholds use the frozen float formulas, which differ from exact-integer forms above about 2^52 (A-5) | frozen float formulas |
-| Q-6 | A defender answering at LOW is unprepared even with a Ready track (sheet §5.3 step 4); should a funded-but-LOW *Ready* defender keep partial strength? | strength tier None |
-| Q-7 | Should HIGH preservation also require the defense to have *succeeded* at final ≤ −1 (today it only avoids wear unless the defense failed)? | contested (0) and success both preserve; failure wears |
-| Q-8 | The exchange fixture embeds full pre/post snapshots (about 54 MB for 16,812 rows); compact encodings may be preferable for the Godot parity suite | full snapshots |
-| Q-9 | `window_initiator_changed` is unreachable through the public API (A-8) | exercised via a corrupted snapshot only |
-| Q-10 | Contract-level addressing codes are outside the oracle (A-14) | not modeled |
+| # | Item |
+| --- | --- |
+| L-1 | The exchange fixture embeds full pre/post snapshots (tens of megabytes); a compact encoding may be preferable later. The Godot parity suite reads it as generated, git-ignored data |
+| L-2 | `window_initiator_changed` and the context-error codes other than `terminal_exchange` are reachable only through a corrupted state, so the Godot suite exercises them through its test seam |
+| L-3 | Contract-level addressing codes belong to the Godot contract layer and are tested there, not in the oracle |
