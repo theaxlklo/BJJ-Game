@@ -801,7 +801,10 @@ func _test_determinism() -> void:
 
 
 func _test_scope_and_hygiene() -> void:
-    var forbidden: Array[String] = ["feint", "Feint", "sealed", "seal_intent", "surcharge", "BjjBehaviorStaminaPolicy.Flow", "BjjD3B", "BjjMount", "BjjMatchWindowGateway.create",
+    # B1h revised this pin on purpose: the engine sources now contain the explicit feint rules, so "feint" / "Feint" / "surcharge" are no longer
+    # forbidden. The sealed-intent protocol and its timeout metadata stay OUTSIDE the engine: "sealed", "seal_intent", "SealedProtocol" and
+    # "defaulted" remain forbidden in every engine source.
+    var forbidden: Array[String] = ["sealed", "seal_intent", "SealedProtocol", "defaulted", "BjjBehaviorStaminaPolicy.Flow", "BjjD3B", "BjjMount", "BjjMatchWindowGateway.create",
         "randi", "randf", "RandomNumberGenerator", "Time.", "OS.get_ticks", "await", "get_tree", "Engine.get_frames", "FileAccess", "preload("]
     for path: String in SOURCES:
         var file := FileAccess.open(path, FileAccess.READ)

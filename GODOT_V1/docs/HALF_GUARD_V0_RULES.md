@@ -217,3 +217,51 @@ All numbers below come from the oracle checkpoint's own tests (`tests/test_half_
 | L-1 | The exchange fixture embeds full pre/post snapshots (tens of megabytes); a compact encoding may be preferable later. The Godot parity suite reads it as generated, git-ignored data |
 | L-2 | `window_initiator_changed` and the context-error codes other than `terminal_exchange` are reachable only through a corrupted state, so the Godot suite exercises them through its test seam |
 | L-3 | Contract-level addressing codes belong to the Godot contract layer and are tested there, not in the oracle |
+
+## 13. Feints, the feint surcharge and the defender timeout (B1h; provisional v0 prototype rules)
+
+**Status: owner-accepted provisional prototype rules (GP-2, GP-3, GP-4, the two pairs below, the ±1 bite adjustment, `s = +3`, the LOW-feint exit cap and the published LOW fallback).** Sections 1–12 are unchanged: a **direct** command (no real technique supplied) resolves exactly as before, with no new key in any direct record, history or snapshot. A feint is **one logical exchange**: it adds no window, no clock advance, no initiative, no chaining and no history array.
+
+**13.1 The pair table (explicit; never derived).** Only these two pairs exist:
+
+| Id | Side | Apparent → real | Required condition (public state) | Bite response (best counter to the apparent technique) |
+| --- | --- | --- | --- | --- |
+| FP-1 | Top | Crossface → Knee Slice | `top_base ≥ 1` (Partial) | `half_guard.bottom_response.underhook_fight` |
+| FP-2 | Bottom | Underhook → Recover Guard | `bottom_frame ≥ 1` (Partial) | `half_guard.top_response.head_control` |
+
+Flatten → Knee Slice is **excluded** (it failed the neutral-state counterplay rule of the proposal, §12.4). A real technique must differ from the apparent one, belong to the acting side, be listed, be break-capable and meet the condition. The apparent technique never resolves, changes no tier and appears in no grade.
+
+**13.2 Grade modifier.** For a feint only: `raw = RAW[real][response]`, then the unchanged steps 3.1–3.4 of §5.3 **read the real technique** (positional, attack readiness from the initiator's own track, defense readiness from the response). Then, **after the defense readiness step and before exhaustion**,
+`g3f = shift(g3, +1)` if `response == bite response`, else `shift(g3, −1)`. Exhaustion, magnitude and undercommitment follow on `g3f` (§5.3 steps 5–7) with the funded effective commitment. Every step saturates at ±2 on its own (sequential saturation; there is no combined modifier at the end).
+Direct techniques receive no feint modifier. A successful call grants the defender nothing beyond the reduced grade: no extra turn, token or initiative.
+
+**13.3 Funding (all-or-nothing surcharge `s = +3`).** Given the initiator's stamina `S`: if `S < 3` refuse; `funding = determine(commitment, S − 3)`; if unfunded refuse; `effective = funding.effective`; the initiator's total cost is `3 + cost(effective)` and is charged **once** at the settlement step of §5.5 (a shortfall cannot occur because funding was checked first). The responder is charged exactly as for a direct technique and never pays a surcharge. A feint therefore needs `S ≥ 6`.
+
+| Initiator stamina `S` | requested HIGH | requested MEDIUM | requested LOW |
+| --- | --- | --- | --- |
+| 0 – 5 | refused | refused | refused |
+| 6 – 9 | LOW, total 6 | LOW, total 6 | LOW, total 6 |
+| 10 – 14 | MEDIUM, total 10 | MEDIUM, total 10 | LOW, total 6 |
+| 15 + | HIGH, total 15 | MEDIUM, total 10 | LOW, total 6 |
+
+Direct costs stay LOW 3 / MEDIUM 7 / HIGH 12. An unfunded initiator may still attempt a direct technique but cannot feint, so a funded feint can never trigger Rule 1's responder waiver (`responder_waived = 0`). Exhaustion bands are captured before the charge and are unchanged.
+
+**13.4 LOW-effective exit cap.** A feint whose **funded effective** commitment is LOW may resolve, move the axis (clamped as usual), build or weaken tiers and flip initiative, but it **cannot produce an exit**, even when `final ≥ 1` and the proposed axis crosses a break line. MEDIUM and HIGH feints follow the real technique's normal exit rule (§3).
+
+**13.5 Settlement and record.** All settlement runs for the **real** technique: consumption, wear and builders (§5.7), `initiated_action_history` (the real id), the axis, the exit label and reason (the real technique's name). A feint record carries every key of the direct record (`action_id` is the **real** id; `initiator_effective_cost` is the cost of the effective commitment; `initiator_charged` is the total charged) **plus one extra key `feint`**:
+`{"apparent_action_id", "real_action_id", "bite_response_id", "bit": bool, "modifier": +1 | −1, "grade_before": g3, "grade_after": g3f, "surcharge": 3, "surcharge_charged": 3, "total_cost": 3 + cost, "exit_capped": bool}`; `exit_capped` is true exactly when the cap removed an exit that the real technique would otherwise have produced.
+
+**13.6 Admission of a feint** (additive to §8; direct precedence is unchanged). `attempt(..., real_action_id)` with a non-empty real id: the direct `attempt` checks first (context, commitments, `unknown_action`, `incorrect_action_side_or_kind` of the **apparent** id, response checks), then `feint_real_equals_apparent` → `unknown_action` / `incorrect_action_side_or_kind` (of the real id) → `feint_not_supported` (the pair is not listed, which includes a non-break-capable real) → `feint_not_eligible` (the condition fails) → `feint_requires_funding`. `submit` adds `feint_without_action` (a pass carrying a real id) after `commitment_without_action`. Every refusal leaves the state byte-identical.
+
+**13.7 Public information (GP-2, GP-3).** For a visible state, an apparent technique and a requested commitment the public intent view is a pure function of those three things: `eligible_real_ids` is the list of real techniques that the **pair table and the public conditions** allow for that apparent technique (`[]` when the technique has no pair or the condition fails; it ignores stamina and funding), and `commitment_requested` is the requested label (`MEDIUM` for an empty request). The view never contains the real technique, a feint flag, the funded effective commitment, a downgrade, a surcharge or a funding result. A direct command and any eligible feint with the same apparent technique and requested commitment therefore produce identical public information.
+
+**13.8 Defender timeout (session layer; not positional stalling; not the emergency-submission rule).** When the defender misses an ordinary decision deadline, the **session** supplies the published fallback below through the protocol's timeout path; the engine never reads a clock and never randomizes. The fallback resolves exactly like an active response (so it may bite or fail to bite) and is identified as `defaulted` in protocol metadata only.
+
+| Defender role | Fallback response | Requested commitment |
+| --- | --- | --- |
+| Bottom | `half_guard.bottom_response.hip_frame` | LOW |
+| Top | `half_guard.top_response.hip_pressure` | LOW |
+
+The only tactical consequence is the existing mechanics: if the funded effective commitment of the defender is lower than the attacker's, the existing undercommitment step gives the attacker `+1` (LOW vs MEDIUM/HIGH); there is **no** timeout-specific modifier, no free initiative window, no guaranteed outcome and no second clock advance. A defender that cannot fund LOW follows the existing unfunded handling (no free stamina). Attacker timeouts, positional stalling (Guide §§41–42) and the emergency submission-defense expiry are **not** implemented here and are untouched.
+
+**13.9 Limitations.** The surcharge, the ±1 bite value, the pair list and the fallback are provisional prototype values, not balance claims. The tactical measurements of B1h report structural reachability and policy-population outcomes only.

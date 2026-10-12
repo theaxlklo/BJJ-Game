@@ -13,6 +13,8 @@ const STEP_TENTHS: int = 10
 const PASS_LINE: int = 30
 const ESCAPE_LINE: int = -30
 const NO_BAND_CHANGE: int = 99
+# B1h feints (HALF_GUARD_V0_RULES.md section 13): the separately funded, all-or-nothing surcharge, in stamina points.
+const FEINT_SURCHARGE: int = 3
 
 # Readiness tiers (N-1): 0 None, 1 Partial, 2 Ready. Both tracks enter at Partial.
 const TIER_NAMES: Array[String] = ["None", "Partial", "Ready"]

@@ -484,7 +484,7 @@ class _HalfGuardSuiteWiring:
 
 class HalfGuardBoundariesWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
     NAME, STEP_PREFIX = 'Half Guard boundaries', 'Validate Half Guard v0 boundaries'
-    SCRIPT, LOG, EXPECTED = 'test_half_guard_boundaries.gd', '/tmp/half-guard-boundaries.log', 4006
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_boundaries.gd', '/tmp/half-guard-boundaries.log', 3999  # 4006 before B1h: the engine scope scan was revised on purpose
 
 
 class HalfGuardReferenceWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
@@ -521,7 +521,7 @@ class HalfGuardMountEdgeWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
 
     def test_earlier_half_guard_pins_are_untouched(self):
         text = WORKFLOW.read_text()
-        for name, count in (('/tmp/half-guard-boundaries.log', 4006), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151)):
+        for name, count in (('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151)):
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
 
@@ -532,20 +532,49 @@ class HalfGuardGraphWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
     def test_earlier_pins_are_untouched(self):
         text = WORKFLOW.read_text()
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
-                            ('/tmp/half-guard-boundaries.log', 4006), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
+                            ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
                             ('/tmp/half-guard-mount-edge.log', 3119)):
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
 
 class HalfGuardSealedProtocolWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
     NAME, STEP_PREFIX = 'Half Guard sealed protocol', 'Validate the Half Guard sealed-intent protocol'
-    SCRIPT, LOG, EXPECTED = 'test_half_guard_sealed_protocol.gd', '/tmp/half-guard-sealed-protocol.log', 41231
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_sealed_protocol.gd', '/tmp/half-guard-sealed-protocol.log', 42309  # 41231 before B1h (GP-2/GP-3, published fallback)
 
     def test_earlier_pins_are_untouched(self):
         text = WORKFLOW.read_text()
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
-                            ('/tmp/half-guard-boundaries.log', 4006), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
+                            ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
                             ('/tmp/half-guard-mount-edge.log', 3119), ('/tmp/half-guard-graph.log', 2125)):
+            self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
+
+
+class HalfGuardFeintReferenceWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Half Guard feint reference', 'Validate Half Guard feints against the independent Python oracle'
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_feint_reference.gd', '/tmp/half-guard-feint-reference.log', 26415
+
+    def test_feint_fixture_is_generated_before_the_replay_and_by_the_oracle_only(self):
+        text = WORKFLOW.read_text()
+        generate = text.index('python GODOT_V1/tests/generate_half_guard_feint_reference.py')
+        replay = text.index('res://tests/test_half_guard_feint_reference.gd')
+        self.assertLess(generate, replay)
+        self.assertEqual(text.count('generate_half_guard_feint_reference.py'), 1)
+        self.assertEqual(text.count('generate_half_guard_reference.py'), 1)  # the direct fixture generation step is untouched
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'generate_half_guard_feint_reference.py').read_text()
+        self.assertIn('from oracles import half_guard_v0_feint_scenarios', source)
+        self.assertNotIn('bjj_game', source)
+
+
+class HalfGuardFeintProtocolWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Half Guard feint protocol', 'Validate Half Guard feints through the sealed-intent protocol'
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_feint_protocol.gd', '/tmp/half-guard-feint-protocol.log', 32222
+
+    def test_earlier_pins_are_untouched_except_the_two_intentional_b1h_revisions(self):
+        text = WORKFLOW.read_text()
+        for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
+                            ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151), ('/tmp/half-guard-mount-edge.log', 3119),
+                            ('/tmp/half-guard-graph.log', 2125),
+                            ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-sealed-protocol.log', 42309)):
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
 

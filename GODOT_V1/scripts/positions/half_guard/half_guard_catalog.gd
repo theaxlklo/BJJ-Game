@@ -61,6 +61,32 @@ const BUILD: Dictionary = {
 # Exit label -> declared destination id. These nodes are declared but not implemented.
 const EXIT_DESTINATIONS: Dictionary = {"Side Control": "side_control", "Open Guard": "open_guard", "Closed Guard": "closed_guard"}
 
+# B1h (HALF_GUARD_V0_RULES.md section 13.1): the only feint pairs, listed and never derived. apparent -> {id, real, track, minimum_tier, bite}.
+# `bite` is the best counter to the APPARENT technique; `minimum_tier` is the public condition on the acting side's own track.
+const FEINT_PAIRS: Dictionary = {
+    TOP_CROSSFACE: {"id": "FP-1", "real": TOP_KNEE_SLICE, "track": TOP_BASE, "minimum_tier": 1, "bite": BOTTOM_UNDERHOOK_FIGHT},
+    BOTTOM_UNDERHOOK: {"id": "FP-2", "real": BOTTOM_RECOVER_GUARD, "track": BOTTOM_FRAME, "minimum_tier": 1, "bite": TOP_HEAD_CONTROL},
+}
+# Section 13.8: the published ordinary-decision fallback, by the DEFENDER's role. The session layer supplies it; the engine never reads a clock.
+const TIMEOUT_FALLBACK: Dictionary = {
+    "bottom": {"response_id": BOTTOM_HIP_FRAME, "commitment": BjjCommitment.LOW},
+    "top": {"response_id": TOP_HIP_PRESSURE, "commitment": BjjCommitment.LOW},
+}
+
+# The real techniques `apparent_id` may conceal in a PUBLIC state (the pair table crossed with the acting side's own track tier). A pure
+# function of its three arguments: it ignores stamina, funding and anything an attacker sealed.
+static func eligible_real_ids(apparent_id: String, top_base: int, bottom_frame: int) -> Array[String]:
+    var eligible: Array[String] = []
+    if FEINT_PAIRS.has(apparent_id):
+        var pair: Dictionary = FEINT_PAIRS[apparent_id]
+        var tier := top_base if str(pair.track) == TOP_BASE else bottom_frame
+        if tier >= int(pair.minimum_tier):
+            eligible.append(str(pair.real))
+    return eligible
+
+static func timeout_fallback(defender_role: String) -> Dictionary:
+    return TIMEOUT_FALLBACK[defender_role].duplicate() if TIMEOUT_FALLBACK.has(defender_role) else {}
+
 static func actions_of(side: String) -> Array[String]:
     return TOP_ACTIONS if side == "top" else BOTTOM_ACTIONS if side == "bottom" else []
 

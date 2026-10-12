@@ -7,7 +7,9 @@ extends RefCounted
 # counter and the histories. Settlement is one ordered, uniform path for every accepted exchange, exits included:
 #   admission -> capture -> grade (pre-exchange tiers) -> axis / band / exit / initiative -> stamina charges -> readiness
 #   updates (consume, wear, build) -> histories -> terminal fields.
-# Rejections happen before any mutation. No behaviors, drift, recovery, feints or sealed intent exist in v0.
+# Rejections happen before any mutation. No behaviors, drift or recovery exist in v0. B1h adds one optional input to the same path: an
+# explicit feint (HALF_GUARD_V0_RULES.md section 13): the real technique settles through this same pipeline; the sealed-intent protocol is a
+# separate wrapper and is never referenced here.
 # Shared stamina and commitment primitives are reused unchanged.
 const DEFAULT_COMMITMENT: String = BjjCommitment.MEDIUM
 
@@ -198,7 +200,7 @@ func open_window_for(duration: Variant) -> Result:
     return result
 
 func _admission_error(requested_window_id: int, fighter_id: String, action_id: String, response_id: String,
-        commitment: String, response_commitment: String) -> String:
+        commitment: String, response_commitment: String, real_action_id: String = "") -> String:
     if not window_open:
         return "no_open_window"
     if requested_window_id != window_id:
@@ -219,12 +221,14 @@ func _admission_error(requested_window_id: int, fighter_id: String, action_id: S
         return "response_without_action"
     if action_id.is_empty() and not (commitment.is_empty() and response_commitment.is_empty()):
         return "commitment_without_action"
+    if action_id.is_empty() and not real_action_id.is_empty():
+        return "feint_without_action"
     return ""
 
 # One decision for the open window: an empty action is a pass, anything else an exchange. Everything is checked before any mutation.
 func decide(requested_window_id: int, fighter_id: String, action_id: String = "", response_id: String = "",
-        commitment: String = "", response_commitment: String = "") -> Result:
-    var error := _admission_error(requested_window_id, fighter_id, action_id, response_id, commitment, response_commitment)
+        commitment: String = "", response_commitment: String = "", real_action_id: String = "") -> Result:
+    var error := _admission_error(requested_window_id, fighter_id, action_id, response_id, commitment, response_commitment, real_action_id)
     if not error.is_empty():
         return _fail(error)
     var side := window_side
@@ -238,7 +242,7 @@ func decide(requested_window_id: int, fighter_id: String, action_id: String = ""
             "detail": {"settlement": {"kind": "reset", "initiator": side, "next_initiator": initiator}},
             "transition": BjjHalfGuardCatalog.transition_fields(exit_destination), "ended": is_ended(), "state": state_fields()}
         return result
-    var attempted := attempt(action_id, response_id, DEFAULT_COMMITMENT if commitment.is_empty() else commitment, response_commitment)
+    var attempted := attempt(action_id, response_id, DEFAULT_COMMITMENT if commitment.is_empty() else commitment, response_commitment, real_action_id)
     if not attempted.ok():
         return _fail(attempted.error)
     window_open = false
@@ -268,20 +272,55 @@ func _shape_error(action_id: String, response_id: String, commitment: String, re
         return "incorrect_response_side_or_kind"
     return ""
 
+# Feint admission, after the direct shape checks (section 13.6): equality, the real id's own shape, the pair table, the public condition on the
+# acting side's own track, then funding. Pure. The same function backs the sealed protocol's seal check, so there is one authority.
+func feint_error(apparent_id: String, real_id: String, commitment: String) -> String:
+    if real_id == apparent_id:
+        return "feint_real_equals_apparent"
+    if not BjjHalfGuardCatalog.ENTITIES.has(real_id):
+        return "unknown_action"
+    var real: Dictionary = BjjHalfGuardCatalog.ENTITIES[real_id]
+    if str(real.kind) != "action" or str(real.side) != initiator:
+        return "incorrect_action_side_or_kind"
+    if not BjjHalfGuardCatalog.FEINT_PAIRS.has(apparent_id) or str(BjjHalfGuardCatalog.FEINT_PAIRS[apparent_id].real) != real_id \
+            or not BjjHalfGuardCatalog.is_break_capable(real_id):
+        return "feint_not_supported"
+    if BjjHalfGuardCatalog.eligible_real_ids(apparent_id, top_base, bottom_frame).is_empty():
+        return "feint_not_eligible"
+    if _feint_funding(_pool_of(initiator).current, commitment) == null:
+        return "feint_requires_funding"
+    return ""
+
+# Surcharge first (all-or-nothing), then the existing funding policy on what remains. null = refused (nothing is ever partially funded).
+func _feint_funding(available: int, requested: String) -> BjjStaminaCostPolicy.Funding:
+    if available < BjjHalfGuardRules.FEINT_SURCHARGE:
+        return null
+    var funding := cost_policy.determine(requested, available - BjjHalfGuardRules.FEINT_SURCHARGE)
+    return null if funding.effective == BjjCommitment.UNFUNDED else funding
+
 # Match-level exchange for the current initiator (no window). `commitment` must be valid; an empty response commitment is MEDIUM.
-func attempt(action_id: String, response_id: String, commitment: String, response_commitment: String = "") -> Result:
+# A non-empty `real_action_id` makes it a feint: `action_id` is then the APPARENT technique (it never resolves) and the real technique
+# settles everything below. An empty one is a direct technique and every line behaves exactly as before B1h.
+func attempt(action_id: String, response_id: String, commitment: String, response_commitment: String = "", real_action_id: String = "") -> Result:
     var error := validate_context()
     if error.is_empty():
         error = _shape_error(action_id, response_id, commitment, response_commitment)
+    var feint := not real_action_id.is_empty()
+    if error.is_empty() and feint:
+        error = feint_error(action_id, real_action_id, commitment)
     if not error.is_empty():
         return _fail(error)
+    var apparent_id := action_id
+    if feint:
+        action_id = real_action_id
     var side := initiator
     var other := "bottom" if side == "top" else "top"
     var initiator_pool := _pool_of(side)
     var responder_pool := _pool_of(other)
     # Capture before any charge.
     var requested_response := DEFAULT_COMMITMENT if response_commitment.is_empty() else response_commitment
-    var initiator_funding := cost_policy.determine(commitment, initiator_pool.current)
+    var initiator_funding := _feint_funding(initiator_pool.current, commitment) if feint else cost_policy.determine(commitment, initiator_pool.current)
+    var initiator_total_cost := initiator_funding.effective_cost + (BjjHalfGuardRules.FEINT_SURCHARGE if feint else 0)
     var responder_funding := cost_policy.determine(requested_response, responder_pool.current)
     var input := BjjHalfGuardResolver.Inputs.new()
     input.side = side
@@ -295,12 +334,13 @@ func attempt(action_id: String, response_id: String, commitment: String, respons
     input.responder_band = responder_pool.band
     input.initiator_effective = initiator_funding.effective
     input.responder_effective = responder_funding.effective
+    input.feint_apparent_id = apparent_id if feint else ""
     var resolution := BjjHalfGuardResolver.resolve(input)
     var tiers_before := {"top_base": top_base, "bottom_frame": bottom_frame}
     var band_before := band
     var axis_before := axis_tenths
     # Stamina charges: the initiator first, then the responder unless Rule 1 waives the charge.
-    var initiator_charge := initiator_pool.spend_up_to(initiator_funding.effective_cost)
+    var initiator_charge := initiator_pool.spend_up_to(initiator_total_cost)
     var waived := 0
     var responder_cost := responder_funding.effective_cost
     if BjjCommitmentSettlement.waives_response_cost(true, initiator_funding.effective):
@@ -354,4 +394,10 @@ func attempt(action_id: String, response_id: String, commitment: String, respons
         "band_before": band_before, "band_after": resolution.band_after, "exit_destination": resolution.exit_destination,
         "tiers_before": tiers_before, "tiers_after": {"top_base": top_base, "bottom_frame": bottom_frame},
         "readiness_changes": readiness.changes.duplicate()}
+    if feint:
+        result.values["feint"] = {"apparent_action_id": apparent_id, "real_action_id": action_id,
+            "bite_response_id": str(BjjHalfGuardCatalog.FEINT_PAIRS[apparent_id].bite), "bit": resolution.feint_bit,
+            "modifier": resolution.feint_modifier, "grade_before": resolution.grade_after_defense, "grade_after": resolution.grade_after_feint,
+            "surcharge": BjjHalfGuardRules.FEINT_SURCHARGE, "surcharge_charged": BjjHalfGuardRules.FEINT_SURCHARGE,
+            "total_cost": initiator_total_cost, "exit_capped": resolution.exit_capped}
     return result

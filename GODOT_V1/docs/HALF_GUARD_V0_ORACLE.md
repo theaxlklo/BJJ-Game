@@ -12,7 +12,10 @@ engine can be compared with a second, independently written implementation. It i
 | `tests/oracles/half_guard_v0_scenarios.py` | Bounded, deterministic scenario families and structural searches (shared by tests and generator) |
 | `tests/test_half_guard_oracle.py` | Focused unit tests (hand-computed literals, boundary grids, trajectories, frozen cross-checks, doc consistency) |
 | `GODOT_V1/tests/generate_half_guard_reference.py` | Deterministic JSONL fixture generator for the later Godot parity suite (output git-ignored; **not wired into CI yet**) |
-| `GODOT_V1/docs/HALF_GUARD_V0_RULES.md` | The canonical rules sheet the oracle is written from |
+| `GODOT_V1/docs/HALF_GUARD_V0_RULES.md` | The canonical rules sheet the oracle is written from (section 13 holds the B1h feint, funding and timeout rules) |
+| `tests/oracles/half_guard_v0_feint_scenarios.py` | B1h feint families: feint grid, funding boundary grid, published-fallback rows, refusals with precedence, window trajectories, public intent views |
+| `tests/test_half_guard_feint_oracle.py` | B1h focused tests: hand-computed literals (arithmetic in comments), the funding table, sequential saturation, the exit cap, timeout, admission, public-information equivalence, the unchanged direct fixture digest, byte-identical regeneration |
+| `GODOT_V1/tests/generate_half_guard_feint_reference.py` | Deterministic JSONL generator for the feint parity fixture (`half_guard_feint_reference.jsonl`, git-ignored). The direct fixture and its generator are untouched |
 
 ## Independence evidence
 
@@ -42,7 +45,13 @@ the break grid covers the six break matchups across 16 axis boundary values and 
 
 ## Known limitations
 
-* The oracle covers direct techniques, preparation, defensive effort, entry, windows and replay only. Feints, the sealed-intent protocol, behaviors, recovery, Standing and contract-level addressing are out of scope.
+* The oracle covers direct techniques, preparation, defensive effort, entry, windows and replay, and (B1h) the two explicit feint pairs, the feint surcharge, the public intent view and the published timeout fallback as pure rules. The sealed-intent *protocol* object (seal / respond / events / session end), behaviors, recovery, Standing and contract-level addressing are out of scope: the protocol is tested in Godot against literals and against these oracle rows.
 * Runtime evidence is from the system Python used locally; Python 3.11 / 3.13 runtime evidence is CI-only. Syntax compatibility of every new file was checked with `ast.parse(..., feature_version=(3, 11))`, `(3, 13)` and `(3, 14)`.
 * The fixture embeds full snapshots (large); the later Godot suite may prefer a compact encoding.
 * Structural searches use fixed responder policies; they are reachability facts, not balance evidence.
+
+## B1h feint extension
+
+`HalfGuard.attempt(..., real_action_id)` and `submit(..., real_action_id)` take an optional real technique; an empty value is a **direct** command and runs the original code unchanged (the direct fixture is byte-identical: the digest `62da6805…3517fb` of `generate_half_guard_reference.py` is pinned by a test). `feint_funding`, `eligible_real_ids`, `public_intent_view` and `TIMEOUT_FALLBACK` are pure helpers. The feint record carries every direct key plus one `feint` sub-record; direct records never gain a key.
+
+A development-time mutation control (disposable copies, not committed) confirmed that each of these single mutations is detected by `test_half_guard_feint_oracle.py`: surcharge 3→2; reversed bite; the modifier applied after exhaustion; one combined unsaturated modifier; the LOW exit cap removed; the cap keyed on the requested instead of the effective commitment; the surcharge not charged; the surcharge charged twice; funding that ignores the surcharge; readiness read from the apparent technique; eligibility that ignores the tier; a public view that carries the real technique; a published fallback without a commitment; and Flatten → Knee Slice admitted.
