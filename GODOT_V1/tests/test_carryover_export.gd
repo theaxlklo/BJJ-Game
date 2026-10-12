@@ -557,7 +557,8 @@ func _initialize() -> void:
         if (int(p.usage) & PROPERTY_USAGE_SCRIPT_VARIABLE) != 0:
             graph_properties.append(str(p.name))
     graph_properties.sort()
-    check("graph gained no state", graph_properties, ["_blocked", "_events", "_gateway", "_status", "_terminal_reason"])
+    # HG-16 revises this pin: the B1d Half Guard slot, receiver table and cadence are the only additions (carry-over state is not among them).
+    check("graph gained no carry-over state", graph_properties, ["_blocked", "_events", "_gateway", "_half_guard", "_interval_seconds", "_receivers", "_status", "_terminal_reason"])
 
     print("carry-over export checks: ", checks)
     print("carry-over export failures: ", failures)

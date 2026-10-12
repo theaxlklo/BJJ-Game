@@ -138,14 +138,16 @@ func _initialize() -> void:
     check("fresh status", fresh.status(), "active")
     check("fresh events empty", fresh.events().size(), 0)
     check("fresh blocked empty", fresh.blocked_transition().is_empty(), true)
-    check("one gateway, no second owner", fresh._gateway is BjjMatchWindowGateway, true)
+    check("one Mount gateway; the Half Guard slot is empty on a default graph (HG-16)", [fresh._gateway is BjjMatchWindowGateway, fresh._half_guard == null, fresh.active_position_id()], [true, true, "mount"])
     var own_properties: Array[String] = []
     for p: Dictionary in fresh.get_property_list():
         if (int(p.usage) & PROPERTY_USAGE_SCRIPT_VARIABLE) != 0:
             own_properties.append(str(p.name))
     own_properties.sort()
-    check("graph holds only gateway, status, events, blocked, terminal reason", own_properties,
-        ["_blocked", "_events", "_gateway", "_status", "_terminal_reason"])
+    # HG-16 revises this pin: the retained Mount gateway is still the only Mount owner; the typed nullable Half Guard slot, the
+    # opt-in receiver table and the cadence are the only additions.
+    check("graph holds gateway, Half Guard slot, receivers, cadence, status, events, blocked, terminal reason", own_properties,
+        ["_blocked", "_events", "_gateway", "_half_guard", "_interval_seconds", "_receivers", "_status", "_terminal_reason"])
 
     # ---- 2. Rejections leave the whole graph unchanged ---------------------------------------
     var g := graph_of(config(modern_rules()))

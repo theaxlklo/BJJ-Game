@@ -1,8 +1,11 @@
 # Mount carry-over export (A3b)
 
 Status: additive, read-only, validated, detached record of Mount state that a future position
-transition may need. **No receiver exists.** Nothing here creates a Half Guard, commits a graph
+transition may need. Nothing here creates a Half Guard, commits a graph
 transition, re-arms D3-B, changes stamina policy or defines a combat rule. Python is untouched.
+(Since B1c/B1d an **opt-in** receiver exists elsewhere: `BjjHalfGuardMountEdge` reads this record and
+`BjjPositionGraphMatch.create_with_receivers` can commit it. The record, its validators and the
+default graph are unchanged; see `HALF_GUARD_V0_ENGINE.md`.)
 See [POSITION_TOPOLOGY.md](POSITION_TOPOLOGY.md) (A3c, proposal) for how this v1 record relates to a wider
 topology and how it would be versioned when a destination becomes executable.
 
@@ -65,6 +68,11 @@ The blocked `reason` is validated against the segment exit: a resolved exit (`Ha
 validated exit's `resolved` flag, not from a second label mapping. **This is a v1 assumption** that no destination
 position is implemented: when one is, halted-export validation (reasons, and the `ended`-with-exit rejection)
 must be updated deliberately, together with a schema version decision.
+
+**B1d note.** The v1 assumption is deliberately left unchanged. An opt-in graph that has committed to Half Guard
+refuses `carryover_export()` with `carryover_unsupported_position` (no v2 envelope is invented), and a graph halted
+with `transition_entry_invalid` (Mount still the retained segment) is refused by this unchanged validator with
+`inconsistent_graph_segment`; both codes are pinned by `test_half_guard_graph.gd`.
 
 ## Validation (exact keys, exact types, no side effects, never calls validate_context)
 

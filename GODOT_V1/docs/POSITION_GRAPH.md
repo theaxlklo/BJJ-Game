@@ -103,8 +103,16 @@ One atomic graph-owner step, run only after an accepted decision whose outcome i
 
 Event order (fixed, replay-checked): `decision_accepted` (the exit exchange, already settled by
 Mount) → `transition_committed` → later, caller-driven `window_opened`. Events are never
-reordered, merged or duplicated. Any failure in steps 1–4 leaves the whole graph state
-bit-identical and appends nothing.
+reordered, merged or duplicated. Any failure in steps 1–2 (a rejected command) leaves the whole
+graph state bit-identical and appends nothing.
+
+> **Amendment (HG-18, implemented in B1d; owner-approved).** Steps 3–4 run **after** the exit
+> exchange has been accepted and settled, so a failure there cannot leave the state bit-identical:
+> the settled exchange cannot be rolled back. In the opt-in Half Guard graph such a failure appends
+> `transition_blocked` with reason `transition_entry_invalid` and halts; nothing is partially
+> activated and the Mount segment is retained as the (halted) active history. This is unreachable
+> for a valid Mount export and is exercised through the receiver-table injection seam. The default
+> graph is unaffected: it has no receivers and halts on every Mount exit.
 
 ## 6. D4 — shared state versus position-specific policy
 
@@ -174,13 +182,16 @@ cross-position record. Commitment baseline is not recomputed by the transition.
 Two situations are kept apart and must never be conflated:
 
 - **A rejected command** (invalid, stale, duplicate, unknown fighter, wrong initiative, command
-  after a halt, failed construction validation) leaves the **entire graph state unchanged**:
+  after a halt) leaves the **entire graph state unchanged** (a receiver that fails *after* an
+  accepted exit is the HG-18 case below, not a rejected command):
   Mount state, clock, pools, histories, controller record, window record, event log and status.
 - **An accepted exchange whose destination is unavailable** (`Reversal`, unimplemented
   `Half Guard` / `Open Guard`) is **not** rolled back. The exchange stays accepted and settled:
   its stamina, clock, positional and history changes remain. The graph then appends
   `transition_blocked`, enters `halted_at_unsupported_transition`, instantiates no destination
   and invents no winner, score or terminal result; later commands are rejected without mutation.
+- **An accepted exit whose receiver fails validation** (opt-in graphs only; HG-18) is treated the same
+  way: the exchange stands, the graph halts with `transition_entry_invalid`, and nothing is activated.
 
 The exit-producing exchange is atomic through the existing owners. The deferred gateway hardening (an unreachable
 post-mutation settlement guard) is a separate maintenance task; this specification neither
