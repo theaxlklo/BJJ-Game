@@ -597,5 +597,87 @@ class HalfGuardGraphSealedFlowWiringTests(_HalfGuardSuiteWiring, unittest.TestCa
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
 
+class MatchFlowInvariantsWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Match-flow invariants', 'Validate the connected match-flow structural invariants'
+    SCRIPT, LOG, EXPECTED = 'test_match_flow_invariants.gd', '/tmp/match-flow-invariants.log', 73606
+
+    def test_the_harness_and_the_measurement_script_exist_and_are_shared(self):
+        tests = WORKFLOW.parents[2] / 'GODOT_V1' / 'tests'
+        for name in ('match_flow_harness.gd', 'measure_match_flow.gd', 'test_match_flow_invariants.gd'):
+            self.assertTrue((tests / name).is_file(), name)
+        self.assertIn('res://tests/match_flow_harness.gd', (tests / 'test_match_flow_invariants.gd').read_text())
+        self.assertIn('res://tests/match_flow_harness.gd', (tests / 'measure_match_flow.gd').read_text())
+
+    def test_earlier_pins_are_untouched(self):
+        text = WORKFLOW.read_text()
+        for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
+                            ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
+                            ('/tmp/half-guard-mount-edge.log', 3119), ('/tmp/half-guard-sealed-protocol.log', 42309), ('/tmp/half-guard-feint-reference.log', 26415),
+                            ('/tmp/half-guard-feint-protocol.log', 32222), ('/tmp/half-guard-graph.log', 2133), ('/tmp/half-guard-graph-sealed-flow.log', 2433)):
+            self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
+
+
+class MatchFlowMeasurementSmokeWiringTests(unittest.TestCase):
+    PREFIX = 'Smoke-run the match-flow measurement harness'
+
+    def step(self):
+        text = WORKFLOW.read_text()
+        match = re.search(r'^      - name: %s[^\n]*\n(.*?)(?=^      - name: )' % re.escape(self.PREFIX), text, re.S | re.M)
+        self.assertIsNotNone(match, 'smoke step not found')
+        return match.group(1)
+
+    def test_the_smoke_step_gates_no_measured_value(self):
+        step = self.step()
+        live = [line.strip() for line in step.splitlines() if line.strip() and not line.strip().startswith('#')]
+        self.assertIn('set -euo pipefail', live)
+        self.assertIn('shell: bash', live)
+        self.assertTrue(any('measure_match_flow.gd -- seeds=1 hg_seeds=1' in line for line in live), live)
+        # it checks the exit code, determinism and harness errors, and nothing numeric about outcomes
+        self.assertIn('test "$status" -eq 0', live)
+        self.assertTrue(any('replay IDENTICAL' in line for line in live))
+        self.assertTrue(any('violations: 0' in line for line in live))
+        self.assertNotIn('--expected-assertions', step)
+        self.assertNotRegex(step, r'(?i)(tap|timeout|halt|exhaust|feint)[a-z_ ]*[=:]\s*[1-9]')
+        for forbidden in ('continue-on-error', '\n        if:', 'set +e'):
+            self.assertNotIn(forbidden, step)
+
+    def test_the_smoke_script_runs_once_and_prints_the_checked_phrases(self):
+        self.assertEqual(WORKFLOW.read_text().count('res://tests/measure_match_flow.gd'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'measure_match_flow.gd').read_text()
+        for phrase in ('replay %s', 'policy errors (a refused command the harness did not intend; any non-zero value is a harness defect): %d', 'violations: %d'):
+            self.assertIn(phrase, source)
+
+
+class MatchFlowReportConsistencyTests(unittest.TestCase):
+    """The committed diagnostic report must agree with the committed deterministic measurement output (no hand-edited number can drift unnoticed)."""
+    DOCS = WORKFLOW.parents[2] / 'GODOT_V1' / 'docs'
+
+    def test_the_measurement_file_matches_its_declared_digest_and_the_report_quotes_it(self):
+        import hashlib
+        text = (self.DOCS / 'MATCH_FLOW_MEASUREMENTS.md').read_text()
+        header, body = text.split('-->\n\n', 1)
+        declared = re.search(r'SHA-256 of that body: ([0-9a-f]{64})', header).group(1)
+        self.assertEqual(hashlib.sha256(body.encode()).hexdigest(), declared)
+        report = (self.DOCS / 'MATCH_FLOW_DIAGNOSTICS.md').read_text()
+        self.assertIn(declared, report)
+        population = re.search(r'population trace digest \(first run\) ([0-9a-f]{64}); \(second run\) ([0-9a-f]{64}); replay IDENTICAL', body)
+        self.assertIsNotNone(population)
+        self.assertEqual(population.group(1), population.group(2))
+        self.assertIn(population.group(1), report)
+
+    def test_the_structural_totals_in_the_measurements_are_clean(self):
+        body = (self.DOCS / 'MATCH_FLOW_MEASUREMENTS.md').read_text()
+        self.assertRegex(body, r'policy errors \(a refused command the harness did not intend; any non-zero value is a harness defect\): 0\n')
+        self.assertRegex(body, r'transitions checked for identity, stamina, latch, meter, clock and window continuity: \d+; violations: 0\n')
+        self.assertRegex(body, r'\(Half Guard v0 has no recovery rule\): 0\n')
+        match = re.search(r'published-fallback exchanges: (\d+); undercommitment \+1 applied: (\d+); expected from the funded commitments alone: (\d+); any other modifier difference: (\d+)', body)
+        self.assertEqual((match.group(2), match.group(4)), (match.group(3), '0'))
+
+    def test_the_documents_state_their_scope(self):
+        report = (self.DOCS / 'MATCH_FLOW_DIAGNOSTICS.md').read_text()
+        for phrase in ('**STRUCTURAL**', '**POPULATION**', '**DESIGN QUESTION**', 'Nothing here is a balance qualification', 'incomplete-engine boundary'):
+            self.assertIn(phrase, report)
+
+
 if __name__ == '__main__':
     unittest.main()

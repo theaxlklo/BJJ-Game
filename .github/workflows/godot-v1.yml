@@ -355,5 +355,31 @@ jobs:
           cat /tmp/half-guard-graph-sealed-flow.log
           python tools/ci/validate_mount_slice_log.py /tmp/half-guard-graph-sealed-flow.log --name "Half Guard graph sealed flow" --exit-code "$status" --expected-assertions 2433
 
+      - name: Validate the connected match-flow structural invariants (real games, live observer, rejected-command probes; not a population measurement)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_match_flow_invariants.gd or match_flow_harness.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_match_flow_invariants.gd > /tmp/match-flow-invariants.log 2>&1 || status=$?
+          cat /tmp/match-flow-invariants.log
+          python tools/ci/validate_mount_slice_log.py /tmp/match-flow-invariants.log --name "Match-flow invariants" --exit-code "$status" --expected-assertions 73606
+
+      - name: Smoke-run the match-flow measurement harness (exit code, determinism and policy errors only; no measured value is gated)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The exploratory populations (GODOT_V1/docs/MATCH_FLOW_DIAGNOSTICS.md) are evidence, never a gate. This only proves that the harness still runs
+          # to completion on the current code, replays identically and produced no harness error, on a deliberately tiny seed count.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/measure_match_flow.gd -- seeds=1 hg_seeds=1 > /tmp/match-flow-measure.log 2>&1 || status=$?
+          tail -n 25 /tmp/match-flow-measure.log
+          test "$status" -eq 0
+          grep -q "replay IDENTICAL" /tmp/match-flow-measure.log
+          grep -q "policy errors (a refused command the harness did not intend; any non-zero value is a harness defect): 0" /tmp/match-flow-measure.log
+          grep -q "violations: 0" /tmp/match-flow-measure.log
+          ! grep -q -E "^(ERROR|SCRIPT ERROR)" /tmp/match-flow-measure.log
+
       - name: Smoke-test the default scene (2D Mount practice; the 3D greybox stays a separate diagnostic scene)
         run: godot --headless --path GODOT_V1 --quit-after 5
