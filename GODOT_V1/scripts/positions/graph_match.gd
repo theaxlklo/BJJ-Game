@@ -13,6 +13,12 @@ extends RefCounted
 # identity stay with the active segment's gateway; every view here is a detached read through it. The graph owns only
 # its status, its global event log, the recorded blocked transition and (opt-in) the receiver table and cadence.
 #
+# B1i adds ONE more explicit opt-in (create_with_sealed_half_guard): the same receiver table and activation, plus the Half Guard sealed
+# protocol adopted onto the graph's OWN already-constructed Half Guard gateway (never a second simulation). The graph coordinates match
+# flow; it does not prescribe a sequence of positions: a match stays in its current position through any number of accepted exchanges and
+# can end there (timeout or tap); only a legal, accepted positional exit triggers a transition. The graph owns no combat rule: every
+# accepted resolution, direct or sealed, feeds the SAME settlement function below.
+#
 # An accepted exchange that exits Mount stays accepted and settled. Because no destination
 # position exists yet (Half Guard / Open Guard unimplemented, Reversal unresolved), the graph
 # records one `transition_blocked` event and halts. A halt is not a match outcome: no winner,
@@ -31,10 +37,18 @@ const RECEIVER_IDS: Array[String] = [HALF_GUARD_ID]
 const ERROR_INVALID_RECEIVERS: String = "invalid_receivers"
 const ERROR_UNSUPPORTED_EXPORT: String = "carryover_unsupported_position"
 const REASON_ENTRY_INVALID: String = "transition_entry_invalid"
+# B1i (opt-in sealed Half Guard decisions)
+const ERROR_MATCH_ENDED: String = "match_ended"
+const ERROR_SEALED_NOT_ENABLED: String = "sealed_protocol_not_enabled"
+const ERROR_WRONG_POSITION: String = "wrong_active_position"
 
 var _gateway: BjjMatchWindowGateway
 # Typed, nullable second segment (HG-16). Null until a validated Mount -> Half Guard commit; while null Mount is the active position.
 var _half_guard: BjjHalfGuardWindowGateway
+# B1i: typed, nullable. Set only together with `_half_guard`, on an opt-in graph, and it ADOPTS that very gateway (same object). While it is
+# set every Half Guard command that can change the simulation goes through it, so a pending seal cannot be bypassed.
+var _sealed: BjjHalfGuardSealedProtocol
+var _sealed_enabled: bool = false
 # Opt-in receiver table {destination position id: Callable(record, interval_seconds) -> BjjHalfGuardWindowGateway.Creation}; empty by default.
 var _receivers: Dictionary = {}
 # Window cadence handed to a receiver (HG-25): the graph's own configured interval.
@@ -74,6 +88,20 @@ static func create_with_receivers(configuration: Dictionary, top_fighter_id: Str
     var table: Dictionary = receivers
     result.graph._receivers = table.duplicate()
     result.graph._interval_seconds = int(configuration.get("interval", BjjMountRules.DEFAULT_INTERVAL_SECONDS))
+    return result
+
+# B1i explicit opt-in: the B1d receiver table and activation (nothing is bypassed) PLUS the Half Guard sealed protocol, adopted at the
+# Mount -> Half Guard commit. `receivers` defaults to the qualified edge and must contain the half_guard receiver (a sealed graph with no
+# way into Half Guard would be a silent no-op). Mount is untouched: no sealed protocol exists until, and unless, Half Guard is entered.
+static func create_with_sealed_half_guard(configuration: Dictionary, top_fighter_id: String, bottom_fighter_id: String, receivers: Variant = null) -> Creation:
+    var table: Variant = default_receivers() if receivers == null else receivers
+    if not _receivers_are_valid(table) or not (table as Dictionary).has(HALF_GUARD_ID):
+        var rejected := Creation.new()
+        rejected.error = ERROR_INVALID_RECEIVERS
+        return rejected
+    var result := create_with_receivers(configuration, top_fighter_id, bottom_fighter_id, table)
+    if result.ok():
+        result.graph._sealed_enabled = true
     return result
 
 # The Half Guard edge as a receiver table, for future callers and tests. No production caller exists yet (F1 uses `create`).
@@ -251,7 +279,7 @@ func open_window() -> BjjMatchWindowGateway.Report:
 func open_window_for(duration: Variant) -> BjjMatchWindowGateway.Report:
     if _status == STATUS_HALTED:
         return _rejected(ERROR_HALTED)
-    var report := _half_guard.open_window_for(duration) if _half_guard != null else _gateway.open_window_for(duration)
+    var report := _hg_open(duration) if _half_guard != null else _gateway.open_window_for(duration)
     if not report.ok():
         return report
     if report.values.get("closed", false):
@@ -267,11 +295,95 @@ func submit(window_id: int, fighter_id: String, action_id: String = "", response
     if _status == STATUS_HALTED:
         return _rejected(ERROR_HALTED)
     var source := active_position_id()
-    var report := _half_guard.submit(window_id, fighter_id, action_id, response_id, commitment, response_commitment) if _half_guard != null \
+    var report := _hg_submit(window_id, fighter_id, action_id, response_id, commitment, response_commitment) if _half_guard != null \
         else _gateway.submit(window_id, fighter_id, action_id, response_id, commitment, response_commitment)
     if not report.ok():
         return report
-    _append({"kind": "decision_accepted", "window_id": window_id, "fighter_id": fighter_id,
+    _settle_accepted(source, report)
+    return report
+
+# --- Sealed Half Guard decisions (B1i; opt-in) ------------------------------------------------------------------
+# Admission is the graph's: a halted or ended match, a graph that did not opt in, and Mount being the active position are all refused
+# BEFORE anything is forwarded, so a refusal changes nothing. The protocol owns the seal / respond / reveal workflow; the graph only
+# classifies what an accepted resolution means for the match. A seal is not a combat exchange and appends no graph event.
+
+func sealed_protocol_enabled() -> bool:
+    return _sealed_enabled
+
+func seal_intent(window_id: int, fighter_id: String, action_id: String, commitment: String = "", real_action_id: String = "") -> BjjMatchWindowGateway.Report:
+    var error := _sealed_admission()
+    if not error.is_empty():
+        return _rejected(error)
+    return _sealed.seal_intent(window_id, fighter_id, action_id, commitment, real_action_id)
+
+func public_intent_view() -> BjjMatchWindowGateway.Report:
+    var error := _sealed_admission()
+    if not error.is_empty():
+        return _rejected(error)
+    return _sealed.public_intent_view()
+
+func sealed_intent_view(fighter_id: String) -> BjjMatchWindowGateway.Report:
+    var error := _sealed_admission()
+    if not error.is_empty():
+        return _rejected(error)
+    return _sealed.sealed_intent_view(fighter_id)
+
+# The responder's committed response. An accepted resolution is classified exactly like a direct accepted exchange.
+func respond(window_id: int, fighter_id: String, intent_serial: int, response_id: String, response_commitment: String = "") -> BjjMatchWindowGateway.Report:
+    var error := _sealed_admission()
+    if not error.is_empty():
+        return _rejected(error)
+    var source := active_position_id()
+    var report := _sealed.respond(window_id, fighter_id, intent_serial, response_id, response_commitment)
+    if not report.ok():
+        return report
+    _settle_accepted(source, report)
+    return report
+
+# The ordinary defender-decision timeout: the session supplies the PUBLISHED fallback of the defender's role (the protocol refuses anything
+# else). It is a normal accepted exchange for the graph; it is not positional stalling and not an emergency submission-defense timeout.
+func apply_response_timeout(window_id: int, intent_serial: int, fallback_response_id: String, fallback_response_commitment: String = "") -> BjjMatchWindowGateway.Report:
+    var error := _sealed_admission()
+    if not error.is_empty():
+        return _rejected(error)
+    var source := active_position_id()
+    var report := _sealed.apply_response_timeout(window_id, intent_serial, fallback_response_id, fallback_response_commitment)
+    if not report.ok():
+        return report
+    _settle_accepted(source, report)
+    return report
+
+# Redacted public protocol events (detached). Empty unless a sealed Half Guard is active or was; the real technique appears only after the reveal.
+func sealed_public_events() -> Array:
+    return [] if _sealed == null else _sealed.public_events()
+
+# --- Internals -----------------------------------------------------------------------------
+
+func _sealed_admission() -> String:
+    if _status == STATUS_HALTED:
+        return ERROR_HALTED
+    if _status == STATUS_ENDED:
+        return ERROR_MATCH_ENDED
+    if not _sealed_enabled:
+        return ERROR_SEALED_NOT_ENABLED
+    if _sealed == null:
+        return ERROR_WRONG_POSITION
+    return ""
+
+# Every Half Guard command that can change the simulation goes through the adopted protocol when there is one (its pending-seal gate and
+# divergence guard then apply to the legacy path too); otherwise straight to the B1d gateway slot exactly as before.
+func _hg_open(duration: Variant) -> BjjMatchWindowGateway.Report:
+    return _sealed.open_window_for(duration) if _sealed != null else _half_guard.open_window_for(duration)
+
+func _hg_submit(window_id: int, fighter_id: String, action_id: String, response_id: String, commitment: String, response_commitment: String) -> BjjMatchWindowGateway.Report:
+    if _sealed != null:
+        return _sealed.submit(window_id, fighter_id, action_id, response_id, commitment, response_commitment)
+    return _half_guard.submit(window_id, fighter_id, action_id, response_id, commitment, response_commitment)
+
+# THE settlement path. A direct submit, a sealed respond and a published-fallback timeout all end here with an ACCEPTED report: one
+# decision_accepted event, then continue (no exit), transition / halt (an exit) or terminal (an accepted tap or clock end that is not an exit).
+func _settle_accepted(source: String, report: BjjMatchWindowGateway.Report) -> void:
+    _append({"kind": "decision_accepted", "window_id": report.values.window_id, "fighter_id": report.values.fighter_id,
         "role": report.values.role, "decision": report.values.kind})
     var exit_label: String = str(report.values.transition.raw_destination)
     var verdict := _classify(source, exit_label)
@@ -282,9 +394,6 @@ func submit(window_id: int, fighter_id: String, action_id: String = "", response
     elif report.values.ended:
         _record_terminal()
     report.values["graph"] = _graph_fields()
-    return report
-
-# --- Internals -----------------------------------------------------------------------------
 
 # One decision point for "what does this exit label mean for the active position". Default graphs (no receivers) return
 # exactly the static answer. An opt-in Mount graph turns the static "destination not implemented" answer into a transition
@@ -313,7 +422,17 @@ func _commit_or_halt(label: String, destination_position_id: String) -> void:
     if built == null:
         _halt(POSITION_ID, label, REASON_ENTRY_INVALID, destination_position_id)
         return
+    # B1i: on a sealed opt-in graph the protocol is adopted onto THIS gateway and validated BEFORE anything is committed; a refusal halts like any
+    # other invalid entry (the exchange stays settled, nothing partial is activated). The adoption claims the gateway only after it validated.
+    var protocol: BjjHalfGuardSealedProtocol = null
+    if _sealed_enabled:
+        var adopted := BjjHalfGuardSealedProtocol.adopt(built)
+        if not adopted.ok() or not _protocol_matches(adopted.protocol, built):
+            _halt(POSITION_ID, label, REASON_ENTRY_INVALID, destination_position_id)
+            return
+        protocol = adopted.protocol
     _half_guard = built
+    _sealed = protocol
     _append({"kind": "transition_committed", "from_position_id": POSITION_ID, "to_position_id": destination_position_id, "label": label})
 
 # Receiver construction is a trust boundary. Everything is built and checked in isolation from detached values; nothing
@@ -375,6 +494,13 @@ func _receiver_matches(gateway: BjjHalfGuardWindowGateway, request: Dictionary, 
     if gateway.state_fields().ended or gateway.is_terminal():
         return false
     return _same(snapshot, fresh)
+
+# The adopted protocol must be a fresh, idle, unclosed view of exactly this gateway: its simulation snapshot is the gateway's, nothing is
+# pending, nothing was recorded and no serial was issued.
+func _protocol_matches(protocol: BjjHalfGuardSealedProtocol, gateway: BjjHalfGuardWindowGateway) -> bool:
+    var executor := protocol.executor_snapshot()
+    return protocol.is_adopted() and not protocol.is_closed() and _same(executor.gateway, gateway.snapshot()) and executor.pending.is_empty() \
+        and int(executor.serial) == 0 and (executor.events as Array).is_empty()
 
 # Public read views of the retained Mount segment (plus its export, which includes the private meters), used to prove a
 # receiver did not touch it.

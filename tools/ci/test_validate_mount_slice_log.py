@@ -527,7 +527,7 @@ class HalfGuardMountEdgeWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
 
 class HalfGuardGraphWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
     NAME, STEP_PREFIX = 'Half Guard graph', 'Validate the opt-in Mount to Half Guard graph integration'
-    SCRIPT, LOG, EXPECTED = 'test_half_guard_graph.gd', '/tmp/half-guard-graph.log', 2125
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_graph.gd', '/tmp/half-guard-graph.log', 2133  # 2125 before B1i: the public-name scan checks the 8 new graph methods
 
     def test_earlier_pins_are_untouched(self):
         text = WORKFLOW.read_text()
@@ -545,7 +545,7 @@ class HalfGuardSealedProtocolWiringTests(_HalfGuardSuiteWiring, unittest.TestCas
         text = WORKFLOW.read_text()
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
                             ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
-                            ('/tmp/half-guard-mount-edge.log', 3119), ('/tmp/half-guard-graph.log', 2125)):
+                            ('/tmp/half-guard-mount-edge.log', 3119), ('/tmp/half-guard-graph.log', 2133)):
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
 
@@ -573,8 +573,27 @@ class HalfGuardFeintProtocolWiringTests(_HalfGuardSuiteWiring, unittest.TestCase
         text = WORKFLOW.read_text()
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
                             ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151), ('/tmp/half-guard-mount-edge.log', 3119),
-                            ('/tmp/half-guard-graph.log', 2125),
+                            ('/tmp/half-guard-graph.log', 2133),
                             ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-sealed-protocol.log', 42309)):
+            self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
+
+
+class HalfGuardGraphSealedFlowWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Half Guard graph sealed flow', 'Validate the opt-in sealed Half Guard graph match flow'
+    SCRIPT, LOG, EXPECTED = 'test_half_guard_graph_sealed_flow.gd', '/tmp/half-guard-graph-sealed-flow.log', 2433
+
+    def test_fixtures_used_by_the_flow_suite_are_generated_before_it(self):
+        text = WORKFLOW.read_text()
+        flow = text.index('res://tests/test_half_guard_graph_sealed_flow.gd')
+        self.assertLess(text.index('python GODOT_V1/tests/generate_half_guard_reference.py'), flow)
+        self.assertLess(text.index('python GODOT_V1/tests/generate_half_guard_feint_reference.py'), flow)
+
+    def test_earlier_pins_are_untouched_except_the_b1i_graph_revision(self):
+        text = WORKFLOW.read_text()
+        for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
+                            ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
+                            ('/tmp/half-guard-mount-edge.log', 3119), ('/tmp/half-guard-sealed-protocol.log', 42309), ('/tmp/half-guard-feint-reference.log', 26415),
+                            ('/tmp/half-guard-feint-protocol.log', 32222), ('/tmp/half-guard-graph.log', 2133)):
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
 

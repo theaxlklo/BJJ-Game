@@ -10,6 +10,9 @@ const POSITION_ID: String = BjjHalfGuardRules.POSITION_ID
 
 var _match: BjjHalfGuardMatch
 var _contract: BjjHalfGuardContract
+# B1i: at most one sealed-intent protocol may ever drive this gateway (it is the position graph's own gateway when adopted). The claim
+# is one-way for the lifetime of the object and changes no simulation state.
+var _protocol_claimed: bool = false
 
 class Creation extends RefCounted:
     var error: String = ""
@@ -85,6 +88,14 @@ func feint_error(apparent_id: String, real_id: String, commitment: String = "") 
 # Pure: the real techniques `apparent_id` may conceal right now (pair table x public tier condition; ignores stamina and funding).
 func eligible_real_ids(apparent_id: String) -> Array[String]:
     return BjjHalfGuardCatalog.eligible_real_ids(apparent_id, _match.top_base, _match.bottom_frame)
+
+# One-shot, one-way claim by a sealed-intent protocol (BjjHalfGuardSealedProtocol.create / adopt). False when already claimed, so a second
+# protocol can never be attached to the same simulation.
+func claim_for_protocol() -> bool:
+    if _protocol_claimed:
+        return false
+    _protocol_claimed = true
+    return true
 
 # Canonical detached snapshot of the whole segment (for parity tests and diagnostics).
 func snapshot() -> Dictionary:

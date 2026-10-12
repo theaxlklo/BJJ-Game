@@ -983,7 +983,9 @@ func _method_names(script: GDScript) -> Array:
 func _test_unchanged_surfaces() -> void:
     for method_name: String in ["seal_intent", "respond", "apply_response_timeout", "public_intent_view", "submit_feint", "feint_error"]:
         check("the Mount gateway has no %s" % method_name, _method_names(BjjMatchWindowGateway).has(method_name), false)
-        check("the position graph has no %s" % method_name, _method_names(BjjPositionGraphMatch).has(method_name), false)
+        # B1i: the graph has the sealed coordinator methods (seal_intent, respond, apply_response_timeout, public_intent_view) but never the feint rules
+        check("the position graph has %s only if it is a B1i coordinator method" % method_name, _method_names(BjjPositionGraphMatch).has(method_name),
+            method_name in ["seal_intent", "respond", "apply_response_timeout", "public_intent_view"])
         check("the position contract has no %s" % method_name, _method_names(BjjPositionContract).has(method_name), false)
     check("the Half Guard contract has no feint method", _method_names(BjjHalfGuardContract).has("submit_feint"), false)
     # the existing one-call gateway path still behaves exactly as before and a direct command never takes the feint path
@@ -1036,7 +1038,9 @@ func _test_scope_and_hygiene() -> void:
         if other.is_empty():
             continue
         for token: String in ["submit_feint", "seal_intent", "FEINT_PAIRS", "SealedProtocol", "timeout_fallback", "feint_error"]:
-            check("%s never references %s" % [path, token], other.contains(token), false)
+            # B1i: the graph names the protocol (slot, adoption, forwarding) but never the feint rules, the pair table, the fallback table or the admission check
+            check("%s references %s only as the B1i opt-in" % [path, token], other.contains(token),
+                path.ends_with("graph_match.gd") and token in ["seal_intent", "SealedProtocol"])
     var referencing: Array = []
     for directory: String in ["res://scripts/core", "res://scripts/positions", "res://scripts/positions/mount", "res://scripts/presentation", "res://scripts/ui"]:
         var dir := DirAccess.open(directory)
@@ -1045,7 +1049,7 @@ func _test_scope_and_hygiene() -> void:
         for file_name: String in dir.get_files():
             if file_name.ends_with(".gd") and _code_text(directory + "/" + file_name).contains("BjjHalfGuardSealedProtocol"):
                 referencing.append(directory + "/" + file_name)
-    check("no production source references the protocol (it stays an explicit opt-in path)", referencing, [])
+    check("only the graph's explicit opt-in references the protocol (B1i); no other production source does", referencing, ["res://scripts/positions/graph_match.gd"])
     # the controller double above never names executor internals
     var own := FileAccess.open("res://tests/test_half_guard_feint_protocol.gd", FileAccess.READ).get_as_text()
     var begin := own.find("# BEGIN controller double")
