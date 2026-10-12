@@ -12,7 +12,7 @@ This is a future rules specification, not a change to the B1e-qualified engine, 
 
 ## 1. Stalling — IBJJF penalties, not direct points deducted
 
-**Owner clarification:** “Point deduction” meant losing an advantage in the **IBJJF penalty system**: stalling can eventually benefit the opponent on the scoreboard or disqualify the offender. It **does not** mean subtracting one positional point from the staller on each turn.
+**Owner clarification:** “Point deduction” meant the **IBJJF penalty process**: stalling can eventually award advantages or points to the opponent, or disqualify the offender. It **does not** mean subtracting one positional point from the staller on each turn.
 
 For the archived June 2024 **adult** reference:
  
