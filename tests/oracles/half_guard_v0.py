@@ -1,8 +1,10 @@
-"""Independent, test-only Half Guard v0 oracle (B1b checkpoint).
+"""Independent, test-only Half Guard v0 oracle (B1b checkpoint; feint extension B1h).
 
 Written from ``GODOT_V1/docs/HALF_GUARD_V0_RULES.md`` -- not from any GDScript and not from the Mount
 engine. Standard library only: no ``bjj_game`` import, no file or network access, no randomness, no
 clock. Plain dictionaries in, plain dictionaries out; every refusal leaves the state untouched.
+B1h adds the explicit feint pairs, the feint surcharge, the public intent view and the published timeout fallback
+(rules sheet section 13). A command without a real technique is a *direct* command and runs the original code path unchanged.
 
 This module is a *specification executor* for the provisional v0 prototype baseline. It is not a
 claim about game balance. Section numbers (``S5.3`` ...) refer to the rules sheet.
@@ -64,6 +66,17 @@ DEFENSE_SHIFT = {2: -1, 1: 0, 0: 2}  # N-4
 # Builders / weakeners on final >= Success (N-5): action -> (track, delta)
 BUILD = {TOP_ACTIONS[0]: ("bottom_frame", -1), TOP_ACTIONS[1]: ("top_base", 1),
          BOTTOM_ACTIONS[0]: ("bottom_frame", 1), RECOVER_GUARD: ("top_base", -1)}
+
+
+# ---- Feints (S13, B1h) ---------------------------------------------------------------------------------
+FEINT_SURCHARGE = 3
+# Explicit pair table, apparent -> pair. Pairs are listed, never derived. The side is the side that owns both techniques.
+FEINT_PAIRS = {
+    TOP_ACTIONS[0]: {"id": "FP-1", "real": KNEE_SLICE, "track": "top_base", "minimum_tier": 1, "bite": BOTTOM_RESPONSES[1]},
+    BOTTOM_ACTIONS[0]: {"id": "FP-2", "real": RECOVER_GUARD, "track": "bottom_frame", "minimum_tier": 1, "bite": TOP_RESPONSES[0]},
+}
+# The published ordinary-decision fallback for a defender, by the defender's role: (response id, requested commitment).
+TIMEOUT_FALLBACK = {"bottom": (BOTTOM_RESPONSES[0], "LOW"), "top": (TOP_RESPONSES[1], "LOW")}
 
 
 def shift(grade, steps):
@@ -186,6 +199,38 @@ def undercommitment_modifier(initiator_effective, responder_effective):
 
 def exhaustion_modifier(initiator_band, responder_band):
     return (-1 if initiator_band == "Exhausted" else 0) + (1 if responder_band == "Exhausted" else 0)
+
+
+def feint_funding(stamina, requested):
+    """(effective, total_cost) of a feint at the given initiator stamina, or ("", 0) when refused (S13.3)."""
+    if stamina < FEINT_SURCHARGE:
+        return "", 0
+    effective, cost = determine(requested, stamina - FEINT_SURCHARGE)
+    if effective == "":
+        return "", 0
+    return effective, FEINT_SURCHARGE + cost
+
+
+def eligible_real_ids(state, apparent):
+    """The real techniques the apparent technique may conceal in this *public* state (pair table x tier condition).
+    A pure function of the state and the apparent id: it ignores stamina, funding and anything the attacker sealed."""
+    pair = FEINT_PAIRS.get(apparent)
+    if pair is None or state[pair["track"]] < pair["minimum_tier"]:
+        return []
+    return [pair["real"]]
+
+
+def public_intent_view(state, apparent, commitment, intent_serial):
+    """What a defender may see of a sealed intent (S13.7). The real technique, the feint flag, the funded effective commitment,
+    the downgrade and the surcharge are not parameters of this function, so they cannot appear in its output."""
+    role_map = state["role_map"]
+    side = "top" if apparent in TOP_ACTIONS else "bottom"
+    responder = "bottom" if side == "top" else "top"
+    return {"position_id": POSITION_ID, "window_id": state["window_id"], "intent_serial": intent_serial,
+            "initiator_id": role_map[side], "responder_id": role_map[responder], "apparent_technique_id": apparent,
+            "apparent_technique_name": TECHNIQUE_NAMES[apparent],
+            "commitment_requested": DEFAULT_COMMITMENT if commitment == "" else commitment,
+            "eligible_real_ids": eligible_real_ids(state, apparent), "response_ids": list(RESPONSES[responder])}
 
 
 # ---- Entry (S4) ----------------------------------------------------------------------------------
@@ -377,7 +422,7 @@ class HalfGuard:
                        "commitment": DEFAULT_COMMITMENT, "state": self.state_fields()})
         return report
 
-    def _admission(self, window_id, fighter_id, action_id, response_id, commitment, response_commitment):
+    def _admission(self, window_id, fighter_id, action_id, response_id, commitment, response_commitment, real_action_id=""):
         s = self.s
         if not s["window_open"]:
             return "no_open_window"
@@ -399,11 +444,13 @@ class HalfGuard:
             return "response_without_action"
         if action_id == "" and (commitment != "" or response_commitment != ""):
             return "commitment_without_action"
+        if action_id == "" and real_action_id != "":
+            return "feint_without_action"
         return ""
 
-    def submit(self, window_id, fighter_id, action_id="", response_id="", commitment="", response_commitment=""):
+    def submit(self, window_id, fighter_id, action_id="", response_id="", commitment="", response_commitment="", real_action_id=""):
         s = self.s
-        error = self._admission(window_id, fighter_id, action_id, response_id, commitment, response_commitment)
+        error = self._admission(window_id, fighter_id, action_id, response_id, commitment, response_commitment, real_action_id)
         if error:
             return {"error": error}
         side = s["window_side"]
@@ -415,7 +462,8 @@ class HalfGuard:
             return {"error": "", "window_id": window_id, "fighter_id": fighter_id, "role": side, "kind": "reset",
                     "detail": detail, "transition": transition_for(s["exit_destination"]), "ended": _ended(s),
                     "state": self.state_fields()}
-        record = self.attempt(action_id, response_id, DEFAULT_COMMITMENT if commitment == "" else commitment, response_commitment)
+        record = self.attempt(action_id, response_id, DEFAULT_COMMITMENT if commitment == "" else commitment, response_commitment,
+                              real_action_id)
         if record["error"]:
             return {"error": record["error"]}
         s["window_open"], s["window_side"] = False, ""
@@ -443,15 +491,43 @@ class HalfGuard:
             return "incorrect_response_side_or_kind"
         return ""
 
-    def attempt(self, action_id, response_id, commitment, response_commitment=""):
+    def _feint_error(self, action_id, real_action_id, commitment):
+        """Feint admission after the direct shape checks (S13.6): equality, the real id's own shape, the pair table, the public
+        condition, then funding. Pure."""
+        s = self.s
+        if not isinstance(real_action_id, str):
+            return "unknown_action"
+        if real_action_id == action_id:
+            return "feint_real_equals_apparent"
+        if real_action_id not in TOP_ACTIONS + BOTTOM_ACTIONS + TOP_RESPONSES + BOTTOM_RESPONSES:
+            return "unknown_action"
+        if real_action_id not in ACTIONS[s["initiator"]]:
+            return "incorrect_action_side_or_kind"
+        pair = FEINT_PAIRS.get(action_id)
+        if pair is None or pair["real"] != real_action_id or real_action_id not in BREAK_CAPABLE:
+            return "feint_not_supported"
+        if s[pair["track"]] < pair["minimum_tier"]:
+            return "feint_not_eligible"
+        stamina = s["fighters"][s["role_map"][s["initiator"]]]["stamina_current"]
+        if feint_funding(stamina, commitment)[0] == "":
+            return "feint_requires_funding"
+        return ""
+
+    def attempt(self, action_id, response_id, commitment, response_commitment="", real_action_id=""):
         s = self.s
         error = validate_context(s)
         if not error and isinstance(action_id, str) and isinstance(response_id, str):
             error = self._shape_error(action_id, response_id, commitment, response_commitment)
         elif not error:
             error = "unknown_action" if not isinstance(action_id, str) else "unknown_response"
+        feint = real_action_id != ""
+        if not error and feint:
+            error = self._feint_error(action_id, real_action_id, commitment)
         if error:
             return {"error": error}
+        apparent_id = action_id
+        if feint:
+            action_id = real_action_id  # every later step settles the REAL technique; the apparent one never resolves
         side = s["initiator"]
         other = "bottom" if side == "top" else "top"
         init_f, resp_f = s["fighters"][s["role_map"][side]], s["fighters"][s["role_map"][other]]
@@ -462,7 +538,12 @@ class HalfGuard:
         axis_before, band_before = s["axis_tenths"], s["band"]
         # S5.3 funding and grading
         requested_response = DEFAULT_COMMITMENT if response_commitment == "" else response_commitment
-        init_eff, init_cost = determine(commitment, init_f["stamina_current"])
+        if feint:
+            init_eff, total_cost = feint_funding(init_f["stamina_current"], commitment)
+            init_cost = total_cost - FEINT_SURCHARGE
+        else:
+            init_eff, init_cost = determine(commitment, init_f["stamina_current"])
+            total_cost = init_cost
         resp_eff, resp_cost = determine(requested_response, resp_f["stamina_current"])
         raw = RAW[side][action_id][response_id]
         positional = -1 if (side == "top" and band_before == -2) or (side == "bottom" and band_before == 2) else 0
@@ -476,8 +557,13 @@ class HalfGuard:
             strength_tier = 0 if resp_eff in ("LOW", "") else track_tier
             defense_shift = DEFENSE_SHIFT[strength_tier]
         g3 = shift(g2, defense_shift)
+        bit, feint_modifier, g3f = False, 0, g3
+        if feint:
+            bit = response_id == FEINT_PAIRS[apparent_id]["bite"]
+            feint_modifier = 1 if bit else -1
+            g3f = shift(g3, feint_modifier)  # after the readiness shifts, before exhaustion; saturates on its own
         exhaustion = exhaustion_modifier(init_band, resp_band)
-        g4 = shift(g3, exhaustion)
+        g4 = shift(g3f, exhaustion)
         magnitude = magnitude_modifier(init_eff, g4)
         g5 = shift(g4, magnitude)
         under = undercommitment_modifier(init_eff, resp_eff)
@@ -491,10 +577,13 @@ class HalfGuard:
                 exit_label = "Side Control"
             elif action_id == RECOVER_GUARD and proposed <= ESCAPE_LINE:
                 exit_label = "Open Guard" if final == 1 else "Closed Guard"
+        exit_capped = bool(exit_label) and feint and init_eff == "LOW"
+        if exit_capped:
+            exit_label = ""  # S13.4: a LOW-effective feint cannot cause an exit
         axis_after = max(AXIS_MIN, min(AXIS_MAX, proposed))
         band_after = band_update(axis_after, band_before)
         # S5.5 charges: initiator first, then responder unless Rule 1 waives
-        init_charged = min(init_f["stamina_current"], init_cost)
+        init_charged = min(init_f["stamina_current"], total_cost)
         waived = resp_cost if init_eff == "" else 0
         resp_requested_charge = resp_cost - waived
         resp_charged = min(resp_f["stamina_current"], resp_requested_charge)
@@ -545,7 +634,7 @@ class HalfGuard:
             h["band_change_history"].append("%d->%d" % (band_before, band_after))
         h["readiness_change_history"].extend(changes)
         h[side + "_initiation_count"] += 1
-        return {"error": "", "kind": "exchange", "initiator": side, "action_id": action_id, "response_id": response_id,
+        record = {"error": "", "kind": "exchange", "initiator": side, "action_id": action_id, "response_id": response_id,
                 "commitment_requested": commitment, "response_commitment_requested": requested_response,
                 "initiator_band": init_band, "responder_band": resp_band, "exhaustion_modifier": exhaustion,
                 "initiator_effective": init_eff, "responder_effective": resp_eff,
@@ -559,6 +648,12 @@ class HalfGuard:
                 "axis_before": axis_before, "axis_proposed": proposed, "axis_after": axis_after,
                 "band_before": band_before, "band_after": band_after, "exit_destination": exit_label,
                 "tiers_before": tiers_before, "tiers_after": dict(tiers), "readiness_changes": changes}
+        if feint:
+            record["feint"] = {"apparent_action_id": apparent_id, "real_action_id": action_id,
+                               "bite_response_id": FEINT_PAIRS[apparent_id]["bite"], "bit": bit, "modifier": feint_modifier,
+                               "grade_before": g3, "grade_after": g3f, "surcharge": FEINT_SURCHARGE,
+                               "surcharge_charged": FEINT_SURCHARGE, "total_cost": total_cost, "exit_capped": exit_capped}
+        return record
 
 
 # ---- Replay (S9) ---------------------------------------------------------------------------------
@@ -583,10 +678,10 @@ def replay(entry, commands):
         elif op == "submit":
             results.append(match.submit(command["window_id"], command["fighter_id"], command.get("action_id", ""),
                                         command.get("response_id", ""), command.get("commitment", ""),
-                                        command.get("response_commitment", "")))
+                                        command.get("response_commitment", ""), command.get("real_action_id", "")))
         elif op == "attempt":
             results.append(match.attempt(command["action_id"], command["response_id"], command["commitment"],
-                                         command.get("response_commitment", "")))
+                                         command.get("response_commitment", ""), command.get("real_action_id", "")))
         else:
             raise ValueError("unknown replay operation: %r" % (op,))
     return {"entry_error": "", "results": results, "final": match.snapshot()}
