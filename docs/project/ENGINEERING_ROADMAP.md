@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 1.7 — owner confirms percentage-based residual learning after blurry-memory discard; retention rate and persistence implementation remain open  
+**Roadmap revision:** 1.8 — P0 Batch A #17→#18→#22 selected for integration preflight; no merge authorization or main mutation  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1`) and draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and any merge/integration. This document recommends; it does not change engine behavior or authorize a merge.
@@ -55,7 +55,7 @@ Dotted connections are **not runnable** in the current graph; Standing arrows sh
 
 | Priority | Work package | First artifacts / PR boundary | Exit gate and overseer evidence | Current status |
 |---|---|---|---|---|
-| P0 | **Integration-readiness checkpoint** | Inventory the 30-PR stack, independent #44, all exact heads, CI and dependent commits; explicitly plan safe bottom-up integration. | Owner-approved merge train, no silently changed bases or SHA, full composite CI; branch/PR reconciled with `main`. | **Needed**. No merges authorized. |
+| P0 | **Integration-readiness checkpoint** | Review the 31-PR active chain plus #44 and independent #64; first candidate **Batch A #17→#18→#22**, then remaining dependencies in short batches. | Owner specifically authorizes merge operations before any execution; validate exact heads, predecessor ancestry, post-merge cumulative CI and default behavior after **each** PR; stop on conflict or failing gate. | **Batch A selected for read-only preflight; no merges authorized.** |
 | P1 | **B2a Side Control spec** | [Draft #65](https://github.com/theaxlklo/BJJ-Game/pull/65): `GODOT_V1/docs/SIDE_CONTROL_V0_PROPOSAL.md` (346 lines); 3 actions and 3 responses per side, proposed grade tables, four proposed exits, Knee Slice receiver, R1–R12 risks and SC-D1–SC-D15. | Owner accepts or amends exact mechanics and architecture before any oracle is frozen. | **DOC-QUALIFIED; awaiting owner approval**. |
 | P1.1 | **B2a.1 Position-aware initiative contract** | New documentation-only checkpoint stacked on qualified B2a #65. Compare current Mount/Half Guard windows against Side Control, Closed Guard, Open Guard and Standing needs; define first-window, ongoing-initiative and neutral simultaneous-choice semantics, with impact on personal turn accounting. | Report design alternatives and owner decisions, no code/fixture/default changes; preserve SC-D2 as open. | **NEXT · approved to investigate only**. |
 | P2 | **Side Control executable** | **B2b** accepted canonical rules sheet and independent test-only Python oracle (checkpoint PR), **B2c** typed Godot engine, **B2d** source→destination keyed receiver/opt-in graph seam, **B2e** measurement (separate slices). | After owner approval: independent oracle prior to GDScript, negative-first and replay parity, real Knee Slice→Side entry, no leaked Half Guard protocol or Mount replay, honest unsupported exit halts. | **Blocked on SC-D1–SC-D15; not started**. |
@@ -178,6 +178,20 @@ Opponent uses a technique not yet learned
 **Open implementation decisions:** the exact **nonzero residual retention percentage** and rounding, what exact events add clarity (observation, using an incomplete memory, practice, defeat/training), repeated-discard handling, what counts as `learned` versus `mastered`, whether pending observations expire, timing/UX for replacement prompts in five-minute matches, duplicate-variant semantics, career/run persistence boundaries, and whether the 3-slot cap ever upgrades. **The existence of percentage-based partial progress retention is owner direction; the numeric rate is not approved.** Do not fill missing numerical XP thresholds or game-balance rules without owner approval.
 
 **Milestone placement:** include this in the **memory/career design** phase and in a later bounded memory learning specification, not the current B2a.1 initiative contract or B2b Side Control oracle. B2a.1 may reference how positional focus would accelerate memory progress, but it must not implement this queue or change initiative.
+
+## P0 integration checkpoint — Batch A chosen for review (2026-10-12)
+
+**Status: FIRST-BATCH CANDIDATE APPROVED FOR PREFLIGHT, NOT FOR MERGE.** Claude's read-only P0 audit closing message identified Batch A as PRs #17, #18, #22. The full audit report was not included in that owner-pasted excerpt; the oversight reviewer independently verified the selected slice against GitHub. Do not infer approval of the remainder of the audit or a blanket 31-PR merge train.
+
+| Step | Exact currently observed head | Current base | Read-only findings |
+| --- | --- | --- | --- |
+| [#17](https://github.com/theaxlklo/BJJ-Game/pull/17) | `1de58ef97c4a0a4342f6a80a36c352926620be6e` | `main` at `7aaf576e5fc01af4a5592dc544d632e9a3bf4fb1` | 1 commit ahead / 0 behind, 5 changed paths, mergeable, historical exact-head CI success |
+| [#18](https://github.com/theaxlklo/BJJ-Game/pull/18) | `9c4166cef43d367786bbb24b76bccef6624779ba` | #17 head branch, matching exact parent head | 6 commits ahead / 0 behind, 18 changed paths, mergeable, historical exact-head CI success |
+| [#22](https://github.com/theaxlklo/BJJ-Game/pull/22) | `83d2eb9d4d5f29249f1954ebf7b6b82661bac982` | #18 head branch, matching exact parent head | 4 commits ahead / 0 behind, 19 changed paths, mergeable, historical exact-head CI success |
+
+**Integration procedure to prepare, not execute yet:** verify GitHub branch protections, exact SHA and PR review gate; recommend **merge-commit ancestry preservation** for this dependent stack where permitted; simulate/inspect result against current `main`; prepare a *one-PR-at-a-time* gate and rollback procedure, with explicit owner authorization required before every actual mainline mutation. Once #17 is integrated and independently verified, reassess #18's base/diff/CI against the actual updated `main`; only then proceed to #18, and repeat for #22. Do not rewrite ancestor commit SHA, squash early dependencies without an explicit ancestry-safe recovery design, auto-retarget dependent PRs or merge if checks are incomplete. Existing exact-head CI success **does not** prove the subsequent integration commit's CI.
+
+**Watchouts:** the existing early PRs have no submitted GitHub reviews in the queried API result, and the presence/absence of branch-protection gates is not established by that fact. Track both explicitly. Keep proposed B2a.1/Side Control design paused until P0 integration is stable. Independent oversight [#64](https://github.com/theaxlklo/BJJ-Game/pull/64) may be evaluated separately; divergent #44 is not a chain predecessor.
 
 ## Open PR inventory — status snapshot
 
