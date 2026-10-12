@@ -296,3 +296,16 @@ See `HALF_GUARD_V0_PROPOSAL.md` §12.7 for the Half Guard scenarios. The class d
 | GP-8 | Generalize into shared code only by the rule of three, or on explicit owner authorization to migrate Mount | Yes |
 | GP-9 | A called feint grants the defender nothing beyond the attacker's shift (no extra initiative or window) unless a position declares otherwise | Yes |
 | GP-10 | A feint costs the direct cost of its effective commitment plus a separately funded, all-or-nothing surcharge (illustrative +3); the value is a per-position numeric decision | Yes (value pending) |
+
+## 11. Implementation status (B1g)
+
+B1g implements only the **sealed-intent protocol** of §7.1 for Half Guard, with `real = apparent` (a direct technique), as an explicit opt-in wrapper over the unchanged Half Guard gateway (`HALF_GUARD_V0_ENGINE.md`, last section). It implements no feint, surcharge, bite adjustment or counterplay gate, and it adds no game-wide runtime interface (GP-8). Where the proposal above leaves a decision open, B1g chose the conservative reading and states it:
+
+| Decision | What B1g does | Status |
+| --- | --- | --- |
+| GP-3 (requested commitment is a public cue) | The public view **omits** the requested commitment; it is revealed by `exchange_revealed` | open; adding it later is additive |
+| GP-4 (a seal is irrevocable) | A pending seal blocks every other command; there is no cancel. A session end discards it and refuses all later commands | implemented, not yet accepted |
+| GP-5 (published timeout fallback) | `apply_response_timeout` takes the fallback **from the session**, validates it as a legal response, and flags it `defaulted`. No fallback table exists in the protocol | open; the Half Guard table is a B1h-or-earlier owner decision |
+| GP-2 (public list of eligible real techniques) | Not present: with `real = apparent` there is nothing to list | deferred to B1h |
+| §7.3 codes | All seal and respond codes that apply to a direct technique are used (`feint_*` codes and `unsupported_cost_policy` are not applicable yet) | partial by design |
+| §7.1 event names | `intent_sealed`, `response_committed`, `exchange_revealed` (plus `session_closed`) | implemented |

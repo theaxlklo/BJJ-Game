@@ -304,5 +304,16 @@ jobs:
           cat /tmp/half-guard-graph.log
           python tools/ci/validate_mount_slice_log.py /tmp/half-guard-graph.log --name "Half Guard graph" --exit-code "$status" --expected-assertions 2125
 
+      - name: Validate the Half Guard sealed-intent protocol (seal, respond, refusals, redaction, oracle compatibility)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_sealed_protocol.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_sealed_protocol.gd > /tmp/half-guard-sealed-protocol.log 2>&1 || status=$?
+          cat /tmp/half-guard-sealed-protocol.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-sealed-protocol.log --name "Half Guard sealed protocol" --exit-code "$status" --expected-assertions 41231
+
       - name: Smoke-test the default scene (2D Mount practice; the 3D greybox stays a separate diagnostic scene)
         run: godot --headless --path GODOT_V1 --quit-after 5
