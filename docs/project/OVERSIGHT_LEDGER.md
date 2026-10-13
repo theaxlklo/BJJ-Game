@@ -309,6 +309,12 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Not approved:** separate OS-specific game projects, changing pinned Godot, new mechanics, B2c engine implementation, speculative PositionContract restructuring, skipped tests, validator relaxation, or OS.kill teardown suppression. Keep the crash diagnosis evidence in the backlog without endless experiments.
 - **Qualification of E-025:** documentation/policy work only, no executable Godot or Python tests or manual Windows/Linux playtest performed as part of the policy edits. No new game-play parity or two-platform acceptance claim.
 
+### E-026 — Multi-computer development policy added to AGENTS.md (2026-10-13)
+
+- **Owner decision:** the owner switches between Windows and Linux/Omarchy computers, so `AGENTS.md` now has a *Multi-computer development* section: identify OS, branch, HEAD, tree status, Godot and Python at session start; synchronize only with `git pull --ff-only origin main` after checking for local work; keep unqualified work off `main`; assume no machine-local paths, caches, venvs or tools; per-OS qualification. It adds session procedure only and defers to *Permanent Windows + Linux support* (E-025) for the rest.
+- **Status carried forward, not changed:** Windows position-registry crash remains BLOCKED/FAIL; Linux qualification remains NOT TESTED until run there.
+- **Qualification:** documentation only; no Godot, Python, Windows or Linux test was run for this change.
+
 ## Standard Claude-result ingestion form
 
 For each result the owner pastes here, append a new `E-###` entry, checking at least:

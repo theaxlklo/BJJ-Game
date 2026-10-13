@@ -45,6 +45,17 @@ This repository contains a deterministic Brazilian Jiu-Jitsu game, a frozen Pyth
 - **Reuse F1:** The existing GODOT_V1/scenes/mount_practice.tscn and graph-backed controller are the initial interactive 2D surface. Do not create a parallel scene, fork for Linux, or claim this is already a complete scored match.
 - **Permanent documentation:** Every substantive handoff records each platform's PASS / FAIL / NOT TESTED / BLOCKED status, exact evidence and next gate in docs/project/ENGINEERING_ROADMAP.md and docs/project/OVERSIGHT_LEDGER.md. Technical instructions stay in their subsystem docs.
 
+## Multi-computer development (owner decision 2026-10-13)
+
+The owner alternates between Windows and Linux/Omarchy computers on this same repository. Everything below applies on top of *Permanent Windows + Linux support*, which stays the source for the single-project rule, per-platform evidence and the Windows blocker.
+
+- **Start of every session:** identify the current operating system, branch, `HEAD`, working-tree status, Godot executable and version (`GODOT_BIN`), and the available Python environment, before reading or changing anything. Do not assume this machine looks like the previous one.
+- **Synchronize safely:** inspect `git status` for uncommitted or untracked work first. When the tree is safe, update with `git pull --ff-only origin main`. Never discard local changes, force-push or rewrite history to synchronize; if a fast-forward is impossible, stop and report.
+- **Before switching machines:** commit and push work that is locally qualified. Preserve unfinished or unqualified work on a clearly named temporary branch (not `main`) and say that it is unqualified, so it is never mistaken for qualified work.
+- **Nothing local is shared:** never assume absolute paths, `.godot/` caches, `.venv` environments, downloaded tools (including Godot) or uncommitted files exist on the other machine; detect and use what is present here.
+- **Portability:** keep the `.gitattributes` LF rules for `.gd` and `.py`, and check path-sensitive code and resource filename capitalization when touching files (Linux is case-sensitive).
+- **Qualification is per operating system:** record Windows and Linux results separately; a PASS on one never establishes a PASS on the other. Until it is actually executed on Linux, the registry test and the rest of the Godot qualification are **NOT TESTED** there, while on Windows the position-registry crash remains **BLOCKED/FAIL** as described above.
+
 ## Educational code comments (permanent rule)
 
 Write code so the project owner can understand and learn from it later. The codebase should teach how the BJJ game works without costing maintainability or Ponytail's lean principles.
