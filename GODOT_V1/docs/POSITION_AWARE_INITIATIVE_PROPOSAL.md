@@ -1,20 +1,22 @@
 # Position-aware initiative contract (B2a.1) — proposal
 
 **Status: documentation only. No engine, test, fixture or gameplay change; Mount and Half Guard behavior is untouched.**
-Tags: **[OWNER-DIRECTION]** already agreed by the owner, formalized here, not reopened · **[OBSERVED]** verified in the code or documents at `main` · **[PROPOSAL]** a design or number awaiting owner approval · **[OPEN]** an owner decision.
+Tags: **[OWNER-DIRECTION]** already agreed by the owner, formalized here, not reopened · **[OBSERVED]** verified in the code or documents at `main` · **[PROPOSAL]** a design or number awaiting owner approval · **[OPEN]** an owner decision · **[OWNER-APPROVED]** an explicit owner decision, recorded with its date.
 Nothing tagged PROPOSAL or OPEN is a rule until the owner approves it. The name of this file is provisional.
+
+**Revision 2 (2026-10-13):** the owner approved OD-2 Option B: General Technique (`G`) and position-role proficiency (`R`) are **separate**, and a new career fighter starts at `R = 0` (§8.0). Only that baseline is approved; every scale, weight, edge and XP-related number stays provisional, and §8.3–§9 were recomputed accordingly.
 
 ## 1. What is already decided (and is not reopened)
 
 **[OWNER-DIRECTION]** Initiative at the start of a position combines three things:
 
 1. **General Technique proficiency**: a fighter characteristic. Belt influences its starting distribution, but distributions overlap and individuals vary.
-2. **Position-and-role proficiency**: expertise in *this* position in *this* role (`side_control/bottom`, `closed_guard/bottom`, ...), grown through the player's selected training focuses.
+2. **Position-and-role proficiency**: expertise in *this* position in *this* role (`side_control/bottom`, `closed_guard/bottom`, ...), earned (a new career fighter starts at `R = 0`, never derived from `G`) and accelerated by the player's selected training focuses.
 3. **The tactical advantage of the current position**: the position's own opening priority.
 
 A sufficiently skilled or specialized fighter may overcome the normal positional opening priority. Side Control ordinarily favors Top. Closed Guard may favor Bottom. Genuinely neutral positions keep simultaneous sealed choices. **Mount and Half Guard keep their implemented behavior until the owner explicitly authorizes a change.** Individual **Memory Mastery** stays separate from general initiative priority so nothing is counted twice.
 
-Consequence for SC-D2 (`SIDE_CONTROL_V0_PROPOSAL.md` §6.4): "Top first or Bottom first" stops being a binary choice. Side Control becomes a *biased* position whose favored role is Top, and a large enough skill gap can reverse the opening. With no fighter skill data yet, the contract reduces to "the favored role opens" (§8.4), so B2b can proceed without waiting for the career system.
+Consequence for SC-D2 (`SIDE_CONTROL_V0_PROPOSAL.md` §6.4): "Top first or Bottom first" stops being a binary choice. Side Control becomes a *biased* position whose favored role is Top, and a large enough skill gap can reverse the opening. With no fighter skill data yet, the contract reduces to "the favored role opens" (§8.6), so B2b can proceed without waiting for the career system.
 
 ## 2. What exists today **[OBSERVED]**
 
@@ -62,7 +64,7 @@ A policy is `{position_id, kind, favored_role, legacy_role, edge}`; unused field
 ### 4.2 Decision function (pure, integers only, no clock, no randomness)
 
 ```text
-score(fighter, position, role) = general[fighter] + role_proficiency[fighter][position, role]     # each 0..100, so 0..200
+score(fighter, position, role) = general[fighter] + role_proficiency[fighter][position, role]     # separate integers, provisional scale 0..100 each; R is 0 for a new fighter and is never derived from G
 
 decide_opening(policy, role_map, inputs, entry_adjust = 0):
     LEGACY_FIXED:          opener = role_map[policy.legacy_role]                  reason legacy_fixed
@@ -70,7 +72,7 @@ decide_opening(policy, role_map, inputs, entry_adjust = 0):
     BIASED_SEQUENTIAL:
         fav, oth   = role_map[policy.favored_role], the other fighter
         margin     = score(oth, ..., oth's role) - score(fav, ..., favored role)
-        edge_now   = policy.edge - entry_adjust                                    # entry_adjust >= 0, default 0 (§8.5)
+        edge_now   = policy.edge - entry_adjust                                    # entry_adjust >= 0, default 0 (§8.7)
         opener     = oth if margin > edge_now else fav                             # strict ">": a tie keeps the favored role
         reason     = skill_override | favored_holds | favored_holds_tie
 ```
@@ -82,7 +84,7 @@ Why integers and a strict comparison: a float or an "either order" tie-break wou
 - **Exactly once per position entry** (including the match's first position). Never inside a window, never when a window closes, never at a timer.
 - After the opener, **existing strict alternation continues** (a non-exit exchange flips the initiator; an exit does not). Skill therefore decides *who gets the first window*, not who owns the position. This cannot create a monopoly, a deadlock or extra turns.
 - Inputs are a **frozen snapshot taken at match creation** and passed in immutably. A position never reads career data, and career changes (promotion, respec, new focus) take effect at the next match. Replays and saves reproduce the same opening because the recorded inputs, not live fighter data, drive it.
-- A **missing input is a refusal with zero mutation** (`missing_proficiency`); no position silently invents a default. Until fighter data exists, the match owner supplies an explicit provisional profile (§8.4).
+- A **missing input is a refusal with zero mutation** (`missing_proficiency`); no position silently invents a default. Until fighter data exists, the match owner supplies an explicit provisional profile (§8.6).
 - The result is one detached event, `initiative_decided`: `position_id, kind, opener_id, favored_id, scores by fighter id, edge, effective_edge, margin, overridden, reason`. A replay verifier recomputes it from the recorded inputs and must match byte for byte.
 - It grants **no window, no clock change and no charge**: it names who opens the next window the position would open anyway (D2 stays true).
 
@@ -103,7 +105,7 @@ Why integers and a strict comparison: a float or an "either order" tie-break wou
 | Memory mastery (named technique) | **No** | Existing/future memory rules decide | Its own progress |
 | Belt | Only as the starting distribution of General Technique; never a trump | No | No |
 
-Using General Technique or position proficiency to change grades, costs or legality needs its own owner approval and a balance test. A test must assert that `decide_opening` accepts no mastery input.
+`R` is earned only: raising `G` or earning a belt never raises `R`, and a focus change never lowers it. Using General Technique or position proficiency to change grades, costs or legality needs its own owner approval and a balance test. A test must assert that `decide_opening` accepts no mastery input.
 
 ## 6. Timing protocols
 
@@ -132,72 +134,253 @@ CLOSED ──position rule──> stays NEUTRAL_SIMULTANEOUS
 
 Policy kinds are *placeholders until each position's own rules sheet is accepted*. Only the Mount and Half Guard rows describe current behavior.
 
-| Position | Implemented | Proposed kind | Favored role | Candidate edge (score units) | Notes |
+| Position | Implemented | Proposed kind | Favored role | Playtest candidate edge (unapproved) | Notes |
 |---|---|---|---|---|---|
 | `mount` | Yes | `LEGACY_FIXED` | `top` opens | n/a | Preserved exactly; `initiator` default `top`, strict alternation |
 | `half_guard` | Yes (opt-in) | `LEGACY_FIXED` | `top` opens at entry | n/a | Preserved exactly |
-| `side_control` | Proposal only | `BIASED_SEQUENTIAL` | `top` (pin) | **40** (§8.2) | Resolves SC-D2 as a consequence, not a freeze; Bottom keeps real initiated escapes from the alternation |
-| `closed_guard` | No | `BIASED_SEQUENTIAL` | `bottom` ("may favor Bottom") | 24 | Triggered openings (Guide example: Bottom Triangle Ready) are position-local rules |
-| `back_control` | No | `BIASED_SEQUENTIAL` | the back attacker | 60 | Role vocabulary differs from top/bottom; per its sheet |
+| `side_control` | Proposal only | `BIASED_SEQUENTIAL` | `top` (pin) | **25** (§8.5; bracket 20–30) | Resolves SC-D2 as a consequence, not a freeze; Bottom keeps real initiated escapes from the alternation |
+| `closed_guard` | No | `BIASED_SEQUENTIAL` | `bottom` ("may favor Bottom") | 15 (bracket 10–20) | Triggered openings (Guide example: Bottom Triangle Ready) are position-local rules |
+| `back_control` | No | `BIASED_SEQUENTIAL` | the back attacker | 40 (bracket 30–50) | Role vocabulary differs from top/bottom; per its sheet |
 | `standing` | No | `NEUTRAL_SIMULTANEOUS` | none | n/a | Skill does not alter the protocol |
 | `open_guard` | No | `NEUTRAL_SIMULTANEOUS` | none | n/a | Owner review at its rules sheet; a transient setup may trigger sequential initiative |
 | `turtle`, `front_headlock`, `leg_entanglement` | No | **[OPEN]** | — | — | No proposal; decide at each rules sheet |
 
-## 8. Numbers proposed for owner approval **[PROPOSAL; none is accepted]**
+## 8. Numbers proposed for owner approval **[PROPOSAL; none is accepted unless marked OWNER-APPROVED]**
 
-### 8.1 Scale and composition
+### 8.0 Approved baseline: General Technique and position-role proficiency are separate **[OWNER-APPROVED 2026-10-13, OD-2 Option B]**
 
-- General Technique `G` and role proficiency `R` are integers `0..100`. `score = G + R` (`0..200`); the weights are `1:1`, the simplest choice, and an owner decision (OD-2).
-- At fighter creation `R` starts equal to `G` for every position-role (so an unfocused fighter is never penalized below general skill); focus and experience raise it later. Within-belt variance is assigned once at creation and stored (owner's illustrative belt ranges, **not accepted**: White 10–35, Blue 25–50, Purple 40–65, Brown 55–80, Black 70–95).
+- **`G` (General Technique)** is broad technical competence, influenced by belt with overlapping distributions and individual variation.
+- **`R` (position-role proficiency)** is *earned* expertise for one position in one role (`side_control/bottom`, `closed_guard/bottom`, ...).
+- **A new career fighter starts with `R = 0` for every position-role, whatever their `G`.** `R` is never set equal to `G`, and it does not rise automatically when `G` improves or a belt is earned.
+- **Training focuses accelerate earning `R`.** Earned `R` persists when focus assignments change.
+- **Unfocused fighters keep legal attacks, escapes and essential defenses** under the existing technique-knowledge rules: `R` influences only the opening-priority contest here, never legality.
+- **Memory Mastery stays separate** and is not automatically an initiative modifier.
 
-### 8.2 Edge sizing: exact enumeration, not simulation
+This approves the separate baseline only. It does **not** approve any scale, weight, edge, XP rate, fighter-schema change or career mechanic. Everything below that is a number stays **provisional**.
 
-The edge is the score margin the non-favored fighter needs to take the opening. Each cell is the exact probability that the **non-favored** fighter opens, both fighters unfocused (`R = G`), skill uniform over the illustrative belt ranges, strict `>` (§9 describes the script). Edges are in score units (`2 x` skill points when `R = G`).
+### 8.1 Scale and composition **[PROPOSAL]**
 
-| Favored-role belt vs other belt | edge 16 (8 pts) | edge 24 (12 pts, owner's illustrative) | **edge 40 (20 pts)** | edge 60 (30 pts) |
-|---|---|---|---|---|
-| same belt (any belt) | 0.226 | 0.135 | 0.022 | 0.000 |
-| Blue favored vs **White** other | 0.004 | 0.000 | 0.000 | 0.000 |
-| White favored vs **Blue** other (one belt up) | 0.719 | 0.592 | 0.311 | 0.081 |
-| White favored vs Purple other (two up) | 0.985 | 0.947 | 0.799 | 0.481 |
-| White favored vs Brown other (three up) | 1.000 | 1.000 | 0.999 | 0.902 |
-| White favored vs Black other (four up) | 1.000 | 1.000 | 1.000 | 1.000 |
-| Blue vs Blue, other is a +15 specialist | 0.481 | 0.342 | 0.135 | 0.009 |
-| Blue vs Blue, other is a +30 specialist | 0.719 | 0.592 | 0.311 | 0.081 |
-| Blue vs Blue, **both** +15 specialists in their own roles | 0.226 | 0.135 | 0.022 | 0.000 |
+- `G` and `R` are integers; the provisional scale is `0..100` each. `score = G + R`, weights `1:1`, the simplest choice.
+- The **edge** is in the same score units as `G` and `R`, so an untrained matchup (`R = 0` for both) is decided by the `G` gap against the edge, and a trained matchup adds the `R` gap.
+- A different weight is the same as rescaling `R` and the edges together, so no edge is meaningful without `R`'s cap and growth pace (§8.8). The edges below are only as good as those two unknowns.
+- `G` uses the owner's **illustrative** belt ranges (uniform integers; **not accepted**, not the real belt system): White 10–35, Blue 25–50, Purple 40–65, Brown 55–80, Black 70–95. The `R` levels used in the examples (20 light, 40 solid, 60 specialist, 80 elite) are labels for the calculation, **not** XP rates or a progression design.
 
-Reading it: with the owner's illustrative +12-point edge (24), an adjacent-belt gap reverses the opening about 59% of the time, so the position's priority is mostly erased across belts. An edge of 40 keeps the pin meaningful between adjacent belts (31% reversal), lets a clear two-belt gap override it (80%), and treats a same-belt +15 specialist as a real but not dominant threat (13.5%). An edge of 60 makes the position strongly sticky, which fits Back Control. **Recommendation:** Side Control 40, Closed Guard (Bottom favored) 24, Back Control 60, as a starting point for playtest measurement, not as balance truth. OD-4.
+### 8.2 How the position's opening advantage interacts with `G` and `R` **[PROPOSAL]**
 
-### 8.3 Worked examples (edge 24, `score = G + R`)
+The position hands its **favored role** a head start: the favored fighter opens unless the other fighter beats them by **more than the edge** (`(G + R)` of the other minus `(G + R)` of the favored, using each fighter's own role in this position). Read it as three layers:
 
-| Case | Favored `G/R` | Other `G/R` | Margin | Opener |
-|---|---|---|---|---|
-| Equal fighters | 50/50 | 50/50 | 0 | favored |
-| Blue-ish Bottom vs White-ish Top | 22/22 | 37/37 | +30 | **other** (override) |
-| Black Bottom vs White Top | 22/22 | 82/80 | +118 | **other** |
-| Equal `G`, Bottom +20 specialist | 50/50 | 50/70 | +20 | favored |
-| Exactly at the edge | 50/50 | 62/62 | +24 | favored (strict `>`) |
-| One over the edge | 50/50 | 62/63 | +25 | **other** |
-| Top specialist vs generalist Bottom | 50/70 | 60/60 | 0 | favored |
+1. **The position** supplies the edge. A favored fighter needs no skill to open, and two untrained equals always give the opening to the favored role.
+2. **`G` is a shared currency.** It counts in every position, so a higher belt can reverse a position's priority by itself, but belt distributions overlap and the edge makes a small gap meaningless.
+3. **`R` is the specific, earned currency.** It counts only in the position-role it was earned in, so training the *right* position can overcome a gap in belt, and a high-belt fighter who never trained this role has no head start in it.
 
-### 8.4 Before fighter data exists **[PROPOSAL]**
+`G` alone, `R` alone or both together can clear the edge; none is required. **Because `R` starts at 0 for everyone, early-career openings are decided by the position and the belt gap, and the earned `R` of a trained player is what later makes a position-aware opening.** The opening grants nothing else: no extra window, clock, charge or response right, and it is evaluated once per entry (§4.3).
 
-The match owner passes an explicit, recorded provisional profile (`G = R = 50` for both fighters). Every margin is 0, so every `BIASED_SEQUENTIAL` position opens for its favored role. For Side Control that is exactly the Top-first behavior in `SIDE_CONTROL_V0_PROPOSAL.md`, recorded as a *consequence of the provisional profile*, not a frozen rule. Tests for B2b use explicit stable inputs.
+### 8.3 Exact-enumeration evidence **[PROPOSAL; illustrative inputs]**
 
-### 8.5 Entry tempo adjustment **[OPEN, default 0]**
+Each cell is the exact probability that the **non-favored** fighter opens (strict `>`; a tie keeps the favored role), over every integer `G` pair in the belt ranges. Where a single number is shown for a fighter, that is the stated `R` level.
 
-After a Knee Slice the passing fighter produced the exit and, if favored, also opens Side Control: consecutive personal opportunities across two positions, with no free window or clock. Rather than choose a side, the contract carries `entry_adjust` (default **0**) that lowers the favored role's edge when the favored fighter produced the entry transition. Candidate values are decided only after the measurement plan in §12 shows whether it matters. OD-8.
+**Table 1: both fighters untrained (`R = 0`).** Belt gap only.
 
-## 9. Method for the numbers
+| Other fighter vs favored-role fighter; edge → | 10 | 15 | 20 | 25 | 30 | 40 | 50 | 60 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| same belt | 0.178 | 0.081 | 0.022 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| other is 1 belt higher | 0.658 | 0.481 | 0.311 | 0.178 | 0.081 | 0.000 | 0.000 | 0.000 |
+| other is 2 belts higher | 0.969 | 0.902 | 0.799 | 0.658 | 0.481 | 0.178 | 0.022 | 0.000 |
+| other is 3 belts higher | 1.000 | 1.000 | 0.999 | 0.969 | 0.902 | 0.658 | 0.311 | 0.081 |
+| other is 4 belts higher | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.969 | 0.799 | 0.481 |
+| other is 1 belt **lower** | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 
-The table in §8.2 is reproducible exactly (no randomness): for every integer pair `g1` in the favored belt range and `g2` in the other belt range, with `R = G` (plus the stated specialist offset, clamped at 100), count the pairs with `(g2 + r2) - (g1 + r1) > edge`, divided by the number of pairs. The illustrative ranges are the owner's; they are **not** accepted and not the real belt system.
+**Table 2: same belt (`G` random inside the range), different positional training.**
+
+| Favored R / other R; edge → | 10 | 15 | 20 | 25 | 30 | 40 | 50 | 60 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| favored R=0 / other R=0 | 0.178 | 0.081 | 0.022 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| favored R=0 / other R=20 | 0.799 | 0.658 | 0.481 | 0.311 | 0.178 | 0.022 | 0.000 | 0.000 |
+| favored R=0 / other R=40 | 1.000 | 0.999 | 0.969 | 0.902 | 0.799 | 0.481 | 0.178 | 0.022 |
+| favored R=0 / other R=60 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.969 | 0.799 | 0.481 |
+| favored R=0 / other R=80 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.969 |
+| favored R=40 / other R=0 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| favored R=40 / other R=20 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| favored R=40 / other R=40 | 0.178 | 0.081 | 0.022 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| favored R=40 / other R=60 | 0.799 | 0.658 | 0.481 | 0.311 | 0.178 | 0.022 | 0.000 | 0.000 |
+| favored R=40 / other R=80 | 1.000 | 0.999 | 0.969 | 0.902 | 0.799 | 0.481 | 0.178 | 0.022 |
+
+**Table 3: a specialized lower belt against an inexperienced higher belt.**
+
+| Case; edge → | 10 | 15 | 20 | 25 | 30 | 40 | 50 | 60 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| White other R=40 vs Blue favored R=0 | 0.902 | 0.799 | 0.658 | 0.481 | 0.311 | 0.081 | 0.000 | 0.000 |
+| White other R=60 vs Blue favored R=0 | 1.000 | 1.000 | 0.999 | 0.969 | 0.902 | 0.658 | 0.311 | 0.081 |
+| White other R=80 vs Blue favored R=0 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.999 | 0.902 | 0.658 |
+| White other R=40 vs Purple favored R=0 | 0.481 | 0.311 | 0.178 | 0.081 | 0.022 | 0.000 | 0.000 | 0.000 |
+| White other R=60 vs Purple favored R=0 | 0.969 | 0.902 | 0.799 | 0.658 | 0.481 | 0.178 | 0.022 | 0.000 |
+| White other R=80 vs Purple favored R=0 | 1.000 | 1.000 | 1.000 | 0.999 | 0.969 | 0.799 | 0.481 | 0.178 |
+| White **favored** R=40 vs Blue other R=0 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| White **favored** R=60 vs Blue other R=0 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| White **favored** R=80 vs Blue other R=0 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+
+**Table 4: two Black Belts with equal General Technique (`G = 82`), different positional expertise.** Deterministic: the margin is exactly `R_other − R_favored`.
+
+| Margin; edge → | 10 | 15 | 20 | 25 | 30 | 40 | 50 | 60 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| R_other − R_favored = 0 | favored | favored | favored | favored | favored | favored | favored | favored |
+| R_other − R_favored = 10 | favored | favored | favored | favored | favored | favored | favored | favored |
+| R_other − R_favored = 20 | **other** | **other** | favored | favored | favored | favored | favored | favored |
+| R_other − R_favored = 25 | **other** | **other** | **other** | favored | favored | favored | favored | favored |
+| R_other − R_favored = 26 | **other** | **other** | **other** | **other** | favored | favored | favored | favored |
+| R_other − R_favored = 30 | **other** | **other** | **other** | **other** | favored | favored | favored | favored |
+| R_other − R_favored = 40 | **other** | **other** | **other** | **other** | **other** | favored | favored | favored |
+| R_other − R_favored = 41 | **other** | **other** | **other** | **other** | **other** | **other** | favored | favored |
+| R_other − R_favored = 50 | **other** | **other** | **other** | **other** | **other** | **other** | favored | favored |
+| R_other − R_favored = 60 | **other** | **other** | **other** | **other** | **other** | **other** | **other** | favored |
+| R_other − R_favored = 80 | **other** | **other** | **other** | **other** | **other** | **other** | **other** | **other** |
+
+### 8.4 Worked examples (read from the tables)
+
+1. **White Belt vs Blue Belt, no positional experience** (Table 1). If the Blue Belt is the non-favored fighter, the White Belt's position priority is reversed 31.1% of the time at edge 20, 17.8% at 25, 8.1% at 30 and never at 40. If the *White* Belt is the non-favored one, the reversal is **0.000** at every edge: a lower belt with no experience never takes a higher belt's position.
+2. **Two White Belts with different histories** (Table 2). With no training on either side, only `G` noise reverses the opening (2% at edge 20, 0% from 25). If the other White Belt has light training (`R = 20`) it reverses 31.1% of the time at edge 25 and 17.8% at 30; with solid training (`R = 40`) 90.2% and 79.9%. If the favored White Belt is *also* trained (`R = 40`), an `R = 40` challenger is back to noise level, and a challenger needs `R = 60` to reverse it 31.1% of the time at edge 25. Training on the favored side protects the pin.
+3. **A specialized lower belt vs an inexperienced higher belt** (Table 3). A White Belt specialist (`R = 60`) takes the opening from an untrained Blue Belt 96.9% of the time at edge 25 and 65.8% at 40; an elite specialist (`R = 80`) 99.9% at edge 40. Against an untrained *Purple* Belt the specialist needs `R = 60` to win 65.8% at edge 25. The reverse (White favored specialist against an untrained Blue Belt) is never reversed. Specialization can beat belt, but only in the role it was earned in.
+4. **Two Black Belts with equal `G`** (Table 4). Equal `G` cancels, so the winner is decided by the `R` gap alone: with edge 25 the other fighter needs a gap of **26** or more (25 is a tie and the favored role keeps it); with edge 40, **41**.
+5. **A fighter changing focus without losing proficiency** (Table 5). Moving a focus slot away from `side_control/bottom` leaves the earned `R` untouched, and a belt promotion that raises `G` leaves `R` untouched too.
+
+**Table 5: focus change and promotion (illustrative values; edge 25; opponent is an untrained Blue Belt, `G = 37`, `R = 0`, Top in Side Control).**
+
+| Step | G | R[`side_control/bottom`] | Score | Opponent score | Margin | Opener (edge 25) |
+|---|---:|---:|---:|---:|---:|---|
+| Trained `side_control/bottom` (R=45); focus = `side_control/bottom` + `mount/top` | 22 | 45 | 67 | 37 | +30 | **fighter (override)** |
+| Focus changed to `closed_guard/bottom` + `mount/top`; earned R unchanged | 22 | 45 | 67 | 37 | +30 | **fighter (override)** |
+| Promoted: General Technique 22 → 37; R unchanged | 37 | 45 | 82 | 37 | +45 | **fighter (override)** |
+
+### 8.5 Reassessing the candidate thresholds **[PROPOSAL; not approved]**
+
+The earlier candidates (Side Control 40, Closed Guard 24, Back Control 60) assumed `R = G`, which doubled every skill gap. Halving them (20 / 12 / 30) reproduces the *untrained* behavior exactly, but the new baseline changes what a threshold means for **trained** fighters: the edge is now directly the `R` gap a specialist must earn. So the table below compares a **range of smaller thresholds** instead of one halving.
+
+| Candidate edge → | 10 | 12 | 15 | 20 | 25 | 30 | 40 | 50 | 60 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| same belt, both untrained (G noise only) | 0.178 | 0.135 | 0.081 | 0.022 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| other 1 belt higher, both untrained | 0.658 | 0.592 | 0.481 | 0.311 | 0.178 | 0.081 | 0.000 | 0.000 | 0.000 |
+| other 2 belts higher, both untrained | 0.969 | 0.947 | 0.902 | 0.799 | 0.658 | 0.481 | 0.178 | 0.022 | 0.000 |
+| same belt, other R=20 (light training) | 0.799 | 0.747 | 0.658 | 0.481 | 0.311 | 0.178 | 0.022 | 0.000 | 0.000 |
+| same belt, other R=40 (solid training) | 1.000 | 1.000 | 0.999 | 0.969 | 0.902 | 0.799 | 0.481 | 0.178 | 0.022 |
+| White other R=60 vs Blue favored R=0 | 1.000 | 1.000 | 1.000 | 0.999 | 0.969 | 0.902 | 0.658 | 0.311 | 0.081 |
+| R gap needed at equal G (edge + 1) | 11 | 13 | 16 | 21 | 26 | 31 | 41 | 51 | 61 |
+
+What to read from it:
+
+- **Same-belt untrained noise** should be small, or the position's priority means nothing between equals: ≤ 2% from edge 20, 0% from 25.
+- **Adjacent-belt untrained reversal** is the cost of letting `G` alone override a position: 31% at 20, 18% at 25, 8% at 30, 0% at 40.
+- **Training should clearly matter:** light training (`R = 20`) reverses 48% at edge 20, 31% at 25; solid training (`R = 40`) 97% at 20, 90% at 25, 80% at 30, 48% at 40.
+- **The `R` gap needed at equal `G` is `edge + 1`**, so an edge is also a statement about how long a specialist must train: it is only meaningful against `R`'s cap and growth pace, which are not decided (§8.8).
+
+| Position | Earlier candidate | Straight halving | **Recommended playtest value** | Bracket worth testing | Why |
+|---|---|---|---|---|---|
+| `side_control` (Top favored) | 40 | 20 | **25** | 20–30 | Equal fighters keep the pin (0% noise); adjacent-belt reversal 18% (not 31%); light training matters (31%); solid training clearly overcomes it (90%) |
+| `closed_guard` (Bottom "may" be favored) | 24 | 12 | **15** | 10–20 | A deliberately mild bias: some noise (8%) and a real belt effect (48% adjacent), with light training already favoring the challenger (66%) |
+| `back_control` (attacker favored) | 60 | 30 | **40** | 30–50 | A strong pin: no noise, no adjacent-belt reversal (0%), two belts needed (18%), solid training only 48% so real specialization is required |
+
+These are starting points for the playtest/measurement plan in §12, **not** balance truth and **not** approved. If the owner changes `R`'s cap, the weights or the belt ranges, every edge must be recomputed with the script in §9.
+
+### 8.6 Before fighter data exists, and existing experienced fighters **[PROPOSAL]**
+
+- **Before any fighter proficiency data exists**, the match owner passes an explicit, recorded provisional profile. Any profile that is **identical for both fighters** (for example `G = 50`, `R = 0`) gives margin 0, so every `BIASED_SEQUENTIAL` position opens for its favored role. For Side Control that is the Top-opens behavior in `SIDE_CONTROL_V0_PROPOSAL.md`, recorded as a consequence of the placeholder profile, not a frozen rule. Tests for B2b use explicit stable inputs.
+- **A new career fighter is `R = 0` everywhere.** A fighter who is *not* new (an experienced opponent, a boss, a saved fighter from before this system) would also read as `R = 0`, which wrongly makes a Black Belt look positionally untrained. Such fighters will eventually need an **explicitly defined starting proficiency or training history** (authored per fighter, or a documented history that earned it). It must **not** be derived silently from `G`, and this proposal does not design or implement a roster or opponent generator (OD-12).
+
+### 8.7 Entry tempo adjustment **[OPEN, default 0]**
+
+After a Knee Slice the passing fighter produced the exit and, if favored, also opens Side Control: consecutive personal opportunities across two positions, with no free window or clock. Rather than choose a side, the contract carries `entry_adjust` (default **0**) that lowers the favored role's edge when the favored fighter produced the entry transition. A value is decided only after the measurement plan in §12 shows whether it matters. OD-8.
+
+### 8.8 Remaining numerical questions **[OPEN]**
+
+1. **`R` cap and scale** (`0..100`?) and whether an elite specialist (`R = 80..100`) may outweigh several belts of `G`. At edge 25, a White Belt with `R = 100` takes the opening from an untrained Black Belt in 90.2% of the cases (average margin +40.0); whether specialization should be able to outrank belt that far is a design question.
+2. **`R` growth pace** (XP per accepted exchange, focus acceleration, diminishing returns, anti-farming). Not decided; edges depend on it.
+3. **Weights** between `G` and `R` (`1:1` is provisional).
+4. **Edges** per position (§8.5) and whether they vary by belt or division.
+5. **`G` belt distributions** and within-belt variance (illustrative here).
+6. **Starting profile for existing experienced fighters** (§8.6, OD-12).
+7. **`entry_adjust`** (§8.7).
+
+## 9. Method and reproducibility
+
+All tables above are produced by the script below with no randomness and no floating-point arithmetic: every integer `G` pair in the belt ranges is enumerated, the strict comparison `(G_other + R_other) − (G_favored + R_favored) > edge` is evaluated, and the count is rounded to three decimals with integer arithmetic. Run it with `python3 -I`. It was run from this document to produce the tables, and a fresh run reproduces them exactly.
+
+```python
+"""B2a.1 sensitivity, exact and deterministic (integers only; no random numbers, no floats).
+score = G + R. G is uniform over the owner's ILLUSTRATIVE belt range; R is an explicit illustrative
+earned-expertise level (0 for a new career fighter). The non-favored fighter opens iff
+score_other - score_favored > edge (strict), otherwise the favored role opens."""
+BELTS = {'White': (10, 35), 'Blue': (25, 50), 'Purple': (40, 65), 'Brown': (55, 80), 'Black': (70, 95)}
+EDGES = (10, 15, 20, 25, 30, 40, 50, 60)
+CANDIDATES = (10, 12, 15, 20, 25, 30, 40, 50, 60)
+
+def pct(hit, tot):                      # integer-only rounding to 0.001 (half up)
+    return f'{(2000 * hit + tot) // (2 * tot) / 1000:.3f}'
+
+def p_override(fav, other, edge):
+    """fav/other = (belt_or_fixed_G, R). Returns (hits, total) over all integer G pairs."""
+    def gs(x):
+        return range(BELTS[x][0], BELTS[x][1] + 1) if isinstance(x, str) else (x,)
+    hit = tot = 0
+    for gf in gs(fav[0]):
+        for go in gs(other[0]):
+            tot += 1
+            hit += (go + other[1]) - (gf + fav[1]) > edge
+    return hit, tot
+
+def row(fav, other):
+    return ' '.join(f'{pct(*p_override(fav, other, e)):>6}' for e in EDGES)
+
+def header(first):
+    return f'{first:<44}' + ' '.join(f'{e:>6}' for e in EDGES)
+
+if __name__ == '__main__':
+    print('TABLE 1  both untrained (R=0); P(non-favored fighter opens); edge in score units')
+    print(header('other fighter vs favored-role fighter'))
+    for label, fav, oth in [('same belt', 'White', 'White'), ('other is 1 belt higher', 'White', 'Blue'),
+                            ('other is 2 belts higher', 'White', 'Purple'), ('other is 3 belts higher', 'White', 'Brown'),
+                            ('other is 4 belts higher', 'White', 'Black'), ('other is 1 belt LOWER', 'Blue', 'White')]:
+        print(f'{label:<44}' + row((fav, 0), (oth, 0)))
+    print('\nTABLE 2  same belt (G random in range); R_fav / R_other illustrative earned expertise')
+    print(header('favored R / other R'))
+    for rf, ro in [(0, 0), (0, 20), (0, 40), (0, 60), (0, 80), (40, 0), (40, 20), (40, 40), (40, 60), (40, 80)]:
+        print(f'{f"favored R={rf} / other R={ro}":<44}' + row(('White', rf), ('White', ro)))
+    print('\nTABLE 3  specialist vs inexperienced higher belt (illustrative R)')
+    print(header('case'))
+    for r in (40, 60, 80):
+        print(f'{f"White other R={r} vs Blue favored R=0":<44}' + row(('Blue', 0), ('White', r)))
+    for r in (40, 60, 80):
+        print(f'{f"White other R={r} vs Purple favored R=0":<44}' + row(('Purple', 0), ('White', r)))
+    for r in (40, 60, 80):
+        print(f'{f"White FAVORED R={r} vs Blue other R=0":<44}' + row(('White', r), ('Blue', 0)))
+    print('\nTABLE 3b  threshold comparison (all untrained unless stated; P = non-favored fighter opens)')
+    print(f'{"candidate edge (score units)":<44}' + ' '.join(f'{e:>6}' for e in CANDIDATES))
+    for label, fav, oth in [('same belt, both untrained (G noise only)', ('White', 0), ('White', 0)),
+                            ('other 1 belt higher, both untrained', ('White', 0), ('Blue', 0)),
+                            ('other 2 belts higher, both untrained', ('White', 0), ('Purple', 0)),
+                            ('same belt, other R=20 (light training)', ('White', 0), ('White', 20)),
+                            ('same belt, other R=40 (solid training)', ('White', 0), ('White', 40)),
+                            ('White R=60 other vs Blue favored R=0', ('Blue', 0), ('White', 60))]:
+        print(f'{label:<44}' + ' '.join(f'{pct(*p_override(fav, oth, e)):>6}' for e in CANDIDATES))
+    print(f'{"R gap needed at equal G (edge + 1)":<44}' + ' '.join(f'{e + 1:>6}' for e in CANDIDATES))
+    print('\nTABLE 4  two Black Belts, equal G = 82 (fixed); margin = R_other - R_favored (deterministic)')
+    print(header('R_other - R_favored'))
+    for d in (0, 10, 20, 25, 26, 30, 40, 50, 60, 80):
+        print(f'{d:<44}' + ' '.join(f'{"OTHER" if (82 + d) - 82 > e else "fav":>6}' for e in EDGES))
+
+    print('\nTABLE 5  focus change keeps earned R; promotion changes G only (illustrative values, edge 25)')
+    opponent_g, edge = 37, 25             # untrained Blue-ish Top (favored in Side Control), R = 0
+    steps = [('trained sc/bottom; focus = sc/bottom + mount/top', 22, 45), ('focus changed to cg/bottom + mount/top', 22, 45),
+             ('promoted: General Technique 22 -> 37', 37, 45)]
+    for label, g, r in steps:
+        margin = (g + r) - (opponent_g + 0)
+        print(f'{label:<52} G={g:>2} R[sc/bottom]={r:>2} margin={margin:>3} -> {"fighter opens (override)" if margin > edge else "Top opens"}')
+```
 
 ## 10. Edge cases
 
 | # | Case | Proposed rule | Reason |
 |---|---|---|---|
 | 1 | Equal scores / margin exactly at the edge | Favored role opens (`favored_holds_tie`) | Deterministic; the position's priority is the default |
-| 2 | Missing or out-of-range proficiency | Refuse entry, `missing_proficiency` / `invalid_proficiency`, zero mutation | Fail closed; no silent default |
+| 2 | Missing or out-of-range proficiency | Refuse entry, `missing_proficiency` / `invalid_proficiency`, zero mutation. `R = 0` is a valid explicit value; an absent value is not | Fail closed; no silent default, and no silent `R = G` |
 | 3 | Mount / Half Guard | Policy `LEGACY_FIXED`; inputs ignored; replays byte-identical to today | Preserve existing behavior |
 | 4 | Chains (Mount → Half Guard → Side Control) | One decision per entry, using the proficiency of the role the fighter **now** holds in the **new** position | Role proficiency is keyed `(position, role)`, not identity or axis |
 | 5 | Roles swap on a reversal | Same: the roles at entry decide which `R` applies | Same |
@@ -209,6 +392,10 @@ The table in §8.2 is reproducible exactly (no randomness): for every integer pa
 | 11 | Passive monopoly | Not possible: alternation after the opener; there is no repeated contest | V1 design |
 | 12 | Information leak | Opening reveals only scores and the opener, never a sealed choice; neutral positions seal before reveal | Sealed decisions stay sealed |
 | 13 | Memory mastery as an input | Not accepted; a test asserts it | No double counting |
+| 14 | `G` rises or a belt is earned | `R` is unchanged; only `G` changes the next match's contest | OD-2: `R` is earned, never derived |
+| 15 | Focus assignment changes | Earned `R` for every position-role persists; the focus only changes how fast future `R` is earned, and takes effect next match | OD-2; inputs are frozen per match |
+| 16 | Unfocused fighter | Legal attacks, escapes and essential defenses unchanged (existing technique-knowledge rules); `R` affects only the opening contest | No move is locked for lack of focus |
+| 17 | Experienced fighter with no recorded history | Reads as `R = 0`; needs an explicitly defined starting profile or history before it is used, never derived from `G` | OD-12; no roster generator is designed here |
 
 ## 11. Per-fighter completed-turn tracking (for future 3-turn stalling and 5-turn Heart of a Lion)
 
@@ -220,7 +407,7 @@ The table in §8.2 is reproducible exactly (no randomness): for every integer pa
 
 **Negative-first tests (each leaves state byte-identical):** missing / extra / mistyped proficiency keys, `bool` or float where an int is required, out-of-range values, unknown position id or role, a policy with an unknown kind or a missing favored role, a mastery input, a second decision for the same entry, a decision while a window is open, a mismatched role map.
 
-**Deterministic matrix:** equal ratings; adjacent belts; underdog Top and underdog Bottom; high-skill Bottom in Side Control and Closed Guard; low-technique Top in Open Guard (no override, protocol unchanged); two White Belts with different two-focus selections; identical belt and `G` with different focus histories; respec retaining earned proficiency (next match only); off-focus legal moves unaffected; promotion unlocking a focus; save/load and replay reproducing the same `initiative_decided` records; margin = edge and edge + 1; input permutations (fighter-id order must not matter).
+**Deterministic matrix:** equal ratings; adjacent belts; underdog Top and underdog Bottom; high-skill Bottom in Side Control and Closed Guard; low-technique Top in Open Guard (no override, protocol unchanged); two White Belts with different two-focus selections; identical belt and `G` with different focus histories; respec retaining earned proficiency (next match only); off-focus legal moves unaffected; promotion unlocking a focus; save/load and replay reproducing the same `initiative_decided` records; margin = edge and edge + 1; input permutations (fighter-id order must not matter); new career fighters at `R = 0` regardless of `G`; `G` increases and belt promotion leaving `R` unchanged; focus reassignment keeping earned `R`; Tables 1–5 and the §8.4 examples reproduced as fixtures; two Black Belts with equal `G` deciding by the `R` gap alone; an experienced fighter without an explicit starting profile refused.
 
 **Measurement plan before any numeric acceptance:** after B2c exists, run the B1e-style harness with fixed provisional profiles across a belt-pair grid and report opener distribution, consecutive-opportunity frequency after Knee Slice, and any window starvation. These are evidence, not gates the doc pre-commits.
 
@@ -236,13 +423,15 @@ The table in §8.2 is reproducible exactly (no randomness): for every integer pa
 | Id | Decision | Recommendation |
 |---|---|---|
 | OD-1 | Accept §3 (seven separate concerns) and the three policy kinds | Accept |
-| OD-2 | Scale `0..100`, `score = G + R`, weights `1:1`; `R` starts equal to `G` | Accept |
+| OD-2 | **OWNER-APPROVED 2026-10-13 (Option B):** `G` and `R` are separate; a new career fighter starts at `R = 0`; `R` is never derived from `G` | Done |
+| OD-2a | Scale (`0..100` provisional), weights (`1:1` provisional), `R` cap and growth pace | Decide with the progression design; every edge depends on it (§8.8) |
 | OD-3 | Skill decides the opening only (V1); V2 deferred; V3 rejected | Accept |
-| OD-4 | Edges: Side Control 40, Closed Guard 24, Back Control 60 (or choose from §8.2) | Accept as playtest starting values |
+| OD-4 | Edges: Side Control 25 (20–30), Closed Guard 15 (10–20), Back Control 40 (30–50); compare with the halved 20 / 12 / 30 (§8.5) | Accept as playtest starting values only |
 | OD-5 | Strict `>`; a tie keeps the favored role | Accept |
 | OD-6 | Inputs frozen at match creation; changes apply next match | Accept |
-| OD-7 | Provisional profile `G = R = 50` until fighter data exists (§8.4) | Accept |
+| OD-7 | Until fighter data exists, an explicit provisional profile identical for both fighters (for example `G = 50`, `R = 0`) (§8.6) | Accept |
 | OD-8 | `entry_adjust` exists, default 0; decide a value after measurement | Accept |
 | OD-9 | Personal-turn definition (§11), including responses, D3-B holds, passes, free windows | Review |
 | OD-10 | Policies for `turtle`, `front_headlock`, `leg_entanglement`, and confirming `open_guard`/`closed_guard` | Decide at each rules sheet |
 | OD-11 | Mount / Half Guard stay `LEGACY_FIXED`; any conversion is a separate authorized slice | Accept |
+| OD-12 | How an existing experienced fighter (opponent, boss, pre-system save) gets an explicit starting `R` or training history; never derived silently from `G` | Decide when fighter data is designed; no generator now |

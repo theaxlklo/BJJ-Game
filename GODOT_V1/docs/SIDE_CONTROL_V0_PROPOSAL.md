@@ -179,6 +179,8 @@ Here the situation differs: the fighter who produces the exit (the passing **Top
 * **[PROPOSAL]** entry `initiator = top`, no window open, zero seconds, no charge, window ids continuing (§6.5);
 * **[OPEN]** the owner decides between the Guide §15 authority rule (Top first) and an alternation rule (Bottom first, because Top just acted). Either is expressible without extra turns. This slice neither adds nor models a free-initiative priority; that belongs to the stalling/priority rule family of PR #63.
 
+**Note (2026-10-13):** the owner-agreed direction in `POSITION_AWARE_INITIATIVE_PROPOSAL.md` (B2a.1) supersedes this binary framing: Side Control would be a position-biased opening (Top favored) that a sufficiently skilled or specialized fighter can override. That document is a proposal; none of its numerical thresholds is approved, and until fighter proficiency data exists an identical provisional profile makes the favored role open.
+
 ### 6.5 What is preserved **[PROPOSAL; continuity facts OBSERVED for Half Guard]**
 
 | Quantity | Rule at the boundary | Observed precedent / source |

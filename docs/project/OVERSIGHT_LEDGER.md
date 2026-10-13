@@ -1,8 +1,8 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 4.3 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 4.4 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
-**Workflow (owner decision 2026-10-13, see E-016 to E-019):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
+**Workflow (owner decision 2026-10-13, see E-016 to E-020):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
 **Completed Claude handoff:** `CLAUDE_B2A_HANDOFF.md` (archived on branch `docs/project-oversight-canonical`) (archived B2a scope; completed in [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65)). **Next gate:** B2a.1 position-aware initiative design, then owner review of Side Control SC-D1–SC-D15; B2b not yet authorized.
@@ -45,7 +45,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 |---|---|---|---|
 | Stack safety | P0 — cumulative integration **COMPLETE** | PR #66 merged successfully | Local-first workflow adopted (E-016); stale PRs left untouched; harden comparer count/exception pins locally |
 | Gameplay breadth | B2a — Side Control rules/entry spec | **Doc-qualified #65, not approved** | SC-D2 Top-first explicitly remains open; don't freeze numbers | 
-| Initiative design | B2a.1 — Position-aware and skill-sensitive contract | **Proposal delivered (E-019); awaiting owner decisions OD-1–OD-11** | Include role-specific selectable training focuses, belt Technique variance and move mastery without implementing career, focus selection, or initiative changes |
+| Initiative design | B2a.1 — Position-aware and skill-sensitive contract | **Proposal revised (E-020): OD-2 approved; awaiting OD-2a, OD-3 to OD-12** | Include role-specific selectable training focuses, belt Technique variance and move mastery without implementing career, focus selection, or initiative changes |
 | Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **Blocked on SC-D1–SC-D15** | B2b separate Python oracle; B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
 | Wider positions | Open/Closed Guard, Standing, reversals | **Planned** | Full legal graph traversal and start |
 | Match completion | Scoring, adjudication, activity enforcement, basic opponent | **Planned** | Human plays a complete fight from Standing |
@@ -56,7 +56,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 | ID | Question | Current decision / state |
 |---|---|---|
 | D-SC-01 | Side Control SC-D1–SC-D15: roles, first initiative, axis, catalog, grades, economy, exits, entry, opt-in and slicing | **Proposal delivered #65; all owner decisions remain OPEN** |
-| D-INIT-01 | Position-aware initiative, especially SC-D2 first Side Control window | **B2a.1 docs investigation approved; no specific priority policy approved** |
+| D-INIT-01 | Position-aware initiative, especially SC-D2 first Side Control window | **B2a.1 docs investigation approved; OD-2 Option B (separate `G` and `R`, new fighter `R = 0`) OWNER-APPROVED 2026-10-13 (E-020); no numerical threshold, scale, weight or XP rate approved** |
 | D-INIT-02 | Neutral simultaneous commitments in Open Guard/Standing and potential Bottom initiative in Closed Guard | **Proposed future capability; not implemented; requires secrecy, clock, ordering, personal-turn rules** |
 | D-INIT-03 | Belt-banded Technique stat with within-belt variance and position-specific proficiency affecting opening priority | **New owner design idea, NOT APPROVED**. Investigate in B2a.1, keep control/authority/response and clock independent; initial ranges/override thresholds OPEN. |
 | D-FOCUS-01 | Player-selected positional training focuses keyed by position family **and physical role**; White Belt begins with proposed 2 focuses (e.g. Mount Top and Side Control Top); more slots as fighter improves | **Owner design direction/provisional 2-slot example; NOT CODE-AUTHORIZED.** Decide exact slot ladder, focus switching, XP/learning rules and persistent storage later. Preserve off-focus move legality, earned belts and earned proficiency. |
@@ -248,6 +248,17 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Observed facts the proposal rests on:** `BjjFighterDefinition` has no proficiency data; no symmetric simultaneous protocol exists (Half Guard's sealed protocol is asymmetric); Half Guard's initiation counters are role-keyed.
 - **Validation:** documentation only. Whitespace check and the `tools/ci` suite pass; no code, test, fixture, workflow or pinned count changed. Facts were checked against `main` at the time of writing; the numbers are reproducible by the method in the document's §9.
 - **Next gate:** owner review of OD-1–OD-11 together with SC-D1–SC-D15. B2b is not authorized by this entry.
+
+### E-020 — Owner approves separate positional proficiency (OD-2 Option B); B2a.1 revised, 2026-10-13
+
+- **Owner decision (OWNER-APPROVED):** General Technique `G` (belt-influenced, overlapping distributions, individual variation) and position-and-role proficiency `R` (earned expertise per position-role) are **separate** characteristics. A new career fighter starts at `R = 0` for every position-role regardless of `G`. `R` is not set from `G` and does not rise automatically when `G` improves or a belt is earned. Training focuses accelerate earning `R`; earned `R` persists when focus assignments change. Unfocused fighters keep legal attacks, escapes and essential defenses under the existing technique-knowledge rules. Memory Mastery stays separate and is not automatically an initiative modifier. **Not approved:** numerical balance parameters, XP rates, fighter-schema implementation, career mechanics.
+- **Revision (documentation only):** `GODOT_V1/docs/POSITION_AWARE_INITIATIVE_PROPOSAL.md` revision 2. New §8.0 (approved baseline), §8.2 (how the position's opening advantage interacts with `G` and `R`), recomputed tables (untrained belt gaps; same-belt training histories; specialist vs higher belt; equal-`G` Black Belts; focus change and promotion), five worked examples, reassessed thresholds, §8.6 (existing experienced fighters need an explicitly defined starting proficiency or history, never derived from `G`; no roster generator is designed), §8.8 (remaining numerical questions), updated edge cases, tests and decisions (OD-2 approved, OD-2a, OD-4, OD-7, new OD-12). The integer arithmetic, strict comparison and once-per-entry decision are preserved: the revised examples revealed no concrete issue with them.
+- **Revised balance evidence (illustrative inputs; exact enumeration, no randomness):** with `score = G + R` an untrained matchup is decided by the `G` gap against the edge, so the old candidates (written for `R = G`) halve to 20 / 12 / 30 for untrained fighters but mean something different for trained ones (the edge is the `R` gap a specialist must earn: `edge + 1`). Untrained, one belt higher reverses a Side Control opening 31.1% at edge 20, 17.8% at 25, 8.1% at 30 and 0% at 40. Light training (`R = 20`) reverses 48.1% at 20 and 31.1% at 25; solid training (`R = 40`) 96.9% at 20, 90.2% at 25, 79.9% at 30 and 48.1% at 40. A White Belt specialist (`R = 60`) takes the opening from an untrained Blue Belt 96.9% at edge 25 and 65.8% at 40.
+- **Recommended playtest thresholds (unapproved candidates, not balance truth):** Side Control 25 (bracket 20–30), Closed Guard 15 (10–20), Back Control 40 (30–50).
+- **Remaining numerical questions:** `R` cap and scale, `R` growth pace and anti-farming, `G`/`R` weights, per-position edges (and whether they vary by belt), `G` belt distributions and variance, starting profile for existing experienced fighters (OD-12), the Knee Slice `entry_adjust` (OD-8). Also open and unchanged: OD-3 to OD-11.
+- **Other documents:** `SIDE_CONTROL_V0_PROPOSAL.md` §6.4 gained one note pointing to the newer direction without approving any threshold. No code, test, fixture, workflow, Python reference or pinned count changed.
+- **Validation:** the script embedded in the proposal was extracted and run; all 31 probability rows reproduce verbatim in the document tables and 16 prose percentages match exact computation. Whitespace check and `tools/ci` suite pass. No gameplay parity run was needed (no code changed).
+- **Next gate:** owner review of OD-2a and OD-3 to OD-12 together with SC-D1–SC-D15. B2b is not authorized by this entry.
 
 ## Standard Claude-result ingestion form
 
