@@ -35,9 +35,7 @@ static func process(state: BjjMountExchange, request: BjjExchangeResult.Request)
         return missing
     return state.attempt(request)
 
-func _validate(request: BjjExchangeResult.Request) -> String:
-    if request == null:
-        return "missing_request"
+func validate_context(allow_finished_advance: bool = false) -> String:
     if rules == null or cost_policy == null or position == null or history == null:
         return "missing_configuration_or_state"
     if top == null or bottom == null:
@@ -55,7 +53,7 @@ func _validate(request: BjjExchangeResult.Request) -> String:
     if initial_clock <= 0 or initial_clock > BjjStaminaPool.MAXIMUM_EXACT or clock_seconds < 0 or clock_seconds > initial_clock:
         return "invalid_clock_context"
     # User-approved safety boundary differs from three Python terminal anomalies.
-    if clock_seconds == 0 or submission_tapped or position.broken or not exit_destination.is_empty():
+    if ((clock_seconds == 0 or submission_tapped) and not allow_finished_advance) or position.broken or not exit_destination.is_empty():
         return "terminal_exchange"
     if not is_finite(position.axis) or not BjjMountRules.axis_can_have_band(position.axis, position.band):
         return "invalid_mount_context"
@@ -65,6 +63,14 @@ func _validate(request: BjjExchangeResult.Request) -> String:
         return "invalid_setup_context"
     if not submission_stage.is_empty() and not STAGES.has(submission_stage):
         return "invalid_submission_stage"
+    return ""
+
+func _validate(request: BjjExchangeResult.Request) -> String:
+    if request == null:
+        return "missing_request"
+    var context_error := validate_context()
+    if not context_error.is_empty():
+        return context_error
     if not BjjCommitment.valid(request.commitment):
         return "invalid_commitment"
     # Frozen legacy path ignores the optional response commitment entirely.
@@ -106,10 +112,15 @@ func _validate(request: BjjExchangeResult.Request) -> String:
         return "unsupported_matchup"
     return ""
 
+# Read-only admission query for contract adapters. Same checks and codes as attempt(),
+# which calls the very same validation; it never mutates state.
+func admission_error(request: BjjExchangeResult.Request) -> String:
+    return _validate(request)
+
 func attempt(request: BjjExchangeResult.Request) -> BjjExchangeResult:
     var r := BjjExchangeResult.new()
     r.error = _validate(request)
-    if not r.ok():
+    if not r.error.is_empty():
         return r
     # Capture all historical authority before initiative flips or either charge.
     r.initiator = initiator
@@ -129,10 +140,9 @@ func attempt(request: BjjExchangeResult.Request) -> BjjExchangeResult:
     r.base_resolution = _resolve(request, 0, ready)
     r.resolution = r.base_resolution if r.exhaustion.modifier == 0 else _resolve(request, r.exhaustion.modifier, ready)
     if rules.v04:
-        r.initiator_commitment_modifier = _magnitude(r.initiator_funding.effective, r.resolution.final_grade)
-        r.response_undercommitment_modifier = 1 if _rank(r.responder_funding.effective) < _rank(r.initiator_funding.effective) else 0
-        var magnitude_grade := BjjGrade.shift(r.resolution.final_grade, r.initiator_commitment_modifier)
-        var final_grade := BjjGrade.shift(magnitude_grade, r.response_undercommitment_modifier)
+        r.initiator_commitment_modifier = BjjCommitmentSettlement.magnitude_modifier(r.initiator_funding.effective, r.resolution.final_grade)
+        r.response_undercommitment_modifier = BjjCommitmentSettlement.undercommitment_modifier(r.initiator_funding.effective, r.responder_funding.effective)
+        var final_grade := BjjCommitmentSettlement.sequential_grade(r.resolution.final_grade, r.initiator_commitment_modifier, r.response_undercommitment_modifier)
         if r.initiator_commitment_modifier != 0 or r.response_undercommitment_modifier != 0:
             # Re-resolve using actual sequential target, not the sum of shifts.
             r.resolution = _resolve(request, final_grade - r.base_resolution.final_grade, ready)
@@ -143,7 +153,7 @@ func attempt(request: BjjExchangeResult.Request) -> BjjExchangeResult:
     r.stamina = attacker.spend_up_to(r.initiator_funding.effective_cost)
     if rules.v04:
         var response_cost := r.responder_funding.effective_cost
-        if rules.rule1 and r.initiator_funding.effective.is_empty():
+        if BjjCommitmentSettlement.waives_response_cost(rules.rule1, r.initiator_funding.effective):
             r.response_stamina_waived = response_cost
             response_cost = 0
         r.response_stamina = defender.spend_up_to(response_cost)
@@ -162,22 +172,6 @@ func attempt(request: BjjExchangeResult.Request) -> BjjExchangeResult:
     _record_settlement(r)
     r.outcome = snapshot()
     return r
-
-static func _rank(commitment: String) -> int:
-    return BjjCommitment.ORDER.find(commitment) + 1
-
-static func _magnitude(commitment: String, grade: int) -> int:
-    if commitment == BjjCommitment.HIGH:
-        if grade == BjjGrade.SUCCESS:
-            return 1
-        if grade == BjjGrade.FAILURE:
-            return -1
-    if commitment == BjjCommitment.LOW or commitment.is_empty():
-        if grade == BjjGrade.STRONG_SUCCESS:
-            return -1
-        if grade == BjjGrade.STRONG_FAILURE:
-            return 1
-    return 0
 
 func _resolve(request: BjjExchangeResult.Request, modifier: int, ready: bool) -> BjjExchangeResult.Resolution:
     var finish := request.action_id == FINISH

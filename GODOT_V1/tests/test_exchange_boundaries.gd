@@ -38,6 +38,14 @@ func full_state(state: BjjMountExchange) -> Dictionary:
     return result
 
 func _initialize() -> void:
+    var blank := BjjExchangeResult.new()
+    check("blank result is rejected", blank.ok(), false)
+    check("blank result serializes safely", blank.fields(), {"error":"incomplete_exchange_result"})
+    var verifier: Script = load("res://tests/test_exchange_reference.gd")
+    for value: float in [NAN, INF, -INF]:
+        check("nonfinite actual is unequal", verifier.numeric_equal(value, 1.5), false)
+        check("nonfinite expectation is unequal", verifier.numeric_equal(1.5, value), false)
+    check("finite axis tolerance", verifier.numeric_equal(1.5, 1.5), true)
     check("missing state", BjjMountExchange.process(null, request()).ok(), false)
     for flag: String in ["enable_v03_submissions", "enable_stamina_settlement_rules",
             "enable_unfunded_responder_cost_waiver", "enable_supplemental_hold_settlement", "enable_v04b_recognition"]:

@@ -17,7 +17,8 @@
 | `scripts/positions/mount/mount_resolver.gd` | `engine/mount_engine.py::resolve_action` | Core deterministic exchange, no match orchestration |
 | `scripts/positions/mount/mount_drift.gd` | `engine/mount_engine.py::simulate_drift` | Per-second drift, clock, band-change events |
 | `scripts/positions/mount/mount_position.gd` | `positions/mount/{axis,position}.py` | Persisted control / terminal crossing split |
-| `scenes/mount_debug.tscn` | New | Visual placeholder with 3 camera presets |
+| `scenes/mount_debug.tscn` | New | Visual placeholder with 3 camera presets (kept as a separate diagnostic scene; no longer the default) |
+| `scenes/mount_practice.tscn` | F1 | Default 2D Mount practice scene driven through `BjjPositionGraphMatch` (see `F1_MOUNT_PRACTICE.md`) |
 
 ## Still NOT ported
 
@@ -92,3 +93,29 @@ remain OFF. See [EXCHANGE_SETTLEMENT.md](EXCHANGE_SETTLEMENT.md) for source/API
 mapping, test evidence, three explicitly approved terminal rejection differences,
 strict admission boundaries and remaining dependencies. This is not full
 MountMatch or production recovery parity. Issue #20 is the next controller slice.
+
+## Position graph (proposal)
+
+[POSITION_GRAPH.md](POSITION_GRAPH.md) proposes the Mount → Half Guard transition architecture and Definition of Done. It is a specification only: no Half Guard mechanics exist, and Mount `Reversal` stays unresolved.
+
+## Position topology (proposal)
+
+[POSITION_TOPOLOGY.md](POSITION_TOPOLOGY.md) (A3c) is a specification only. It separates the three exit labels the frozen Mount engine emits today from the game's future position topology, evaluates GrappleMap as an architectural reference (nothing imported), and proposes a future transition contract, receiver-state decision matrix and chaining boundary. A follow-up adds a proposed canonical position-family inventory, a registry recommendation (stable string ids, not an integer enum) and a match-start contract in which normal matches begin from Standing; Standing is not implemented, an identity-only `BjjPositionRegistry` was added separately as A3e (ids only, no consumers), and Mount remains the only constructed position. It changes no code, schema, fixture or rule, and it assigns no landing to Mount `Reversal`.
+
+## Fighter foundation (F0)
+
+[F0_FIGHTER_FOUNDATION.md](F0_FIGHTER_FOUNDATION.md) records the source-field inventory, the feasibility decisions and the API for `BjjFighterDefinition` (a reusable content `Resource`), `BjjFighterSnapshotAdapter` (read-only, fighter-keyed views over the Mount gateway) and the additive `behavior_fields()` accessor. The Mount match remains the only owner of stamina, exhaustion, behavior, roles and time; nothing here is a Node.
+
+## Mount practice prototype (F1)
+
+[F1_MOUNT_PRACTICE.md](F1_MOUNT_PRACTICE.md) explains how to play the 2D practice scene, records the feasibility decisions (graph `behavior_fields()` pass-through, graph-backed fighter snapshots, display scaling) and lists the limitations. The default scene is now `scenes/mount_practice.tscn`; the 3D greybox is a separate diagnostic scene. Standing and Half Guard are not implemented.
+
+## Half Guard v0 proposal (B1a)
+
+[HALF_GUARD_V0_PROPOSAL.md](HALF_GUARD_V0_PROPOSAL.md) answers `POSITION_GRAPH.md` Q1–Q8 for a Half Guard v0, lists the owner decisions (`HG-1` … `HG-25`), the proposed rules sheet, an independent-oracle plan and the B1b/B1c/B1d slice boundaries. It is a proposal only: nothing is approved or implemented, and no Half Guard mechanics exist.
+
+The owner-approved *direction* for tactical preparation, feints and defensive counterplay is described, with proposed (not accepted) details, in [TACTICAL_PREPARATION_AND_FEINTS.md](TACTICAL_PREPARATION_AND_FEINTS.md); the Half Guard-specific proposal is `HALF_GUARD_V0_PROPOSAL.md` §12 (HG-26). Of that direction the two-phase sealed-intent **protocol** (B1g) and the first two explicit **feint pairs** with the +3 surcharge, the ±1 bite rule and the published defender timeout fallback (B1h, Half Guard only, an explicit opt-in object; see `HALF_GUARD_V0_ENGINE.md` and `HALF_GUARD_V0_RULES.md` §13) are implemented as provisional prototype rules; positional stalling, recovery and every other proposed rule are not. B1i connects the sealed protocol to the position graph through an explicit opt-in constructor (`create_with_sealed_half_guard`): Half Guard sealed decisions are reachable only after a validated Mount → Half Guard transition on such a graph; the default graph, F0 and F1 are unchanged and Mount-only. B1e adds a deterministic match-flow measurement harness and a CI-gated structural invariants suite (`MATCH_FLOW_DIAGNOSTICS.md`); it changes no rule. (The Half Guard engine itself, with its preparation and defensive-effort rules, is documented in `HALF_GUARD_V0_ENGINE.md`.)
+
+## Future match incentives and mutual exhaustion (specification only)
+
+[MATCH_INCENTIVES_HEART_OF_A_LION.md](MATCH_INCENTIVES_HEART_OF_A_LION.md) records the **custom game-specific third consecutive inactive personal turn** stalling trigger, an **IBJJF-inspired** escalating penalty ledger (the official 20-second inactivity standard is not this game's trigger), Momentum, and Heart of a Lion (both exactly zero: 50% stamina, five completed personal turns each, then 100%; once per match, normal costs and clock). When the Lion event has already fully completed and both fighters reach zero again, future gameplay must allow eligible **LOW memories at zero stamina** and/or up to **two consecutive REST/inactive personal turns**; the third incurs the custom stalling penalty. This requires an explicitly designed exception to LOW commitment funding and a separately approved REST recovery rule. These are **not implemented**, do not change B1e invariants or reports, and require separately accepted rule/policy and negative-first tests. A faithful IBJJF mode must not silently inherit any custom inactivity trigger or game-original mechanic. The current Half Guard prototype still has no ordinary stamina recovery.
