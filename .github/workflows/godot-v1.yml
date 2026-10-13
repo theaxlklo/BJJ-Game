@@ -378,6 +378,35 @@ jobs:
           cat /tmp/half-guard-graph-sealed-flow.log
           python tools/ci/validate_mount_slice_log.py /tmp/half-guard-graph-sealed-flow.log --name "Half Guard graph sealed flow" --exit-code "$status" --expected-assertions 2433
 
+      - name: Generate the independent Side Control Python oracle fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Standard-library oracle (tests/oracles/side_control_v0.py, written from SIDE_CONTROL_V0_RULES.md); no engine code, Mount code or Half Guard code is imported.
+          python GODOT_V1/tests/generate_side_control_reference.py
+
+      - name: Validate Side Control v0 boundaries (negative-first typed standalone engine tests)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_side_control_boundaries.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_side_control_boundaries.gd > /tmp/side-control-boundaries.log 2>&1 || status=$?
+          cat /tmp/side-control-boundaries.log
+          python tools/ci/validate_mount_slice_log.py /tmp/side-control-boundaries.log --name "Side Control boundaries" --exit-code "$status" --expected-assertions 3164
+
+      - name: Validate Side Control v0 against the independent Python oracle (fixture replay)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_side_control_reference.gd or oracle change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_side_control_reference.gd > /tmp/side-control-reference.log 2>&1 || status=$?
+          cat /tmp/side-control-reference.log
+          python tools/ci/validate_mount_slice_log.py /tmp/side-control-reference.log --name "Side Control reference" --exit-code "$status" --expected-assertions 89744
+
       - name: Validate the connected match-flow structural invariants (real games, live observer, rejected-command probes; not a population measurement)
         shell: bash
         run: |

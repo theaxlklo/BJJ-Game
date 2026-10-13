@@ -688,6 +688,33 @@ class HalfGuardGraphSealedFlowWiringTests(_HalfGuardSuiteWiring, unittest.TestCa
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
 
+class SideControlBoundariesWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Side Control boundaries', 'Validate Side Control v0 boundaries'
+    SCRIPT, LOG, EXPECTED = 'test_side_control_boundaries.gd', '/tmp/side-control-boundaries.log', 3164
+
+
+class SideControlReferenceWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
+    NAME, STEP_PREFIX = 'Side Control reference', 'Validate Side Control v0 against the independent Python oracle'
+    SCRIPT, LOG, EXPECTED = 'test_side_control_reference.gd', '/tmp/side-control-reference.log', 89744
+
+    def test_fixture_is_generated_before_the_replay_and_by_the_oracle_only(self):
+        text = WORKFLOW.read_text(encoding='utf-8')
+        generate = text.index('python GODOT_V1/tests/generate_side_control_reference.py')
+        replay = text.index('res://tests/test_side_control_reference.gd')
+        self.assertLess(generate, replay)
+        self.assertEqual(text.count('generate_side_control_reference.py'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'generate_side_control_reference.py').read_text(encoding='utf-8')
+        self.assertIn('from oracles import side_control_v0_scenarios', source)
+        self.assertNotIn('bjj_game', source)
+
+    def test_earlier_pins_are_untouched_by_the_standalone_side_control_slice(self):
+        text = WORKFLOW.read_text(encoding='utf-8')
+        for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
+                            ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-graph.log', 2133),
+                            ('/tmp/half-guard-graph-sealed-flow.log', 2433), ('/tmp/match-flow-invariants.log', 73606)):
+            self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
+
+
 class MatchFlowInvariantsWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
     NAME, STEP_PREFIX = 'Match-flow invariants', 'Validate the connected match-flow structural invariants'
     SCRIPT, LOG, EXPECTED = 'test_match_flow_invariants.gd', '/tmp/match-flow-invariants.log', 73606
