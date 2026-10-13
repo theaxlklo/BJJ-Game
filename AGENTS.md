@@ -20,6 +20,7 @@ This repository contains a deterministic Brazilian Jiu-Jitsu game, a frozen Pyth
 - For visual and memory concepts: Issues #31–#40. **Approved visual direction is not approval of experimental memory, chains, Fight IQ, desperation, rival AI or new mechanics.**
 - For optional manual qualification: `.github/workflows/test.yml` (manual dispatch only), `.github/workflows/godot-v1.yml`, `docs/CI_OPTIMIZATION.md`. Automatic GitHub Actions are disabled; local test results are the gate.
 - For progress and open decisions: `docs/project/ENGINEERING_ROADMAP.md` and `docs/project/OVERSIGHT_LEDGER.md` (the only living progress documents).
+- For a quick, non-authoritative inventory of project documents, Claude reviewer agents, skills and the named Ponytail plugin: `docs/project/PROJECT_HUB.md` (also has a searchable HTML view).
 - For architecture context: `docs/ARCHITECTURE.md`; older milestone prose may lag newer typed Godot modules.
 
 ## Local-first workflow (owner decision 2026-10-13; supersedes the earlier PR/CI process)
