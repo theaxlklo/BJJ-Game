@@ -315,6 +315,15 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Status carried forward, not changed:** Windows position-registry crash remains BLOCKED/FAIL; Linux qualification remains NOT TESTED until run there.
 - **Qualification:** documentation only; no Godot, Python, Windows or Linux test was run for this change.
 
+### E-027 — Project Hub catalog and tooling inventory (2026-10-13)
+
+- **Owner request:** Make it easy to see, at a glance, which agents, skills, plugins and documents exist or are in use, and organize many existing project documents by understandable names. This is a navigation/catalog deliverable, not a change to gameplay or the two-file live-progress policy.
+- **New navigation artifacts:** `docs/project/PROJECT_HUB.md` (GitHub-readable project/agent/skill/plugin and document-category overview) and `docs/project/PROJECT_HUB.html` (self-contained, locally viewable HTML dashboard with an offline title/category search over **140 tracked Markdown/text documents** from `docs/`, `GODOT_V1/docs/` and README files; excludes screenshots/compressed fixtures). Friendly names and document-family labels are **navigation only**: no source files were moved, renamed, deleted or rewritten.
+- **Inventory evidence from the GitHub `main` tree:** four Claude read-only reviewers (`design-sentinel`, `position-architect`, `replay-auditor`, `pr-verifier`); seven canonical BJJ skills under `.agents/skills/` with Claude wrappers (including the legacy `bjj-pr-handoff`); three reviewed vendored Claude skills (`godot-gdscript`, `godot-ui-control`, `systematic-debugging`); one **named project-workflow Claude Code plugin** (`ponytail@ponytail`, Ponytail Full). Repo configuration does **not** certify that this plugin is enabled on every Windows/Linux machine; `tools/setup_dev.py` / `claude plugin list` checks the local installation.
+- **Discoverability:** linked the hub from the root README, `AGENTS.md`, `docs/project/ENGINEERING_ROADMAP.md` and `docs/AGENT_WORKFLOW.md`. The existing Roadmap and Oversight Ledger remain the **only living progress documents**. The project hub is an inventory snapshot, not an authority on gameplay decisions.
+- **Scope and qualification:** documentation/index-only. No Godot, Python, Windows GUI or Linux gameplay tests were run for this change; no executable or oracle files, plugin installation, gameplay rules or CI gates were modified. Windows `test_position_registry.gd` remains BLOCKED/FAIL and Linux is NOT TESTED for that particular investigation. The planned F1 playable checkpoint has **not** started.
+- **Next action:** reuse the existing F1 2D Mount practice checkpoint; keep per-OS acceptance reports in future ledger entries and update the hub inventory only when tool/document membership materially changes.
+
 ## Standard Claude-result ingestion form
 
 For each result the owner pastes here, append a new `E-###` entry, checking at least:
