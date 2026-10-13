@@ -5,7 +5,7 @@
 **Workflow (owner decision 2026-10-13, see E-016 to E-021):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
-**Completed Claude handoff:** `CLAUDE_B2A_HANDOFF.md` (archived on branch `docs/project-oversight-canonical`) (archived B2a scope; completed in [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65)). **Next gate:** B2b-1 owner-authorized Side Control provisional rules sheet, then B2b-2 independent test-only Python oracle; B2c Godot remains unauthorized.
+**Completed Claude handoff:** `CLAUDE_B2A_HANDOFF.md` (archived on branch `docs/project-oversight-canonical`) (archived B2a scope; completed in [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65)). **Next gate:** B2b-1 rules sheet is done (E-023); B2b-2 independent test-only Python oracle next; B2c Godot remains unauthorized.
 
 ## One-screen overseer pulse
 
@@ -46,7 +46,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 | Stack safety | P0 — cumulative integration **COMPLETE** | PR #66 merged successfully | Local-first workflow adopted (E-016); stale PRs left untouched; harden comparer count/exception pins locally |
 | Gameplay breadth | B2a — Side Control rules/entry spec | **Doc-qualified #65, not approved** | SC-D2 reframed by B2a.1 (not a binary); owner-decision review in `SIDE_CONTROL_V0_PROPOSAL.md` §11A; no numbers frozen | 
 | Initiative design | B2a.1 — Position-aware and skill-sensitive contract | **Proposal revised (E-020): OD-2 approved; awaiting OD-2a, OD-3 to OD-12** | Include role-specific selectable training focuses, belt Technique variance and move mastery without implementing career, focus selection, or initiative changes |
-| Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **B2b authorized: rules sheet and independent test-only oracle; B2c+ not authorized** | B2b rules sheet then separate Python oracle (own local commit phases, before any GDScript); B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
+| Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **B2b-1 rules sheet done (E-023); B2b-2 oracle next; B2c+ not authorized** | Separate Python oracle (own local commit phase, before any GDScript); B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
 | Wider positions | Open/Closed Guard, Standing, reversals | **Planned** | Full legal graph traversal and start |
 | Match completion | Scoring, adjudication, activity enforcement, basic opponent | **Planned** | Human plays a complete fight from Standing |
 | Distinctive mechanics | Heart of a Lion, REST, LOW-at-zero, Momentum | **Approved concept, not implemented** | Separate rule gates and tests after core match, or earlier if liveness blocks play |
@@ -275,6 +275,14 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Correction:** Side Control SC-N8 no longer says a PASS “spends no clock.” An accepted PASS costs no stamina, has no grade and adds no *extra* clock charge; the ordinary decision window accounts for elapsed match time when it opens. Acceptance does not change the existing Half Guard behavior or add a new action.
 - **Prototype tradeoffs accepted:** 3 actions and 3 responses per side, no v0 submission threat, provisional `expose_back` as a halting exit, all four declared unsupported destinations honest-halt in B2b/B2c, no recovery or feints, unresolved reversals. Side Control → Half Guard re-entry is a future design target, not yet an implemented or authorized return route.
 - **Workflow/evidence:** docs-only owner decision record, no engine/test/oracle/fixture change. Prior calculator table verification remains valid; this entry does not freeze Side Control initiative edges or general/positional proficiency weights. Claude Code/Ponytail will implement B2b using local tests and direct `main` commits, with the oracle independent of later Godot code.
+
+### E-023 — B2b-1: Side Control v0 canonical rules sheet, 2026-10-13
+
+- **Slice:** `GODOT_V1/docs/SIDE_CONTROL_V0_RULES.md` (new, documentation only) on `main` from `df58466`. It restates the owner-approved §11A.6 package as one self-contained, ordered specification: identity/authority/initiative, entry schema with an explicit validated `initiator` and its 12-step rejection order, stable ids, both 3×3 raw-grade matrices, the funding/readiness/exhaustion/magnitude/undercommitment pipeline, wear and build tables, axis, bands and hysteresis, the four exits, PASS (no stamina, no grade, no extra clock, own decision kind with the fighter id), windows and timeout, admission precedence, histories/snapshot/replay, four worked examples, explicit exclusions.
+- **Boundaries held:** provisional prototype constants, no balance claim; no submissions, feints, stalling, Heart of a Lion, scoring or proficiency thresholds; all four exits honestly unsupported; no GDScript, oracle, fixture, workflow or existing document other than this ledger and the roadmap row changed.
+- **Resolved non-numeric details (sheet §12, owner may amend):** R-1 hysteresis numbers equal Half Guard's, stated independently (entry axis +10 gives band +1 under them); R-3 one `decision_history` list replaces parallel arrays; R-4 empty commitments default to MEDIUM; R-5 `attempt` is refused while a window is open; R-6 `malformed_command` typed boundary.
+- **Evidence (observed):** a disposable script (not committed) confirmed the sheet's 18 raw cells equal the proposal's §4.3 tables, both grids keep the proposal's structural properties, the 8 hysteresis rules terminate and are idempotent over every axis/band pair, and the four worked examples recompute with a separately written mini-calculator. `git diff --check` clean. No Godot or Python suite applies to a documentation-only commit and none was run.
+- **Next gate:** B2b-2 independent test-only Python oracle written from this sheet.
 
 ## Standard Claude-result ingestion form
 
