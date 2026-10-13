@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 4.1 — Local-first workflow adopted (owner decision 2026-10-13); educational-comment rule and three reviewed skills added; cumulative PR #66 integrated the stack through #65 into main (21/21 CI)  
+**Roadmap revision:** 4.2 — Local-first workflow adopted (owner decision 2026-10-13); educational-comment rule and three reviewed skills added; cumulative PR #66 integrated the stack through #65 into main (21/21 CI)  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`626321721209ffb0850bbdd1f2613992e1eaa629`, after cumulative PR #66) and historical draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and unresolved design decisions. Ordinary development is local-first on `main` (see *Development workflow*). This document recommends; it does not change engine behavior.
@@ -17,6 +17,8 @@ The earlier PR-stack, exact-head-CI and merge-train process is **retired**. Pass
 - Historical PRs are left as they are; no closure, branch deletion or force-push is planned unless the owner asks.
 - **Educational code comments are a permanent rule** (`AGENTS.md`): new and meaningfully modified code explains *why* (algorithms, stamina, initiative, transitions, determinism, invariants, tradeoffs) so the owner can learn from it; no repository-wide comment rewrite.
 - **Installed Claude Code skills (2026-10-13, loaded on demand, pinned in `docs/third_party/skills/PROVENANCE.md`):** `godot-gdscript` and `godot-ui-control` (gamedev-skills, Apache-2.0) and `systematic-debugging` (obra/superpowers, MIT). BJJ rules override them; existing `bjj-*` skills come first.
+- **One-command setup:** `python3 tools/setup_dev.py` (read-only check; interactive `--install` for PyYAML in a project `.venv` and the Ponytail plugin; Godot is never downloaded). See `docs/DEV_SETUP.md`.
+- **Future optional improvement (not scheduled):** let Codex reuse the reviewed Godot and debugging skills through its supported project-skill mechanism, with `AGENTS.md` staying authoritative. Avoid duplicate skill copies and extra plugin infrastructure; Ponytail itself need not be installed for Codex to follow the lean principles.
 - Only this roadmap and `OVERSIGHT_LEDGER.md` are living progress documents. The full rules are in `AGENTS.md`.
 
 ## Executive verdict

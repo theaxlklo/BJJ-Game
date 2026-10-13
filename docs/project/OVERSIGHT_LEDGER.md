@@ -1,8 +1,8 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 4.1 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 4.2 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
-**Workflow (owner decision 2026-10-13, see E-016, E-017):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
+**Workflow (owner decision 2026-10-13, see E-016, E-017, E-018):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
 **Completed Claude handoff:** `CLAUDE_B2A_HANDOFF.md` (archived on branch `docs/project-oversight-canonical`) (archived B2a scope; completed in [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65)). **Next gate:** B2a.1 position-aware initiative design, then owner review of Side Control SC-D1–SC-D15; B2b not yet authorized.
@@ -230,6 +230,15 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Compatibility:** every runnable GDScript sample in both Godot skills (and their fragments, in function context) parsed on Godot 4.7.2 with `--check-only`. No functional overlap with the seven `bjj-*` skills. Conflicts are handled by precedence text in `AGENTS.md`, not by editing vendored files: no `_process`/`delta` timing, `@export` gameplay constants or `assert` invariants in authoritative simulation (`godot-gdscript`); F1 presentation only, `bjj-visual-memory` governs scope (`godot-ui-control`); real bugs and mismatches only (`systematic-debugging`). The skills mention uninstalled skills (`superpowers:*`, `godot-nodes-scenes`, ...); these were deliberately not installed.
 - **Validation:** byte-compare to reviewed upstream, frontmatter and name-collision check across all 10 skills, `tools/ci` tests, whitespace check. No gameplay code, Python or pinned count changed, so no Godot parity or Python suite run.
 - **Not verified:** a live Claude Code session loading the new skills (they are picked up when a session starts in the repository).
+
+### E-018 — One-command development setup checker, 2026-10-13
+
+- **Owner direction:** after a clone or pull on another Linux machine, `python3 tools/setup_dev.py` must report what is ready or missing and offer only safe installs. No sudo, no system-Python changes, no overwriting configuration, no silent installs, no Godot download, idempotent. Codex is reported only.
+- **Delivered:** `tools/setup_dev.py` (standard library only; ~230 lines), tests in `tools/ci/test_setup_dev.py` (28), and `docs/DEV_SETUP.md`. It checks Python 3.11+, PyYAML in the interpreter the Godot runner would use (project `.venv` first), Godot 4.7.2 (`GODOT_BIN`, then `~/.local/bin/godot-bjj`; PATH hits are reported with an `export GODOT_BIN=` hint because the runner ignores PATH), Claude Code, `ponytail@ponytail` enabled (via `claude plugin list --json`), the three repo skills, and Codex (optional). Exit code 1 only when a required component is missing.
+- **Install behavior:** default is read-only. `--install` needs a terminal, shows the exact argv per component, and runs it only after `y`. Offered: `.venv` plus `pip install PyYAML>=6` (never into system Python; a half-made `.venv` is left alone) and the Ponytail marketplace and plugin commands (a disabled plugin is only reported). Godot, Claude Code and Codex are never installed.
+- **Validation:** 28 tests against fake executables and an injected runner (detection, wrong or stale Godot, PATH-only Godot, plugin states, unreadable CLI output, missing tools, declined and failing installs, noninteractive `--install`, rerun idempotence, and the real script run as a subprocess with an empty PATH). Four mutations of the safety guards (non-interactive guard, decline check, stale `GODOT_BIN`, auto-enabling a disabled plugin) were each caught. Real read-only run on this machine: all items OK. Full `tools/ci` suite and whitespace check pass; no workflow changed, so actionlint was not needed. No real installation was performed; no gameplay or Python reference code changed.
+- **Future optional improvement (recorded, not scheduled):** let Codex reuse the reviewed Godot and debugging skills through its supported project-skill mechanism, keeping `AGENTS.md` authoritative, with no duplicate copies and no plugin infrastructure; Ponytail need not be installed for Codex.
+- **Manual requirements on a new machine:** Python 3.11+, Godot 4.7.2 Standard, Claude Code (recommended), `python3-venv` if the distribution splits it out (needs the user's package manager; the script will not use sudo).
 
 ## Standard Claude-result ingestion form
 
