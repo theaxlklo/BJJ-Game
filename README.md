@@ -1,6 +1,6 @@
 # BJJ Mount v0 Prototype
 
-> **Current project navigation (2026):** [BJJ-Game Project Hub](docs/project/PROJECT_HUB.md) · [Searchable HTML project hub](docs/project/PROJECT_HUB.html) · [Engineering Roadmap](docs/project/ENGINEERING_ROADMAP.md) · [Oversight Ledger](docs/project/OVERSIGHT_LEDGER.md) · [F1 playable 2D Mount practice](GODOT_V1/docs/F1_MOUNT_PRACTICE.md). The older Mount-v0 material below is retained as historical reference; current instructions are in [AGENTS.md](AGENTS.md).
+> **Current project navigation (2026):** [BJJ-Game Project Hub](docs/project/PROJECT_HUB.md) · [Searchable HTML project hub](docs/project/PROJECT_HUB.html) · [Conversation migration prompt](docs/project/CONVERSATION_MIGRATION_PROMPT.md) · [Engineering Roadmap](docs/project/ENGINEERING_ROADMAP.md) · [Oversight Ledger](docs/project/OVERSIGHT_LEDGER.md) · [F1 playable 2D Mount practice](GODOT_V1/docs/F1_MOUNT_PRACTICE.md). The older Mount-v0 material below is retained as historical reference; current instructions are in [AGENTS.md](AGENTS.md).
 
 A dependency-free implementation of the frozen **Mount v0** rules for the tactical BJJ roguelike.
 
