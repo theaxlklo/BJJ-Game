@@ -36,6 +36,15 @@ This repository contains a deterministic Brazilian Jiu-Jitsu game, a frozen Pyth
 - **Skills:** use the existing BJJ skills first. Evaluate skills.sh additions selectively; do not install unreviewed skills.
 - **Living documents:** keep progress in `docs/project/ENGINEERING_ROADMAP.md` and `docs/project/OVERSIGHT_LEDGER.md`; technical specifications stay where they are.
 
+## Permanent Windows + Linux support (owner decision 2026-10-13)
+
+- **Single project:** Maintain one Godot 4.7.2 Standard PC game, one Python behavioral reference, and one repository for Windows and Linux. Windows is the primary hands-on development environment, but Linux is a first-class continuously supported target, never a later separate port. Keep match authority, assets, gameplay data and test fixtures shared; isolate true OS-specific setup, launch, filesystem, input and packaging differences.
+- **Both-platform verification:** For runtime or UI work, separately record Windows and Linux engine/build, resource import, actual interactive launch and keyboard/mouse focus where possible, focused headless tests with exact PASS markers **and process exit 0**, relevant Python/Godot parity, and exports when applicable. If a host cannot be accessed, mark NOT TESTED, and don't claim dual-platform-ready. One platform passing never overrides a failure on the other. Docs-only work doesn't require invented executable evidence.
+- **Deterministic portability:** Render timing, UI, input, operating system and packaging must not affect legal actions, decision windows, stamina, clock, replay, or frozen oracles. Check case-sensitive resource paths, separators, line endings and platform-specific environment assumptions.
+- **Windows qualification blocker stays visible:** The pinned 4.7.2 Standard test_position_registry.gd script intermittently exits 0xC0000005 after printing 431 PASS assertions. That marker does not make a crashing process PASS. Never suppress this gate, weaken its validator or adopt OS.kill() as a teardown bypass. Keep the native investigation bounded while unrelated verified on-screen 2D playability can advance; B2c's full Windows qualification remains BLOCKED.
+- **Reuse F1:** The existing GODOT_V1/scenes/mount_practice.tscn and graph-backed controller are the initial interactive 2D surface. Do not create a parallel scene, fork for Linux, or claim this is already a complete scored match.
+- **Permanent documentation:** Every substantive handoff records each platform's PASS / FAIL / NOT TESTED / BLOCKED status, exact evidence and next gate in docs/project/ENGINEERING_ROADMAP.md and docs/project/OVERSIGHT_LEDGER.md. Technical instructions stay in their subsystem docs.
+
 ## Educational code comments (permanent rule)
 
 Write code so the project owner can understand and learn from it later. The codebase should teach how the BJJ game works without costing maintainability or Ponytail's lean principles.
