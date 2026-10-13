@@ -6,6 +6,8 @@ Nothing tagged PROPOSAL or OPEN is a rule until the owner approves it. The name 
 
 **Revision 2 (2026-10-13):** the owner approved OD-2 Option B: General Technique (`G`) and position-role proficiency (`R`) are **separate**, and a new career fighter starts at `R = 0` (§8.0). Only that baseline is approved; every scale, weight, edge and XP-related number stays provisional, and §8.3–§9 were recomputed accordingly.
 
+**Revision 3 (2026-10-13):** §11 and OD-9 were reconciled with `MATCH_INCENTIVES_HEART_OF_A_LION.md` (an earlier draft had invented a personal-turn definition and conflated two counters; §11.1 now separates the inactive-turn event from the Heart-of-a-Lion counted-turn event and §11.2 lists the open questions without answering them). The §9 calculator's percentage formatting is now pure-integer; every table and quoted percentage is unchanged.
+
 ## 1. What is already decided (and is not reopened)
 
 **[OWNER-DIRECTION]** Initiative at the start of a position combines three things:
@@ -301,7 +303,7 @@ After a Knee Slice the passing fighter produced the exit and, if favored, also o
 
 ## 9. Method and reproducibility
 
-All tables above are produced by the script below with no randomness and no floating-point arithmetic: every integer `G` pair in the belt ranges is enumerated, the strict comparison `(G_other + R_other) − (G_favored + R_favored) > edge` is evaluated, and the count is rounded to three decimals with integer arithmetic. Run it with `python3 -I`. It was run from this document to produce the tables, and a fresh run reproduces them exactly.
+All tables above are produced by the script below with no randomness and no floating-point arithmetic: every integer `G` pair in the belt ranges is enumerated, the strict comparison `(G_other + R_other) − (G_favored + R_favored) > edge` is evaluated, and the count is rounded to three decimals and formatted with integer arithmetic only (no float is ever formed). Run it with `python3 -I`. It was run from this document to produce the tables, and a fresh run reproduces them exactly.
 
 ```python
 """B2a.1 sensitivity, exact and deterministic (integers only; no random numbers, no floats).
@@ -312,8 +314,9 @@ BELTS = {'White': (10, 35), 'Blue': (25, 50), 'Purple': (40, 65), 'Brown': (55, 
 EDGES = (10, 15, 20, 25, 30, 40, 50, 60)
 CANDIDATES = (10, 12, 15, 20, 25, 30, 40, 50, 60)
 
-def pct(hit, tot):                      # integer-only rounding to 0.001 (half up)
-    return f'{(2000 * hit + tot) // (2 * tot) / 1000:.3f}'
+def pct(hit, tot):                      # pure-integer rounding to 0.001 (half up); no float is ever formed
+    thousandths = (2000 * hit + tot) // (2 * tot)
+    return f"{thousandths // 1000}.{thousandths % 1000:03d}"
 
 def p_override(fav, other, edge):
     """fav/other = (belt_or_fixed_G, R). Returns (hits, total) over all integer G pairs."""
@@ -386,7 +389,7 @@ if __name__ == '__main__':
 | 5 | Roles swap on a reversal | Same: the roles at entry decide which `R` applies | Same |
 | 6 | Neutral → sequential after a trigger | The position declares the trigger and the named initiator; no skill contest | Guide §15/§17 |
 | 7 | Opener cannot act (exhausted) | Every window must offer at least one legal action (Side Control v0 has the free pass); skill can never choose an opener with no legal action | No deadlock |
-| 8 | Free windows (#63 priority tokens) | Orthogonal: a free window's beneficiary overrides alternation for that window only; the opening decision creates none | Separate rule family |
+| 8 | Free windows (a Mount mechanism exists; nothing generates them yet) | The opening decision neither creates nor consumes a free window; whether a free window counts toward either turn counter is open (§11.2) | Separate rule family; no invented accounting |
 | 9 | Decision deadline expiry | Independent of initiative; existing published fallbacks apply; simultaneous needs its own | Three timeout systems stay separate |
 | 10 | Frozen inputs vs mid-match career change | Impossible by construction; inputs are a match-creation snapshot | Replay determinism |
 | 11 | Passive monopoly | Not possible: alternation after the opener; there is no repeated contest | V1 design |
@@ -397,13 +400,55 @@ if __name__ == '__main__':
 | 16 | Unfocused fighter | Legal attacks, escapes and essential defenses unchanged (existing technique-knowledge rules); `R` affects only the opening contest | No move is locked for lack of focus |
 | 17 | Experienced fighter with no recorded history | Reads as `R = 0`; needs an explicitly defined starting profile or history before it is used, never derived from `G` | OD-12; no roster generator is designed here |
 
-## 11. Per-fighter completed-turn tracking (for future 3-turn stalling and 5-turn Heart of a Lion)
+## 11. Per-fighter turn accounting: reconciliation with the Match Incentives decisions
 
-**[PROPOSAL]** A match-owner ledger **keyed by fighter id**, never by role, carried across positions (Half Guard's role-keyed initiation counters stay as they are). Per fighter: `personal_turns_completed` and `consecutive_inactive_turns`. A *personal turn* is an **accepted, resolved, normal exchange in which that fighter was the initiator**; in a simultaneous exchange each fighter's own sealed action counts once. Rejections, menu views, a bare seal of feint intent and unresolved protocol phases never count. A responder's response is part of the initiator's exchange and does not add a second turn. **[OPEN]** (OD-9): whether a response counts, and how D3-B holds, passes and free windows count; the owner's text in `MATCH_INCENTIVES_HEART_OF_A_LION.md` leaves these unfrozen. The ledger lives above the positions so alternation changes (positions with different opening rules) never skew "five of their own turns".
+**Reconciled in revision 3 (2026-10-13).** An earlier draft of this section defined a "personal turn" as an accepted exchange in which the fighter was the initiator and said a response adds no turn. That answered a question the owner left open and merged two different counters, so it is **withdrawn**. The authority is [`MATCH_INCENTIVES_HEART_OF_A_LION.md`](MATCH_INCENTIVES_HEART_OF_A_LION.md) (owner-approved 2026-10-12; **specification only, nothing is implemented**) and Master Guide §§41–42. This section states only what the initiative contract must stay compatible with. It implements, approves and changes none of those rules.
+
+### 11.1 Two separate events, never one counter
+
+| | **Inactive-turn event** (custom stalling) | **Heart-of-a-Lion counted-turn event** |
+|---|---|---|
+| Owner decision | **[OWNER-APPROVED 2026-10-12]** | **[OWNER-APPROVED 2026-10-12]** |
+| What it is | A consumed normal personal decision that the future activity classifier calls *inactive* | An accepted, resolved, normal personal decision turn counted during the once-per-match Heart of a Lion phase |
+| Keyed by | Stable fighter ID; persists across position changes (never three global windows; initiative can be unequal) | Stable fighter ID; five counted turns remaining per fighter, kept at the match owner |
+| Consequence | **The third consecutive inactive personal turn triggers the game's custom stalling penalty.** The first two are allowed (a warning after the second is a presentation proposal) | Once **both** fighters have completed five counted turns, each surviving fighter is restored to 100% of their own maximum at the next authoritative settlement boundary |
+| Reset | Only meaningful activity under a future, explicit classifier clears the streak; meaningless action spam does not | Does not reset; the mechanic never re-arms |
+| Rule status | A **custom game rule** ("custom game stalling with IBJJF-inspired scoring"). **It is not an official IBJJF rule:** the IBJJF reference (Rules Book v6.1, Arts. 7.2.1, 7.3.1) is a time-based threshold of 20 consecutive seconds, and a strict IBJJF mode would keep its own timing and exemptions | A **game-original modifier**, not an IBJJF rule; opt-in or a labeled custom ruleset |
+
+**What the owner has decided about each**
+
+- *Inactive-turn events:* an accepted normal **PASS** or **REST** decision counts as an inactive personal turn, subject to explicitly approved defensive exemptions (none are defined yet). **Legitimate failed attacks, escapes and defenses are not automatically inactive**, even when the fighter is exhausted. A fighter with no legal defense is not automatically punished for an opponent's unanswerable action. The streak is shared across all inactive and REST decisions by one fighter, so alternating REST with passes does not erase it. The penalty progression itself (1st recorded; 2nd one advantage to the opponent; 3rd two points; 4th disqualification) is an IBJJF-*inspired* match-scoring proposal in the Match Incentives document, not part of this contract.
+- *Heart-of-a-Lion events:* it activates **only** when both fighters' current stamina is **exactly zero** at one authoritative boundary (the nonzero Exhausted latch is not enough); it immediately restores 50% of each fighter's own maximum; each fighter then has **five of their own counted normal personal decision turns**; it happens **once per match**, across position changes, and never re-arms; it opens no window, advances no clock, changes no position or role and bypasses no submission or penalty. A match owner stores `consumed`, the phase and the five-turn counters.
+- *After Heart of a Lion is spent* (mutual exactly-zero, one-time phase fully completed): eligible **LOW memories** may be attempted (a failed legal attempt is not stalling) and **REST** may be chosen for up to **two** consecutive personal turns without a stalling penalty; the third consecutive inactive or REST turn triggers the custom stalling penalty. This keeps the existing LOW-memory and REST direction. It is **not** already legal in the engine (the current LOW funding cost is 3 stamina), and REST restores nothing until a separate deterministic rest-economy rule exists.
+- *Rejected commands, unresolved seals, menu views and UI observations* consume **no** completed personal turn under either counter.
+
+The classifications are independent. For example, an accepted normal PASS **is** an inactive-turn event (decided above), but whether it also advances the Heart-of-a-Lion counter is **open** (§11.2). Nothing here lets one classification stand in for the other.
+
+### 11.2 Still open; this proposal answers none of them **[OPEN]**
+
+| # | Open question | Source |
+|---|---|---|
+| 1 | Whether **passes** and other special decisions advance the Heart-of-a-Lion counter | Match Incentives §3 |
+| 2 | Whether **D3-B holds** (and other specialized controller opportunities) count, for either counter | Match Incentives §3 |
+| 3 | **Responder accounting**: whether a response is a personal turn, for either counter | Match Incentives §3 ("do not assume one window equals one fighter turn") |
+| 4 | **Free windows** (Mount has a free-initiative mechanism; nothing generates one yet) | Match Incentives §3, §5 |
+| 5 | **Simultaneous decisions** (and the effect of simultaneous initiative on the streak) | Match Incentives §1, §3 |
+| 6 | **Integer rounding** of 50% restoration for fractional capacities | Match Incentives §3 |
+| 7 | **Settlement order** relative to costs, score, terminal outcomes, transitions and exhaustion-latch recomputation | Match Incentives §3 |
+| 8 | **Repeated stalling penalties**: cadence and reset after the third and later inactive turns, repeat-offense scoring, integration with other fouls | Match Incentives §1 |
+| 9 | The activity classifier per position, the defensive and forced-hold exemptions, whether a successful defense immediately clears the streak, warning UX, referee tie handling, and whether REST restores any capacity | Match Incentives §1, §4 |
+
+### 11.3 What the initiative contract must stay compatible with **[PROPOSAL]**
+
+- **The opening decision is not a turn.** `initiative_decided` neither increments nor resets either counter, and an opening won by skill earns no turn credit.
+- **Counting and classification live above the positions**, at the match owner, keyed by stable fighter ID, never by role. A position owns no inactivity or Heart-of-a-Lion state (consistent with `SIDE_CONTROL_V0_PROPOSAL.md` §7.4). Half Guard's existing role-keyed initiation counters stay as they are.
+- **One window is not assumed to equal one fighter turn.** With a favored opening, alternation and (later) free windows or simultaneous decisions, per-fighter counting is what keeps "the third consecutive personal turn" and "five of their own turns" well defined.
+- **The event log must keep the facts a future counter needs**: for each accepted decision the stable fighter ID(s), role(s), position ID, window ID, decision kind (action, response, pass, hold, REST, free-window use, simultaneous commit) and whether it was accepted and resolved. These are facts to record, **not** a classification.
+- **Proficiency, belt, role and initiative priority never classify a turn.** `G` and `R` affect only the opening contest (§5).
 
 ## 12. Compatibility and test plan (design only; nothing is implemented)
 
-**Compatibility invariants:** Mount and Half Guard suites, oracles and pinned counts are unchanged; replays of existing matches are byte-identical; no existing public API, test or fixture is edited; Python under `src/` is untouched; a graph built by any existing constructor behaves exactly as today.
+**Compatibility invariants:** Mount and Half Guard suites, oracles and pinned counts are unchanged; replays of existing matches are byte-identical; no existing public API, test or fixture is edited; Python under `src/` is untouched; a graph built by any existing constructor behaves exactly as today. The contract creates no turn, inactivity or Heart-of-a-Lion state (§11).
 
 **Negative-first tests (each leaves state byte-identical):** missing / extra / mistyped proficiency keys, `bool` or float where an int is required, out-of-range values, unknown position id or role, a policy with an unknown kind or a missing favored role, a mastery input, a second decision for the same entry, a decision while a window is open, a mismatched role map.
 
@@ -416,7 +461,7 @@ if __name__ == '__main__':
 1. Owner reviews this document and SC-D1–SC-D15 together.
 2. B2b: Side Control rules sheet and independent oracle, with the policy and provisional profile as explicit inputs (so it never waits for the career system).
 3. B2c/B2d: typed engine and the Knee Slice receiver, using `decide_opening` for the first window.
-4. Later, separate slices: fighter proficiency data, the symmetric simultaneous protocol (§6.2), the per-fighter turn ledger, memory mastery.
+4. Later, separate slices: fighter proficiency data, the symmetric simultaneous protocol (§6.2), the match-owner turn accounting of §11 (stalling and Heart of a Lion), memory mastery.
 
 ## 14. Owner decisions
 
@@ -431,7 +476,7 @@ if __name__ == '__main__':
 | OD-6 | Inputs frozen at match creation; changes apply next match | Accept |
 | OD-7 | Until fighter data exists, an explicit provisional profile identical for both fighters (for example `G = 50`, `R = 0`) (§8.6) | Accept |
 | OD-8 | `entry_adjust` exists, default 0; decide a value after measurement | Accept |
-| OD-9 | Personal-turn definition (§11), including responses, D3-B holds, passes, free windows | Review |
+| OD-9 | The nine open turn-accounting questions of §11.2 (passes and special decisions for the Heart-of-a-Lion counter, D3-B holds, responder accounting, free windows, simultaneous decisions, rounding, settlement order, repeated stalling penalties, classifier and exemptions). **Not answered here**; the stalling threshold, the inactive PASS/REST rule and Heart of a Lion are already owner-approved in the Match Incentives document | Decide with the stalling and Heart of a Lion slices; not needed for B2b or B2c |
 | OD-10 | Policies for `turtle`, `front_headlock`, `leg_entanglement`, and confirming `open_guard`/`closed_guard` | Decide at each rules sheet |
 | OD-11 | Mount / Half Guard stay `LEGACY_FIXED`; any conversion is a separate authorized slice | Accept |
 | OD-12 | How an existing experienced fighter (opponent, boss, pre-system save) gets an explicit starting `R` or training history; never derived silently from `G` | Decide when fighter data is designed; no generator now |

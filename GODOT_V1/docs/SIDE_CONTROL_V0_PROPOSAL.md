@@ -2,7 +2,7 @@
 
 **Status: DOCUMENTATION ONLY. Nothing here is implemented, and nothing here is approved.** This is a proposal for the project owner to review. It changes no engine, test, fixture, oracle, workflow, default, frozen Python reference or number. Every combat value below is a **proposal**, not an accepted rule, and none is a balance claim. Executable Side Control mechanics need a separate, explicit authorization (see §12 for the recommended B2b boundary).
 
-Stacked on draft PR #63 (`docs/match-incentives-heart-of-lion-spec`, head `650e7e1b9c6ba138a931c2805ce661e2268431b2`). Written against that exact revision; the open PR stack is **not** merged to `main`.
+Stacked on draft PR #63 (`docs/match-incentives-heart-of-lion-spec`, head `650e7e1b9c6ba138a931c2805ce661e2268431b2`). Written against that exact revision; the open PR stack is **not** merged to `main`. **Update 2026-10-13:** the PR stack was integrated into `main` by #66 and development is now local-first; PR-specific wording below (PRs, stacking, "separate PR") is historical and superseded by independent local commit phases (§11A.4). §11A is a recommendation-only owner-decision review; nothing in it is approved.
 
 ## 0. How to read the labels
 
@@ -274,7 +274,7 @@ Follows `bjj-parity-gate` and the Half Guard precedent (B1b, B1c, B1d, B1h). The
 Contamination and independence controls **[PROPOSAL]**:
 
 * The oracle imports no GDScript-derived data and is **stdlib-only**; it must not import `half_guard_v0`, and the four or five position-independent helpers it needs are re-implemented. A test-only differential check compares them with the Half Guard oracle helpers and, when `PYTHONPATH=src` is set, the frozen reference (a skipped differential is reported as skipped, never as passed). An AST test forbids I/O, clock, randomness and the Half Guard import, as the Half Guard oracle's own test does.
-* The Half Guard oracle was written before any GDScript existed; Side Control has a Half Guard engine as its template. So the oracle checkpoint is a **separate, earlier commit and PR** than the typed engine, written from the rules sheet only, with hand-computed literals and the arithmetic in comments for each rule, and with the sheet's own tables parsed into a consistency test. It is not a search-and-replace copy of the Half Guard oracle (shared constants such as the 30 pass line would carry shared bugs).
+* The Half Guard oracle was written before any GDScript existed; Side Control has a Half Guard engine as its template. So the oracle checkpoint is a **separate, earlier commit phase** than the typed engine, written from the rules sheet only, with hand-computed literals and the arithmetic in comments for each rule, and with the sheet's own tables parsed into a consistency test. It is not a search-and-replace copy of the Half Guard oracle (shared constants such as the 30 pass line would carry shared bugs).
 * Fixtures are generated, never hand-copied; a strict integer comparator is used in the Godot reference test (a float where an integer is expected must fail; the Half Guard reference comparator treats int and float as equal within 1e-9, `test_half_guard_reference.gd:30-34`), the fixture SHA-256 and the per-family minimum counts are pinned inside each reference test, and the Python side pins exact scenario, operation and comparison counts.
 * Byte-identical generation is proven under at least three `PYTHONHASHSEED` values in subprocesses, and an AST check forbids iterating a `set` into output. (The Half Guard test of that name generates twice under one seed, so it does not by itself prove hash-seed independence.)
 * Oracle-measured structural searches are labelled "not parity evidence".
@@ -320,11 +320,11 @@ Only this Markdown file changed. The checks are `git diff --check` (including th
 | ID | Decision | Recommendation (not a decision) |
 | --- | --- | --- |
 | SC-D1 | Role map at the Knee Slice boundary: identity (Half Guard Top stays Top) | Identity |
-| SC-D2 | Who holds the first Side Control window: Top (Guide §15 authority rule) or Bottom (alternation after the Top's exit) | Top, with the consecutive-initiative effect recorded as a known property |
+| SC-D2 | Who holds the first Side Control window: Top (Guide §15 authority rule) or Bottom (alternation after the Top's exit) | Top, with the consecutive-initiative effect recorded as a known property. **Reframed 2026-10-13:** no longer a binary; see §11A and `POSITION_AWARE_INITIATIVE_PROPOSAL.md` |
 | SC-D3 | Authority: by axis sign (reported only) or fixed to the Top | By axis sign |
 | SC-D4 | v0 catalog scope: 3+3 as proposed, the Guide's full list, or a different subset; submissions (Kimura/Armbar routes) in v0 or deferred | 3+3, no submissions |
 | SC-D5 | Meaning of "Expose Back" and whether `back_control` is a v0 exit at all | Keep as an honest-halt exit |
-| SC-D6 | Grade tables, exit lines, entry axis, step, bands (§4.3, §7.2) | Accept only after an oracle checkpoint and a separate measurement |
+| SC-D6 | Grade tables, exit lines, entry axis, step, bands (§4.3, §7.2) | Accept only after an oracle checkpoint and a separate measurement. **Sequencing amended in §11A.2:** accept as provisional prototype constants for B2b |
 | SC-D7 | Readiness tracks, entry tiers, consume/wear/build rules; whether Half Guard preparation carries (v0: it does not) | Fresh tiers, no carry |
 | SC-D8 | Economy: free passes, no recovery, no behaviors (inherits Half Guard) versus any change | Inherit; leave economy to the PR #63 family |
 | SC-D9 | Feints and the sealed protocol in Side Control (v0: none; sealed methods refused while Side Control is active) | None in v0 |
@@ -333,11 +333,84 @@ Only this Markdown file changed. The checks are `git diff --check` (including th
 | SC-D12 | Graph exposure: a new explicit opt-in constructor (recommended) versus extending an existing one | New constructor; defaults unchanged |
 | SC-D13 | Variations (North-South, Knee-on-Belly) and Knee-on-Belly's Guide §40.1 scoring hook | Out of v0; scoring remains a policy over events |
 | SC-D14 | Mount `Reversal`, Side Control `Reversal` landings | Remain unresolved |
-| SC-D15 | Slicing: oracle-only B2b then engine B2c (recommended), or the Half Guard precedent of one slice with an earlier oracle checkpoint | Separate oracle PR |
+| SC-D15 | Slicing under local-first development: oracle-only B2b then engine B2c as independent local commit phases on `main` (recommended), or the Half Guard precedent of one slice with an earlier oracle checkpoint (§11A.4) | Separate oracle phase: its own commits, on `main` before any GDScript |
+
+## 11A. Owner-decision review of SC-D1 to SC-D15 (2026-10-13)
+
+**Documentation only. Everything below is a recommendation until the owner approves it. No number, rule or threshold is approved by this section, nothing is implemented, and Mount and Half Guard are untouched.** The recommended scope in §11 is the starting point; where this review disagrees it says so and why. Sources: this proposal, `POSITION_AWARE_INITIATIVE_PROPOSAL.md` (B2a.1), `MATCH_INCENTIVES_HEART_OF_A_LION.md`, Master Guide §§11.5, 15–17, 40–42, the Engineering Roadmap and the Oversight Ledger.
+
+**Preserved direction.** Initiative combines General Technique `G`, separate earned position-role proficiency `R` (a new career fighter starts at `R = 0`, never derived from `G`) and the position's tactical advantage. Side Control v0 grades, costs and readiness use **neither** `G` nor `R`; the opening contest uses them once (B2a.1 §4.3). So nothing is counted twice and no B2a.1 number is needed to build the position.
+
+### 11A.1 Classification
+
+Each decision is tagged by its dominant nature: **A** architecture consistent with the current engine; **B** small v0 scope or implementation boundary; **C** gameplay with a meaningful player-facing consequence; **N** numerical balance needing future measurement. A decision can carry a second tag.
+
+### 11A.2 Review table
+
+| ID | Decision (short) | Tag | Existing recommendation | Review | Why |
+|---|---|---|---|---|---|
+| SC-D1 | Role map at the Knee Slice boundary | **A** | Identity (Top stays Top) | **Agree** | Knee Slice is a Top technique; matches the approved Mount→Half Guard D1 precedent; roles are not a reversal or a score |
+| SC-D2 | First Side Control window | **C** (+A) | Top | **Reframed** | No longer a Top/Bottom binary. B2a.1: Side Control is a position-biased opening (Top favored) that skill may override. The v0 position only needs an explicit, validated **entry `initiator` input**; a provisional identical profile makes it Top. No B2a.1 threshold is needed for B2b |
+| SC-D3 | Authority | **A** | By axis sign (reported only) | **Agree** | No mechanical effect, same convention as Half Guard, and independent of the B2a.1 "favored role" (a policy declaration, not authority) |
+| SC-D4 | Catalog scope and submissions | **B** (+C) | 3+3, no submissions | **Agree, with the consequence stated** | See concern 1. A real finish needs setup tiers, a stage, a tap terminal and the emergency-defense rule |
+| SC-D5 | "Expose Back" and `back_control` as an exit | **B** (+C) | Keep as an honest-halt exit | **Agree, with a meaning caveat** | See concern 2 |
+| SC-D6 | Grade tables, exit lines, entry axis, step, bands | **N** (+C) | Accept only after an oracle checkpoint and a separate measurement | **Disagree with the sequencing** | That order is circular: the oracle must freeze values first and measurement needs an engine. Accept the values as **provisional prototype constants** for B2b, as Half Guard's GP-2/3/4 were; B2e measurement may then justify a versioned amendment through the oracle. See concern 5 |
+| SC-D7 | Readiness tracks, tiers, wear, no carry | **N** (+A) | Fresh tiers, no carry | **Agree** | "No carry" is also the engine-consistent choice (no Half Guard field beyond the carry-over list crosses the boundary); the cost is that Half Guard preparation is lost at the pass, a player-visible consequence worth recording |
+| SC-D8 | Economy: free pass, no recovery, no behaviors | **C** (+N) | Inherit; leave to the stalling family | **Agree, with one added requirement** | See concern 4: record a pass as its own decision kind |
+| SC-D9 | Feints and the sealed protocol | **B** | None in v0 | **Agree** | Sealed methods must be refused while Side Control is active (risk R4); simultaneous-sealed (B2a.1 §6.2) is a different, later protocol |
+| SC-D10 | Edge source | **A** | Half Guard `snapshot()` through a pure adapter | **Agree** | The oracle builds the expected entry from a Half Guard snapshot fixture, so the edge is checked independently |
+| SC-D11 | Destinations; do the four exits halt | **B** (+C) | All four halt | **Agree for B2b/B2c; flag for B2d** | See concern 3 |
+| SC-D12 | Graph exposure | **A** | New explicit opt-in constructor, defaults unchanged | **Agree** | Same pattern as `create_with_receivers` and `create_with_sealed_half_guard`; belongs to B2d, not B2b |
+| SC-D13 | North-South, Knee-on-Belly, scoring hook | **B** | Out of v0 | **Agree** | Variations stay variations (Guide §10); scoring remains a policy over recorded events |
+| SC-D14 | Mount `Reversal` and Side Control `Reversal` landings | **B** | Remain unresolved | **Agree** | Nothing here resolves or approximates a landing |
+| SC-D15 | Slicing | **A** (process) | Separate oracle PR | **Reframed** | Obsolete under local-first development; see 11A.4 |
+
+### 11A.3 The six concerns
+
+**1. No submissions in v0 (SC-D4).** With no Kimura or Armbar route, a Top fighter in Side Control has no finishing threat: the position can end only by clock, or by an exit that halts the prototype. That also means the opening advantage (B2a.1) has little at stake in v0, and a match in Side Control cannot be *won*. This is the same state Half Guard v0 has. I **agree to defer** because a real finish needs setup tiers, a submission stage, a tap terminal, the emergency submission-defense rule and an answer to T-8; a "route" with no finish would be a meaningless threat builder. Two cautions: (a) call v0 a **transition prototype, not a complete position**, in the rules sheet; (b) reserve `side_control.top.kimura_route` / `.armbar_route` and schedule submissions as their own later slice, using Mount's Americana chain only as precedent. Owner-visible consequence: Side Control v0 will not deliver a finish.
+
+**2. "Expose Back" and the Back Control destination (SC-D5, SC-D11).** The Guide lists "Expose Back" under Top and `Back Control` as a destination but defines neither. The proposal reads it as a break-capable Top technique that lands in `back_control`. Two risks: the name is a Guide word whose intended meaning (exposing the opponent's back versus taking it) is unstated, and Back Control will need its own attacker/defender role vocabulary (T-9) at receive time, which a halt-only v0 never exercises. I **agree to keep it**, because the 3×3 response grid's structural properties (every response holds one action and loses to another, no dominated response) depend on three actions per side, and removing it would force a new grid. Keep the exit label `Back Control` and the id `side_control.top.expose_back` as **provisional names**, state that the meaning is open, and treat the first real use as the moment T-9 is decided. **Alternative for the owner:** drop it from v0 and keep two Top actions, accepting a redesigned grid.
+
+**3. Does a halt-only v0 feel like a dead end (SC-D11).** Four of the six actions are break-capable exits (`advance_to_mount`, `expose_back`, `recover_half_guard`, `turn_to_knees`), and every successful one ends the prototype at `halted_at_unsupported_transition`. From the proposed entry axis +10 (step 10 per final grade), the Top reaches the +30 line in as few as **one** accepted exchange (a final +2) and the Bottom needs at least **two** to reach −30. That is arithmetic on proposed numbers, **not a measured frequency** (SC-D6). Precedent: §5.3 cites the same honest-halt behavior, as Mount's exit toward Half Guard halted before the B1d edge existed. The honest-halt behavior is correct and consistent with the engine; the player-facing risk is that the first playable Mount→Half Guard→Side Control path ends abruptly, against the project invariant of human-play breadth over endless Mount tuning. **Recommendation:** accept all-halt for B2b and B2c (they are standalone); make **the first return route (Side Control → Half Guard, which needs the P-11 segment-identity and re-entry design)** an explicit roadmap item to be decided before B2e measurement, instead of silently leaving the loop open. No mechanic is added here.
+
+**4. Free PASS without recovery, and future inactivity penalties (SC-D8).** In v0 (as in Half Guard) a pass charges no stamina, produces no grades and flips initiative; the window it closes already advanced the clock when it opened, so two fighters passing still run the match to the clock. There are no behaviors, no recovery and no REST. B1e measured the Half Guard consequences (no-progress freezes, pass-to-the-clock). Under the approved custom stalling rule (`MATCH_INCENTIVES_HEART_OF_A_LION.md` §1) an accepted normal PASS is an **inactive personal turn**, and the third consecutive one triggers the stalling penalty, keyed by fighter ID across positions. So free passes are exactly what that future rule polices, but **nothing in v0 punishes them**. Two interactions the owner should know: a fighter who cannot afford any action (funding refusal at very low stamina) has PASS as the only non-engaging choice, which is the "no legal defense must not be automatically punished" exemption that is still undefined; and v0 has no REST, so the REST/LOW-memory direction after Heart of a Lion has no home in Side Control yet. I **agree to inherit** with one added v0 requirement: **a pass is recorded as its own decision kind with the fighter ID**, the position owns no inactivity or Heart-of-a-Lion state, and a test asserts both (§7.4 already requires the record). Classification stays at the match owner. This answers none of the open accounting questions (B2a.1 §11.2).
+
+**5. Grade tables and their independence from the oracle (SC-D6).** The §4.3 tables were chosen to satisfy Guide §16 and checked by a disposable structural script; that verifies shape only (no dominated response, no shared best counter), not reachability, frequency or fairness, and an earlier draft failed it. The independence risk is that the same author writes the rules sheet, the oracle and the engine, so a conceptual error could be shared (Half Guard had no template; Side Control has one). Existing controls are sound and should all be required: oracle written from the **sheet only**, stdlib-only, no import of the Half Guard oracle, hand-computed literals with the arithmetic in comments, a test that parses the sheet's tables and compares them with the oracle's constants, strict integer comparators, byte-identical generation under at least three hash seeds, a mutation-sensitivity record, and the engine written from the sheet (never from the oracle) and compared against a generated fixture. Under local-first development there is no PR boundary, so independence must be **enforced by order and a checkable rule**: no GDScript may be committed to `main` before the oracle commit, verified by the path-allowlist command in §8. I **disagree only with the sequencing in SC-D6** (see the table): accept the tables as provisional prototype constants now, keep the sheet versioned, and let measurement amend them through a new sheet version and oracle change rather than a silent edit. Because the grade tables use neither `G` nor `R`, they stay independent of the initiative contract.
+
+**6. SC-D15's obsolete PR language.** Replaced in 11A.4.
+
+### 11A.4 SC-D15 under local-first development
+
+The original wording ("separate oracle PR", "a separate, earlier commit and PR") assumed a PR review boundary that no longer exists. **Recommended replacement:** independent **local commit phases on `main`**, each tested locally before it is pushed, with no PRs and no automatic CI:
+
+1. **B2b-1: rules sheet** (`SIDE_CONTROL_V0_RULES.md`): documentation only, containing exactly the owner-approved values and a "provisional prototype constants" label.
+2. **B2b-2: test-only Python oracle** (`tests/oracles/side_control_v0.py`, its generator and tests) with the mutation-sensitivity record. Python and documentation only; **no GDScript**.
+3. **B2c: standalone typed Godot position** and its reference test against the oracle fixture, committed only after B2b-2 is on `main`.
+4. **B2d: Half Guard → Side Control edge, opt-in graph constructor**; **B2e: measurement and a new diagnostics document.**
+
+Independence is preserved by commit order, the path-allowlist check, and the rule that the engine commit reads the sheet and fixture, not oracle code. Local gates replace CI: the oracle's own tests, the existing parity and pinned-count steps through `tools/ci/run_godot_steps.py`, and an optional manual workflow run on the exact SHA.
+
+### 11A.5 Recommended minimal v0 set (recommendation, not approval)
+
+- **Architecture:** identity role map (SC-D1); authority by axis sign, reported only (SC-D3); Half Guard `snapshot()` through a pure adapter (SC-D10); new explicit opt-in graph constructor, defaults unchanged (SC-D12, B2d); local commit phases (SC-D15).
+- **Scope:** three actions and three responses per side, no submissions, no feints, no variations (SC-D4, SC-D9, SC-D13); keep `expose_back` as a provisional-name halting exit (SC-D5); all four exits halt (SC-D11); both `Reversal` landings stay unresolved (SC-D14).
+- **Gameplay:** entry initiator is an explicit validated input supplied by the receiving rule, Top under the provisional identical profile (SC-D2); economy inherited from Half Guard with passes recorded as their own decision kind (SC-D8); fresh readiness tiers, no carry (SC-D7).
+- **Numbers:** the §4.3 and §7.2 values accepted **only as provisional prototype constants** (SC-D6), versioned, with measurement allowed to amend them.
+
+### 11A.6 Smallest owner-approval package to start B2b
+
+B2b builds only the rules sheet and the Python oracle, so it needs no B2a.1 threshold, no `R` data and no graph decision. The owner needs to approve, in one message:
+
+1. **SC-D1, D3, D4, D5, D7, D8, D9, D10, D11, D14** as recommended in 11A.5 (or amend named items).
+2. **SC-D2 reduced to one sentence:** the Side Control entry request carries an explicit, validated `initiator`, supplied by the receiving rule; fixtures use Top.
+3. **SC-D6 values as provisional prototype constants** (or list the changes). This is the **only** numerical acceptance.
+4. **SC-D15 as the local commit phases of 11A.4.**
+
+**Not needed for B2b:** SC-D12 and SC-D13 (B2d and out of scope), and the B2a.1 decisions OD-2a, OD-4, OD-9 and OD-12. B2a.1 OD-1, OD-3, OD-5, OD-6 and OD-7 are needed by **B2d**, when the graph supplies the first window.
 
 ## 12. Recommended implementation boundary
 
-* **B2b (recommended): the accepted Side Control rules sheet and the test-only Python oracle, with its mutation-sensitivity checkpoint. Python and documentation only; no GDScript.** The oracle is written from the sheet alone, and keeping it a separate, earlier PR than the engine preserves its independence (a Side Control engine template already exists, unlike when the Half Guard oracle was written). Alternative for the owner: the Half Guard precedent of one slice whose oracle checkpoint is pushed before any GDScript (**[OPEN]** SC-D15).
+* **B2b (recommended): the accepted Side Control rules sheet and the test-only Python oracle, with its mutation-sensitivity checkpoint. Python and documentation only; no GDScript.** The oracle is written from the sheet alone, and keeping it a separate, earlier commit phase than the engine (no GDScript before the oracle commit is on `main`) preserves its independence (a Side Control engine template already exists, unlike when the Half Guard oracle was written). Alternative for the owner: the Half Guard precedent of one slice whose oracle checkpoint is pushed before any GDScript (**[OPEN]** SC-D15).
 * **B2c:** the standalone typed Godot position (rules, catalog, resolver, entry, match, contract, window gateway) and its reference tests against the oracle fixture. No graph, no edge, no receiver; the only existing files touched are workflow and pin wiring.
 * **B2d:** the pure Half Guard → Side Control edge adapter, the (source, destination)-keyed receiver generalization behind a **new explicit opt-in constructor**, the typed slot, the Half Guard frozen-segment fingerprint and the HG-18 failure tests, with every amended pin (§6.1, R12) listed with a reason and Mount → Half Guard behavior proved byte-identical.
 * **B2e:** match-flow harness extension and a new diagnostics document for Mount → Half Guard → Side Control (measurement only; no gating of frequencies; the committed B1e documents and digests are never rewritten).
