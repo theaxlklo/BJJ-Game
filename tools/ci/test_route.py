@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from godot_runner_support import find_bash
 from route import classify, changed_paths, plan
 
 
@@ -90,17 +91,17 @@ class EventAdmissionTests(unittest.TestCase):
                     run = subprocess.run(['python', script], cwd=directory, env=env, capture_output=True, text=True)
                     self.assertEqual(run.returncode == 0, accepted, run.stderr)
                     if accepted:
-                        self.assertIn('python_required=true', output.read_text())
-                        self.assertIn('godot_required=true', output.read_text())
+                        self.assertIn('python_required=true', output.read_text(encoding='utf-8'))
+                        self.assertIn('godot_required=true', output.read_text(encoding='utf-8'))
                     else:
-                        self.assertEqual(output.read_text(), '')
+                        self.assertEqual(output.read_text(encoding='utf-8'), '')
 
 
 class GateTests(unittest.TestCase):
     def test_real_gate_failure_propagation(self):
         import os
         workflow = Path(__file__).resolve().parents[2] / '.github/workflows/test.yml'
-        text = workflow.read_text().split('  ci-gate:', 1)[1]
+        text = workflow.read_text(encoding='utf-8').split('  ci-gate:', 1)[1]
         script = text.split('        run: |\n', 1)[1]
         script = '\n'.join(line[10:] for line in script.splitlines())
         baseline = dict(CLASSIFY_RESULT='success', LIGHT_RESULT='success', PYTHON_REQUIRED='false', GODOT_REQUIRED='true', GODOT_RESULT='success', UNIT_RESULT='skipped', VERIFY_RESULT='skipped', HISTORY_RESULT='skipped')
@@ -116,7 +117,7 @@ class GateTests(unittest.TestCase):
             full[key] = 'failure'; cases.append((key + 'full failure', full, False))
         for name, changes, accepted in cases:
             with self.subTest(name=name):
-                result = subprocess.run(['bash', '-c', script], env=dict(os.environ, **(baseline | changes)), capture_output=True, text=True)
+                result = subprocess.run([find_bash(), '-c', script], env=dict(os.environ, **(baseline | changes)), capture_output=True, text=True)
                 self.assertEqual(result.returncode == 0, accepted, result.stderr)
 
 
@@ -138,11 +139,11 @@ class LightweightTests(unittest.TestCase):
             old = subprocess.run(['git', 'show', '--format=', '--check', 'HEAD'], cwd=shallow, capture_output=True)
             self.assertNotEqual(old.returncode, 0, 'reproduce the depth-one historical-whitespace failure')
             workflow = Path(__file__).resolve().parents[2] / '.github/workflows/test.yml'
-            section = workflow.read_text().split('  lightweight-validation:', 1)[1].split('  godot:', 1)[0]
+            section = workflow.read_text(encoding='utf-8').split('  lightweight-validation:', 1)[1].split('  godot:', 1)[0]
             self.assertIn('fetch-depth: 0', section)
             script = section.split('        run: |\n', 1)[1]
             script = '\n'.join(line[10:] for line in script.splitlines())
-            result = subprocess.run(['bash', '-c', script], cwd=repository, env=dict(os.environ, DIFF_SPAN=base+'...'+head), capture_output=True, text=True)
+            result = subprocess.run([find_bash(), '-c', script], cwd=repository, env=dict(os.environ, DIFF_SPAN=base+'...'+head), capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
 
 
@@ -150,7 +151,7 @@ class TriggerTests(unittest.TestCase):
     def test_only_manual_dispatch_triggers(self):
         # Local-first policy: pushes and pull requests must not start GitHub Actions automatically.
         workflow = Path(__file__).resolve().parents[2] / '.github/workflows/test.yml'
-        triggers = workflow.read_text().split('\non:\n', 1)[1].split('\npermissions:', 1)[0]
+        triggers = workflow.read_text(encoding='utf-8').split('\non:\n', 1)[1].split('\npermissions:', 1)[0]
         self.assertIn('  workflow_dispatch:', triggers)
         for automatic in ('push:', 'pull_request:', 'schedule:'):
             self.assertNotIn(automatic, triggers)

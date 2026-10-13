@@ -17,6 +17,21 @@ spec = importlib.util.spec_from_file_location('setup_dev', SCRIPT)
 sd = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sd)
 
+# Windows cannot execute the sh scripts these tests use as fake programs, so there each fake is an empty file
+# that exists for PATH and file checks, and sd.run answers for it from FAKES (path -> handler(argv) -> (rc, out)).
+IS_WINDOWS = os.name == 'nt'
+FAKES = {}
+_real_run = sd.run
+
+
+def _run_with_fakes(argv, env=None, timeout=60):
+    handler = FAKES.get(os.path.normcase(str(argv[0])))
+    return handler(argv) if handler else _real_run(argv, env, timeout)
+
+
+if IS_WINDOWS:
+    sd.run = _run_with_fakes
+
 DIGEST = 'a' * 64
 WORKFLOW = f'''curl "https://downloads.godotengine.org/?version=4.7.2&flavor=stable"
 echo "{DIGEST}  /tmp/godot.zip" | sha256sum --check
@@ -24,8 +39,17 @@ echo "{DIGEST}  /tmp/godot.zip" | sha256sum --check
 PLUGINS_ENABLED = [{'id': 'ponytail@ponytail', 'version': '5.2.0', 'enabled': True}]
 
 
-def fake(directory, name, body):
-    """A stand-in executable using only shell builtins, so tests can run with an empty PATH."""
+def fake(directory, name, body, win=None, ext='.CMD'):
+    """A stand-in executable using only shell builtins, so tests can run with an empty PATH.
+
+    `body` is the sh script used on Linux. `win` is the equivalent handler used on Windows, where the fake is
+    an empty file named name+ext (.exe for programs the code reaches by an exact .exe path)."""
+    if IS_WINDOWS:
+        path = Path(directory) / (name + ext)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b'')
+        FAKES[os.path.normcase(str(path))] = win or (lambda argv: (0, ''))
+        return str(path)
     path = Path(directory) / name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text('#!/bin/sh\n' + body + '\n')
@@ -34,7 +58,8 @@ def fake(directory, name, body):
 
 
 def fake_godot(directory, name, version):
-    return fake(directory, name, f'echo "{version}"')
+    return fake(directory, name, f'echo "{version}"', win=lambda argv: (0, version),
+                ext='.exe' if name == 'godot-bjj' else '.EXE')   # PATH lookups report the PATHEXT spelling
 
 
 def fake_claude(directory, plugins, marketplaces=(), rc=0):
@@ -42,7 +67,16 @@ def fake_claude(directory, plugins, marketplaces=(), rc=0):
             f"  \"plugin list --json\") echo '{json.dumps(plugins)}'; exit {rc};;\n"
             f"  \"plugin marketplace list --json\") echo '{json.dumps([{'name': m} for m in marketplaces])}';;\n"
             '  *) exit 2;;\nesac')
-    return fake(directory, 'claude', body)
+    def handler(argv):
+        args = ' '.join(argv[1:])
+        if args == '--version':
+            return 0, '9.9.9 (Claude Code)'
+        if args == 'plugin list --json':
+            return rc, json.dumps(plugins)
+        if args == 'plugin marketplace list --json':
+            return 0, json.dumps([{'name': m} for m in marketplaces])
+        return 2, ''
+    return fake(directory, 'claude', body, win=handler)
 
 
 class Sandbox(unittest.TestCase):
@@ -63,7 +97,8 @@ class Sandbox(unittest.TestCase):
         self.env = {'PATH': str(self.bin), 'HOME': str(self.home)}
 
     def venv_python(self, importable):
-        return fake(self.root / '.venv/bin', 'python', f'exit {0 if importable else 1}')
+        return fake(sd.venv_python_path(self.root).parent, 'python', f'exit {0 if importable else 1}',
+                    win=lambda argv: (0 if importable else 1, ''), ext='.exe')
 
     def godot_default(self, version='4.7.2.stable.official.abc'):
         return fake_godot(self.home / '.local/bin', 'godot-bjj', version)
@@ -96,10 +131,33 @@ class GodotTests(Sandbox):
         found = fake_godot(self.bin, 'godot', '4.7.2.stable.official.x')
         c = sd.check_godot(self.root, self.env)
         self.assertEqual(c.status, sd.MISSING)
-        self.assertIn(f'export GODOT_BIN={found}', c.hint)
+        self.assertIn(f'setx GODOT_BIN "{found}"' if sd.IS_WINDOWS else f'export GODOT_BIN={found}', c.hint)
+
+    def test_path_only_advice_matches_the_platform_being_checked(self):
+        found = fake_godot(self.bin, 'godot', '4.7.2.stable.official.x')
+        for windows, expected in ((True, f'setx GODOT_BIN "{found}"'), (False, f'export GODOT_BIN={found}')):
+            with self.subTest(windows=windows), mock.patch.object(sd, 'IS_WINDOWS', windows):
+                self.assertIn(expected, sd.check_godot(self.root, self.env).hint)
+
+    def test_default_location_and_venv_interpreter_per_platform(self):
+        for windows, godot, venv in ((False, 'godot-bjj', Path('.venv/bin/python')),
+                                     (True, 'godot-bjj.exe', Path('.venv/Scripts/python.exe'))):
+            with self.subTest(windows=windows), mock.patch.object(sd, 'IS_WINDOWS', windows):
+                self.assertEqual(sd.default_godot(Path('/h')), Path('/h/.local/bin') / godot)
+                self.assertEqual(sd.venv_python_path(Path('/r')), Path('/r') / venv)
+
+    def test_windows_hint_gives_the_official_download_and_checksum_and_never_a_linux_one(self):
+        with mock.patch.object(sd, 'IS_WINDOWS', True):
+            c = sd.check_godot(self.root, self.env)
+        self.assertEqual((c.status, c.fix), (sd.MISSING, ()))
+        for text in ('win64.exe.zip', sd.GODOT_WINDOWS_SHA512, 'SHA512-SUMS.txt', 'console.exe', 'setx GODOT_BIN', 'never downloads'):
+            self.assertIn(text, c.hint)
+        self.assertNotIn(DIGEST, c.hint)
+        self.assertNotIn('linux', c.hint.lower())
 
     def test_missing_godot_shows_pin_and_never_offers_a_download(self):
-        c = sd.check_godot(self.root, self.env)
+        with mock.patch.object(sd, 'IS_WINDOWS', False):
+            c = sd.check_godot(self.root, self.env)
         self.assertEqual((c.status, c.fix), (sd.MISSING, ()))
         self.assertTrue(all(s in c.hint for s in ('4.7.2', DIGEST, 'never downloads')))
 
@@ -115,16 +173,17 @@ class PyYamlTests(Sandbox):
         self.assertEqual(c.fix, ([python, '-m', 'pip', 'install', 'PyYAML>=6'],))
 
     def test_missing_without_venv_creates_one_never_touching_system_python(self):
-        no_yaml = fake(self.bin, 'py', 'exit 1')
+        no_yaml = fake(self.bin, 'py', 'exit 1', win=lambda argv: (1, ''), ext='.exe')
         with mock.patch.object(sd.sys, 'executable', no_yaml):
             c = sd.check_pyyaml(self.root, self.env)
         venv = self.root / '.venv'
-        self.assertEqual(c.fix, ([no_yaml, '-m', 'venv', str(venv)], [f'{venv}/bin/python', '-m', 'pip', 'install', 'PyYAML>=6']))
-        self.assertIn(f'{venv}/bin/python tools/ci/run_godot_steps.py', c.hint)
+        venv_python = str(sd.venv_python_path(self.root))
+        self.assertEqual(c.fix, ([no_yaml, '-m', 'venv', str(venv)], [venv_python, '-m', 'pip', 'install', 'PyYAML>=6']))
+        self.assertIn(f'{venv_python} tools/ci/run_godot_steps.py', c.hint)
 
     def test_half_made_venv_is_never_overwritten(self):
         (self.root / '.venv').mkdir()
-        no_yaml = fake(self.bin, 'py', 'exit 1')
+        no_yaml = fake(self.bin, 'py', 'exit 1', win=lambda argv: (1, ''), ext='.exe')
         with mock.patch.object(sd.sys, 'executable', no_yaml):
             c = sd.check_pyyaml(self.root, self.env)
         self.assertEqual((c.status, c.fix), (sd.MISSING, ()))
@@ -151,7 +210,7 @@ class PonytailTests(Sandbox):
                          ([claude, 'plugin', 'marketplace', 'add', 'DietrichGebert/ponytail'], [claude, 'plugin', 'install', sd.PLUGIN]))
 
     def test_unreadable_output_and_cli_failure_offer_nothing(self):
-        fake(self.bin, 'claude', 'echo "not json"')
+        fake(self.bin, 'claude', 'echo "not json"', win=lambda argv: (0, 'not json'))
         self.assertEqual(sd.check_ponytail(self.env).fix, ())
         fake_claude(self.bin, [], rc=1)
         c = sd.check_ponytail(self.env)
@@ -173,7 +232,7 @@ class SkillAndCodexTests(Sandbox):
     def test_codex_is_optional_and_never_fixable(self):
         c = sd.check_codex(self.env)
         self.assertEqual((c.status, c.fix), (sd.INFO, ()))
-        fake(self.bin, 'codex', 'echo "codex-cli 0.1"')
+        fake(self.bin, 'codex', 'echo "codex-cli 0.1"', win=lambda argv: (0, 'codex-cli 0.1'))
         self.assertEqual(sd.check_codex(self.env).status, sd.OK)
 
 
@@ -208,11 +267,11 @@ class MainTests(Sandbox):
         code, out, _, _ = self.run_main([])
         self.assertEqual(code, 0)
         self.assertIn('tools/ci/run_godot_steps.py', out)
-        self.assertIn(str(self.root / '.venv/bin/python'), out)
+        self.assertIn(str(sd.venv_python_path(self.root)), out)
 
     def test_missing_required_tool_exits_one(self):
         self.ready()
-        (self.home / '.local/bin/godot-bjj').unlink()
+        sd.default_godot(self.home).unlink()
         code, out, _, _ = self.run_main([])
         self.assertEqual(code, 1)
         self.assertIn('Not ready: Godot', out)
@@ -238,9 +297,8 @@ class MainTests(Sandbox):
 
     def test_confirmed_install_runs_exactly_the_shown_commands(self):
         python = self.venv_python(False)
-        fake_claude(self.bin, [], marketplaces=['ponytail'])
+        claude = fake_claude(self.bin, [], marketplaces=['ponytail'])
         _, out, calls, asked = self.run_main(['--install'], answers=['y', 'y'])
-        claude = str(self.bin / 'claude')
         self.assertEqual(calls, [[python, '-m', 'pip', 'install', 'PyYAML>=6'], [claude, 'plugin', 'install', sd.PLUGIN]])
         self.assertEqual(len(asked), 2)
         self.assertIn('Commands that would run', out)
@@ -272,6 +330,8 @@ class ProcessTests(unittest.TestCase):
     def test_real_script_without_tools_fails_cleanly_and_noninteractively(self):
         with tempfile.TemporaryDirectory() as tmp:
             env = {'PATH': tmp, 'HOME': tmp}
+            if IS_WINDOWS:
+                env['SYSTEMROOT'] = os.environ['SYSTEMROOT']     # Python cannot start on Windows without it
             repo_venv = SCRIPT.parents[1] / '.venv'
             existed = repo_venv.exists()
             for args in ([], ['--install']):

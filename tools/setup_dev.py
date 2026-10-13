@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """BJJ-Game development setup checker: `python3 tools/setup_dev.py` (read-only by default).
 
-Reports what is ready or missing for local-first development (see AGENTS.md). With --install it offers,
+Reports what is ready or missing for local-first development (see AGENTS.md). Runs on Linux and native
+Windows (PowerShell or Git Bash); platform differences live in the small helpers below. With --install it offers,
 one component at a time and only after you confirm, the installs that are safe to automate: PyYAML in a
 project-local .venv, and the Ponytail Claude Code plugin. It never uses sudo, never touches system Python
 packages, never overwrites an existing configuration and never downloads Godot. Standard library only,
@@ -18,8 +19,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+IS_WINDOWS = os.name == 'nt'      # tests patch this to exercise both platforms' path logic anywhere
 MIN_PYTHON = (3, 11)             # the supported CI lanes are 3.11 and 3.13
 GODOT_PINNED = '4.7.2'
+# Official SHA-512 of Godot_v4.7.2-stable_win64.exe.zip, from the godot-builds release's SHA512-SUMS.txt.
+GODOT_WINDOWS_SHA512 = ('83decd58fdf67b9d657958a1ae6bf1929c20785315a81effe245874cdc57acb7'
+                        '09bf868e00778a96984338c1b29dafdb453c6847747694621c6ecf5da2259993')
+GODOT_WINDOWS_URL = 'https://downloads.godotengine.org/?version=4.7.2&flavor=stable&platform=windows.64&slug=win64.exe.zip'
+GODOT_WINDOWS_SUMS = 'https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/SHA512-SUMS.txt'
 SKILLS = ('godot-gdscript', 'godot-ui-control', 'systematic-debugging')
 PLUGIN = 'ponytail@ponytail'
 MARKETPLACE = ('ponytail', 'DietrichGebert/ponytail')   # (marketplace name, GitHub source)
@@ -41,16 +48,29 @@ class Check:
 def run(argv, env=None, timeout=60):
     """Run argv (never a shell string) and return (returncode, combined output); failures become rc 127."""
     try:
-        done = subprocess.run(argv, env=env, capture_output=True, text=True, timeout=timeout)
+        done = subprocess.run(argv, env=env, capture_output=True, text=True, encoding='utf-8', errors='replace',
+                              timeout=timeout)
         return done.returncode, (done.stdout + done.stderr).strip()
     except (OSError, subprocess.TimeoutExpired) as error:
         return 127, str(error)
 
 
+def venv_python_path(root):
+    """Where a project-local .venv keeps its interpreter: Scripts/python.exe on Windows, bin/python elsewhere."""
+    return root / '.venv' / ('Scripts' if IS_WINDOWS else 'bin') / ('python.exe' if IS_WINDOWS else 'python')
+
+
+def default_godot(home):
+    """The location run_godot_steps.py falls back to when GODOT_BIN is unset. Windows has no conventional
+    per-user bin directory, so the same ~/.local/bin spot is used with an .exe name; most Windows setups
+    simply set GODOT_BIN to the *_console.exe (the plain .exe is a GUI program and prints nothing)."""
+    return home / '.local' / 'bin' / ('godot-bjj.exe' if IS_WINDOWS else 'godot-bjj')
+
+
 def project_python(root):
     """The interpreter whose PyYAML matters: run_godot_steps.py hands its own interpreter to the workflow
     steps, so the project .venv is preferred when it exists and the current interpreter otherwise."""
-    venv_python = root / '.venv' / 'bin' / 'python'
+    venv_python = venv_python_path(root)
     return str(venv_python) if venv_python.exists() else sys.executable
 
 
@@ -68,19 +88,27 @@ def check_pyyaml(root, env):
         return Check('PyYAML', OK, f'importable by {interpreter}',
                      'Run the Godot runner with exactly this interpreter.' if '.venv' in interpreter else '')
     venv = root / '.venv'
-    hint = f'Run the runner with the interpreter that has PyYAML, e.g. {venv}/bin/python tools/ci/run_godot_steps.py'
-    if venv.exists() and not (venv / 'bin' / 'python').exists():
+    venv_python = venv_python_path(root)
+    hint = f'Run the runner with the interpreter that has PyYAML, e.g. {venv_python} tools/ci/run_godot_steps.py'
+    if venv.exists() and not venv_python.exists():
         # A half-made .venv is user state; refuse to overwrite it.
         return Check('PyYAML', MISSING, f'{venv} exists but has no interpreter',
                      f'Remove or repair {venv} yourself, then rerun. {hint}')
-    install = [str(venv / 'bin' / 'python'), '-m', 'pip', 'install', 'PyYAML>=6']
+    install = [str(venv_python), '-m', 'pip', 'install', 'PyYAML>=6']
     create = [] if venv.exists() else [[sys.executable, '-m', 'venv', str(venv)]]
     return Check('PyYAML', MISSING, f'not importable by {interpreter}', hint, tuple(create + [install]))
 
 
 def godot_download_hint(root):
-    """Show the pinned download so the user can fetch and verify it; the checksum comes from the workflow
-    that CI uses, so there is a single source of truth."""
+    """Show the pinned download so the user can fetch and verify it; on Linux the checksum comes from the
+    workflow that CI uses, so there is a single source of truth."""
+    if IS_WINDOWS:
+        return (f'Needs Godot {GODOT_PINNED}-stable Standard (not .NET), Windows x86_64. This script never downloads it.\n'
+                f'  Download: {GODOT_WINDOWS_URL}\n'
+                f'  Verify:   sha512 {GODOT_WINDOWS_SHA512}\n'
+                f'            (official list: {GODOT_WINDOWS_SUMS})\n'
+                f'  Install:  unzip, then set GODOT_BIN to the *_console.exe, e.g.\n'
+                f'            setx GODOT_BIN "C:\\Tools\\Godot\\Godot_v{GODOT_PINNED}-stable_win64_console.exe"')
     text = (root / '.github/workflows/godot-v1.yml').read_text() if (root / '.github/workflows/godot-v1.yml').exists() else ''
     url = re.search(r'"(https://downloads\.godotengine\.org/[^"]+)"', text)
     digest = re.search(r'"([0-9a-f]{64})  /tmp/godot\.zip"', text)
@@ -96,8 +124,8 @@ def godot_version(path, env):
 
 
 def check_godot(root, env):
-    home = Path(env.get('HOME') or Path.home())
-    default = home / '.local' / 'bin' / 'godot-bjj'
+    home = Path(env.get('HOME') or env.get('USERPROFILE') or Path.home())
+    default = default_godot(home)
     explicit = env.get('GODOT_BIN')
     # run_godot_steps.py reads only GODOT_BIN, then the default location, never PATH. A set GODOT_BIN wins
     # even when the default is fine, so a stale value must be reported rather than silently bypassed.
@@ -112,11 +140,12 @@ def check_godot(root, env):
             return Check('Godot', OK, f'{path} ({version})')
         return Check('Godot', MISSING, f'{path} reports {version or "no version"}, need {GODOT_PINNED}.stable',
                      godot_download_hint(root))
-    for name in ('godot-bjj', 'godot', 'godot4'):
+    for name in ('godot-bjj', 'godot', 'godot4', f'Godot_v{GODOT_PINNED}-stable_win64_console'):
         found = shutil.which(name, path=env.get('PATH', ''))
         if found and godot_version(found, env).startswith(GODOT_PINNED + '.stable'):
-            return Check('Godot', MISSING, f'{GODOT_PINNED} found on PATH at {found}, but the runner ignores PATH',
-                         f'Run: export GODOT_BIN={found}   (or symlink it to {default})')
+            advice = (f'Run: setx GODOT_BIN "{found}"   (new terminals pick it up)' if IS_WINDOWS
+                      else f'Run: export GODOT_BIN={found}   (or symlink it to {default})')
+            return Check('Godot', MISSING, f'{GODOT_PINNED} found on PATH at {found}, but the runner ignores PATH', advice)
     return Check('Godot', MISSING, 'no Godot executable found', godot_download_hint(root))
 
 

@@ -207,7 +207,7 @@ class WorkflowWiringTests(unittest.TestCase):
 
     @staticmethod
     def mount_step():
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         match = re.search(r'^      - name: Run frozen Mount-slice tests\n(.*?)(?=^      - name: )', text, re.S | re.M)
         assert match, 'Mount-slice step not found'
         return match.group(1)
@@ -229,11 +229,11 @@ class WorkflowWiringTests(unittest.TestCase):
                         'validator invocation must be live code, not a comment')
 
     def test_slice_script_is_run_exactly_once_by_the_validated_step(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         self.assertEqual(text.count('res://tests/test_mount_slice.gd'), 1)
 
     def test_stamina_read_only_diagnostic_step_is_untouched(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         self.assertIn("len(errors) == 2 and all(line.startswith('ERROR: read_only_property:') for line in errors)", text)
 
 
@@ -318,7 +318,7 @@ class NamedSuiteTests(unittest.TestCase):
 class RegistryStepWiringTests(unittest.TestCase):
     @staticmethod
     def registry_step():
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         match = re.search(r'^      - name: Validate canonical position registry[^\n]*\n(.*?)(?=^      - name: )', text, re.S | re.M)
         assert match, 'registry step not found'
         return match.group(1)
@@ -338,10 +338,10 @@ class RegistryStepWiringTests(unittest.TestCase):
             self.assertNotIn(forbidden, step)
 
     def test_registry_script_is_run_exactly_once(self):
-        self.assertEqual(WORKFLOW.read_text().count('res://tests/test_position_registry.gd'), 1)
+        self.assertEqual(WORKFLOW.read_text(encoding='utf-8').count('res://tests/test_position_registry.gd'), 1)
 
     def test_pin_matches_the_gdscript_completion_contract(self):
-        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_position_registry.gd').read_text()
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_position_registry.gd').read_text(encoding='utf-8')
         self.assertIn('print("Position registry PASS: %d assertions" % checks)', source)
         self.assertIn('push_error("Position registry: %d / %d assertions failed" % [failures, checks])', source)
 
@@ -353,7 +353,7 @@ FIGHTER_EXPECTED = 750
 class FighterStepWiringTests(unittest.TestCase):
     @staticmethod
     def step():
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         match = re.search(r'^      - name: Validate fighter definitions and read-only fighter snapshots[^\n]*\n(.*?)(?=^      - name: )', text, re.S | re.M)
         assert match, 'fighter foundation step not found'
         return match.group(1)
@@ -372,8 +372,8 @@ class FighterStepWiringTests(unittest.TestCase):
             self.assertNotIn(forbidden, self.step())
 
     def test_script_runs_once_and_matches_the_completion_contract(self):
-        self.assertEqual(WORKFLOW.read_text().count('res://tests/test_fighter_foundation.gd'), 1)
-        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_fighter_foundation.gd').read_text()
+        self.assertEqual(WORKFLOW.read_text(encoding='utf-8').count('res://tests/test_fighter_foundation.gd'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_fighter_foundation.gd').read_text(encoding='utf-8')
         self.assertIn('print("Fighter foundation PASS: %d assertions" % checks)', source)
         self.assertIn('push_error("Fighter foundation: %d / %d assertions failed" % [failures, checks])', source)
 
@@ -394,7 +394,7 @@ PRACTICE_EXPECTED = 1036
 class PracticeStepWiringTests(unittest.TestCase):
     @staticmethod
     def step():
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         match = re.search(r'^      - name: Validate the 2D Mount practice scene[^\n]*\n(.*?)(?=^      - name: )', text, re.S | re.M)
         assert match, 'practice step not found'
         return match.group(1)
@@ -413,21 +413,21 @@ class PracticeStepWiringTests(unittest.TestCase):
             self.assertNotIn(forbidden, self.step())
 
     def test_script_runs_once_and_matches_the_completion_contract(self):
-        self.assertEqual(WORKFLOW.read_text().count('res://tests/test_mount_practice.gd'), 1)
-        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_mount_practice.gd').read_text()
+        self.assertEqual(WORKFLOW.read_text(encoding='utf-8').count('res://tests/test_mount_practice.gd'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_mount_practice.gd').read_text(encoding='utf-8')
         self.assertIn('print("Mount practice PASS: %d assertions" % checks)', source)
         self.assertIn('push_error("Mount practice: %d / %d assertions failed" % [failures, checks])', source)
 
     def test_regression_pins_of_the_earlier_suites_are_untouched(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750)):
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
     def test_default_scene_is_the_practice_scene_and_the_3d_greybox_is_kept(self):
-        project = (WORKFLOW.parents[2] / 'GODOT_V1' / 'project.godot').read_text()
+        project = (WORKFLOW.parents[2] / 'GODOT_V1' / 'project.godot').read_text(encoding='utf-8')
         self.assertIn('run/main_scene="res://scenes/mount_practice.tscn"', project)
         self.assertTrue((WORKFLOW.parents[2] / 'GODOT_V1' / 'scenes' / 'mount_debug.tscn').is_file())
-        self.assertIn('Smoke-test the default scene', WORKFLOW.read_text())
+        self.assertIn('Smoke-test the default scene', WORKFLOW.read_text(encoding='utf-8'))
 
     def test_validator_rejects_a_premature_practice_log(self):
         clean = 'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nMount practice PASS: 1036 assertions\n'
@@ -448,7 +448,7 @@ class _HalfGuardSuiteWiring:
 
     @classmethod
     def step(cls):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         match = re.search(r'^      - name: %s[^\n]*\n(.*?)(?=^      - name: )' % re.escape(cls.STEP_PREFIX), text, re.S | re.M)
         assert match, '%s step not found' % cls.NAME
         return match.group(1)
@@ -467,8 +467,8 @@ class _HalfGuardSuiteWiring:
             self.assertNotIn(forbidden, self.step())
 
     def test_script_runs_once_and_matches_the_completion_contract(self):
-        self.assertEqual(WORKFLOW.read_text().count('res://tests/' + self.SCRIPT), 1)
-        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / self.SCRIPT).read_text()
+        self.assertEqual(WORKFLOW.read_text(encoding='utf-8').count('res://tests/' + self.SCRIPT), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / self.SCRIPT).read_text(encoding='utf-8')
         self.assertIn('print("%s PASS: %%d assertions" %% checks)' % self.NAME, source)
         self.assertIn('push_error("%s: %%d / %%d assertions failed" %% [failures, checks])' % self.NAME, source)
 
@@ -492,12 +492,12 @@ class HalfGuardReferenceWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
     SCRIPT, LOG, EXPECTED = 'test_half_guard_reference.gd', '/tmp/half-guard-reference.log', 49609
 
     def test_fixture_is_generated_before_the_replay_and_by_the_oracle_only(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         generate = text.index('python GODOT_V1/tests/generate_half_guard_reference.py')
         replay = text.index('res://tests/test_half_guard_reference.gd')
         self.assertLess(generate, replay)
         self.assertEqual(text.count('generate_half_guard_reference.py'), 1)
-        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'generate_half_guard_reference.py').read_text()
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'generate_half_guard_reference.py').read_text(encoding='utf-8')
         self.assertIn('from oracles import half_guard_v0_scenarios', source)
         self.assertNotIn('bjj_game', source)
 
@@ -509,7 +509,7 @@ class HalfGuardConformanceWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
 
 class HalfGuardEarlierPinsUntouchedTests(unittest.TestCase):
     def test_earlier_suite_pins_and_routing_inputs_are_untouched(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750),
                             ('/tmp/mount-practice.log', 1036)):
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
@@ -520,7 +520,7 @@ class HalfGuardMountEdgeWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
     SCRIPT, LOG, EXPECTED = 'test_half_guard_mount_edge.gd', '/tmp/half-guard-mount-edge.log', 3119
 
     def test_earlier_half_guard_pins_are_untouched(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         for name, count in (('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151)):
             self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
 
@@ -530,7 +530,7 @@ class HalfGuardGraphWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
     SCRIPT, LOG, EXPECTED = 'test_half_guard_graph.gd', '/tmp/half-guard-graph.log', 2133  # 2125 before B1i: the public-name scan checks the 8 new graph methods
 
     def test_earlier_pins_are_untouched(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
                             ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
                             ('/tmp/half-guard-mount-edge.log', 3119)):
@@ -542,7 +542,7 @@ class HalfGuardSealedProtocolWiringTests(_HalfGuardSuiteWiring, unittest.TestCas
     SCRIPT, LOG, EXPECTED = 'test_half_guard_sealed_protocol.gd', '/tmp/half-guard-sealed-protocol.log', 42309  # 41231 before B1h (GP-2/GP-3, published fallback)
 
     def test_earlier_pins_are_untouched(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
                             ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
                             ('/tmp/half-guard-mount-edge.log', 3119), ('/tmp/half-guard-graph.log', 2133)):
@@ -554,13 +554,13 @@ class HalfGuardFeintReferenceWiringTests(_HalfGuardSuiteWiring, unittest.TestCas
     SCRIPT, LOG, EXPECTED = 'test_half_guard_feint_reference.gd', '/tmp/half-guard-feint-reference.log', 26415
 
     def test_feint_fixture_is_generated_before_the_replay_and_by_the_oracle_only(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         generate = text.index('python GODOT_V1/tests/generate_half_guard_feint_reference.py')
         replay = text.index('res://tests/test_half_guard_feint_reference.gd')
         self.assertLess(generate, replay)
         self.assertEqual(text.count('generate_half_guard_feint_reference.py'), 1)
         self.assertEqual(text.count('generate_half_guard_reference.py'), 1)  # the direct fixture generation step is untouched
-        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'generate_half_guard_feint_reference.py').read_text()
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'generate_half_guard_feint_reference.py').read_text(encoding='utf-8')
         self.assertIn('from oracles import half_guard_v0_feint_scenarios', source)
         self.assertNotIn('bjj_game', source)
 
@@ -570,7 +570,7 @@ class HalfGuardFeintProtocolWiringTests(_HalfGuardSuiteWiring, unittest.TestCase
     SCRIPT, LOG, EXPECTED = 'test_half_guard_feint_protocol.gd', '/tmp/half-guard-feint-protocol.log', 32222
 
     def test_earlier_pins_are_untouched_except_the_two_intentional_b1h_revisions(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
                             ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151), ('/tmp/half-guard-mount-edge.log', 3119),
                             ('/tmp/half-guard-graph.log', 2133),
@@ -583,13 +583,13 @@ class HalfGuardGraphSealedFlowWiringTests(_HalfGuardSuiteWiring, unittest.TestCa
     SCRIPT, LOG, EXPECTED = 'test_half_guard_graph_sealed_flow.gd', '/tmp/half-guard-graph-sealed-flow.log', 2433
 
     def test_fixtures_used_by_the_flow_suite_are_generated_before_it(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         flow = text.index('res://tests/test_half_guard_graph_sealed_flow.gd')
         self.assertLess(text.index('python GODOT_V1/tests/generate_half_guard_reference.py'), flow)
         self.assertLess(text.index('python GODOT_V1/tests/generate_half_guard_feint_reference.py'), flow)
 
     def test_earlier_pins_are_untouched_except_the_b1i_graph_revision(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
                             ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
                             ('/tmp/half-guard-mount-edge.log', 3119), ('/tmp/half-guard-sealed-protocol.log', 42309), ('/tmp/half-guard-feint-reference.log', 26415),
@@ -605,11 +605,11 @@ class MatchFlowInvariantsWiringTests(_HalfGuardSuiteWiring, unittest.TestCase):
         tests = WORKFLOW.parents[2] / 'GODOT_V1' / 'tests'
         for name in ('match_flow_harness.gd', 'measure_match_flow.gd', 'test_match_flow_invariants.gd'):
             self.assertTrue((tests / name).is_file(), name)
-        self.assertIn('res://tests/match_flow_harness.gd', (tests / 'test_match_flow_invariants.gd').read_text())
-        self.assertIn('res://tests/match_flow_harness.gd', (tests / 'measure_match_flow.gd').read_text())
+        self.assertIn('res://tests/match_flow_harness.gd', (tests / 'test_match_flow_invariants.gd').read_text(encoding='utf-8'))
+        self.assertIn('res://tests/match_flow_harness.gd', (tests / 'measure_match_flow.gd').read_text(encoding='utf-8'))
 
     def test_earlier_pins_are_untouched(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         for name, count in (('/tmp/mount-slice.log', 256992), ('/tmp/position-registry.log', 431), ('/tmp/fighter-foundation.log', 750), ('/tmp/mount-practice.log', 1036),
                             ('/tmp/half-guard-boundaries.log', 3999), ('/tmp/half-guard-reference.log', 49609), ('/tmp/half-guard-conformance.log', 151),
                             ('/tmp/half-guard-mount-edge.log', 3119), ('/tmp/half-guard-sealed-protocol.log', 42309), ('/tmp/half-guard-feint-reference.log', 26415),
@@ -621,7 +621,7 @@ class MatchFlowMeasurementSmokeWiringTests(unittest.TestCase):
     PREFIX = 'Smoke-run the match-flow measurement harness'
 
     def step(self):
-        text = WORKFLOW.read_text()
+        text = WORKFLOW.read_text(encoding='utf-8')
         match = re.search(r'^      - name: %s[^\n]*\n(.*?)(?=^      - name: )' % re.escape(self.PREFIX), text, re.S | re.M)
         self.assertIsNotNone(match, 'smoke step not found')
         return match.group(1)
@@ -642,8 +642,8 @@ class MatchFlowMeasurementSmokeWiringTests(unittest.TestCase):
             self.assertNotIn(forbidden, step)
 
     def test_the_smoke_script_runs_once_and_prints_the_checked_phrases(self):
-        self.assertEqual(WORKFLOW.read_text().count('res://tests/measure_match_flow.gd'), 1)
-        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'measure_match_flow.gd').read_text()
+        self.assertEqual(WORKFLOW.read_text(encoding='utf-8').count('res://tests/measure_match_flow.gd'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'measure_match_flow.gd').read_text(encoding='utf-8')
         for phrase in ('replay %s', 'policy errors (a refused command the harness did not intend; any non-zero value is a harness defect): %d', 'violations: %d'):
             self.assertIn(phrase, source)
 
@@ -654,11 +654,11 @@ class MatchFlowReportConsistencyTests(unittest.TestCase):
 
     def test_the_measurement_file_matches_its_declared_digest_and_the_report_quotes_it(self):
         import hashlib
-        text = (self.DOCS / 'MATCH_FLOW_MEASUREMENTS.md').read_text()
+        text = (self.DOCS / 'MATCH_FLOW_MEASUREMENTS.md').read_text(encoding='utf-8')
         header, body = text.split('-->\n\n', 1)
         declared = re.search(r'SHA-256 of that body: ([0-9a-f]{64})', header).group(1)
         self.assertEqual(hashlib.sha256(body.encode()).hexdigest(), declared)
-        report = (self.DOCS / 'MATCH_FLOW_DIAGNOSTICS.md').read_text()
+        report = (self.DOCS / 'MATCH_FLOW_DIAGNOSTICS.md').read_text(encoding='utf-8')
         self.assertIn(declared, report)
         population = re.search(r'population trace digest \(first run\) ([0-9a-f]{64}); \(second run\) ([0-9a-f]{64}); replay IDENTICAL', body)
         self.assertIsNotNone(population)
@@ -666,7 +666,7 @@ class MatchFlowReportConsistencyTests(unittest.TestCase):
         self.assertIn(population.group(1), report)
 
     def test_the_structural_totals_in_the_measurements_are_clean(self):
-        body = (self.DOCS / 'MATCH_FLOW_MEASUREMENTS.md').read_text()
+        body = (self.DOCS / 'MATCH_FLOW_MEASUREMENTS.md').read_text(encoding='utf-8')
         self.assertRegex(body, r'policy errors \(a refused command the harness did not intend; any non-zero value is a harness defect\): 0\n')
         self.assertRegex(body, r'transitions checked for identity, stamina, latch, meter, clock and window continuity: \d+; violations: 0\n')
         self.assertRegex(body, r'\(Half Guard v0 has no recovery rule\): 0\n')
@@ -674,7 +674,7 @@ class MatchFlowReportConsistencyTests(unittest.TestCase):
         self.assertEqual((match.group(2), match.group(4)), (match.group(3), '0'))
 
     def test_the_documents_state_their_scope(self):
-        report = (self.DOCS / 'MATCH_FLOW_DIAGNOSTICS.md').read_text()
+        report = (self.DOCS / 'MATCH_FLOW_DIAGNOSTICS.md').read_text(encoding='utf-8')
         for phrase in ('**STRUCTURAL**', '**POPULATION**', '**DESIGN QUESTION**', 'Nothing here is a balance qualification', 'incomplete-engine boundary'):
             self.assertIn(phrase, report)
 
