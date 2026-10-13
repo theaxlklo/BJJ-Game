@@ -245,7 +245,7 @@ Commitment costs LOW 3 / MEDIUM 7 / HIGH 12; funding `determine(requested, avail
 | SC-N5 | Build: a successful `stabilize` raises `top_pin` by one; a successful `shrimp` raises `bottom_space` by one; at Ready a break-capable attempt spends one tier whatever the result; governed responses wear by effective commitment as in the Half Guard wear table; no cross-track weakening in v0 | HG N-5, N-6, N-8 |
 | SC-N6 | Pipeline order: raw → positional (−1 facing the opposing CONTROL band) → attack readiness → defense readiness → exhaustion → magnitude → undercommitment; each step saturates at ±2; the clamp and band update also happen on an exit | HG §5.3, N-7 |
 | SC-N7 | Axis: integer tenths in −40…+40; step 10 per final grade; entry axis **+10** (band +1, `TOP_EDGE`); exit lines ±30; band hysteresis table identical in shape to Half Guard's but defined independently in the Side Control rules sheet | HG §2 |
-| SC-N8 | A pass costs nothing, spends no clock and flips initiative (as Half Guard); there are **no behaviors, no drift, no recovery action, no D3-B** in v0 | HG v0 |
+| SC-N8 | An accepted PASS costs no stamina, produces no grade and adds no clock advance beyond the time accounted for when its decision window opened; it flips initiative (as Half Guard). There are **no behaviors, no drift, no recovery action, no D3-B** in v0. | HG v0 |
 | SC-N9 | Timeout: `TIMEOUT — Side Control retained`, terminal, no exit | HG A-9 |
 
 Entry axis +10 reflects that the Top has just completed a pass; it is a placeholder for the owner's choice, not a balance result. **[OPEN]** SC-D6, SC-D7, SC-D8.
@@ -315,7 +315,9 @@ Checks that must be **stated as not run** in any later report unless run: the fu
 
 Only this Markdown file changed. The checks are `git diff --check` (including the CI whitespace configuration, before and after staging), a read-through for label consistency, and a link and file-reference check (every repository path and `file:line` citation was opened at the stack head). No Godot or Python suite applies to a documentation-only change and none was run; a green documentation-only CI result proves nothing about Side Control behavior. The exact CI routing and results are reported in the handoff.
 
-## 11. Owner decisions required before implementation
+## 11. Original owner-decision inventory (B2a proposal)
+
+**Status update (2026-10-13):** The owner has approved the **limited B2b prototype package** in §11A.6. This original decision table preserves the proposals and alternatives for historical review; it does not override the later B2b-specific approval or authorize B2c/B2d.
 
 | ID | Decision | Recommendation (not a decision) |
 | --- | --- | --- |
@@ -397,16 +399,18 @@ Independence is preserved by commit order, the path-allowlist check, and the rul
 - **Gameplay:** entry initiator is an explicit validated input supplied by the receiving rule, Top under the provisional identical profile (SC-D2); economy inherited from Half Guard with passes recorded as their own decision kind (SC-D8); fresh readiness tiers, no carry (SC-D7).
 - **Numbers:** the §4.3 and §7.2 values accepted **only as provisional prototype constants** (SC-D6), versioned, with measurement allowed to amend them.
 
-### 11A.6 Smallest owner-approval package to start B2b
+### 11A.6 Owner-approved B2b prototype scope (2026-10-13)
 
-B2b builds only the rules sheet and the Python oracle, so it needs no B2a.1 threshold, no `R` data and no graph decision. The owner needs to approve, in one message:
+**[OWNER-APPROVED — B2b ONLY]** The owner accepted this minimal v0 package, consistent with the previously recorded game design. B2b is **only** a self-contained Side Control rules sheet followed by an **independent, test-only Python oracle** in separate locally tested commits on `main`. It does **not** authorize B2c Godot implementation, B2d graph/receiver integration, submissions, stalling, Heart of a Lion, scoring or new return-route mechanics. The numbers below are **provisional v0 oracle constants**, not final balance decisions.
 
-1. **SC-D1, D3, D4, D5, D7, D8, D9, D10, D11, D14** as recommended in 11A.5 (or amend named items).
-2. **SC-D2 reduced to one sentence:** the Side Control entry request carries an explicit, validated `initiator`, supplied by the receiving rule; fixtures use Top.
-3. **SC-D6 values as provisional prototype constants** (or list the changes). This is the **only** numerical acceptance.
-4. **SC-D15 as the local commit phases of 11A.4.**
+The approved package is:
 
-**Not needed for B2b:** SC-D12 and SC-D13 (B2d and out of scope), and the B2a.1 decisions OD-2a, OD-4, OD-9 and OD-12. B2a.1 OD-1, OD-3, OD-5, OD-6 and OD-7 are needed by **B2d**, when the graph supplies the first window.
+1. **SC-D1, D3, D4, D5, D7, D8, D9, D10, D11, D14** exactly as recommended in §11A.5: identity role mapping; reported axis authority; three actions and three responses per side; no submissions or feints in v0; provisional `expose_back` naming; fresh readiness; existing stamina economy; pure Half Guard snapshot adapter as a future boundary; four honest unsupported exits; unresolved reversals. A PASS has no additional clock charge, but opening its normal window accounts for clock (§7.2, SC-N8).
+2. **SC-D2:** the Side Control entry request carries an explicit, validated `initiator`, supplied by the receiving position policy; prototype fixtures use Top. Later skill-sensitive entry uses the recorded General Technique, separate earned position-role proficiency (`R = 0` for new career fighters) and positional advantage; no B2a.1 numerical threshold is approved here.
+3. **SC-D6:** the proposed raw grade tables (§4.3), axis and bands, exit lines, readiness and settlement constants (§7.2, SC-N1–SC-N9) are approved **only as provisional prototype constants** for the B2b rules sheet and oracle. They may be changed later only through an explicit, versioned and measured rules revision; no balance claim is implied.
+4. **SC-D15:** B2b-1 rules-sheet commit, then B2b-2 independent test-only oracle commit, with no GDScript before the oracle checkpoint. No PRs or automatic CI; follow the project's local-first test gates.
+
+**Deferred and not authorized:** SC-D12 (B2d graph constructor), SC-D13 (position variations/scoring), B2c–B2e, and the remaining B2a.1 OD-2a/OD-4/OD-9/OD-12 questions. The Side Control → Half Guard re-entry loop is a priority for a later explicit design decision, not permission to invent a receiver now.
 
 ## 12. Recommended implementation boundary
 
