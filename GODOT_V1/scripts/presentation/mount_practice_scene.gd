@@ -25,6 +25,7 @@ var controller: BjjMountPracticeController = BjjMountPracticeController.new()
 @onready var technique_list: ItemList = %TechniqueList
 @onready var response_header: Label = %ResponseHeader
 @onready var response_list: ItemList = %ResponseList
+@onready var commit_header: Label = %CommitHeader
 @onready var commit_option: OptionButton = %CommitOption
 @onready var commit_note: Label = %CommitNote
 @onready var next_button: Button = %NextWindowButton
@@ -94,8 +95,14 @@ func _on_response_selected(index: int) -> void:
     refresh()
 
 
+# One control, two meanings: the Top's own commitment in a Top window, and the Top responder's commitment in a two-sided
+# Bottom window. The controller's model says which one is active; its item index maps to the value it accepts.
 func _on_commitment_selected(index: int) -> void:
-    controller.select_commitment(commit_option.get_item_text(index))
+    var responder: Dictionary = controller.view().commitment.responder
+    if responder.active:
+        controller.select_response_commitment(responder.values[index])
+    else:
+        controller.select_commitment(commit_option.get_item_text(index))
     refresh()
 
 
@@ -199,7 +206,34 @@ func _fill_list(list: ItemList, rows: Array) -> void:
             list.select(index)
 
 
+func _set_commit_items(labels: Array) -> void:
+    var current: Array = []
+    for index: int in commit_option.item_count:
+        current.append(commit_option.get_item_text(index))
+    if current == labels:
+        return
+    commit_option.clear()
+    for label: String in labels:
+        commit_option.add_item(label)
+
+
 func _fill_commitment(commitment: Dictionary) -> void:
+    var responder: Dictionary = commitment.responder
+    if responder.active:
+        _set_commit_items(responder.labels)
+        commit_header.text = "Top's response commitment"
+        commit_option.disabled = not responder.selectable
+        commit_option.select(responder.values.find(responder.selected))
+        match responder.state:
+            "waiting":
+                commit_note.text = "Sets the Top's commitment when it answers. Choose a technique and response first. Bottom's own commitment: policy-selected (%s)." % commitment.policy_selected
+            "no_action":
+                commit_note.text = "No response commitment: No action was chosen."
+            _:
+                commit_note.text = "Sets the Top's commitment when it answers. Default = MEDIUM. Bottom's own commitment: policy-selected (%s)." % commitment.policy_selected
+        return
+    _set_commit_items(commitment.options)
+    commit_header.text = "Top's commitment" if commitment.selectable else "Commitment"
     commit_option.disabled = not commitment.selectable
     commit_option.select(commitment.options.find(commitment.selected))
     commit_note.text = "Top's commitment (policy default %s)" % commitment.policy_selected if commitment.selectable \

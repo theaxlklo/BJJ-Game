@@ -254,6 +254,17 @@ jobs:
           cat /tmp/mount-practice-two-sided.log
           python tools/ci/validate_mount_slice_log.py /tmp/mount-practice-two-sided.log --name "Mount practice two-sided" --exit-code "$status" --expected-assertions 491
 
+      - name: Validate F1.2 Top responder commitment in two-sided Mount practice (selection, clearing and the sixth submit argument)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the other suites: validate status and the whole log. A separate script with its own pin,
+          # so the F1 (1036) and F1.1 (491) suites above stay unchanged.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_mount_practice_response_commitment.gd > /tmp/mount-practice-response-commitment.log 2>&1 || status=$?
+          cat /tmp/mount-practice-response-commitment.log
+          python tools/ci/validate_mount_slice_log.py /tmp/mount-practice-response-commitment.log --name "Mount practice response commitment" --exit-code "$status" --expected-assertions 432
+
       - name: Generate the independent Half Guard Python oracle fixture
         shell: bash
         run: |

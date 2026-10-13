@@ -24,6 +24,12 @@ extends RefCounted
 # a Bottom window through the production bottom_decision() (D3-B, RESET/HOLD and recovery stay the
 # engine's). Bottom never supplies a commitment (the gateway refuses one), so none is sent. The
 # scripted mode stays the default and behaves exactly as before.
+#
+# F1.2 lets the human choose the Top RESPONDER's commitment in a two-sided Bottom window (LOW, MEDIUM, HIGH, or the
+# engine default). It is a separate selection from the Top initiator's commitment, and it travels only in the sixth
+# argument of BjjPositionGraphMatch.submit(). The empty string is a real, distinct choice: the existing exchange rules
+# treat an omitted responder commitment as MEDIUM when they fund it, so "engine default" and MEDIUM settle identically
+# under the practice rules, but the controller never guesses that, it forwards exactly what was selected.
 const TOP_ID: String = "fighter_alpha"
 const BOTTOM_ID: String = "fighter_bravo"
 const KIND_ACTIVE: String = "active"
@@ -49,6 +55,8 @@ var practice_mode: String = MODE_SCRIPTED
 var selected_action: String = ""
 var selected_response: String = ""
 var selected_commitment: String = ""
+# The Top responder's commitment in a two-sided Bottom window. "" is the engine default (nothing forwarded).
+var selected_response_commitment: String = ""
 
 var _graph: BjjPositionGraphMatch
 var _adapter: BjjFighterSnapshotAdapter
@@ -97,6 +105,7 @@ func start_new_match(top_definition: Variant, bottom_definition: Variant, extra:
     selected_action = ""
     selected_response = ""
     selected_commitment = ""
+    selected_response_commitment = ""
     _last_report = {}
     _last_lines = []
     _last_message = "New independent practice match started."
@@ -140,6 +149,7 @@ func next_window() -> Dictionary:
     selected_action = ""
     selected_response = ""
     selected_commitment = ""
+    selected_response_commitment = ""
     var window := _graph.window_fields()
     if window.open:
         _last_message = "Window %d opened for %s (%s)." % [window.window_id, _display(window.fighter_id), window.role]
@@ -158,6 +168,7 @@ func select_action(action_id: String) -> Dictionary:
     if action_id == NO_ACTION_ID and window.role == "bottom":
         selected_action = NO_ACTION_ID
         selected_response = ""
+        selected_response_commitment = ""
         return {"ok": true, "error": ""}
     for option: BjjPositionContract.Option in _graph.action_options(window.fighter_id).options:
         if option.id == action_id:
@@ -165,6 +176,7 @@ func select_action(action_id: String) -> Dictionary:
                 return _refuse_command(option.reason)
             selected_action = action_id
             selected_response = ""
+            selected_response_commitment = ""
             return {"ok": true, "error": ""}
     return _refuse_command("unknown_action")
 
@@ -182,6 +194,7 @@ func select_response(response_id: String) -> Dictionary:
             if not option.available:
                 return _refuse_command(option.reason)
             selected_response = response_id
+            selected_response_commitment = ""
             return {"ok": true, "error": ""}
     return _refuse_command("unknown_response")
 
@@ -197,6 +210,27 @@ func select_commitment(commitment_id: String) -> Dictionary:
     if not BjjCommitment.valid(commitment_id):
         return _refuse_command("unknown_commitment")
     selected_commitment = commitment_id
+    return {"ok": true, "error": ""}
+
+
+# The Top responder's commitment, selectable only in a two-sided Bottom window once a real Bottom technique and the Top's
+# response are chosen. "" means the engine default. Anything else must be one of the engine's commitment names.
+func select_response_commitment(commitment_id: String) -> Dictionary:
+    var status_gate := _status_gate()
+    if not status_gate.is_empty():
+        return _refuse_command(status_gate)
+    var window := _graph.window_fields()
+    if not window.open or not _is_two_sided_bottom(window):
+        return _refuse_command("response_commitment_not_applicable")
+    if selected_action.is_empty():
+        return _refuse_command("technique_required")
+    if selected_action == NO_ACTION_ID:
+        return _refuse_command("no_response_for_no_action")
+    if selected_response.is_empty():
+        return _refuse_command("response_required")
+    if not commitment_id.is_empty() and not BjjCommitment.valid(commitment_id):
+        return _refuse_command("unknown_commitment")
+    selected_response_commitment = commitment_id
     return {"ok": true, "error": ""}
 
 
@@ -216,15 +250,17 @@ func submit_decision() -> Dictionary:
         # A Top window, or a two-sided Bottom window. The Bottom never supplies a commitment (the gateway refuses one), so it is
         # not even forwarded from a Bottom window; the practice no-action row maps to the engine's empty action id.
         var action := "" if selected_action == NO_ACTION_ID else selected_action
-        report = _graph.submit(window.window_id, window.fighter_id, action, selected_response, selected_commitment if window.role == "top" else "")
+        var responder_commitment := selected_response_commitment if _is_two_sided_bottom(window) and not action.is_empty() else ""
+        report = _graph.submit(window.window_id, window.fighter_id, action, selected_response, selected_commitment if window.role == "top" else "", responder_commitment)
     if not report.ok():
         return _refuse_command(report.error)
     _last_report = report.fields()
-    _last_lines = _decision_lines(window, scripted, requested, before, _adapter.snapshots(), _last_report)
+    _last_lines = _decision_lines(window, scripted, requested, selected_response_commitment, before, _adapter.snapshots(), _last_report)
     _last_message = "Decision accepted."
     selected_action = ""
     selected_response = ""
     selected_commitment = ""
+    selected_response_commitment = ""
     return {"ok": true, "error": ""}
 
 
@@ -314,6 +350,10 @@ func _submit_gate() -> String:
     return ""
 
 
+func _is_two_sided_bottom(window: Dictionary) -> bool:
+    return window.role == "bottom" and practice_mode == MODE_TWO_SIDED
+
+
 # Only a Bottom window in the default scripted mode is decided by the existing no-action script.
 func _is_scripted(window: Dictionary) -> bool:
     return window.role == "bottom" and practice_mode == MODE_SCRIPTED
@@ -384,7 +424,21 @@ func _commitment_view(window: Dictionary) -> Dictionary:
     var selectable: bool = _status_kind() == KIND_ACTIVE and window.open and window.role == "top"
     var policy: String = _graph.selected_commitment()
     return {"selectable": selectable, "options": BjjCommitment.ORDER.duplicate(), "policy_selected": policy,
-        "selected": selected_commitment if not selected_commitment.is_empty() else policy}
+        "selected": selected_commitment if not selected_commitment.is_empty() else policy, "responder": _responder_view(window)}
+
+
+# The Top responder's commitment control. "active" says the control belongs to this window (a two-sided Bottom window);
+# "state" says why it can or cannot be used right now; "values" are what select_response_commitment accepts ("" = engine
+# default) and "labels" are the matching texts.
+func _responder_view(window: Dictionary) -> Dictionary:
+    var active: bool = _status_kind() == KIND_ACTIVE and window.open and _is_two_sided_bottom(window)
+    var state := "inactive"
+    if active:
+        state = "no_action" if selected_action == NO_ACTION_ID else ("ready" if not selected_action.is_empty() and not selected_response.is_empty() else "waiting")
+    var values: Array[String] = [""]
+    values.append_array(BjjCommitment.ORDER)
+    return {"active": active, "state": state, "selectable": state == "ready", "values": values,
+        "labels": ["Engine default (MEDIUM)", "LOW", "MEDIUM", "HIGH"], "selected": selected_response_commitment if active else ""}
 
 
 func _event_lines() -> Array:
@@ -405,7 +459,7 @@ func _event_lines() -> Array:
     return lines
 
 
-func _decision_lines(window: Dictionary, scripted: bool, requested: String, before: Dictionary, after: Dictionary, report: Dictionary) -> Array[String]:
+func _decision_lines(window: Dictionary, scripted: bool, requested: String, responder_choice: String, before: Dictionary, after: Dictionary, report: Dictionary) -> Array[String]:
     var lines: Array[String] = []
     var who := _display(window.fighter_id)
     var detail: Dictionary = report.detail
@@ -416,7 +470,7 @@ func _decision_lines(window: Dictionary, scripted: bool, requested: String, befo
         if not str(report.transition.raw_destination).is_empty():
             lines.append("Exit: %s" % report.transition.raw_destination)
     else:
-        lines.append_array(_two_sided_bottom_lines(who, requested, report))
+        lines.append_array(_two_sided_bottom_lines(who, requested, responder_choice, report))
     for id: String in [TOP_ID, BOTTOM_ID]:
         lines.append("%s stamina %d -> %d (%s)" % [_display(id), before[id].stamina_current, after[id].stamina_current, after[id].exhaustion_band])
     lines.append("Clock %d s remaining; match status %s" % [report.state.clock_seconds, _graph.status()])
@@ -442,7 +496,21 @@ func _resolution_lines(who: String, role: String, resolution: Dictionary) -> Arr
 # requested technique, so the text follows the settlement's shape, never the request. An attempt carries a
 # "resolution", a recovery hold carries "elapsed_seconds", a reset carries "next_initiator"; anything else is
 # reported without interpretation.
-func _two_sided_bottom_lines(who: String, requested: String, report: Dictionary) -> Array[String]:
+# The Top's response commitment the engine settled. The engine funds what the Top can afford: the effective value can be lower than
+# the requested one, and an empty effective value means UNFUNDED (not even LOW was affordable). The text says so instead of
+# repeating a value that was not used.
+func _response_commitment_line(responder_choice: String, settlement: Dictionary) -> String:
+    var requested: String = settlement.response_requested_commitment
+    var effective: String = settlement.response_effective_commitment
+    var how := "engine default" if responder_choice.is_empty() else "chosen"
+    if effective == requested:
+        return "Top's response commitment: %s (%s)" % [requested, how]
+    if effective.is_empty():
+        return "Top's response commitment: %s (%s; the Top could not afford any commitment, so the response was UNFUNDED)" % [requested, how]
+    return "Top's response commitment: %s (%s; the Top could only afford %s)" % [requested, how, effective]
+
+
+func _two_sided_bottom_lines(who: String, requested: String, responder_choice: String, report: Dictionary) -> Array[String]:
     var lines: Array[String] = []
     var detail: Dictionary = report.detail
     var decision: Variant = detail.decision
@@ -450,6 +518,7 @@ func _two_sided_bottom_lines(who: String, requested: String, report: Dictionary)
     var settlement: Dictionary = detail.settlement
     if settlement.has("resolution"):
         lines.append_array(_resolution_lines(who, "Bottom", settlement.resolution))
+        lines.append(_response_commitment_line(responder_choice, settlement))
         if bool(settlement.resolution.escape_threshold_reached):
             lines.append("The escape threshold was reached.")
         if not str(report.transition.raw_destination).is_empty():
@@ -462,6 +531,8 @@ func _two_sided_bottom_lines(who: String, requested: String, report: Dictionary)
         else:
             lines.append("%s (Bottom): You chose %s, but the engine's D3-B decision ran a recovery hold instead (decision kind %s); no technique was attempted." % [
                 who, _option_name(requested), kind])
+        if not responder_choice.is_empty():
+            lines.append("Your Top response commitment choice (%s) was not used." % responder_choice)
     elif settlement.has("next_initiator"):
         lines.append("%s (Bottom): no-action decision (engine decision kind %s); the engine reset the window." % [who, kind])
     else:

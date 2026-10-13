@@ -42,6 +42,7 @@ the message line says so). *New Practice Match* keeps the current mode.
 | Top window | the human picks a technique, then the opponent's response, optionally the commitment | identical |
 | Bottom window | scripted: Submit sends the engine's existing no-action Bottom decision; the technique rows are informational and disabled with `scripted_practice_opponent` | **the human decides**: pick one of the engine's Bottom techniques and then the **Top's response** to it, or the explicit **No action** row; Submit sends that decision |
 | Bottom commitment | policy-selected | policy-selected (the gateway refuses a Bottom commitment, so none can be selected) |
+| Top responder commitment (F1.2) | n/a | selectable once a Bottom technique and the Top's response are chosen (section 1B) |
 | What the Top's response means in a Bottom window | n/a | the response list shows the **Top** fighter's admitted responses to the Bottom technique, from the engine's own `response_options` |
 
 Two-sided rules, all enforced by the engine and only presented here:
@@ -64,6 +65,33 @@ Two-sided rules, all enforced by the engine and only presented here:
 A tested, deterministic route to a blocked exit from the default start (two windows): in *Two-sided practice* press Next Window; as Top pick *High Mount
 Climb* with the response *Tight-Elbow Arm Defense* and Submit; press Next Window; as Bottom pick *Elbow-Knee Escape* with the Top response *Hand Post and
 Base* and Submit. The match halts with the exit *Half Guard* (`destination_not_implemented`).
+
+## 1B. Top responder commitment (F1.2)
+
+In a two-sided Bottom window the player can also choose **how hard the Top answers** the Bottom technique. It reuses the existing commitment control, which now has
+three meanings that are always labelled:
+
+| Window | Header | Items | Meaning |
+| --- | --- | --- | --- |
+| Top window | Top's commitment | LOW, MEDIUM, HIGH | the Top **initiator's** commitment (F1, unchanged) |
+| Two-sided Bottom window | Top's response commitment | Engine default (MEDIUM), LOW, MEDIUM, HIGH | the Top **responder's** commitment (F1.2) |
+| Scripted Bottom window, no window, ended or blocked match | Commitment | LOW, MEDIUM, HIGH, disabled | nothing to choose; the Bottom's own commitment is policy-selected |
+
+* The control is disabled, with its reason in the note, until a real Bottom technique **and** the Top's response are chosen. For the *No action* row it stays
+  disabled with "No response commitment: No action was chosen." The Bottom's own commitment stays policy-selected and is never editable.
+* The choice is a separate controller field (`selected_response_commitment`). `""` is the **engine default** and is a real, distinct choice. Under the practice
+  rules the Mount exchange funds an omitted responder commitment as **MEDIUM** (`mount_exchange.gd`), and the tests show that the default and an explicit MEDIUM
+  give identical reports and engine states. The label says so; the controller still forwards exactly what was selected.
+* It travels only as the sixth argument of `BjjPositionGraphMatch.submit()`, only from a two-sided Bottom window and only with a real technique. A Top window,
+  a scripted Bottom window and a No-action decision never forward it, even if a script writes a value into the field (the engine would refuse it with
+  `commitment_without_action`). An invalid name is refused (`unknown_commitment`); a forced invalid value is refused by the engine (`invalid_response_commitment`)
+  and the controller reports that code and changes nothing.
+* It is cleared whenever the technique or the response changes, when No action is chosen, when a window opens, after an accepted decision, on a mode switch and on a
+  new match, so an earlier choice can never ride into a later decision.
+* The result text states what the engine settled: "Top's response commitment: HIGH (chosen)" or "(engine default)". The Top can only fund what it can afford, so
+  the text says when it "could only afford LOW" or when the response was **UNFUNDED** (not even LOW was affordable). In a D3-B recovery hold no responder commitment is
+  settled; the text says "Your Top response commitment choice (X) was not used."
+* Keyboard note: a disabled `OptionButton` is skipped by Tab, so the control becomes reachable only after a technique and a response are chosen; the note beside it says so.
 
 Screenshots (rendered by the real renderer into an offscreen 1152x648 viewport): `docs/images/f1_01_window_open.png`,
 `docs/images/f1_02_selected.png`, `docs/images/f1_03_scripted_bottom.png`.
@@ -123,7 +151,7 @@ current design, decision.
 | 5 | `RefCounted` controller separate from the scene | Testable input handling without rendering | Logic inside the scene script | Headless tests of the whole loop | ~350 lines | None | No | **Implement** |
 | 6 | Scripted Bottom = the existing no-action decision | The brief: no invented AI | A response-picking AI | Deterministic, clearly labelled | None | None | Yes | **Implement** (AI rejected). Note the opponent never acts, yet its held behavior still spends and recovers stamina |
 | 7 | Opponent response chosen by the player from the engine's admitted responses | The brief: explicit selectable practice response | Auto-pick | Nothing is fabricated | None | None | n/a | **Implement** |
-| 8 | Responder commitment (`response_commitment`) control | None requested; the engine's own default applies when it is empty | Expose it | Hypothetical | Another input path | Low | Yes | **Defer** |
+| 8 | Responder commitment (`response_commitment`) control | F1.1 left the engine default in place; F1.2 exposes the Top responder's choice in two-sided Bottom windows | Reuse the existing commitment control, context-sensitively | The human can choose how hard the Top answers a Bottom technique | One selection field and a view model entry; no scene node | Low (the sixth `submit` argument already existed and is compared with a reference graph) | No | **Implement in F1.2** (Top responder in a Bottom window only; the Bottom's initiator commitment stays policy-selected) |
 | 9 | Expose `open_window_for(duration)` | None; it is a session-owner test seam | n/a | n/a | Lets a UI manufacture windows | High | Yes | **Reject** |
 | 10 | `extra` match settings on `start_new_match()` | Short practice matches and engine-driven test states | Hard-coded configuration only | Tests reach terminal states in seconds; later practice options | An allow-list of five keys; the engine validates values; `rules` and `production` cannot be replaced | Low | Mostly | **Implement** (allow-listed) |
 | 11 | Project display settings (`window/stretch/mode=canvas_items`, `aspect=expand`) | A tiling window manager forced a 664x352 window on this machine and the unscaled UI was cropped | None (cropped UI) | The whole 2D UI scales into small windows | `[display]` section; only the two stretch lines change behavior (1152x648 are the defaults); no renderer change; affects canvas content only, so the 3D greybox's 3D rendering is unchanged (its HUD label scales) | None for the simulation | No | **Implement** |
@@ -171,7 +199,15 @@ current design, decision.
   dropped, the engine's armed decision kind not reported, a response accepted with No action) were all detected; the scripts are not committed.
 * The Bottom's commitment is structurally absent: the controller forwards a commitment only from a Top window, so even a value written into
   `selected_commitment` by a script is ignored in a Bottom window (tested against a commitment-free reference).
-* Pins unchanged: Mount slice 256,992; position registry 431; fighter foundation 750; Mount practice 1036.
+* F1.2 adds `tests/test_mount_practice_response_commitment.gd`, a third separate suite with its own pin (**432 assertions**, workflow step "Validate F1.2 Top
+  responder commitment ...", `--name "Mount practice response commitment"`). It proves: where the control applies and its states; refusals (no match, no window, Top and
+  scripted windows, before a technique or response, No action, invalid names, finished and blocked matches) leave the engine untouched; stale choices are cleared on every
+  change listed above, including a value written between windows; LOW, MEDIUM, HIGH and the default equal direct graph calls with the sixth argument (report and whole
+  state), with the literal Top stamina cost of each; the default equals an explicit MEDIUM directly on the graph; forced values are never forwarded from a Top window, a
+  scripted window or a No-action decision; a forced invalid value is refused by the engine with its own code; the D3-B hold text; an underfunded Top (UNFUNDED, only
+  LOW or MEDIUM affordable, fully funded) with literal texts; the documented blocked-exit route with a responder commitment; a timeout; inert reads; source scans
+  (still three command lines); and the scene (relabelling, enabling, item mapping, hotkey submit, No action, new match, scripted mode). 23 disposable mutants were all detected.
+* Pins unchanged: Mount slice 256,992; position registry 431; fighter foundation 750; Mount practice 1036; two-sided 491.
 * Not covered headlessly: viewport input routing and focus (the tests call the hotkey handler directly; list type-ahead is turned
   off so it cannot swallow N/S), real-window scaling, and visual quality.
 
@@ -182,8 +218,8 @@ current design, decision.
   by a successful Bottom escape (see the route in section 1A). Reaching it is an engine fact, not a victory: Mount play stops and nothing replaces it.
 * Fighters are fixed (Test Alpha on top, Test Bravo on the bottom); there is no fighter selection, no scoring, no game plan. In Two-sided practice one
   human operates both sides: it is a practice tool, not an opponent, and no AI chooses anything.
-* The Top's responder commitment (`response_commitment`) is still not offered in any mode, so a Bottom technique is always answered with the engine's
-  default responder commitment.
+* The responder commitment is offered only for the **Top responder in a two-sided Bottom window** (F1.2). A Top technique is still answered with the
+  engine's default Bottom responder commitment: choosing the Bottom's response commitment in a Top window is not offered in any mode.
 * No art, animation or sound; the layout targets keyboard and mouse on a PC. Long technique names are clipped in the lists (the
   full id is the tooltip) and disabled rows are low-contrast; the reason code always comes first.
 * Content definitions still live under `tests/resources/` (see row 12).

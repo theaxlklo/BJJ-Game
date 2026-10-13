@@ -38,6 +38,8 @@ The earlier PR-stack, exact-head-CI and merge-train process is **retired**. Pass
 
 **Windows handoff after E-032 (E-033):** on `966aac1` the Windows shim tests (including real Git Bash) and the full `tools/ci` suite (144 run, 1 Linux-only skip) pass, one ordinary `run_godot_steps.py` run passed all 38 steps (exit 0, including the registry step), and the F1.1 scene was played in a real Windows window. The intermittent registry crash is not resolved by one clean run; Linux status is unchanged from E-031/E-032.
 
+**F1.2 Top responder commitment (E-034):** in Two-sided practice the player can choose the Top responder's LOW, MEDIUM, HIGH or engine-default commitment for a Bottom technique, through the existing commitment control and the existing sixth `submit` argument; a separate suite pins 432 assertions and F1 (1036) and F1.1 (491) are unchanged. Windows real-window play observed; Linux NOT TESTED for F1.2; the registry crash still intermittently blocks Windows full qualification.
+
 **Separate native Windows blocker:** test_position_registry.gd prints 431 PASS assertions but sometimes exits with 0xC0000005 in pinned Standard Godot on Windows (approximately 17–20 failures per 40 ordinary runs). The upstream teardown explanation remains unproven. A PASS marker with a crash is FAIL. Do not use OS.kill(), weaken validators, switch Godot versions or hide the failure. B2c full Windows qualification is BLOCKED until actually resolved; bounded native debugging may remain parked while independently testable F1 playability progresses. This does not authorize B2c or a new mechanics slice.
 
 ## Executive verdict

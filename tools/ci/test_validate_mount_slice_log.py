@@ -483,6 +483,52 @@ class TwoSidedPracticeStepWiringTests(unittest.TestCase):
         self.assertTrue(validate(clean, 139, TWO_SIDED_EXPECTED, TWO_SIDED), 'a nonzero exit must be rejected even with the PASS marker')
 
 
+RESPONSE_COMMITMENT = 'Mount practice response commitment'
+RESPONSE_COMMITMENT_EXPECTED = 432
+
+
+class ResponseCommitmentStepWiringTests(unittest.TestCase):
+    @staticmethod
+    def step():
+        text = WORKFLOW.read_text(encoding='utf-8')
+        match = re.search(r'^      - name: Validate F1\.2 Top responder commitment[^\n]*\n(.*?)(?=^      - name: )', text, re.S | re.M)
+        assert match, 'F1.2 step not found'
+        return match.group(1)
+
+    def test_step_validates_status_and_complete_log(self):
+        live = [line.strip() for line in self.step().splitlines() if line.strip() and not line.strip().startswith('#')]
+        self.assertTrue(any(line.startswith('godot --headless --path GODOT_V1 --script res://tests/test_mount_practice_response_commitment.gd '
+                                            '> /tmp/mount-practice-response-commitment.log 2>&1 || status=$?') for line in live), live)
+        self.assertIn('set -euo pipefail', live)
+        self.assertIn('shell: bash', live)
+        pin = re.search(r'^\s*python tools/ci/validate_mount_slice_log\.py /tmp/mount-practice-response-commitment\.log '
+                        r'--name "Mount practice response commitment" --exit-code "\$status" --expected-assertions ([1-9][0-9]*)\s*$', self.step(), re.M)
+        self.assertIsNotNone(pin, self.step())
+        self.assertEqual(int(pin.group(1)), RESPONSE_COMMITMENT_EXPECTED, 'workflow pin and the test constant must change together')
+        for forbidden in ('continue-on-error', '\n        if:', 'set +e'):
+            self.assertNotIn(forbidden, self.step())
+
+    def test_script_runs_once_and_matches_the_completion_contract(self):
+        self.assertEqual(WORKFLOW.read_text(encoding='utf-8').count('res://tests/test_mount_practice_response_commitment.gd'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_mount_practice_response_commitment.gd').read_text(encoding='utf-8')
+        self.assertIn('print("Mount practice response commitment PASS: %d assertions" % checks)', source)
+        self.assertIn('push_error("Mount practice response commitment: %d / %d assertions failed" % [failures, checks])', source)
+
+    def test_the_earlier_practice_pins_are_untouched(self):
+        text = WORKFLOW.read_text(encoding='utf-8')
+        for name, count in (('/tmp/mount-practice.log', 1036), ('/tmp/mount-practice-two-sided.log', 491)):
+            self.assertRegex(text, r'validate_mount_slice_log\.py %s [^\n]*--expected-assertions %d\n' % (re.escape(name), count))
+
+    def test_validator_rejects_a_premature_log_and_a_crash_after_pass(self):
+        clean = 'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nMount practice response commitment PASS: 432 assertions\n'
+        self.assertEqual(validate(clean, 0, RESPONSE_COMMITMENT_EXPECTED, RESPONSE_COMMITMENT), [])
+        premature = clean.replace("432", "200") + 'SCRIPT ERROR: Invalid access to property or key.\n'
+        joined = '\n'.join(validate(premature, 0, RESPONSE_COMMITMENT_EXPECTED, RESPONSE_COMMITMENT))
+        self.assertIn('assertion count 200 != required 432', joined)
+        self.assertIn('unexpected diagnostic', joined)
+        self.assertTrue(validate(clean, 139, RESPONSE_COMMITMENT_EXPECTED, RESPONSE_COMMITMENT), 'a nonzero exit must be rejected even with the PASS marker')
+
+
 class _HalfGuardSuiteWiring:
     """Shared wiring checks for the three Half Guard Godot suites (each is its own workflow step with an exact pin)."""
     NAME = ''
