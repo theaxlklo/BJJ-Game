@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 4.0 — Local-first workflow adopted (owner decision 2026-10-13); cumulative PR #66 integrated the stack through #65 into main (21/21 CI)  
+**Roadmap revision:** 4.1 — Local-first workflow adopted (owner decision 2026-10-13); educational-comment rule and three reviewed skills added; cumulative PR #66 integrated the stack through #65 into main (21/21 CI)  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`626321721209ffb0850bbdd1f2613992e1eaa629`, after cumulative PR #66) and historical draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and unresolved design decisions. Ordinary development is local-first on `main` (see *Development workflow*). This document recommends; it does not change engine behavior.
@@ -15,6 +15,8 @@ The earlier PR-stack, exact-head-CI and merge-train process is **retired**. Pass
 - GitHub Actions are **manual only** (`workflow_dispatch`); optional full qualification of an exact SHA remains available. See `docs/CI_OPTIMIZATION.md`.
 - Deterministic behavior, the frozen Python reference and production opt-in rules are unchanged. New mechanics and unresolved design decisions (SC-D1–SC-D15, B2a.1, ...) still need the owner's approval.
 - Historical PRs are left as they are; no closure, branch deletion or force-push is planned unless the owner asks.
+- **Educational code comments are a permanent rule** (`AGENTS.md`): new and meaningfully modified code explains *why* (algorithms, stamina, initiative, transitions, determinism, invariants, tradeoffs) so the owner can learn from it; no repository-wide comment rewrite.
+- **Installed Claude Code skills (2026-10-13, loaded on demand, pinned in `docs/third_party/skills/PROVENANCE.md`):** `godot-gdscript` and `godot-ui-control` (gamedev-skills, Apache-2.0) and `systematic-debugging` (obra/superpowers, MIT). BJJ rules override them; existing `bjj-*` skills come first.
 - Only this roadmap and `OVERSIGHT_LEDGER.md` are living progress documents. The full rules are in `AGENTS.md`.
 
 ## Executive verdict

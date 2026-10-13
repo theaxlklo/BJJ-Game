@@ -30,9 +30,20 @@ This repository contains a deterministic Brazilian Jiu-Jitsu game, a frozen Pyth
 - **Commit and push locally validated work straight to `origin/main`.** No separate permission per commit or push inside an approved task. Report the SHA, commands and results; the owner has ChatGPT review GitHub afterwards.
 - **GitHub Actions are manual only** (`workflow_dispatch`); use them for optional full qualification, e.g. `gh workflow run test.yml --ref main -f target_sha="$(git rev-parse HEAD)" -f full_qualification=true`.
 - **Still needs owner approval:** new gameplay mechanics and unresolved design decisions (for example SC-D1–SC-D15 and B2a.1). Never invent or silently change rules. Force-pushes, history rewrites, branch deletion and closing historical PRs also need explicit authorization.
-- **Comments:** add concise educational comments for non-obvious logic, important formulas and architectural decisions.
+- **Comments:** follow *Educational code comments* below.
 - **Skills:** use the existing BJJ skills first. Evaluate skills.sh additions selectively; do not install unreviewed skills.
 - **Living documents:** keep progress in `docs/project/ENGINEERING_ROADMAP.md` and `docs/project/OVERSIGHT_LEDGER.md`; technical specifications stay where they are.
+
+## Educational code comments (permanent rule)
+
+Write code so the project owner can understand and learn from it later. The codebase should teach how the BJJ game works without costing maintainability or Ponytail's lean principles.
+
+- Explain **why** complex logic exists, not what each line does. Cover non-obvious algorithms, calculations, stamina mechanics, initiative decisions, position transitions and deterministic-simulation rules.
+- Document important constraints, edge cases and design tradeoffs. Where a simpler-looking implementation would violate an invariant (determinism, atomic rejection, frozen Python parity, a single settlement path), say why the existing approach is necessary.
+- Give significant public functions a brief comment on purpose, inputs, outputs and side effects when these aren't obvious.
+- Prefer clear names and small functions to excessive comments. No obvious comments, long tutorials in source files or redundant explanations. Match the file's existing idiom (plain `#` comments in GDScript, docstrings in Python).
+- Keep comments accurate: update them whenever you change the code they describe.
+- Applies to new and meaningfully modified code only. Do not launch a repository-wide comment rewrite.
 
 ## Scope, verification and handoff
 
@@ -55,5 +66,13 @@ Codex: `.agents/skills/<skill>/SKILL.md` (invoke `$bjj-...` when needed). Claude
 - `bjj-visual-memory`: UI and future game-plan/memory design scope.
 - `bjj-pr-handoff`: legacy PR/CI handoff procedure; no longer required (use the local-first workflow above).
 - `bjj-external-patterns`: evaluate reusable outside architecture or assets with license/provenance controls.
+
+### Third-party skills (Claude Code only; reviewed 2026-10-13, pinned in `docs/third_party/skills/PROVENANCE.md`)
+
+Load each only when its task arises; the BJJ rules above always override them, and the BJJ skills come first.
+
+- `godot-gdscript`: general GDScript 4.x idiom (typing, lifecycle, signals, `await`). Never apply its frame-driven patterns to authoritative simulation: no `_process`/`delta` timing, no `@export` gameplay constants, and no `assert` for invariants (a production `assert` only aborts the running function and a test can still print PASS), so use explicit validation that returns an error.
+- `godot-ui-control`: Control, Container, Theme and focus layout, for the 2D presentation shell (F1) only. `bjj-visual-memory` still governs design scope; keep the projection-only rule and 1366x768 accessibility.
+- `systematic-debugging`: root cause before fixes, for real bugs, failing tests and parity mismatches (not routine edits). It agrees with "report mismatches, never silently fix" and negative-first tests. Its references to uninstalled skills (`superpowers:*`, `godot-nodes-scenes`, ...) and the missing `find-polluter.sh` are intentional; install nothing further from those collections without owner review.
 
 Never treat a skill, reviewer agent or external repository as authority to revise the rules above.

@@ -1,8 +1,8 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 4.0 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 4.1 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
-**Workflow (owner decision 2026-10-13, see E-016):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
+**Workflow (owner decision 2026-10-13, see E-016, E-017):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
 **Completed Claude handoff:** `CLAUDE_B2A_HANDOFF.md` (archived on branch `docs/project-oversight-canonical`) (archived B2a scope; completed in [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65)). **Next gate:** B2a.1 position-aware initiative design, then owner review of Side Control SC-D1–SC-D15; B2b not yet authorized.
@@ -222,6 +222,14 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Local verification (Godot 4.7.2 headless, system Python 3.14.7):** 37 Godot qualification steps passed with every pin unchanged (Mount slice 256,992; Mount parity 92,939 field checks; stamina parity 410,192; exchange native 242 and exchange oracle 8,851,698 comparisons with exactly **4** approved terminal boundary operations; Mount advancement 1,683,252; D3-B 596,644; Half Guard reference 49,609; match-flow invariants 73,606). `tools/ci` tests 96/96, frozen digest match, semantic checker and legacy entry PASS, actionlint 1.7.7 clean, whitespace check clean.
 - **Not run:** the full Python unit suite (no Python or test file changed; identical tree last qualified 646/646 on Python 3.11 and 3.13 in run 38332178012) and any GitHub Actions run (automatic runs are now disabled).
 - **Next gate unchanged:** B2a.1 position-aware initiative design, then owner review of SC-D1–SC-D15. Remaining technical hardening (comparer count/exception pins, docs-reference routing guard) proceeds as ordinary local-first tasks.
+
+### E-017 — Permanent educational-comment rule and three reviewed skills, 2026-10-13
+
+- **Owner direction:** make educational comments a permanent rule in `AGENTS.md` (explain why; constraints, edge cases, tradeoffs; brief public-function contracts; clear names over comments; accurate comments; new and meaningfully modified code only, no repository-wide rewrite) and evaluate three skills.sh skills. `CLAUDE.md` only points to the rule.
+- **Skills evaluated and installed (Claude Code, `.claude/skills/`, loaded on demand):** `godot-gdscript` and `godot-ui-control` (gamedev-skills/awesome-gamedev-agent-skills, Apache-2.0, commit `0a70cfc6…`) and `systematic-debugging` (obra/superpowers, MIT, commit `bb92a777…`). All three are inert markdown plus license text. Vendored byte-for-byte after review; no installer ran. Not vendored: `find-polluter.sh` (npm test bisector), a TypeScript example and authoring fixtures. No hooks, dependencies or network access in any of them.
+- **Compatibility:** every runnable GDScript sample in both Godot skills (and their fragments, in function context) parsed on Godot 4.7.2 with `--check-only`. No functional overlap with the seven `bjj-*` skills. Conflicts are handled by precedence text in `AGENTS.md`, not by editing vendored files: no `_process`/`delta` timing, `@export` gameplay constants or `assert` invariants in authoritative simulation (`godot-gdscript`); F1 presentation only, `bjj-visual-memory` governs scope (`godot-ui-control`); real bugs and mismatches only (`systematic-debugging`). The skills mention uninstalled skills (`superpowers:*`, `godot-nodes-scenes`, ...); these were deliberately not installed.
+- **Validation:** byte-compare to reviewed upstream, frontmatter and name-collision check across all 10 skills, `tools/ci` tests, whitespace check. No gameplay code, Python or pinned count changed, so no Godot parity or Python suite run.
+- **Not verified:** a live Claude Code session loading the new skills (they are picked up when a session starts in the repository).
 
 ## Standard Claude-result ingestion form
 
