@@ -1,11 +1,11 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 4.5 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 4.6 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
 **Workflow (owner decision 2026-10-13, see E-016 to E-021):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
-**Completed Claude handoff:** `CLAUDE_B2A_HANDOFF.md` (archived on branch `docs/project-oversight-canonical`) (archived B2a scope; completed in [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65)). **Next gate:** B2a.1 position-aware initiative design, then owner review of Side Control SC-D1–SC-D15; B2b not yet authorized.
+**Completed Claude handoff:** `CLAUDE_B2A_HANDOFF.md` (archived on branch `docs/project-oversight-canonical`) (archived B2a scope; completed in [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65)). **Next gate:** B2b-1 owner-authorized Side Control provisional rules sheet, then B2b-2 independent test-only Python oracle; B2c Godot remains unauthorized.
 
 ## One-screen overseer pulse
 
@@ -46,7 +46,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 | Stack safety | P0 — cumulative integration **COMPLETE** | PR #66 merged successfully | Local-first workflow adopted (E-016); stale PRs left untouched; harden comparer count/exception pins locally |
 | Gameplay breadth | B2a — Side Control rules/entry spec | **Doc-qualified #65, not approved** | SC-D2 reframed by B2a.1 (not a binary); owner-decision review in `SIDE_CONTROL_V0_PROPOSAL.md` §11A; no numbers frozen | 
 | Initiative design | B2a.1 — Position-aware and skill-sensitive contract | **Proposal revised (E-020): OD-2 approved; awaiting OD-2a, OD-3 to OD-12** | Include role-specific selectable training focuses, belt Technique variance and move mastery without implementing career, focus selection, or initiative changes |
-| Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **Blocked on the four-item approval package of Side Control proposal §11A.6** | B2b rules sheet then separate Python oracle (own local commit phases, before any GDScript); B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
+| Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **B2b approved (rules sheet and test-only oracle); B2c+ not authorized** — formerly blocked on the four-item approval package of Side Control proposal §11A.6** | B2b rules sheet then separate Python oracle (own local commit phases, before any GDScript); B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
 | Wider positions | Open/Closed Guard, Standing, reversals | **Planned** | Full legal graph traversal and start |
 | Match completion | Scoring, adjudication, activity enforcement, basic opponent | **Planned** | Human plays a complete fight from Standing |
 | Distinctive mechanics | Heart of a Lion, REST, LOW-at-zero, Momentum | **Approved concept, not implemented** | Separate rule gates and tests after core match, or earlier if liveness blocks play |
@@ -268,6 +268,13 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Smallest approval package to start B2b (Side Control §11A.6):** (1) SC-D1, D3, D4, D5, D7, D8, D9, D10, D11, D14 as recommended; (2) SC-D2 reduced to "entry request carries an explicit validated `initiator`, Top in fixtures"; (3) SC-D6 values as provisional prototype constants (the only numerical acceptance); (4) SC-D15 as local commit phases. Not needed for B2b: SC-D12, SC-D13 and B2a.1 OD-2a, OD-4, OD-9, OD-12; B2a.1 OD-1, OD-3, OD-5, OD-6, OD-7 are needed by B2d.
 - **Boundaries held:** documentation only; B2b not begun; Heart of a Lion, stalling and Momentum not implemented; no Python reference, Godot engine, fixture, workflow or pinned count changed; Mount and Half Guard untouched; no initiative or other number approved.
 - **Validation:** whitespace check and the `tools/ci` suite pass; the calculator checks above. No Godot or Python gameplay suite applies (no code changed).
+
+### E-022 — Owner authorizes Side Control B2b prototype; PASS clock wording corrected, 2026-10-13
+
+- **Owner approval (scope-limited):** SC-D1, D3, D4, D5, D7, D8, D9, D10, D11 and D14 accepted as reviewed in `SIDE_CONTROL_V0_PROPOSAL.md` §11A.5; SC-D2 explicitly validated opening `initiator` (Top in initial fixture, no frozen B2a.1 edge); SC-D6 §4.3 and §7.2 numeric and readiness rules accepted **as provisional v0 prototype constants only**; SC-D15 independent local commit phases accepted. **B2b-1 rules sheet and B2b-2 test-only Python oracle are authorized**; B2c Godot engine, B2d graph/receivers, B2e measurement, scoring, submissions, stalling and Heart of a Lion implementation remain unauthorized. All approved initiative and positional-proficiency principles persist, including separate G and earned R starting at 0 for new career fighters.
+- **Correction:** Side Control SC-N8 no longer says a PASS “spends no clock.” An accepted PASS costs no stamina, has no grade and adds no *extra* clock charge; the ordinary decision window accounts for elapsed match time when it opens. Acceptance does not change the existing Half Guard behavior or add a new action.
+- **Prototype tradeoffs accepted:** 3 actions and 3 responses per side, no v0 submission threat, provisional `expose_back` as a halting exit, all four declared unsupported destinations honest-halt in B2b/B2c, no recovery or feints, unresolved reversals. Side Control → Half Guard re-entry is a future design target, not yet an implemented or authorized return route.
+- **Workflow/evidence:** docs-only owner decision record, no engine/test/oracle/fixture change. Prior calculator table verification remains valid; this entry does not freeze Side Control initiative edges or general/positional proficiency weights. Claude Code/Ponytail will implement B2b using local tests and direct `main` commits, with the oracle independent of later Godot code.
 
 ## Standard Claude-result ingestion form
 
