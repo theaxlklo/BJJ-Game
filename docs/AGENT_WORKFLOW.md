@@ -2,6 +2,8 @@
 
 This is a **workflow reference**, not a new game design or policy amendment. Repo-wide rules are in `AGENTS.md`. Claude additionally reads `CLAUDE.md`; Codex natively reads `AGENTS.md`.
 
+For a quick at-a-glance list of agents, skills, the project plugin and document categories, see [Project Hub](project/PROJECT_HUB.md) or its [offline searchable HTML view](project/PROJECT_HUB.html). The hub is navigation only; policy remains in `AGENTS.md`.
+
 ## One shared skill library
 
 `.agents/skills/*/SKILL.md` contains the authoritative procedures. `.claude/skills/*/SKILL.md` contains tiny launchers pointing to those procedures, to avoid divergent duplicated copies. Claude's independent reviewer configurations live in `.claude/agents/`. Codex uses the shared skills and can perform the same reviewer roles when asked explicitly (no special runtime plugin needed).
