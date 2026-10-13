@@ -147,10 +147,13 @@ class LightweightTests(unittest.TestCase):
 
 
 class TriggerTests(unittest.TestCase):
-    def test_base_retarget_events_are_qualified(self):
+    def test_only_manual_dispatch_triggers(self):
+        # Local-first policy: pushes and pull requests must not start GitHub Actions automatically.
         workflow = Path(__file__).resolve().parents[2] / '.github/workflows/test.yml'
-        section = workflow.read_text().split('  pull_request:', 1)[1].split('  workflow_dispatch:', 1)[0]
-        self.assertIn('edited', section, 'base retargets use edited, not synchronize events')
+        triggers = workflow.read_text().split('\non:\n', 1)[1].split('\npermissions:', 1)[0]
+        self.assertIn('  workflow_dispatch:', triggers)
+        for automatic in ('push:', 'pull_request:', 'schedule:'):
+            self.assertNotIn(automatic, triggers)
 
 
 if __name__ == "__main__":

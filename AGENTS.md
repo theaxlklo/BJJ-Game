@@ -1,6 +1,6 @@
 # BJJ-Game — Shared agent working agreement
 
-This repository contains a deterministic Brazilian Jiu-Jitsu game, a frozen Python reference, and an incremental **Godot 4.7.2 Standard / typed-GDScript** port. These instructions apply to both Codex and Claude Code. Work from the actual checked-out revision: the open PR stack is not necessarily merged to `main`.
+This repository contains a deterministic Brazilian Jiu-Jitsu game, a frozen Python reference, and an incremental **Godot 4.7.2 Standard / typed-GDScript** port. These instructions apply to both Codex and Claude Code. Work from the actual checked-out revision. Since 2026-10-13 `main` contains the whole integrated development stack through PR #66 and is the working branch (see *Local-first workflow*).
 
 ## Preserve these invariants
 
@@ -18,17 +18,30 @@ This repository contains a deterministic Brazilian Jiu-Jitsu game, a frozen Pyth
 - For game-wide development direction: `docs/BJJ_GAME_MASTER_DEVELOPMENT_GUIDE.md` (v10.4), especially §§7 and 63. Its older 3D presentation preference is superseded for v1 by [Issue #40](https://github.com/theaxlklo/BJJ-Game/issues/40); mechanics are not superseded.
 - For the ported slices: `GODOT_V1/docs/{POSITION_CONTRACT,MOUNT_LIFECYCLE,EXCHANGE_SETTLEMENT,STAMINA_MIGRATION}.md` and the Python reference corresponding to the task.
 - For visual and memory concepts: Issues #31–#40. **Approved visual direction is not approval of experimental memory, chains, Fight IQ, desperation, rival AI or new mechanics.**
-- For CI: `.github/workflows/test.yml`, `.github/workflows/godot-v1.yml`, `docs/CI_OPTIMIZATION.md`. The required aggregate check is `CI gate` when applicable.
+- For optional manual qualification: `.github/workflows/test.yml` (manual dispatch only), `.github/workflows/godot-v1.yml`, `docs/CI_OPTIMIZATION.md`. Automatic GitHub Actions are disabled; local test results are the gate.
+- For progress and open decisions: `docs/project/ENGINEERING_ROADMAP.md` and `docs/project/OVERSIGHT_LEDGER.md` (the only living progress documents).
 - For architecture context: `docs/ARCHITECTURE.md`; older milestone prose may lag newer typed Godot modules.
+
+## Local-first workflow (owner decision 2026-10-13; supersedes the earlier PR/CI process)
+
+- **Primary assistant:** Claude Code with Ponytail Full (smallest complete change). Ponytail never overrides the invariants above, the local tests, or the educational comments.
+- **Work directly on `main`.** No PRs for ordinary development. Refactor existing code when needed to meet approved engineering requirements, keeping deterministic behavior and pinned parity counts unchanged.
+- **Test locally before every push:** Godot 4.7.2 headless (`GODOT_BIN`, default `~/.local/bin/godot-bjj`) and system `python3`. `python3 tools/ci/run_godot_steps.py` runs every step of `godot-v1.yml` (needs PyYAML); `PYTHONPATH=src python3 -m unittest discover -s tests` runs the Python suite for Python/shared changes; `python3 -m unittest discover -s tools/ci` covers the CI tooling. Run what the touched paths require and report what was not run.
+- **Commit and push locally validated work straight to `origin/main`.** No separate permission per commit or push inside an approved task. Report the SHA, commands and results; the owner has ChatGPT review GitHub afterwards.
+- **GitHub Actions are manual only** (`workflow_dispatch`); use them for optional full qualification, e.g. `gh workflow run test.yml --ref main -f target_sha="$(git rev-parse HEAD)" -f full_qualification=true`.
+- **Still needs owner approval:** new gameplay mechanics and unresolved design decisions (for example SC-D1–SC-D15 and B2a.1). Never invent or silently change rules. Force-pushes, history rewrites, branch deletion and closing historical PRs also need explicit authorization.
+- **Comments:** add concise educational comments for non-obvious logic, important formulas and architectural decisions.
+- **Skills:** use the existing BJJ skills first. Evaluate skills.sh additions selectively; do not install unreviewed skills.
+- **Living documents:** keep progress in `docs/project/ENGINEERING_ROADMAP.md` and `docs/project/OVERSIGHT_LEDGER.md`; technical specifications stay where they are.
 
 ## Scope, verification and handoff
 
 1. Before a nontrivial change, state the requested slice, ownership boundary, invariants, excluded work and verification plan. Read **only** documents relevant to that slice; for multi-module work use `.agent/PLANS.md`.
 2. Start with failing/negative tests for new admission paths; rejected commands must not mutate state, history, token controller or timers. Preserve legal unfavorable results.
 3. Prefer composition, stable IDs, typed Godot values, detached snapshots, explicit validation, one authoritative executor, and small reversible commits. Do not add a general framework to support one feature.
-4. Run focused tests, then reference/parity checks for affected behavior. Record exact commands, environment, scenarios, mismatches, exceptions and **what was not run**. Do not claim a passing CI job that was not observed.
+4. Run focused tests, then reference/parity checks for affected behavior. Record exact commands, environment, scenarios, mismatches, exceptions and **what was not run**. Do not claim a test or job that was not run and observed.
 5. Inspect `git status` and `git diff --check`. Keep generated Godot `.gd.uid` files for real scripts when appropriate; ignore `.godot/` and generated parity fixtures. Never sneak a `project.godot` renderer rewrite into gameplay work.
-6. Respect existing branches, stacked PR bases, frozen SHAs and local worktrees. Do not force-push, retarget, merge, delete branches, rewrite history or broaden a PR without explicit authorization. A new feature should have a clear review boundary.
+6. Respect existing branches, frozen SHAs and local worktrees. Do not force-push, rewrite history, delete branches or close historical PRs without explicit owner authorization. Keep each commit a clear, reviewable boundary.
 7. Final handoff: change list, exact evidence, relevant uncertainties, known exceptions, next narrow milestone and explicit Git state.
 
 ## Shared on-demand skills
@@ -40,7 +53,7 @@ Codex: `.agents/skills/<skill>/SKILL.md` (invoke `$bjj-...` when needed). Claude
 - `bjj-position-slice`: a new position or transition graph extension.
 - `bjj-window-gateway`: production decision windows, token lockout, RESET/HOLD or human input wiring.
 - `bjj-visual-memory`: UI and future game-plan/memory design scope.
-- `bjj-pr-handoff`: review, CI evidence, branch/PR handoff.
+- `bjj-pr-handoff`: legacy PR/CI handoff procedure; no longer required (use the local-first workflow above).
 - `bjj-external-patterns`: evaluate reusable outside architecture or assets with license/provenance controls.
 
 Never treat a skill, reviewer agent or external repository as authority to revise the rules above.

@@ -1,5 +1,19 @@
 # CI Optimization
 
+## Current policy (2026-10-13): manual qualification only
+
+Owner decision: development is local-first (see `AGENTS.md`). `test.yml` has **no automatic triggers**; it runs only by
+manual `workflow_dispatch`, and `godot-v1.yml` runs only when `test.yml` calls it. Local tests are the gate:
+`python3 tools/ci/run_godot_steps.py` runs every Godot qualification step from `godot-v1.yml`, and
+`PYTHONPATH=src python3 -m unittest discover -s tests` runs the Python suite. Optional full qualification of an exact SHA:
+
+```sh
+gh workflow run test.yml --ref main -f target_sha="$(git rev-parse HEAD)" -f full_qualification=true
+```
+
+The sections below describe the retained workflow. Passages about pull-request events, the required `CI gate` check
+and branch protection are historical.
+
 ## Purpose
 
 Reduce GitHub Actions wall-clock time without weakening qualification for executable changes.

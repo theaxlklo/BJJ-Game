@@ -14,7 +14,7 @@ This is a **workflow reference**, not a new game design or policy amendment. Rep
 | Match gateway / human commands | `bjj-window-gateway` | replay auditor + architect | production D3-B/window parity and non-mutation |
 | New position | `bjj-position-slice` | position architect | standalone typed tests, graph/role transition proof |
 | Visual shell / memory cards | `bjj-visual-memory` | design sentinel | non-authoritative snapshots and accessible 1366x768 UI |
-| PR readiness | `bjj-pr-handoff` | PR verifier | SHA/base, diff, CI gate, explicit limitations |
+| Handoff | local-first handoff in `AGENTS.md` (`bjj-pr-handoff` is the legacy PR form) | PR verifier (optional) | SHA, diff, local test results, explicit limitations |
 | Outside design / StS2 / GrappleMap | `bjj-external-patterns` | architect + design sentinel | license/provenance, self-authored abstraction only |
 
 One lead owns a change. Reviewers **report** issues, not competing modifications. A skill is a playbook, not a free-standing automation or permission to merge.
@@ -42,8 +42,8 @@ For Python/shared code, CI routing and historical invariants, consult `.github/w
 - Master Guide v10.4 establishes broad architecture; Issue #40 establishes later **2D-first presentation** direction only.
 - Ideas in Issues #31–#38 are backlog research; none silently authorizes changing Mount, knowledge gates, turn/window semantics or AI.
 - PR #39 PositionContract remains a low-level exchange adapter; production Bottom decisions must still call `bottom_decision()`.
-- The published open PR stack is not automatically on `main`. Identify the current checkout and PR base before claiming a feature exists on main.
+- `main` contains the integrated stack through PR #66 (2026-10-13). Verify the checked-out SHA before claiming a feature exists.
 
 ## Sample task request
 
-"On the current worktree, use `bjj-window-gateway`. Implement only a match-level gateway over existing MountMatch and PositionContract; do not change Python mechanics. Begin with non-mutation tests for stale, duplicate, wrong-fighter, terminal and D3-B lockout requests. Run the required Godot reference tests; report exact evidence and leave GitHub unchanged."
+"On the current worktree, use `bjj-window-gateway`. Implement only a match-level gateway over existing MountMatch and PositionContract; do not change Python mechanics. Begin with non-mutation tests for stale, duplicate, wrong-fighter, terminal and D3-B lockout requests. Run the required Godot reference tests; report exact evidence, then commit and push to `main` after local validation."

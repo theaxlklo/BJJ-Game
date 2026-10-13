@@ -1,10 +1,8 @@
 name: test
 
+# Local-first policy (owner decision 2026-10-13): no automatic runs; local tests are the gate and
+# this workflow is optional manual qualification. Re-add `push:` / `pull_request:` triggers to restore automation.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
     inputs:
       target_sha:
