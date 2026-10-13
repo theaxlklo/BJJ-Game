@@ -438,6 +438,51 @@ class PracticeStepWiringTests(unittest.TestCase):
         self.assertIn('unexpected diagnostic', joined)
 
 
+TWO_SIDED = 'Mount practice two-sided'
+TWO_SIDED_EXPECTED = 491
+
+
+class TwoSidedPracticeStepWiringTests(unittest.TestCase):
+    @staticmethod
+    def step():
+        text = WORKFLOW.read_text(encoding='utf-8')
+        match = re.search(r'^      - name: Validate F1\.1 two-sided Mount practice[^\n]*\n(.*?)(?=^      - name: )', text, re.S | re.M)
+        assert match, 'two-sided practice step not found'
+        return match.group(1)
+
+    def test_step_validates_status_and_complete_log(self):
+        live = [line.strip() for line in self.step().splitlines() if line.strip() and not line.strip().startswith('#')]
+        self.assertTrue(any(line.startswith('godot --headless --path GODOT_V1 --script res://tests/test_mount_practice_two_sided.gd '
+                                            '> /tmp/mount-practice-two-sided.log 2>&1 || status=$?') for line in live), live)
+        self.assertIn('set -euo pipefail', live)
+        self.assertIn('shell: bash', live)
+        pin = re.search(r'^\s*python tools/ci/validate_mount_slice_log\.py /tmp/mount-practice-two-sided\.log --name "Mount practice two-sided" '
+                        r'--exit-code "\$status" --expected-assertions ([1-9][0-9]*)\s*$', self.step(), re.M)
+        self.assertIsNotNone(pin, self.step())
+        self.assertEqual(int(pin.group(1)), TWO_SIDED_EXPECTED, 'workflow pin and the test constant must change together')
+        for forbidden in ('continue-on-error', '\n        if:', 'set +e'):
+            self.assertNotIn(forbidden, self.step())
+
+    def test_script_runs_once_and_matches_the_completion_contract(self):
+        self.assertEqual(WORKFLOW.read_text(encoding='utf-8').count('res://tests/test_mount_practice_two_sided.gd'), 1)
+        source = (WORKFLOW.parents[2] / 'GODOT_V1' / 'tests' / 'test_mount_practice_two_sided.gd').read_text(encoding='utf-8')
+        self.assertIn('print("Mount practice two-sided PASS: %d assertions" % checks)', source)
+        self.assertIn('push_error("Mount practice two-sided: %d / %d assertions failed" % [failures, checks])', source)
+
+    def test_the_original_practice_pin_is_untouched(self):
+        text = WORKFLOW.read_text(encoding='utf-8')
+        self.assertRegex(text, r'validate_mount_slice_log\.py /tmp/mount-practice\.log [^\n]*--expected-assertions 1036\n')
+
+    def test_validator_rejects_a_premature_two_sided_log(self):
+        clean = 'Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org\n\nMount practice two-sided PASS: 491 assertions\n'
+        self.assertEqual(validate(clean, 0, TWO_SIDED_EXPECTED, TWO_SIDED), [])
+        premature = clean.replace("491", "300") + 'SCRIPT ERROR: Invalid access to property or key.\n'
+        joined = '\n'.join(validate(premature, 0, TWO_SIDED_EXPECTED, TWO_SIDED))
+        self.assertIn('assertion count 300 != required 491', joined)
+        self.assertIn('unexpected diagnostic', joined)
+        self.assertTrue(validate(clean, 139, TWO_SIDED_EXPECTED, TWO_SIDED), 'a nonzero exit must be rejected even with the PASS marker')
+
+
 class _HalfGuardSuiteWiring:
     """Shared wiring checks for the three Half Guard Godot suites (each is its own workflow step with an exact pin)."""
     NAME = ''

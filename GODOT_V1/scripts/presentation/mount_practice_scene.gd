@@ -13,6 +13,7 @@ const BANNER_COLORS: Dictionary = {"active": Color(0.75, 0.9, 1.0), "terminal": 
 
 var controller: BjjMountPracticeController = BjjMountPracticeController.new()
 
+@onready var mode_option: OptionButton = %ModeOption
 @onready var clock_label: Label = %ClockLabel
 @onready var banner_panel: PanelContainer = %BannerPanel
 @onready var banner_label: Label = %BannerLabel
@@ -40,6 +41,9 @@ func _ready() -> void:
     axis_bar.step = 0.1
     for commitment: String in BjjCommitment.ORDER:
         commit_option.add_item(commitment)
+    for mode: String in BjjMountPracticeController.MODES:
+        mode_option.add_item(BjjMountPracticeController.MODE_LABELS[mode])
+    mode_option.item_selected.connect(_on_mode_selected)
     technique_list.item_selected.connect(_on_technique_selected)
     response_list.item_selected.connect(_on_response_selected)
     commit_option.item_selected.connect(_on_commitment_selected)
@@ -75,6 +79,11 @@ func _on_new_match_pressed() -> void:
     refresh()
 
 
+func _on_mode_selected(index: int) -> void:
+    controller.set_practice_mode(BjjMountPracticeController.MODES[index])
+    refresh()
+
+
 func _on_technique_selected(index: int) -> void:
     controller.select_action(str(technique_list.get_item_metadata(index)))
     refresh()
@@ -98,6 +107,7 @@ func refresh() -> void:
         message_label.text = "No practice match."
         return
     var seconds: int = view.clock_seconds
+    mode_option.select(BjjMountPracticeController.MODES.find(view.mode))
     clock_label.text = "Clock %d:%02d remaining (%d s of %d)" % [floori(seconds / 60.0), seconds % 60, seconds, view.initial_clock]
     banner_label.text = view.banner
     banner_panel.self_modulate = BANNER_COLORS[view.status_kind]
@@ -143,6 +153,8 @@ func _window_text(view: Dictionary) -> String:
     var text := "Window #%d: %s (%s) decides." % [window.window_id, window.owner_name, String(window.role).capitalize()]
     if window.scripted:
         text += " SCRIPTED practice behavior: the existing no-action Bottom decision (its held behavior still drives time and stamina)."
+    elif window.two_sided_bottom:
+        text += " Two-sided practice: you choose Bottom's technique and the Top's response, or No action (the engine's existing Bottom decision: a reset or a recovery hold)."
     return text
 
 
@@ -152,6 +164,8 @@ func _technique_header(view: Dictionary) -> String:
         return "Techniques (open a window first)"
     if window.scripted:
         return "%s's legal techniques (informational only)" % window.owner_name
+    if window.two_sided_bottom:
+        return "Choose %s's technique (or No action)" % window.owner_name
     return "Choose %s's technique" % window.owner_name
 
 
@@ -160,6 +174,12 @@ func _response_header(view: Dictionary) -> String:
         return "Opponent response (open a window first)"
     if view.window.scripted:
         return "No response choice in a scripted Bottom window"
+    if view.window.two_sided_bottom:
+        if view.no_action_selected:
+            return "No Top response: No action was chosen"
+        if view.responses.is_empty():
+            return "Top's response (choose a Bottom technique first)"
+        return "Top's response to the selected Bottom technique"
     return "Opponent response (choose a technique first)" if view.responses.is_empty() else "Opponent response to the selected technique"
 
 
@@ -172,7 +192,7 @@ func _fill_list(list: ItemList, rows: Array) -> void:
             text = "[unavailable: %s]  %s" % [row.reason, row.name]
         var index: int = list.add_item(text)
         list.set_item_metadata(index, row.id)
-        list.set_item_tooltip(index, row.id)
+        list.set_item_tooltip(index, row.get("hint", row.id))
         list.set_item_disabled(index, not row.available)
         list.set_item_selectable(index, row.available)
         if row.selected:

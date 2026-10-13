@@ -1,7 +1,9 @@
 # F1 — First playable 2D Mount practice prototype
 
 **Status:** implemented, deterministic, headless-tested. Stacked on F0 (PR #53). This is an **interactive positional-training
-prototype**: one Mount position, one human-controlled fighter, no match from Standing, no combat AI, no scoring. It invents no rule.
+prototype**: one Mount position, no match from Standing, no combat AI, no scoring. It invents no rule. **F1.1 adds an explicitly selected
+second practice mode (see section 1A): in the default *Scripted practice* the human controls the Top fighter only; in *Two-sided practice* the
+human controls both fighters on their legitimate decision windows.**
 
 ## 1. How to open and play it
 
@@ -28,6 +30,40 @@ prototype**: one Mount position, one human-controlled fighter, no match from Sta
    **BLOCKED POSITION TRANSITION** (a Mount exit whose destination does not exist yet; not a victory or defeat; it names the
    exit label, the engine's reason and either "declared destination X is not implemented" or "destination unresolved (no
    landing)" for Reversal). After a halt or an end every command is disabled.
+
+## 1A. Scripted practice vs two-sided practice (F1.1)
+
+A **mode selector** in the header chooses between two modes. **Scripted practice is the default** and is exactly the F1 described above.
+Choosing a different mode always starts a **fresh independent practice match** (the previous match is discarded, never re-run or converted;
+the message line says so). *New Practice Match* keeps the current mode.
+
+| | Scripted practice (default) | Two-sided practice |
+| --- | --- | --- |
+| Top window | the human picks a technique, then the opponent's response, optionally the commitment | identical |
+| Bottom window | scripted: Submit sends the engine's existing no-action Bottom decision; the technique rows are informational and disabled with `scripted_practice_opponent` | **the human decides**: pick one of the engine's Bottom techniques and then the **Top's response** to it, or the explicit **No action** row; Submit sends that decision |
+| Bottom commitment | policy-selected | policy-selected (the gateway refuses a Bottom commitment, so none can be selected) |
+| What the Top's response means in a Bottom window | n/a | the response list shows the **Top** fighter's admitted responses to the Bottom technique, from the engine's own `response_options` |
+
+Two-sided rules, all enforced by the engine and only presented here:
+
+* Bottom techniques come from `BjjPositionGraphMatch.action_options(<Bottom fighter id>)`. Unavailable rows stay visible with the engine's exact reason
+  (for example `setup_not_ready`) and cannot be selected; the responses come from `response_options(<technique>)`.
+* Submit sends `BjjPositionGraphMatch.submit(<open window id>, <Bottom fighter id>, technique, response)`, the same command path as the Top. The graph
+  forwards it to the production window gateway, which sends a Bottom window through `bottom_decision()`: D3-B classification, RESET/HOLD and recovery stay
+  the engine's. The controller never calls the low-level contract or match, and it sends no commitment for the Bottom.
+* **No action** is a practice-only row ("No action (reset or recovery hold)", id `practice.bottom_no_action`, never an engine id; its tooltip explains it). It is submitted as an empty action id, so the existing
+  production policy decides whether the window is a reset or a recovery hold. It takes no response. Nothing new is invented.
+* The result text follows what the engine did, not what was asked. A normal technique reports "Bottom: <technique>; Top's response: <response>", the
+  Bottom's grade, the axis and band change, any exit, and the engine's decision kind when it is not the plain UNARMED one (for example ARMED_NORMAL). In the
+  engine's D3-B lockout the engine can run a **recovery hold instead of the requested technique**; the text then says so ("You chose X, but the engine's
+  D3-B decision ran a recovery hold instead ...") and claims no grade or axis change.
+* When a Bottom escape produces an exit whose destination does not exist yet (Half Guard, Open Guard or Reversal), the match halts and the banner shows
+  **BLOCKED POSITION TRANSITION (not a victory or defeat)** with the exit label and the engine's reason. It is not a tap or a timeout.
+* The N and S hotkeys work as before. While the mode dropdown's popup is open it absorbs keys; close it with Escape first.
+
+A tested, deterministic route to a blocked exit from the default start (two windows): in *Two-sided practice* press Next Window; as Top pick *High Mount
+Climb* with the response *Tight-Elbow Arm Defense* and Submit; press Next Window; as Bottom pick *Elbow-Knee Escape* with the Top response *Hand Post and
+Base* and Submit. The match halts with the exit *Half Guard* (`destination_not_implemented`).
 
 Screenshots (rendered by the real renderer into an offscreen 1152x648 viewport): `docs/images/f1_01_window_open.png`,
 `docs/images/f1_02_selected.png`, `docs/images/f1_03_scripted_bottom.png`.
@@ -61,7 +97,7 @@ mount_practice.tscn (Control nodes, containers/anchors)
 * Nothing advances in `_process`, `_physics_process`, animations or timers.
 * **Controller-level codes:** `no_match`, `match_ended`, `window_already_open`, `no_open_window`, `technique_required`,
   `response_required`, `not_selectable`, `unknown_action`, `unknown_response`, `unknown_commitment`,
-  `unsupported_practice_setting`. Every other code (the graph's `halted_unsupported_transition`, option reasons such as
+  `unsupported_practice_setting`, and (F1.1) `unknown_practice_mode`, `no_response_for_no_action`. Every other code (the graph's `halted_unsupported_transition`, option reasons such as
   `setup_not_ready`, `inactive_submission`, `incompatible_ready_response`, and admission errors) is the engine's or graph's own,
   passed through unchanged.
 
@@ -116,16 +152,38 @@ current design, decision.
   and a scan of the scene file allows only 2D Control and container node types. They are tripwires, not proofs.
 * During development 49 disposable mutants of the controller, scene, graph pass-through and adapter were all detected (the
   scripts are not committed).
-* Pins unchanged: Mount slice 256,992; position registry 431; fighter foundation 750.
+* F1.1 adds `tests/test_mount_practice_two_sided.gd`, a **separate** suite with its own pin (**491 assertions**, workflow step "Validate F1.1 two-sided
+  Mount practice ...", validated with `--name "Mount practice two-sided"`). The original `test_mount_practice.gd` is unchanged and still passes its 1036
+  assertions: that unchanged suite, run against the F1.1 code, is the proof that scripted practice behaves as before. The new suite proves: mode
+  selection and the fresh-match reset (unknown, same and repeated modes, discarded matches left untouched); scripted mode driven side by side with the
+  default controller gives identical views and engine states over eight windows; the Bottom's rows equal the graph's options; refusals (Top technique in a
+  Bottom window, unavailable technique with its engine reason, response before technique, no-action with a response, commitment in a Bottom window,
+  Next Window with a window open) change nothing; six Bottom technique/response combinations equal a separately driven reference graph (report, state,
+  events, clock and stamina) for window 2 and the Bottom fighter; the no-action decision equals the graph's empty-action Bottom decision and the scripted
+  path's engine state; a located D3-B recovery-hold window shows the hold text and equals the reference; the engine's own refusal codes for wrong fighter,
+  stale window, replay, wrong action/response side, missing response and Bottom commitment; manual Bottom escapes reaching blocked *Half Guard* and
+  *Reversal* are shown as blocked, never terminal, with every command refused; a two-sided timeout is terminal and a new match keeps the mode; one Bottom
+  decision adds exactly one event and one settlement; 50 reads are inert; source scans keep the Bottom away from the contract, match and D3-B and keep the
+  controller at exactly three command lines; and the scene (mode dropdown, rows, headers, hotkey, new match, mode switches) is played headlessly.
+* During development 15 disposable mutants of the controller (sentinel id sent as an action, every Bottom window scripted, mode switch without a reset,
+  missing No-action row, a Bottom commitment forwarded, wrong fighter id, unavailable techniques selectable, hold text claiming an attempt, no response
+  required, mode reset on New Practice Match, mode switch dropping the start settings, a reset text claiming an initiative rule, the Top-response label
+  dropped, the engine's armed decision kind not reported, a response accepted with No action) were all detected; the scripts are not committed.
+* The Bottom's commitment is structurally absent: the controller forwards a commitment only from a Top window, so even a value written into
+  `selected_commitment` by a script is ignored in a Bottom window (tested against a commitment-free reference).
+* Pins unchanged: Mount slice 256,992; position registry 431; fighter foundation 750; Mount practice 1036.
 * Not covered headlessly: viewport input routing and focus (the tests call the hotkey handler directly; list type-ahead is turned
   off so it cannot swallow N/S), real-window scaling, and visual quality.
 
 ## 5. Limitations
 
-* **A human cannot reach a blocked transition through this flow** (derived from the code: only an escape-capable Bottom action
-  produces an exit destination, and the player never chooses Bottom actions). The player can only reach a tap or a timeout. The
-  blocked state is rendered and tested through engine-driven escapes. Letting the player choose Bottom techniques is a separate decision.
-* Fighters are fixed (Test Alpha on top, Test Bravo on the bottom); there is no fighter selection, no scoring, no game plan.
+* **In Scripted practice a human cannot reach a blocked transition** (only an escape-capable Bottom action produces an exit destination and the
+  scripted Bottom never chooses one); the player can only reach a tap or a timeout there. **In Two-sided practice (F1.1) the player can reach it**
+  by a successful Bottom escape (see the route in section 1A). Reaching it is an engine fact, not a victory: Mount play stops and nothing replaces it.
+* Fighters are fixed (Test Alpha on top, Test Bravo on the bottom); there is no fighter selection, no scoring, no game plan. In Two-sided practice one
+  human operates both sides: it is a practice tool, not an opponent, and no AI chooses anything.
+* The Top's responder commitment (`response_commitment`) is still not offered in any mode, so a Bottom technique is always answered with the engine's
+  default responder commitment.
 * No art, animation or sound; the layout targets keyboard and mouse on a PC. Long technique names are clipped in the lists (the
   full id is the tooltip) and disabled rows are low-contrast; the reason code always comes first.
 * Content definitions still live under `tests/resources/` (see row 12).

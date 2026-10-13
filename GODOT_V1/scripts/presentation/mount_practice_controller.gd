@@ -17,18 +17,35 @@ extends RefCounted
 # Bottom fighter owns a window, the existing no-action Bottom decision is submitted as a
 # deterministic, clearly labelled SCRIPTED practice behavior. This is a positional-training
 # prototype, not a match from Standing and not a combat AI.
+#
+# F1.1 adds an explicitly selected second practice mode. In MODE_TWO_SIDED the human also decides
+# in Bottom-owned windows: a Bottom technique, the Top's response to it, or the explicit no-action
+# decision. The routing is unchanged: the same BjjPositionGraphMatch.submit(), whose gateway sends
+# a Bottom window through the production bottom_decision() (D3-B, RESET/HOLD and recovery stay the
+# engine's). Bottom never supplies a commitment (the gateway refuses one), so none is sent. The
+# scripted mode stays the default and behaves exactly as before.
 const TOP_ID: String = "fighter_alpha"
 const BOTTOM_ID: String = "fighter_bravo"
 const KIND_ACTIVE: String = "active"
 const KIND_TERMINAL: String = "terminal"
 const KIND_BLOCKED: String = "blocked"
 const SCRIPTED_REASON: String = "scripted_practice_opponent"
+const MODE_SCRIPTED: String = "scripted"
+const MODE_TWO_SIDED: String = "two_sided"
+const MODES: Array[String] = [MODE_SCRIPTED, MODE_TWO_SIDED]
+const MODE_LABELS: Dictionary = {MODE_SCRIPTED: "Scripted practice", MODE_TWO_SIDED: "Two-sided practice"}
+# A practice-only row, never an engine id: it selects the existing Bottom no-action decision
+# (submitted with an empty action id, so the production policy decides reset or recovery hold).
+const NO_ACTION_ID: String = "practice.bottom_no_action"
+const NO_ACTION_NAME: String = "No action (reset or recovery hold)"
+const NO_ACTION_HINT: String = "The engine's existing Bottom decision: a reset, or a recovery hold when the production policy says so. No technique is attempted."
 const EVENT_TAIL: int = 40
 # Match settings a caller may override (the engine still validates their values). Policy and rules are not among them.
 const SETTINGS_ALLOW_LIST: Array[String] = ["clock", "interval", "axis", "top_stamina", "bottom_stamina"]
 const GRADE_NAMES: Dictionary = {-2: "Strong Failure", -1: "Failure", 0: "Contested", 1: "Success", 2: "Strong Success"}
 
 var match_serial: int = 0
+var practice_mode: String = MODE_SCRIPTED
 var selected_action: String = ""
 var selected_response: String = ""
 var selected_commitment: String = ""
@@ -36,6 +53,9 @@ var selected_commitment: String = ""
 var _graph: BjjPositionGraphMatch
 var _adapter: BjjFighterSnapshotAdapter
 var _names: Dictionary = {}
+var _top_definition: Variant = null
+var _bottom_definition: Variant = null
+var _start_extra: Dictionary = {}
 var _last_report: Dictionary = {}
 var _last_lines: Array[String] = []
 var _last_message: String = ""
@@ -70,6 +90,9 @@ func start_new_match(top_definition: Variant, bottom_definition: Variant, extra:
     _graph = created.graph
     _adapter = adapter.adapter
     _names = {TOP_ID: String(top_definition.display_name), BOTTOM_ID: String(bottom_definition.display_name)}
+    _top_definition = top_definition
+    _bottom_definition = bottom_definition
+    _start_extra = extra.duplicate()
     match_serial += 1
     selected_action = ""
     selected_response = ""
@@ -82,6 +105,27 @@ func start_new_match(top_definition: Variant, bottom_definition: Variant, extra:
 
 func has_match() -> bool:
     return _graph != null
+
+
+# Chooses the practice mode. Changing it always starts a fresh independent match (same fighters), so the
+# old match is discarded, never re-run or converted: no window, decision or clock tick carries over, and the
+# settings the match was started with (if any) are kept. The same mode again is a no-op. An unknown mode is refused and changes nothing.
+func set_practice_mode(mode: String) -> Dictionary:
+    if not MODES.has(mode):
+        return _refuse_command("unknown_practice_mode")
+    if mode == practice_mode:
+        return {"ok": true, "error": ""}
+    if _graph == null:
+        practice_mode = mode
+        return {"ok": true, "error": ""}
+    var previous := practice_mode
+    practice_mode = mode
+    var started := start_new_match(_top_definition, _bottom_definition, _start_extra)
+    if not started.ok:
+        practice_mode = previous
+        return started
+    _last_message = "Practice mode changed to %s: a fresh practice match was started and the previous match was discarded." % MODE_LABELS[mode]
+    return started
 
 
 # --- Commands (each goes through the graph or is refused without touching it) -------------
@@ -109,8 +153,12 @@ func select_action(action_id: String) -> Dictionary:
     if not status_gate.is_empty():
         return _refuse_command(status_gate)
     var window := _graph.window_fields()
-    if not window.open or window.role != "top":
+    if not window.open or (window.role != "top" and practice_mode != MODE_TWO_SIDED):
         return _refuse_command("not_selectable")
+    if action_id == NO_ACTION_ID and window.role == "bottom":
+        selected_action = NO_ACTION_ID
+        selected_response = ""
+        return {"ok": true, "error": ""}
     for option: BjjPositionContract.Option in _graph.action_options(window.fighter_id).options:
         if option.id == action_id:
             if not option.available:
@@ -127,6 +175,8 @@ func select_response(response_id: String) -> Dictionary:
         return _refuse_command(status_gate)
     if selected_action.is_empty():
         return _refuse_command("technique_required")
+    if selected_action == NO_ACTION_ID:
+        return _refuse_command("no_response_for_no_action")
     for option: BjjPositionContract.Option in _graph.response_options(selected_action).options:
         if option.id == response_id:
             if not option.available:
@@ -157,16 +207,20 @@ func submit_decision() -> Dictionary:
     var window := _graph.window_fields()
     var before := _adapter.snapshots()
     var report: BjjMatchWindowGateway.Report
-    var scripted: bool = window.role == "bottom"
+    var scripted: bool = _is_scripted(window)
+    var requested := selected_action
     if scripted:
         # The existing, admitted no-action Bottom decision (Bottom never supplies a commitment).
         report = _graph.submit(window.window_id, window.fighter_id)
     else:
-        report = _graph.submit(window.window_id, window.fighter_id, selected_action, selected_response, selected_commitment)
+        # A Top window, or a two-sided Bottom window. The Bottom never supplies a commitment (the gateway refuses one), so it is
+        # not even forwarded from a Bottom window; the practice no-action row maps to the engine's empty action id.
+        var action := "" if selected_action == NO_ACTION_ID else selected_action
+        report = _graph.submit(window.window_id, window.fighter_id, action, selected_response, selected_commitment if window.role == "top" else "")
     if not report.ok():
         return _refuse_command(report.error)
     _last_report = report.fields()
-    _last_lines = _decision_lines(window, scripted, before, _adapter.snapshots(), _last_report)
+    _last_lines = _decision_lines(window, scripted, requested, before, _adapter.snapshots(), _last_report)
     _last_message = "Decision accepted."
     selected_action = ""
     selected_response = ""
@@ -187,14 +241,15 @@ func view() -> Dictionary:
     for id: String in [TOP_ID, BOTTOM_ID]:
         fighters.append(snapshots[id])
     return {
-        "has_match": true, "match_serial": match_serial,
+        "has_match": true, "match_serial": match_serial, "mode": practice_mode, "mode_label": MODE_LABELS[practice_mode], "no_action_selected": selected_action == NO_ACTION_ID,
         "status": _graph.status(), "status_kind": kind, "banner": _banner(kind),
         "terminal_reason": _terminal_reason(), "blocked": _graph.blocked_transition(),
         "fighters": fighters,
         "clock_seconds": state.clock_seconds, "initial_clock": state.initial_clock,
         "axis": state.axis, "control_axis": state.control_axis, "band": state.band, "band_name": BjjMountRules.Band.keys()[int(state.band)],
         "window": {"open": window.open, "window_id": window.window_id, "fighter_id": window.fighter_id, "role": window.role,
-            "owner_name": _display(window.fighter_id), "scripted": window.open and window.role == "bottom"},
+            "owner_name": _display(window.fighter_id), "scripted": window.open and _is_scripted(window),
+            "two_sided_bottom": window.open and window.role == "bottom" and practice_mode == MODE_TWO_SIDED},
         "actions": _action_rows(window), "responses": _response_rows(window),
         "commitment": _commitment_view(window),
         "commands": {"next_window": _command(_next_window_gate()), "submit": _command(_submit_gate()), "new_match": {"enabled": true, "reason": ""}},
@@ -251,12 +306,17 @@ func _submit_gate() -> String:
     var window := _graph.window_fields()
     if not window.open:
         return "no_open_window"
-    if window.role == "top":
+    if not _is_scripted(window):
         if selected_action.is_empty():
             return "technique_required"
-        if selected_response.is_empty():
+        if selected_action != NO_ACTION_ID and selected_response.is_empty():
             return "response_required"
     return ""
+
+
+# Only a Bottom window in the default scripted mode is decided by the existing no-action script.
+func _is_scripted(window: Dictionary) -> bool:
+    return window.role == "bottom" and practice_mode == MODE_SCRIPTED
 
 
 func _command(gate: String) -> Dictionary:
@@ -301,16 +361,18 @@ func _action_rows(window: Dictionary) -> Array:
     var rows: Array = []
     if _status_kind() != KIND_ACTIVE or not window.open:
         return rows
-    var scripted: bool = window.role == "bottom"
+    var scripted := _is_scripted(window)
     for option: BjjPositionContract.Option in _graph.action_options(window.fighter_id).options:
         rows.append({"id": option.id, "name": _option_name(option.id), "available": option.available and not scripted,
             "reason": SCRIPTED_REASON if scripted and option.available else option.reason, "selected": option.id == selected_action})
+    if window.role == "bottom" and not scripted:
+        rows.append({"id": NO_ACTION_ID, "name": NO_ACTION_NAME, "hint": NO_ACTION_HINT, "available": true, "reason": "", "selected": selected_action == NO_ACTION_ID})
     return rows
 
 
 func _response_rows(window: Dictionary) -> Array:
     var rows: Array = []
-    if _status_kind() != KIND_ACTIVE or not window.open or window.role != "top" or selected_action.is_empty():
+    if _status_kind() != KIND_ACTIVE or not window.open or _is_scripted(window) or selected_action.is_empty() or selected_action == NO_ACTION_ID:
         return rows
     for option: BjjPositionContract.Option in _graph.response_options(selected_action).options:
         rows.append({"id": option.id, "name": _option_name(option.id), "available": option.available, "reason": option.reason,
@@ -343,20 +405,65 @@ func _event_lines() -> Array:
     return lines
 
 
-func _decision_lines(window: Dictionary, scripted: bool, before: Dictionary, after: Dictionary, report: Dictionary) -> Array[String]:
+func _decision_lines(window: Dictionary, scripted: bool, requested: String, before: Dictionary, after: Dictionary, report: Dictionary) -> Array[String]:
     var lines: Array[String] = []
     var who := _display(window.fighter_id)
+    var detail: Dictionary = report.detail
     if scripted:
         lines.append("%s (Bottom) - SCRIPTED practice behavior: the existing no-action Bottom decision (engine decision kind %s; production policy may run a recovery hold)." % [who, str(report.detail.decision.kind)])
-    else:
-        var resolution: Dictionary = report.detail.settlement.resolution
-        lines.append("%s (Top): %s vs %s" % [who, _option_name(str(resolution.action_id)), _option_name(str(resolution.response_id))])
-        lines.append("Grade: %s (raw %s, final %s)" % [GRADE_NAMES.get(int(resolution.final_grade), "?"), resolution.raw_grade, resolution.final_grade])
-        lines.append("Axis %s -> %s; band %s -> %s" % [resolution.axis_before, resolution.axis_after,
-            BjjMountRules.Band.keys()[int(resolution.band_before)], BjjMountRules.Band.keys()[int(resolution.band_after)]])
+    elif window.role == "top":
+        lines.append_array(_resolution_lines(who, "Top", detail.settlement.resolution))
         if not str(report.transition.raw_destination).is_empty():
             lines.append("Exit: %s" % report.transition.raw_destination)
+    else:
+        lines.append_array(_two_sided_bottom_lines(who, requested, report))
     for id: String in [TOP_ID, BOTTOM_ID]:
         lines.append("%s stamina %d -> %d (%s)" % [_display(id), before[id].stamina_current, after[id].stamina_current, after[id].exhaustion_band])
     lines.append("Clock %d s remaining; match status %s" % [report.state.clock_seconds, _graph.status()])
+    return lines
+
+
+func _resolution_lines(who: String, role: String, resolution: Dictionary) -> Array[String]:
+    var lines: Array[String] = []
+    var grade := "%s (raw %s, final %s)" % [GRADE_NAMES.get(int(resolution.final_grade), "?"), resolution.raw_grade, resolution.final_grade]
+    if role == "Top":
+        lines.append("%s (Top): %s vs %s" % [who, _option_name(str(resolution.action_id)), _option_name(str(resolution.response_id))])
+        lines.append("Grade: %s" % grade)
+    else:
+        # In a Bottom window the response belongs to the Top fighter, and the grade is the Bottom technique's own.
+        lines.append("%s (Bottom): %s; Top's response: %s" % [who, _option_name(str(resolution.action_id)), _option_name(str(resolution.response_id))])
+        lines.append("Bottom's grade: %s" % grade)
+    lines.append("Axis %s -> %s; band %s -> %s" % [resolution.axis_before, resolution.axis_after,
+        BjjMountRules.Band.keys()[int(resolution.band_before)], BjjMountRules.Band.keys()[int(resolution.band_after)]])
+    return lines
+
+
+# What the engine actually did for a manual Bottom decision. D3-B can substitute a recovery hold for the
+# requested technique, so the text follows the settlement's shape, never the request. An attempt carries a
+# "resolution", a recovery hold carries "elapsed_seconds", a reset carries "next_initiator"; anything else is
+# reported without interpretation.
+func _two_sided_bottom_lines(who: String, requested: String, report: Dictionary) -> Array[String]:
+    var lines: Array[String] = []
+    var detail: Dictionary = report.detail
+    var decision: Variant = detail.decision
+    var kind := "none" if decision == null else str(decision.kind)
+    var settlement: Dictionary = detail.settlement
+    if settlement.has("resolution"):
+        lines.append_array(_resolution_lines(who, "Bottom", settlement.resolution))
+        if bool(settlement.resolution.escape_threshold_reached):
+            lines.append("The escape threshold was reached.")
+        if not str(report.transition.raw_destination).is_empty():
+            lines.append("Exit: %s" % report.transition.raw_destination)
+        if kind != "UNARMED" and kind != "none":
+            lines.append("Engine decision kind: %s" % kind)
+    elif settlement.has("elapsed_seconds"):
+        if requested == NO_ACTION_ID:
+            lines.append("%s (Bottom): the engine's D3-B decision ran a recovery hold (decision kind %s); no technique was attempted." % [who, kind])
+        else:
+            lines.append("%s (Bottom): You chose %s, but the engine's D3-B decision ran a recovery hold instead (decision kind %s); no technique was attempted." % [
+                who, _option_name(requested), kind])
+    elif settlement.has("next_initiator"):
+        lines.append("%s (Bottom): no-action decision (engine decision kind %s); the engine reset the window." % [who, kind])
+    else:
+        lines.append("%s (Bottom): the engine accepted the decision (decision kind %s)." % [who, kind])
     return lines

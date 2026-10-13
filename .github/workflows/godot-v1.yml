@@ -242,6 +242,18 @@ jobs:
           cat /tmp/mount-practice.log
           python tools/ci/validate_mount_slice_log.py /tmp/mount-practice.log --name "Mount practice" --exit-code "$status" --expected-assertions 1036
 
+      - name: Validate F1.1 two-sided Mount practice (manual Bottom decisions through the same graph command path)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the other suites: validate status and the whole log. It is a separate script
+          # with its own pin so the original 1036-assertion practice suite above stays unchanged and still proves
+          # that the default scripted practice behaves as before.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_mount_practice_two_sided.gd > /tmp/mount-practice-two-sided.log 2>&1 || status=$?
+          cat /tmp/mount-practice-two-sided.log
+          python tools/ci/validate_mount_slice_log.py /tmp/mount-practice-two-sided.log --name "Mount practice two-sided" --exit-code "$status" --expected-assertions 491
+
       - name: Generate the independent Half Guard Python oracle fixture
         shell: bash
         run: |

@@ -39,6 +39,11 @@ size_flags_horizontal = 3
 text = "Mount practice - positional training prototype (not a match from Standing)"
 autowrap_mode = 3
 
+[node name="ModeOption" type="OptionButton" parent="Margin/Main/Header" unique_id=1740256391]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Practice mode. Scripted: Bottom's windows use the existing no-action decision. Two-sided: you also choose Bottom's technique, the Top's response, or no action. Changing the mode starts a fresh match."
+
 [node name="ClockLabel" type="Label" parent="Margin/Main/Header" unique_id=502968268]
 unique_name_in_owner = true
 layout_mode = 2
