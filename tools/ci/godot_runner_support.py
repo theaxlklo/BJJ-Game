@@ -10,7 +10,7 @@ Windows bash accepted here.
 import os
 import shlex
 import shutil
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 def find_bash(windows=None, env=None, which=shutil.which):
@@ -46,13 +46,14 @@ def make_shim(directory, name, target, windows=None):
     """Make `name` on a PATH directory run `target`. A symlink where that works, a sh wrapper on Windows.
 
     Forward slashes are used inside the wrapper because Git Bash accepts them for Windows paths while a
-    backslash would be an escape character to the shell."""
+    backslash would be an escape character to the shell. PureWindowsPath (not Path) parses the target as a Windows path on every
+    OS, so the conversion is the same on a Linux test run as on real Windows."""
     windows = os.name == 'nt' if windows is None else windows
     shim = Path(directory) / name
     if not windows:
         shim.symlink_to(target)
         return shim
-    shim.write_text(f'#!/bin/sh\nexec {shlex.quote(Path(target).as_posix())} "$@"\n', encoding='utf-8', newline='\n')
+    shim.write_text(f'#!/bin/sh\nexec {shlex.quote(PureWindowsPath(target).as_posix())} "$@"\n', encoding='utf-8', newline='\n')
     return shim
 
 
