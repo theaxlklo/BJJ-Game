@@ -332,6 +332,38 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Status carried forward:** pinned Godot 4.7.2 Standard, one Windows/Linux game, local-first Ponytail Full, existing F1 Mount practice awaiting interactive checkpoint; Windows position-registry headless exit `0xC0000005` remains a qualification blocker, while Linux qualification for that investigation remains NOT TESTED. No gameplay, Side Control B2c, test validator or engine-version work is authorized or claimed by this docs change.
 - **Evidence / checks:** document-only update based on the GitHub `main` repository. No Godot, Python, Windows GUI or Linux tests were run for this migration addition; current code parity and engine runtime were not requalified.
 
+### E-029 — F1 interactive Mount practice qualified on Windows; Linux NOT TESTED (2026-10-13)
+
+- **Slice:** verification only of the existing `GODOT_V1/scenes/mount_practice.tscn` and graph-backed controller on `main` at `cfb5fe1`. No code, test, scene, mechanic or validator changed.
+- **Environment (Windows 11 Pro build 26200):** Godot 4.7.2.stable.official.ed1daf0bf (Standard, console exe) with OpenGL 3.3 Compatibility on an AMD Radeon RX 7800 XT; project `.venv` Python 3.13.15.
+- **Focused test:** `test_mount_practice.gd` through `tools/ci/validate_mount_slice_log.py --expected-assertions 1036` printed `Mount practice PASS: 1036 assertions`, Godot exit 0, validator exit 0. A 40-run sample gave exit 0 and the exact PASS marker 40 of 40. Default-scene smoke (`--quit-after 5`, headless) exit 0.
+- **Real windowed play (observed in screenshots of the real window; input was real key and mouse events sent with Windows input APIs by a throwaway helper kept outside the repo):**
+  - startup showed the Mount practice scene with both fighters and roles, stamina bars, axis/band, clock and "No window open";
+  - the **N** key opened window 1 (clock 4:55, "Test Alpha (Top) decides"), listing two available techniques and two unavailable ones with engine reason codes first;
+  - mouse selection of a technique populated the response list; a response click enabled Submit; **S** accepted the decision and the panels, event log and stamina matched the engine result (Success, axis 2.0 to 3.0, band STABLE to STRONG, stamina 99 to 92);
+  - window 2 was the scripted Bottom window ("SCRIPTED practice behavior"): Next Window disabled, Submit enabled, techniques informational with `scripted_practice_opponent`; **S** accepted the no-action decision;
+  - the commitment dropdown opened by mouse with LOW, MEDIUM, HIGH; HIGH was applied by the engine (Strong Success, axis 2.0 to 4.0 LOCKED, stamina 99 to 87);
+  - a blind documented-route play of 41 windows reached **TERMINAL OUTCOME: tap** (Americana finish); later commands were refused with `match_ended` and only New Practice Match stayed enabled;
+  - **New Practice Match** produced practice match #2 with fresh stamina, 5:00 clock, axis 1.5 and empty logs;
+  - the window resized to about 664x351 kept the whole layout visible and legible;
+  - closing the window normally left no Godot process; the console launcher exited **0** with an empty stderr log.
+- **Defects:** none found, so nothing was changed. Two observations were not defects: a stale tooltip appears only until the mouse moves, and an earlier minimized window came from launching with a hidden-window flag in the test helper, not from the game.
+- **Not observed:** a clock timeout and a blocked position transition in the real window (a human cannot reach a blocked transition by design, and the timeout needs about 58 windows); keyboard focus traversal with Tab; mouse-wheel scrolling of long lists; controller refusal paths other than `match_ended`. These remain covered only by the 1036-assertion headless test.
+- **Agents and skills:** read `AGENTS.md`, `CLAUDE.md`, the roadmap, this ledger, the Project Hub and `F1_MOUNT_PRACTICE.md`. No code changed, so `design-sentinel` and `replay-auditor` were not invoked.
+
+| Verification | Windows | Linux |
+|---|---|---|
+| Godot version verified | PASS (4.7.2.stable.official.ed1daf0bf) | NOT TESTED |
+| Project import | PASS (project loads and runs; headless tests PASS) | NOT TESTED |
+| Interactive F1 scene | PASS (real window) | NOT TESTED |
+| Keyboard/mouse interaction | PASS (N, S, mouse selection, dropdown, buttons; Tab focus not tested) | NOT TESTED |
+| Focused F1 tests | PASS (1036 assertions, exit 0, validator OK, 40/40 runs) | NOT TESTED |
+| Clean process termination | PASS (normal close, launcher exit 0, no leftover process) | NOT TESTED |
+| Full platform qualification | BLOCKED (position-registry crash 0xC0000005 unresolved; not rerun here) | NOT TESTED |
+
+- **Boundary:** a working F1 scene on this machine does not qualify the Windows Godot suite or B2c; the registry crash stays open. Linux acceptance requires running the same scene and tests on a Linux machine.
+- **Next narrow milestone:** see the final handoff; do not start it without authorization.
+
 ## Standard Claude-result ingestion form
 
 For each result the owner pastes here, append a new `E-###` entry, checking at least:
