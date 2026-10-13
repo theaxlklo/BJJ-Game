@@ -4,7 +4,7 @@
 
 > **Start here:** [Engineering Roadmap](ENGINEERING_ROADMAP.md) → [Oversight Ledger](OVERSIGHT_LEDGER.md) → [Master Development Guide](../BJJ_GAME_MASTER_DEVELOPMENT_GUIDE.md) → [Current F1 Mount Practice](../../GODOT_V1/docs/F1_MOUNT_PRACTICE.md).
 >
-> **Searchable overview:** [PROJECT_HUB.html](PROJECT_HUB.html). Open the HTML file locally in a browser for a searchable catalog of 139 document/text files. No dependencies or login are required for the dashboard itself; document links open GitHub.
+> **Searchable overview:** [PROJECT_HUB.html](PROJECT_HUB.html). Open the HTML file locally in a browser for a searchable catalog of 140 document/text files. No dependencies or login are required for the dashboard itself; document links open GitHub.
 
 ## Current development in one glance
 
@@ -71,12 +71,12 @@ Sources and licenses: [Third-party skill provenance](../third_party/skills/PROVE
 
 ## All tracked documents, grouped by function
 
-This catalog displays **139 Markdown/text files** from `docs/`, `GODOT_V1/docs/`, and repository README files. Screenshots, compressed fixtures and other non-document evidence are intentionally excluded from the searchable file list.
+This catalog displays **140 Markdown/text files** from `docs/`, `GODOT_V1/docs/`, and repository README files. Screenshots, compressed fixtures and other non-document evidence are intentionally excluded from the searchable file list.
 
 | Document family | Files | Navigate |
 |---|---:|---|
 | **Current roadmap & ledger** | 2 | [Browse/search in HTML](PROJECT_HUB.html) |
-| **Getting started & operations** | 5 | [Browse/search in HTML](PROJECT_HUB.html) |
+| **Getting started & operations** | 6 | [Browse/search in HTML](PROJECT_HUB.html) |
 | **Game design & historical concept** | 2 | [Browse/search in HTML](PROJECT_HUB.html) |
 | **Godot implementation & position specs** | 24 | [Browse/search in HTML](PROJECT_HUB.html) |
 | **Tooling references & provenance** | 1 | [Browse/search in HTML](PROJECT_HUB.html) |
