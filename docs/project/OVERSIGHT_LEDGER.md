@@ -324,6 +324,14 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Scope and qualification:** documentation/index-only. No Godot, Python, Windows GUI or Linux gameplay tests were run for this change; no executable or oracle files, plugin installation, gameplay rules or CI gates were modified. Windows `test_position_registry.gd` remains BLOCKED/FAIL and Linux is NOT TESTED for that particular investigation. The planned F1 playable checkpoint has **not** started.
 - **Next action:** reuse the existing F1 2D Mount practice checkpoint; keep per-OS acceptance reports in future ledger entries and update the hub inventory only when tool/document membership materially changes.
 
+### E-028 — Reusable conversation migration and handoff prompt (2026-10-13)
+
+- **Owner request:** Preserve a reusable prompt in the repository so BJJ-Game work can continue in a **new ChatGPT conversation** or a new Claude Code session without relying on a single long chat.
+- **New document:** `docs/project/CONVERSATION_MIGRATION_PROMPT.md` provides a complete copyable ChatGPT context-recovery prompt, a shorter Claude Code session handoff, a cross-computer preparation checklist, and links to the existing sources of truth. It explicitly instructs the recipient to verify the **current** Git SHA, `AGENTS.md`, roadmap, latest ledger entries, relevant spec, machine-local environment and Windows/Linux test evidence before proposing work. It forbids claiming private conversation memory or local plugin availability without verification, and does not authorize silent GitHub edits.
+- **Discoverability:** linked from the root `README.md`, `AGENTS.md`, `docs/project/ENGINEERING_ROADMAP.md`, `docs/project/PROJECT_HUB.md` and the searchable `PROJECT_HUB.html` dashboard (whose index now includes **141** tracked Markdown/text documents). Historical files were not renamed, moved or removed. This template and the hub are navigation aids; the roadmap and ledger remain the only two living progress documents.
+- **Status carried forward:** pinned Godot 4.7.2 Standard, one Windows/Linux game, local-first Ponytail Full, existing F1 Mount practice awaiting interactive checkpoint; Windows position-registry headless exit `0xC0000005` remains a qualification blocker, while Linux qualification for that investigation remains NOT TESTED. No gameplay, Side Control B2c, test validator or engine-version work is authorized or claimed by this docs change.
+- **Evidence / checks:** document-only update based on the GitHub `main` repository. No Godot, Python, Windows GUI or Linux tests were run for this migration addition; current code parity and engine runtime were not requalified.
+
 ## Standard Claude-result ingestion form
 
 For each result the owner pastes here, append a new `E-###` entry, checking at least:
