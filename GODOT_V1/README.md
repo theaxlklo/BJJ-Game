@@ -5,17 +5,19 @@ The complete new Godot implementation stays inside this folder. Python code in `
 ## What is here now
 
 - **Godot 4.7.2-stable**, standard typed GDScript project (`project.godot`).
-- Minimal **3D Mount greybox** (`scenes/mount_debug.tscn`) with camera presets **1**, **2**, **3**.
+- An interactive **2D Mount practice prototype** (`scenes/mount_practice.tscn`, the default scene): two fighters, stamina, legal techniques and responses with exact reason codes, and deterministic results through `BjjPositionGraphMatch`. See [F1_MOUNT_PRACTICE.md](docs/F1_MOUNT_PRACTICE.md). It is a positional-training prototype, not a match from Standing.
+- The minimal **3D Mount greybox** (`scenes/mount_debug.tscn`) with camera presets **1**, **2**, **3**, kept as a separate diagnostic scene.
 - First parity-oriented decomposition: grade arithmetic, Mount rules, Mount action/response catalog, 18 matchup entries, action resolver, drift and position state.
 - An initial Godot **headless test script**: `tests/test_mount_slice.gd`.
 - [Port status, limitations, and parity contract](docs/PORT_STATUS.md).
+- [PositionContract and Mount adapter](docs/POSITION_CONTRACT.md): position-independent interface over the headless Mount, with an architecture comparison and supported boundaries.
 
 ## Open the project
 
 1. Download and install [Godot 4.7.2-stable](https://godotengine.org/download/archive/4.7.2-stable/) (standard build).
 2. In Godot's Project Manager, choose **Import** and select `GODOT_V1/project.godot`.
-3. Press **F6** or **F5** to run the project; press **1/2/3** for alternate cameras.
-4. The scene is a **visual placeholder**, not yet an interactive grappling match.
+3. Press **F5** to run the default 2D Mount practice scene: **Next Window** (N), pick a technique and a response, **Submit Decision** (S). The Bottom fighter is a scripted practice behavior.
+4. To see the old 3D greybox, open `scenes/mount_debug.tscn` and press **F6** (cameras **1/2/3**). It is a **visual placeholder** and is not wired to the simulation.
 
 ## Run headless Mount tests
 

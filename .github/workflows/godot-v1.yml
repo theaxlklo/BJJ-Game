@@ -1,15 +1,11 @@
 name: Godot V1 headless checks
 
 on:
-  push:
-    paths:
-      - "GODOT_V1/**"
-      - ".github/workflows/godot-v1.yml"
-  pull_request:
-    paths:
-      - "GODOT_V1/**"
-      - ".github/workflows/godot-v1.yml"
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha }}
 
       - name: Install pinned Godot 4.7.2 standard edition
         shell: bash
@@ -40,7 +38,16 @@ jobs:
         run: godot --headless --path GODOT_V1 --editor --import --quit
 
       - name: Run frozen Mount-slice tests
-        run: godot --headless --path GODOT_V1 --script res://tests/test_mount_slice.gd
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A production assert aborts only one test function: Godot can still print
+          # PASS with fewer assertions and exit 0. Validate status and the whole log.
+          # The pinned count changes only with reviewed test_mount_slice.gd changes.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_mount_slice.gd > /tmp/mount-slice.log 2>&1 || status=$?
+          cat /tmp/mount-slice.log
+          python tools/ci/validate_mount_slice_log.py /tmp/mount-slice.log --exit-code "$status" --expected-assertions 256992
 
       - name: Generate reference results using original Python engine
         run: PYTHONPATH=src python GODOT_V1/tests/generate_mount_reference.py
@@ -93,5 +100,286 @@ jobs:
           assert not errors, errors
           PY
 
-      - name: Smoke-test minimal 3D scene
+      - name: Generate Mount advancement trajectories from Python
+        run: PYTHONPATH=src python GODOT_V1/tests/generate_mount_lifecycle_reference.py
+
+      - name: Validate Mount lifecycle boundaries and replay trajectories
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_mount_lifecycle_boundaries.gd 2>&1 | tee /tmp/mount-lifecycle-native.log
+          godot --headless --path GODOT_V1 --script res://tests/test_mount_lifecycle_reference.gd 2>&1 | tee /tmp/mount-lifecycle-parity.log
+          python - <<'PY'
+          from pathlib import Path
+          for name in ('native', 'parity'):
+              lines = Path('/tmp/mount-lifecycle-' + name + '.log').read_text().splitlines()
+              errors = [line for line in lines if line.startswith(('ERROR:', 'WARNING:')) or 'SCRIPT ERROR:' in line]
+              assert not errors, errors
+          PY
+
+      - name: Generate D3-B and integrated Mount lifecycle trajectories from Python
+        run: PYTHONPATH=src python GODOT_V1/tests/generate_d3b_reference.py
+
+      - name: Validate D3-B boundaries and integrated Mount replay parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_d3b_boundaries.gd 2>&1 | tee /tmp/d3b-native.log
+          godot --headless --path GODOT_V1 --script res://tests/test_d3b_reference.gd 2>&1 | tee /tmp/d3b-parity.log
+          python - <<'PY'
+          from pathlib import Path
+          for name in ('native', 'parity'):
+              lines = Path('/tmp/d3b-' + name + '.log').read_text().splitlines()
+              errors = [line for line in lines if line.startswith(('ERROR:', 'WARNING:')) or 'SCRIPT ERROR:' in line]
+              assert not errors, errors
+          PY
+
+      - name: Validate PositionContract boundaries and replay the Python exchange oracle through the Mount adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Reuses exchange_reference.jsonl generated above by the unchanged Python engine.
+          godot --headless --path GODOT_V1 --script res://tests/test_position_contract_boundaries.gd 2>&1 | tee /tmp/position-contract-native.log
+          godot --headless --path GODOT_V1 --script res://tests/test_position_contract_reference.gd 2>&1 | tee /tmp/position-contract-parity.log
+          python - <<'PY'
+          from pathlib import Path
+          for name in ('native', 'parity'):
+              lines = Path('/tmp/position-contract-' + name + '.log').read_text().splitlines()
+              errors = [line for line in lines if line.startswith(('ERROR:', 'WARNING:')) or 'SCRIPT ERROR:' in line]
+              assert not errors, errors
+          PY
+
+      - name: Validate Match Window Gateway admission and lockstep replay against unchanged Mount entry points
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_window_gateway_boundaries.gd 2>&1 | tee /tmp/window-gateway-native.log
+          python - <<'PY'
+          from pathlib import Path
+          lines = Path('/tmp/window-gateway-native.log').read_text().splitlines()
+          errors = [line for line in lines if line.startswith(('ERROR:', 'WARNING:')) or 'SCRIPT ERROR:' in line]
+          assert not errors, errors
+          PY
+
+      - name: Validate Position Graph coordinator halts, atomicity and lockstep replay against the bare gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_position_graph_boundaries.gd 2>&1 | tee /tmp/position-graph-native.log
+          python - <<'PY'
+          from pathlib import Path
+          lines = Path('/tmp/position-graph-native.log').read_text().splitlines()
+          errors = [line for line in lines if line.startswith(('ERROR:', 'WARNING:')) or 'SCRIPT ERROR:' in line]
+          assert not errors, errors
+          PY
+
+      - name: Validate position-aware exit classification fails closed and stays isolated from Mount
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_position_graph_classification.gd 2>&1 | tee /tmp/position-graph-classification.log
+          python - <<'PY'
+          from pathlib import Path
+          lines = Path('/tmp/position-graph-classification.log').read_text().splitlines()
+          errors = [line for line in lines if line.startswith(('ERROR:', 'WARNING:')) or 'SCRIPT ERROR:' in line]
+          assert not errors, errors
+          PY
+
+      - name: Validate position-independent commitment settlement helpers against literal tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_commitment_settlement.gd 2>&1 | tee /tmp/commitment-settlement-native.log
+          python - <<'PY'
+          from pathlib import Path
+          lines = Path('/tmp/commitment-settlement-native.log').read_text().splitlines()
+          errors = [line for line in lines if line.startswith(('ERROR:', 'WARNING:')) or 'SCRIPT ERROR:' in line]
+          assert not errors, errors
+          PY
+
+      - name: Validate detached Mount carry-over export (schema, validation, non-mutation)
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --path GODOT_V1 --script res://tests/test_carryover_export.gd 2>&1 | tee /tmp/carryover-export-native.log
+          python - <<'PY'
+          from pathlib import Path
+          lines = Path('/tmp/carryover-export-native.log').read_text().splitlines()
+          errors = [line for line in lines if line.startswith(('ERROR:', 'WARNING:')) or 'SCRIPT ERROR:' in line]
+          assert not errors, errors
+          PY
+
+      - name: Validate canonical position registry (identity only) and its Mount integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_position_registry.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_position_registry.gd > /tmp/position-registry.log 2>&1 || status=$?
+          cat /tmp/position-registry.log
+          python tools/ci/validate_mount_slice_log.py /tmp/position-registry.log --name "Position registry" --exit-code "$status" --expected-assertions 431
+
+      - name: Validate fighter definitions and read-only fighter snapshots over the Mount gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_fighter_foundation.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_fighter_foundation.gd > /tmp/fighter-foundation.log 2>&1 || status=$?
+          cat /tmp/fighter-foundation.log
+          python tools/ci/validate_mount_slice_log.py /tmp/fighter-foundation.log --name "Fighter foundation" --exit-code "$status" --expected-assertions 750
+
+      - name: Validate the 2D Mount practice scene, its controller and the graph-backed fighter snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_mount_practice.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_mount_practice.gd > /tmp/mount-practice.log 2>&1 || status=$?
+          cat /tmp/mount-practice.log
+          python tools/ci/validate_mount_slice_log.py /tmp/mount-practice.log --name "Mount practice" --exit-code "$status" --expected-assertions 1036
+
+      - name: Generate the independent Half Guard Python oracle fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Standard-library oracle (tests/oracles/half_guard_v0.py); no engine code and no Mount code is imported.
+          python GODOT_V1/tests/generate_half_guard_reference.py
+
+      - name: Generate the independent Half Guard feint oracle fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same standard-library oracle (rules sheet section 13); a separate fixture so the qualified direct-technique fixture is untouched.
+          python GODOT_V1/tests/generate_half_guard_feint_reference.py
+
+      - name: Validate Half Guard v0 boundaries (negative-first typed engine tests)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_boundaries.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_boundaries.gd > /tmp/half-guard-boundaries.log 2>&1 || status=$?
+          cat /tmp/half-guard-boundaries.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-boundaries.log --name "Half Guard boundaries" --exit-code "$status" --expected-assertions 3999
+
+      - name: Validate Half Guard v0 against the independent Python oracle (fixture replay)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_reference.gd or oracle change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_reference.gd > /tmp/half-guard-reference.log 2>&1 || status=$?
+          cat /tmp/half-guard-reference.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-reference.log --name "Half Guard reference" --exit-code "$status" --expected-assertions 49609
+
+      - name: Validate Half Guard v0 window-gateway conformance to the Mount gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_conformance.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_conformance.gd > /tmp/half-guard-conformance.log 2>&1 || status=$?
+          cat /tmp/half-guard-conformance.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-conformance.log --name "Half Guard conformance" --exit-code "$status" --expected-assertions 151
+
+      - name: Validate the Half Guard v0 Mount edge adapter (carry-over record to entry request)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_mount_edge.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_mount_edge.gd > /tmp/half-guard-mount-edge.log 2>&1 || status=$?
+          cat /tmp/half-guard-mount-edge.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-mount-edge.log --name "Half Guard Mount edge" --exit-code "$status" --expected-assertions 3119
+
+      - name: Validate the opt-in Mount to Half Guard graph integration (receiver table, atomic commit, halt semantics)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_graph.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_graph.gd > /tmp/half-guard-graph.log 2>&1 || status=$?
+          cat /tmp/half-guard-graph.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-graph.log --name "Half Guard graph" --exit-code "$status" --expected-assertions 2133
+
+      - name: Validate the Half Guard sealed-intent protocol (seal, respond, refusals, redaction, oracle compatibility)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_sealed_protocol.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_sealed_protocol.gd > /tmp/half-guard-sealed-protocol.log 2>&1 || status=$?
+          cat /tmp/half-guard-sealed-protocol.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-sealed-protocol.log --name "Half Guard sealed protocol" --exit-code "$status" --expected-assertions 42309
+
+      - name: Validate Half Guard feints against the independent Python oracle (grid, funding, refusals, trajectories, public views)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_feint_reference.gd or feint oracle change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_feint_reference.gd > /tmp/half-guard-feint-reference.log 2>&1 || status=$?
+          cat /tmp/half-guard-feint-reference.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-feint-reference.log --name "Half Guard feint reference" --exit-code "$status" --expected-assertions 26415
+
+      - name: Validate Half Guard feints through the sealed-intent protocol (admission, funding, information isolation, timeout, replay)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_feint_protocol.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_feint_protocol.gd > /tmp/half-guard-feint-protocol.log 2>&1 || status=$?
+          cat /tmp/half-guard-feint-protocol.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-feint-protocol.log --name "Half Guard feint protocol" --exit-code "$status" --expected-assertions 32222
+
+      - name: Validate the opt-in sealed Half Guard graph match flow (adoption, single settlement, stay-and-end flows, refusals, replay)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_half_guard_graph_sealed_flow.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_half_guard_graph_sealed_flow.gd > /tmp/half-guard-graph-sealed-flow.log 2>&1 || status=$?
+          cat /tmp/half-guard-graph-sealed-flow.log
+          python tools/ci/validate_mount_slice_log.py /tmp/half-guard-graph-sealed-flow.log --name "Half Guard graph sealed flow" --exit-code "$status" --expected-assertions 2433
+
+      - name: Validate the connected match-flow structural invariants (real games, live observer, rejected-command probes; not a population measurement)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same false-success guard as the Mount-slice step: validate status and the whole log.
+          # The pinned count changes only with a reviewed test_match_flow_invariants.gd or match_flow_harness.gd change.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/test_match_flow_invariants.gd > /tmp/match-flow-invariants.log 2>&1 || status=$?
+          cat /tmp/match-flow-invariants.log
+          python tools/ci/validate_mount_slice_log.py /tmp/match-flow-invariants.log --name "Match-flow invariants" --exit-code "$status" --expected-assertions 73606
+
+      - name: Smoke-run the match-flow measurement harness (exit code, determinism and policy errors only; no measured value is gated)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The exploratory populations (GODOT_V1/docs/MATCH_FLOW_DIAGNOSTICS.md) are evidence, never a gate. This only proves that the harness still runs
+          # to completion on the current code, replays identically and produced no harness error, on a deliberately tiny seed count.
+          status=0
+          godot --headless --path GODOT_V1 --script res://tests/measure_match_flow.gd -- seeds=1 hg_seeds=1 > /tmp/match-flow-measure.log 2>&1 || status=$?
+          tail -n 25 /tmp/match-flow-measure.log
+          test "$status" -eq 0
+          grep -q "replay IDENTICAL" /tmp/match-flow-measure.log
+          grep -q "policy errors (a refused command the harness did not intend; any non-zero value is a harness defect): 0" /tmp/match-flow-measure.log
+          grep -q "violations: 0" /tmp/match-flow-measure.log
+          ! grep -q -E "^(ERROR|SCRIPT ERROR)" /tmp/match-flow-measure.log
+
+      - name: Smoke-test the default scene (2D Mount practice; the 3D greybox stays a separate diagnostic scene)
         run: godot --headless --path GODOT_V1 --quit-after 5
