@@ -1,7 +1,7 @@
 # BJJ Game — Engineering Roadmap & Overseer Ledger
 
 **Audit date:** 2026-10-12 (living snapshot; update after each Claude handoff)  
-**Roadmap revision:** 4.2 — Local-first workflow adopted (owner decision 2026-10-13); educational-comment rule and three reviewed skills added; cumulative PR #66 integrated the stack through #65 into main (21/21 CI)  
+**Roadmap revision:** 4.3 — Local-first workflow adopted (owner decision 2026-10-13); educational-comment rule and three reviewed skills added; cumulative PR #66 integrated the stack through #65 into main (21/21 CI)  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Baseline audited:** `main` (`626321721209ffb0850bbdd1f2613992e1eaa629`, after cumulative PR #66) and historical draft PR #65 (`9942c5a53caf58d0d944bd7931ccc81bf86d0d07`), stacked on #63 (`650e7e1b9c6ba138a931c2805ce661e2268431b2`)  
 **Decision authority:** The project owner approves new combat mechanics and unresolved design decisions. Ordinary development is local-first on `main` (see *Development workflow*). This document recommends; it does not change engine behavior.
@@ -150,6 +150,8 @@ The owner wants a player to **choose the positions they actively train**, instea
 
 **Scheduling:** B2a.1 may define the *interfaces and meaning* of role-specific proficiency and show how future priorities use them, but **must not implement focus selection, memory XP, fighter data migrations, belt advancement or combat modification**. Implement selectable focuses when fighter identity/career/memory infrastructure is ready; do not make its full implementation a blocker for the next Side Control oracle. Until the subsystem exists, use explicit stable test inputs or a provisional fixed initiative rule approved by the owner.
 
+
+**Status 2026-10-13:** the B2a.1 proposal is delivered as [`GODOT_V1/docs/POSITION_AWARE_INITIATIVE_PROPOSAL.md`](../../GODOT_V1/docs/POSITION_AWARE_INITIATIVE_PROPOSAL.md) (documentation only). It formalizes the owner's agreed model (General Technique + position-role proficiency + the position's tactical advantage, with a skill override of the opening priority; neutral positions stay simultaneous sealed; Mount and Half Guard preserved; Memory Mastery excluded) as a policy contract, with a position matrix, edge cases, a per-fighter turn ledger design, a test plan and proposed numbers backed by exact enumeration. SC-D2 is no longer a binary choice. Owner decisions OD-1–OD-11 are open.
 
 **Gate:** project owner reviews B2a.1 and the Side Control SC-D2 choice together. Only then can B2b freeze a self-contained Side Control rules sheet and independent Python oracle. Any new 2-fighter simultaneous action protocol is a later independently qualified slice, not assumed to exist because Half Guard has a sealed feint/response protocol.
 

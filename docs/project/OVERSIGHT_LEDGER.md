@@ -1,8 +1,8 @@
 # BJJ Game — Project Oversight Ledger
 
-**Revision:** 4.2 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
+**Revision:** 4.3 · **Snapshot date:** 2026-10-13 · **State:** Living manual ledger, updated from actual Claude handoffs and verified GitHub evidence.
 
-**Workflow (owner decision 2026-10-13, see E-016, E-017, E-018):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
+**Workflow (owner decision 2026-10-13, see E-016 to E-019):** local-first. Direct commits to `main`, local Godot/Python tests, no PRs, no automatic GitHub Actions; ChatGPT reviews GitHub afterwards.  
 **Repository:** https://github.com/theaxlklo/BJJ-Game  
 **Engineering roadmap:** [`ENGINEERING_ROADMAP.md`](ENGINEERING_ROADMAP.md) (canonical repository document)  
 **Completed Claude handoff:** `CLAUDE_B2A_HANDOFF.md` (archived on branch `docs/project-oversight-canonical`) (archived B2a scope; completed in [PR #65](https://github.com/theaxlklo/BJJ-Game/pull/65)). **Next gate:** B2a.1 position-aware initiative design, then owner review of Side Control SC-D1–SC-D15; B2b not yet authorized.
@@ -45,7 +45,7 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 |---|---|---|---|
 | Stack safety | P0 — cumulative integration **COMPLETE** | PR #66 merged successfully | Local-first workflow adopted (E-016); stale PRs left untouched; harden comparer count/exception pins locally |
 | Gameplay breadth | B2a — Side Control rules/entry spec | **Doc-qualified #65, not approved** | SC-D2 Top-first explicitly remains open; don't freeze numbers | 
-| Initiative design | B2a.1 — Position-aware and skill-sensitive contract | **Next, design investigation only** | Include role-specific selectable training focuses, belt Technique variance and move mastery without implementing career, focus selection, or initiative changes |
+| Initiative design | B2a.1 — Position-aware and skill-sensitive contract | **Proposal delivered (E-019); awaiting owner decisions OD-1–OD-11** | Include role-specific selectable training focuses, belt Technique variance and move mastery without implementing career, focus selection, or initiative changes |
 | Implementation | B2b+ — rules sheet, independent oracle, Godot, receiver | **Blocked on SC-D1–SC-D15** | B2b separate Python oracle; B2c engine; B2d real Knee Slice → Side Control; B2e measurement |
 | Wider positions | Open/Closed Guard, Standing, reversals | **Planned** | Full legal graph traversal and start |
 | Match completion | Scoring, adjudication, activity enforcement, basic opponent | **Planned** | Human plays a complete fight from Standing |
@@ -239,6 +239,15 @@ Status legend: **Observed** means source or GitHub evidence reviewed. **Proposed
 - **Validation:** 28 tests against fake executables and an injected runner (detection, wrong or stale Godot, PATH-only Godot, plugin states, unreadable CLI output, missing tools, declined and failing installs, noninteractive `--install`, rerun idempotence, and the real script run as a subprocess with an empty PATH). Four mutations of the safety guards (non-interactive guard, decline check, stale `GODOT_BIN`, auto-enabling a disabled plugin) were each caught. Real read-only run on this machine: all items OK. Full `tools/ci` suite and whitespace check pass; no workflow changed, so actionlint was not needed. No real installation was performed; no gameplay or Python reference code changed.
 - **Future optional improvement (recorded, not scheduled):** let Codex reuse the reviewed Godot and debugging skills through its supported project-skill mechanism, keeping `AGENTS.md` authoritative, with no duplicate copies and no plugin infrastructure; Ponytail need not be installed for Codex.
 - **Manual requirements on a new machine:** Python 3.11+, Godot 4.7.2 Standard, Claude Code (recommended), `python3-venv` if the distribution splits it out (needs the user's package manager; the script will not use sudo).
+
+### E-019 — B2a.1 position-aware initiative proposal delivered (documentation only), 2026-10-13
+
+- **Owner direction (reaffirmed, not reopened):** initiative combines General Technique proficiency (belt-influenced, overlapping, individually varied), position-and-role proficiency (shaped by training focuses) and the position's tactical advantage. A sufficiently skilled or specialized fighter may overcome the normal opening priority. Side Control ordinarily favors Top, Closed Guard may favor Bottom, neutral positions keep simultaneous sealed choices, Mount and Half Guard stay exactly as implemented, and Memory Mastery stays outside initiative priority. B2a.1 formalizes the contract, examines edge cases and proposes numbers; it does not choose Top-first versus Bottom-first.
+- **Deliverable:** `GODOT_V1/docs/POSITION_AWARE_INITIATIVE_PROPOSAL.md`. Seven separated concerns; three policy kinds (`LEGACY_FIXED`, `BIASED_SEQUENTIAL`, `NEUTRAL_SIMULTANEOUS`); a pure integer decision function evaluated once per position entry, after which today's strict alternation continues (so skill decides the first window, never a monopoly); inputs frozen at match creation; a `initiative_decided` replay record; a symmetric simultaneous-sealed protocol requirement set and state machine (explicitly not implemented); a ten-position matrix; thirteen edge cases; a per-fighter-id personal-turn ledger for future 3-turn stalling and 5-turn Heart of a Lion; a negative-first test plan and measurement plan; staging; eleven owner decisions (OD-1–OD-11).
+- **Proposed numbers (all unapproved):** `score = General + RoleProficiency` (each 0–100); edges in score units Side Control 40, Closed Guard 24, Back Control 60; strict `>` with ties keeping the favored role; provisional profile 50/50 until fighter data exists, which reduces Side Control to Top-opens. The sensitivity table comes from exact enumeration over the owner's illustrative belt ranges: for example a one-belt gap reverses a Side Control opening 59% of the time at the owner's illustrative +12-point edge but 31% at 20 points and 8% at 30.
+- **Observed facts the proposal rests on:** `BjjFighterDefinition` has no proficiency data; no symmetric simultaneous protocol exists (Half Guard's sealed protocol is asymmetric); Half Guard's initiation counters are role-keyed.
+- **Validation:** documentation only. Whitespace check and the `tools/ci` suite pass; no code, test, fixture, workflow or pinned count changed. Facts were checked against `main` at the time of writing; the numbers are reproducible by the method in the document's §9.
+- **Next gate:** owner review of OD-1–OD-11 together with SC-D1–SC-D15. B2b is not authorized by this entry.
 
 ## Standard Claude-result ingestion form
 
