@@ -27,7 +27,15 @@
 
 ## What this approval does NOT finalize
 
-No final mesh topology, animation clip quality, material/shader implementation, pixel resolution, outline method, asset triangle budget, camera, HUD, character face, tattoos, skin palette, or individual combat pose is certified by a concept image. AI-generated contact poses require separate BJJ technique review.
+No final mesh topology, animation clip quality, material/shader implementation, pixel resolution, outline method, final measured triangle budget, camera, HUD, character face, tattoos, skin palette, or individual combat pose is certified by a concept image. AI-generated contact poses require separate BJJ technique review.
+
+## Provisional real-time character geometry budget (owner-approved 2026-10-27)
+
+- **Target: 15,000–25,000 triangles per complete dressed fighter**, including body, hair, rashguard, shorts and visible accessories, rather than per mesh part. This is a production planning range, **not a hard minimum, maximum, or measured performance guarantee**.
+- Preserve silhouette and clean skin deformation around shoulders, elbows, hips and knees; concentrate geometry where grappling contact and expressive animation require it.
+- Test the one-athletic-male greybox instantiated twice, representative animation, actual pixel-textured materials, lights and camera on target hardware. Measure frame time and visual quality; reduce/increase polygons based on results.
+- The pixel-art identity is texture/shading-driven, not a requirement to make silhouettes faceted. 15K–25K is generally moderate real-time geometry rather than an inherently low-poly art style.
+- The generated polygon-count comparison artwork is illustrative only: no depicted triangle count was verified from real meshes.
 
 ## Art review checklist
 
